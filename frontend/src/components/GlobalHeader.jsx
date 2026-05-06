@@ -43,6 +43,9 @@ export default function GlobalHeader({ hasSession, isDemoMode, onNavigate }) {
           ) : (
             <>
               {isDemoMode ? <StatusPill tone="warning">Modo demo</StatusPill> : null}
+              <RouteLink className="button button--secondary global-header__action global-header__action--admin" onNavigate={onNavigate} to="/login">
+                Acesso administrativo
+              </RouteLink>
               <RouteLink className="button button--secondary global-header__action" onNavigate={onNavigate} to="/login">
                 Entrar
               </RouteLink>

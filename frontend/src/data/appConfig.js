@@ -17,47 +17,20 @@ export const APP_SECTIONS = [
 export const PUBLIC_PILLARS = [
   {
     title: "Cursos orientados a projeto",
-    text: "Trilhas com pratica guiada, conteudos liberados por turma e acompanhamento de progresso."
+    text: "Trilhas praticas com materiais e progresso por turma."
   },
   {
     title: "Matricula acompanhada",
-    text: "O aluno solicita entrada pela propria plataforma e acompanha o status quando acessar o painel."
+    text: "Solicitacao online com status visivel no painel."
   },
   {
     title: "Sala digital por perfil",
-    text: "Aluno, professor e coordenacao entram no mesmo produto, cada um com as acoes do seu papel."
+    text: "Aluno, professor e coordenacao com acessos proprios."
   }
 ];
 
 export const PUBLIC_NAV_LINKS = [
-  { href: "#catalogo", label: "Cursos" },
-  { href: "#jornada", label: "Jornada" },
-  { href: "#painel", label: "Acesso" },
-  { href: "#ajuda", label: "Ajuda" }
-];
-
-export const PUBLIC_SUPPORT_CARDS = [
-  {
-    title: "Quero entender a jornada",
-    text: "Veja como descoberta, matricula e painel academico se conectam em poucos passos.",
-    actionLabel: "Ver a jornada",
-    actionTarget: "#jornada",
-    actionType: "anchor"
-  },
-  {
-    title: "Ja tenho acesso",
-    text: "Entre no ambiente autenticado para acompanhar cursos, turmas, materiais e avaliacoes.",
-    actionLabel: "Abrir login",
-    actionTarget: "/login",
-    actionType: "route"
-  },
-  {
-    title: "Quero comecar agora",
-    text: "Escolha um curso e envie sua solicitacao de matricula para a equipe academica.",
-    actionLabel: "Criar conta",
-    actionTarget: "/cadastro",
-    actionType: "route"
-  }
+  { href: "#catalogo", label: "Cursos" }
 ];
 
 export const CURATED_COURSES = [

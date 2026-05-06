@@ -89,6 +89,11 @@
   min-width: var(--button-min-width-wide);
 }
 
+.global-header__action--admin {
+  min-width: 188px;
+  text-transform: uppercase;
+}
+
 .global-header__session {
   align-items: center;
   background: linear-gradient(135deg, rgba(40, 44, 55, 0.96), rgba(28, 31, 40, 0.9));
@@ -257,11 +262,21 @@
   position: relative;
 }
 
+.public-hero__banner {
+  height: 100%;
+  inset: 0;
+  object-fit: cover;
+  object-position: center;
+  position: absolute;
+  width: 100%;
+  z-index: -3;
+}
+
 .public-hero__scene {
   background:
-    linear-gradient(90deg, rgba(11, 14, 22, 0.94) 0%, rgba(12, 16, 24, 0.78) 42%, rgba(12, 17, 25, 0.52) 100%),
-    linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(245, 158, 11, 0.12) 42%, rgba(123, 47, 247, 0.18)),
-    #10141d;
+    linear-gradient(90deg, rgba(11, 14, 22, 0.96) 0%, rgba(12, 16, 24, 0.76) 42%, rgba(12, 17, 25, 0.22) 100%),
+    linear-gradient(180deg, rgba(11, 14, 22, 0.02), rgba(11, 14, 22, 0.52)),
+    linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(245, 158, 11, 0.08) 42%, rgba(123, 47, 247, 0.12));
   inset: 0;
   position: absolute;
   z-index: -2;
@@ -281,8 +296,8 @@
 
 .public-hero__scene::after {
   background:
-    linear-gradient(115deg, transparent 0 38%, rgba(20, 184, 166, 0.24) 38% 39%, transparent 39% 100%),
-    linear-gradient(68deg, transparent 0 54%, rgba(245, 158, 11, 0.2) 54% 55%, transparent 55% 100%);
+    linear-gradient(115deg, transparent 0 38%, rgba(20, 184, 166, 0.12) 38% 39%, transparent 39% 100%),
+    linear-gradient(68deg, transparent 0 54%, rgba(245, 158, 11, 0.1) 54% 55%, transparent 55% 100%);
   content: "";
   inset: 0;
   opacity: 0.86;

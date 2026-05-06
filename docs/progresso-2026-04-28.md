@@ -91,3 +91,19 @@
 
 - Frontend recompilado com sucesso usando o Node empacotado do Codex:
   `C:\Users\Krigor\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe .\node_modules\vite\bin\vite.js build --emptyOutDir false`
+
+## Implementado - 2026-05-05 - Home publica para apresentacao
+
+- Adicionado o banner `frontend/src/assets/home-publica-banner.png` na home publica como imagem real do hero, mantendo overlay para leitura do texto.
+- A home publica foi limpa para focar em `banner`, cards de diferenciais e catalogo de cursos.
+- Removidas as secoes `Jornada`, CTA final duplicado e `Ajuda para decidir`, alem da metrica `100% fluxo online` e textos longos.
+- O menu superior publico foi simplificado para manter apenas o atalho `Cursos`.
+- Adicionado o botao `ACESSO ADMINISTRATIVO` na topbar publica, apontando para `/login`.
+- A ordem dos botoes da topbar ficou: `ACESSO ADMINISTRATIVO`, `Entrar`, `Criar conta`.
+
+## Validacao - 2026-05-05 - Home publica para apresentacao
+
+- Frontend recompilado com sucesso usando o Node empacotado do Codex:
+  `C:\Users\Krigor\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe .\node_modules\vite\bin\vite.js build --emptyOutDir false`
+- Preview local validado em `http://127.0.0.1:5177`.
+- Evidencias visuais geradas em `logs/home-publica-limpa.png` e `logs/home-publica-acesso-admin.png`.
