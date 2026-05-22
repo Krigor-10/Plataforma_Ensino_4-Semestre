@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dicionário de Dados — PlataformaEnsino</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ink:     #1c1c1c;
+            --bg:      #fffef5;
+            --accent:  #f4a261;
+            --muted:   #888;
+            --border:  #d8d3c8;
+            --row-alt: #faf7ee;
+            --head-bg: #1c1c1c;
+            --head-fg: #fffef5;
+            --tag-pk-bg:   #1c1c1c;
+            --tag-pk-fg:   #f4a261;
+            --tag-fk-bg:   #4f8ef7;
+            --tag-fk-fg:   #fff;
+            --tag-nn-bg:   #2ec4b6;
+            --tag-nn-fg:   #fff;
+            --tag-null-bg: #e8e3d5;
+            --tag-null-fg: #666;
+            --tag-en-bg:   #e76f51;
+            --tag-en-fg:   #fff;
+            --tag-disc-bg: #7c5cfc;
+            --tag-disc-fg: #fff;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        /* ── CAPA ── */
+        .cover {
+            background: var(--head-bg);
+            color: var(--head-fg);
+            min-height: 340px;
+            padding: 56px 60px 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .cover-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+
+        .cover-institution {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            line-height: 1.8;
+        }
+
+        .cover-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 32px;
+            font-size: 11px;
+            color: #aaa;
+            text-align: right;
+        }
+
+        .cover-meta-grid span { color: #ddd; font-weight: 600; }
+
+        .cover-title-block { margin-top: 32px; }
+
+        .cover-doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .cover h1 {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1.15;
+        }
+
+        .cover h1 span { color: var(--accent); }
+
+        .cover-sub {
+            font-size: 14px;
+            color: #aaa;
+            margin-top: 8px;
+        }
+
+        .cover-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .cover-footer strong { color: #aaa; }
+
+        .cover-members {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+
+        .cover-members-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .cover-members-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 40px;
+        }
+
+        .cover-member {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 12px;
+            color: #ccc;
+            gap: 12px;
+        }
+
+        .cover-member span {
+            font-family: 'Courier Prime', monospace;
+            font-size: 11px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        /* ── LAYOUT ── */
+        .page { display: flex; }
+
+        /* ── SIDEBAR ── */
+        nav {
+            width: 260px;
+            flex-shrink: 0;
+            background: #f5f2e8;
+            border-right: 1px solid var(--border);
+            padding: 32px 0 40px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .nav-header {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 0 24px 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .nav-section { margin-bottom: 8px; }
+
+        .nav-section-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent);
+            padding: 10px 24px 4px;
+            display: block;
+        }
+
+        nav a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 24px;
+            font-size: 12px;
+            font-family: 'Courier Prime', monospace;
+            color: #555;
+            text-decoration: none;
+            transition: background 0.12s, color 0.12s;
+        }
+
+        nav a:hover { background: #ede9da; color: var(--ink); }
+
+        nav a .nav-num {
+            font-size: 9px;
+            font-weight: 700;
+            color: #bbb;
+            min-width: 18px;
+        }
+
+        nav a:hover .nav-num { color: var(--accent); }
+
+        nav a.special {
+            font-family: 'Outfit', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #777;
+            letter-spacing: 0.3px;
+        }
+
+        /* ── MAIN ── */
+        main {
+            flex: 1;
+            padding: 48px 52px 80px;
+            max-width: 960px;
+        }
+
+        /* ── INTRO ── */
+        .intro-block {
+            background: #f5f2e8;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 28px 32px;
+            margin-bottom: 48px;
+        }
+
+        .intro-block h2 {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .intro-block p {
+            font-size: 13px;
+            color: #444;
+            line-height: 1.75;
+            margin-bottom: 8px;
+        }
+
+        .intro-block p:last-child { margin-bottom: 0; }
+
+        /* ── SUMMARY TABLE ── */
+        .summary-wrap { margin-bottom: 56px; }
+
+        .section-heading {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--ink);
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .section-heading .sec-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--ink);
+            font-family: 'Courier Prime', monospace;
+            line-height: 1;
+        }
+
+        /* ── GENERIC TABLE ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+
+        thead tr { background: var(--head-bg); }
+
+        thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--head-fg);
+            white-space: nowrap;
+        }
+
+        tbody tr { border-bottom: 1px solid var(--border); }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:nth-child(even) { background: var(--row-alt); }
+        tbody tr:hover { background: #f0ece0; }
+
+        td { padding: 9px 14px; vertical-align: middle; }
+
+        .td-name {
+            font-family: 'Courier Prime', monospace;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .td-type {
+            font-family: 'Courier Prime', monospace;
+            font-size: 12px;
+            color: #555;
+            white-space: nowrap;
+        }
+
+        .td-desc { font-size: 12px; color: #333; }
+
+        .td-center { text-align: center; }
+
+        /* tags */
+        .tag {
+            display: inline-block;
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            margin-right: 2px;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .pk   { background: var(--tag-pk-bg);   color: var(--tag-pk-fg); }
+        .fk   { background: var(--tag-fk-bg);   color: var(--tag-fk-fg); }
+        .nn   { background: var(--tag-nn-bg);   color: var(--tag-nn-fg); }
+        .nul  { background: var(--tag-null-bg); color: var(--tag-null-fg); }
+        .en   { background: var(--tag-en-bg);   color: var(--tag-en-fg); }
+        .disc { background: var(--tag-disc-bg); color: var(--tag-disc-fg); }
+
+        /* ── TABLE SECTION ── */
+        .table-section {
+            margin-bottom: 56px;
+            scroll-margin-top: 32px;
+        }
+
+        .table-section-header {
+            margin-bottom: 12px;
+        }
+
+        .table-section-header h3 {
+            font-family: 'Courier Prime', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .table-section-header h3 .tbl-num {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--muted);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .table-section-header .tbl-desc {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+            margin-left: 2px;
+        }
+
+        .table-section-header .tbl-entity {
+            font-size: 11px;
+            color: #aaa;
+            font-family: 'Courier Prime', monospace;
+            margin-top: 2px;
+            margin-left: 2px;
+        }
+
+        .table-wrapper {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        /* ── TPH NOTE ── */
+        .note-box {
+            background: #fffbe8;
+            border: 1px solid #e8c87a;
+            border-radius: 5px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #5a4000;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .note-box strong { font-weight: 700; }
+
+        code {
+            font-family: 'Courier Prime', monospace;
+            font-size: 11px;
+            background: rgba(0,0,0,0.06);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        /* ── GROUP HEADER ── */
+        .group-header {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 52px 0 24px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--ink);
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .group-header .grp-num {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--ink);
+            font-family: 'Courier Prime', monospace;
+            line-height: 1;
+        }
+
+        /* ── ENUMS ── */
+        .enums-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 4px;
+        }
+
+        .enum-card {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .enum-card-header {
+            background: var(--head-bg);
+            color: var(--accent);
+            font-family: 'Courier Prime', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 8px 14px;
+        }
+
+        .enum-card table { font-size: 12px; }
+        .enum-card tbody tr:nth-child(even) { background: var(--row-alt); }
+        .enum-card tbody tr:hover { background: #f0ece0; }
+        .enum-card td { padding: 6px 14px; }
+        .enum-card .td-val {
+            font-family: 'Courier Prime', monospace;
+            font-weight: 700;
+            color: var(--accent);
+            width: 40px;
+        }
+
+        /* ── LEGEND ── */
+        .legend-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 20px;
+            margin-top: 4px;
+            background: #f5f2e8;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 16px 20px;
+        }
+
+        .leg {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #444;
+        }
+
+        /* ── SCROLLBAR ── */
+        nav::-webkit-scrollbar { width: 4px; }
+        nav::-webkit-scrollbar-track { background: #f5f2e8; }
+        nav::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        /* ══════════════════════════════════════════
+           IMPRESSÃO / SALVAR COMO PDF
+           ══════════════════════════════════════════ */
+
+        /* @page fora do @media para ser válido — aplica-se apenas em mídia paginada */
+        @page {
+            size: A4 portrait;
+            margin: 20mm 18mm 24mm 18mm;
+
+            @bottom-center {
+                content: counter(page);
+                font-family: 'Outfit', sans-serif;
+                font-size: 9pt;
+                color: #aaa;
+            }
+        }
+
+        @page :first {
+            @bottom-center { content: none; }
+        }
+
+        @media print {
+
+            /* oculta elementos de navegação e interação */
+            nav,
+            .note-box code { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            nav { display: none !important; }
+
+            /* força cores de fundo a serem impressas */
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+            body {
+                background: #fff;
+                font-size: 11pt;
+                color: #000;
+            }
+
+            /* layout vira coluna única */
+            .page { display: block; }
+
+            main {
+                padding: 0;
+                max-width: 100%;
+                width: 100%;
+            }
+
+            /* ── Capa: página inteira ── */
+            .cover {
+                min-height: 200mm;
+                padding: 28mm 18mm 20mm;
+                page-break-after: always;
+                break-after: page;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            /* ── Sumário na própria página ── */
+            .summary-wrap {
+                page-break-before: always;
+                break-before: page;
+                page-break-after: always;
+                break-after: page;
+            }
+
+            /* ── Legenda logo após o sumário, sem quebra extra ── */
+            #legenda { page-break-before: avoid; break-before: avoid; }
+
+            /* ── Cada grupo começa numa nova página ── */
+            .group-header {
+                page-break-before: always;
+                break-before: page;
+                margin-top: 0;
+            }
+
+            /* ── Seções não devem quebrar no meio da tabela ── */
+            .table-section {
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 28pt;
+            }
+
+            /* se a seção for muito longa, permite quebra mas mantém cabeçalho junto */
+            .table-section-header {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+
+            /* ── Linhas de tabela não quebram ── */
+            tbody tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* ── thead repete em cada página ── */
+            thead { display: table-header-group; }
+
+            /* ── Enums ── */
+            .enum-card {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            /* ── Remove sombras e transições ── */
+            tbody tr:hover { background: inherit; }
+
+            /* ── Ajuste de fontes para impressão ── */
+            .cover h1        { font-size: 28pt; }
+            .group-header    { font-size: 10pt; padding-bottom: 6pt; margin-bottom: 14pt; }
+            .group-header .grp-num { font-size: 18pt; }
+            .table-section-header h3 { font-size: 14pt; }
+            .section-heading { font-size: 10pt; margin-bottom: 10pt; }
+            .section-heading .sec-num { font-size: 18pt; }
+
+            thead th  { font-size: 8pt; padding: 7pt 10pt; }
+            td        { font-size: 9.5pt; padding: 6pt 10pt; }
+            .td-name  { font-size: 9.5pt; }
+            .td-type  { font-size: 9pt; }
+            .tag      { font-size: 7pt; padding: 1pt 5pt; }
+
+            .note-box { font-size: 9pt; }
+            .intro-block p { font-size: 10pt; }
+
+            /* ── Wrapper sem bordas arredondadas (PDF não renderiza bem) ── */
+            .table-wrapper { border-radius: 0; }
+            .enum-card     { border-radius: 0; }
+            .intro-block   { border-radius: 0; }
+            .legend-wrap   { border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════ CAPA ══════════ -->
+<div class="cover">
+    <div class="cover-top">
+        <div class="cover-institution">
+            Universidade Paulista — UNIP<br>
+            Curso de Tecnologia da Informação<br>
+            Projeto Integrado Multidisciplinar — PIM III
+        </div>
+        <div class="cover-meta-grid">
+            <div>Versão</div>         <div><span>1.0</span></div>
+            <div>Semestre</div>       <div><span>1º Sem. 2025</span></div>
+            <div>Data</div>           <div><span>22/05/2026</span></div>
+            <div>Banco de Dados</div> <div><span>SQL Server</span></div>
+        </div>
+    </div>
+    <div class="cover-title-block">
+        <div class="cover-doc-type">Documento Técnico</div>
+        <h1>Dicionário de <span>Dados</span></h1>
+        <div class="cover-sub">Sistema Acadêmico Integrado — PlataformaEnsino</div>
+    </div>
+    <div class="cover-members">
+        <div class="cover-members-label">Integrantes do Grupo</div>
+        <div class="cover-members-grid">
+            <div class="cover-member">Krigor de Sousa Nasare <span>RA: R2694J7</span></div>
+            <div class="cover-member">Heitor Henrique Pereira Nadir <span>RA: R853AG4</span></div>
+            <div class="cover-member">Maria Isabel Branco Iterce da Silva <span>RA: R868AE5</span></div>
+            <div class="cover-member">Nicolas Pimentel dos Santos <span>RA: H6136J1</span></div>
+        </div>
+    </div>
+    <div class="cover-footer">
+        <div><strong>Tecnologia:</strong> .NET 10 · ASP.NET Core · Entity Framework Core (TPH) · SQL Server LocalDB</div>
+        <div><strong>20 tabelas documentadas</strong></div>
+    </div>
+</div>
+
+<!-- ══════════ LAYOUT ══════════ -->
+<div class="page">
+
+    <!-- SIDEBAR -->
+    <nav>
+        <div class="nav-header">Índice de Tabelas</div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">Introdução</span>
+            <a href="#intro" class="special"><span class="nav-num">—</span> Apresentação</a>
+            <a href="#sumario" class="special"><span class="nav-num">—</span> Sumário de Tabelas</a>
+            <a href="#legenda" class="special"><span class="nav-num">—</span> Legenda</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">1. Usuários</span>
+            <a href="#Usuarios"><span class="nav-num">1.1</span>Usuarios</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">2. Estrutura Acadêmica</span>
+            <a href="#Cursos"><span class="nav-num">2.1</span>Cursos</a>
+            <a href="#Modulos"><span class="nav-num">2.2</span>Modulos</a>
+            <a href="#Turmas"><span class="nav-num">2.3</span>Turmas</a>
+            <a href="#Matriculas"><span class="nav-num">2.4</span>Matriculas</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">3. Conteúdo</span>
+            <a href="#ConteudosDidaticos"><span class="nav-num">3.1</span>ConteudosDidaticos</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">4. Banco de Questões</span>
+            <a href="#QuestoesBanco"><span class="nav-num">4.1</span>QuestoesBanco</a>
+            <a href="#AlternativasQuestoesBanco"><span class="nav-num">4.2</span>AlternativasQuestoesBanco</a>
+            <a href="#AnexosQuestoesBanco"><span class="nav-num">4.3</span>AnexosQuestoesBanco</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">5. Avaliações</span>
+            <a href="#Avaliacoes"><span class="nav-num">5.1</span>Avaliacoes</a>
+            <a href="#QuestoesPublicadas"><span class="nav-num">5.2</span>QuestoesPublicadas</a>
+            <a href="#AlternativasQuestoesPublicadas"><span class="nav-num">5.3</span>AlternativasQuestoesPublicadas</a>
+            <a href="#TentativasAvaliacao"><span class="nav-num">5.4</span>TentativasAvaliacao</a>
+            <a href="#RespostasAlunos"><span class="nav-num">5.5</span>RespostasAlunos</a>
+            <a href="#LancamentosNotasAlunos"><span class="nav-num">5.6</span>LancamentosNotasAlunos</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">6. Progresso</span>
+            <a href="#ProgressosConteudosAlunos"><span class="nav-num">6.1</span>ProgressosConteudosAlunos</a>
+            <a href="#ProgressosModulosAlunos"><span class="nav-num">6.2</span>ProgressosModulosAlunos</a>
+            <a href="#ProgressosCursosAlunos"><span class="nav-num">6.3</span>ProgressosCursosAlunos</a>
+            <a href="#MarcosProgressosAlunos"><span class="nav-num">6.4</span>MarcosProgressosAlunos</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">7. Comunicação</span>
+            <a href="#FeedbacksAcademicos"><span class="nav-num">7.1</span>FeedbacksAcademicos</a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-section-label">Apêndice</span>
+            <a href="#enums" class="special"><span class="nav-num">A</span>Enumeradores</a>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main>
+
+        <!-- ── Apresentação ── -->
+        <div class="intro-block" id="intro">
+            <h2>Apresentação</h2>
+            <p>Este documento descreve a estrutura de dados do sistema <strong>PlataformaEnsino</strong>, desenvolvido como parte do Projeto Integrado Multidisciplinar (PIM III) do curso de Tecnologia da Informação da Universidade Paulista — UNIP.</p>
+            <p>O banco de dados foi modelado utilizando a abordagem <em>Code-First</em> do Entity Framework Core com SQL Server, aplicando o padrão <em>Table Per Hierarchy</em> (TPH) para a hierarquia de usuários. Para cada tabela são especificados: nome da coluna, tipo de dado SQL Server, restrições de integridade e descrição semântica do campo.</p>
+        </div>
+
+        <!-- ── Sumário ── -->
+        <div class="summary-wrap" id="sumario">
+            <div class="section-heading">
+                <span class="sec-num">—</span> Sumário de Tabelas
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tabela</th>
+                            <th>Grupo</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="td-center td-type">1.1</td><td class="td-name">Usuarios</td><td class="td-desc">Usuários</td><td class="td-desc">Hierarquia TPH de todos os perfis do sistema</td></tr>
+                        <tr><td class="td-center td-type">2.1</td><td class="td-name">Cursos</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Catálogo de cursos ofertados</td></tr>
+                        <tr><td class="td-center td-type">2.2</td><td class="td-name">Modulos</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Unidades de aprendizagem de um curso</td></tr>
+                        <tr><td class="td-center td-type">2.3</td><td class="td-name">Turmas</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Instâncias de curso conduzidas por professor</td></tr>
+                        <tr><td class="td-center td-type">2.4</td><td class="td-name">Matriculas</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Vínculo aluno–curso–turma e nota final</td></tr>
+                        <tr><td class="td-center td-type">3.1</td><td class="td-name">ConteudosDidaticos</td><td class="td-desc">Conteúdo</td><td class="td-desc">Materiais de aprendizagem (texto, PDF, vídeo, link)</td></tr>
+                        <tr><td class="td-center td-type">4.1</td><td class="td-name">QuestoesBanco</td><td class="td-desc">Banco de Questões</td><td class="td-desc">Repositório reutilizável de questões</td></tr>
+                        <tr><td class="td-center td-type">4.2</td><td class="td-name">AlternativasQuestoesBanco</td><td class="td-desc">Banco de Questões</td><td class="td-desc">Alternativas das questões originais</td></tr>
+                        <tr><td class="td-center td-type">4.3</td><td class="td-name">AnexosQuestoesBanco</td><td class="td-desc">Banco de Questões</td><td class="td-desc">Arquivos e mídias vinculados a questões</td></tr>
+                        <tr><td class="td-center td-type">5.1</td><td class="td-name">Avaliacoes</td><td class="td-desc">Avaliações</td><td class="td-desc">Provas, quizzes e exercícios publicados</td></tr>
+                        <tr><td class="td-center td-type">5.2</td><td class="td-name">QuestoesPublicadas</td><td class="td-desc">Avaliações</td><td class="td-desc">Snapshot de questão em uma avaliação</td></tr>
+                        <tr><td class="td-center td-type">5.3</td><td class="td-name">AlternativasQuestoesPublicadas</td><td class="td-desc">Avaliações</td><td class="td-desc">Snapshot de alternativas publicadas</td></tr>
+                        <tr><td class="td-center td-type">5.4</td><td class="td-name">TentativasAvaliacao</td><td class="td-desc">Avaliações</td><td class="td-desc">Registro de cada tentativa do aluno</td></tr>
+                        <tr><td class="td-center td-type">5.5</td><td class="td-name">RespostasAlunos</td><td class="td-desc">Avaliações</td><td class="td-desc">Resposta individual por questão/tentativa</td></tr>
+                        <tr><td class="td-center td-type">5.6</td><td class="td-name">LancamentosNotasAlunos</td><td class="td-desc">Avaliações</td><td class="td-desc">Nota oficial lançada por avaliação</td></tr>
+                        <tr><td class="td-center td-type">6.1</td><td class="td-name">ProgressosConteudosAlunos</td><td class="td-desc">Progresso</td><td class="td-desc">Progresso por conteúdo didático</td></tr>
+                        <tr><td class="td-center td-type">6.2</td><td class="td-name">ProgressosModulosAlunos</td><td class="td-desc">Progresso</td><td class="td-desc">Agregação de progresso no nível do módulo</td></tr>
+                        <tr><td class="td-center td-type">6.3</td><td class="td-name">ProgressosCursosAlunos</td><td class="td-desc">Progresso</td><td class="td-desc">Agregação de progresso no nível do curso</td></tr>
+                        <tr><td class="td-center td-type">6.4</td><td class="td-name">MarcosProgressosAlunos</td><td class="td-desc">Progresso</td><td class="td-desc">Eventos de progresso significativo</td></tr>
+                        <tr><td class="td-center td-type">7.1</td><td class="td-name">FeedbacksAcademicos</td><td class="td-desc">Comunicação</td><td class="td-desc">Mensagens entre usuários da plataforma</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Legenda ── -->
+        <div style="margin-bottom:56px;" id="legenda">
+            <div class="section-heading">
+                <span class="sec-num">—</span> Legenda de Restrições
+            </div>
+            <div class="legend-wrap">
+                <div class="leg"><span class="tag pk">PK</span> Chave Primária — identifica unicamente o registro</div>
+                <div class="leg"><span class="tag fk">FK</span> Chave Estrangeira — referência a outra tabela</div>
+                <div class="leg"><span class="tag nn">NN</span> NOT NULL — campo obrigatório</div>
+                <div class="leg"><span class="tag nul">NULL</span> Permite valor nulo</div>
+                <div class="leg"><span class="tag disc">DISC</span> Discriminador TPH</div>
+                <div class="leg"><span class="tag en">ENUM</span> Valor inteiro mapeado a enumerador</div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 1 ══ -->
+        <div class="group-header">
+            <span class="grp-num">1</span> Usuários
+        </div>
+
+        <!-- 1.1 Usuarios -->
+        <div class="table-section" id="Usuarios">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">1.1</span> Usuarios</h3>
+                <div class="tbl-desc">Armazena todos os perfis de usuário do sistema. Implementada com Table Per Hierarchy (TPH).</div>
+                <div class="tbl-entity">Entidades: Usuario (abstrata) · Aluno · Professor · Coordenador · Admin</div>
+            </div>
+            <div class="note-box">
+                <strong>Table Per Hierarchy (TPH):</strong> uma única tabela representa toda a hierarquia de herança. O campo <code>TipoUsuario</code> funciona como discriminador e determina o tipo concreto do registro. Colunas exclusivas de um subtipo armazenam <code>NULL</code> para os demais perfis.
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do usuário (auto-increment)</td></tr>
+                        <tr><td class="td-name">Nome</td><td class="td-type">NVARCHAR(150)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nome completo do usuário</td></tr>
+                        <tr><td class="td-name">Email</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Endereço de e-mail; utilizado como credencial de login</td></tr>
+                        <tr><td class="td-name">Cpf</td><td class="td-type">NVARCHAR(11)</td><td><span class="tag nn">NN</span></td><td class="td-desc">CPF sem pontuação — exatamente 11 dígitos numéricos</td></tr>
+                        <tr><td class="td-name">Telefone</td><td class="td-type">NVARCHAR(20)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Número de telefone de contato</td></tr>
+                        <tr><td class="td-name">Cep</td><td class="td-type">NVARCHAR(9)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de Endereçamento Postal</td></tr>
+                        <tr><td class="td-name">Rua</td><td class="td-type">NVARCHAR(200)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Logradouro do endereço</td></tr>
+                        <tr><td class="td-name">Numero</td><td class="td-type">NVARCHAR(20)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Número do endereço</td></tr>
+                        <tr><td class="td-name">Bairro</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Bairro do endereço</td></tr>
+                        <tr><td class="td-name">Cidade</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Cidade do endereço</td></tr>
+                        <tr><td class="td-name">Estado</td><td class="td-type">NVARCHAR(2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Unidade Federativa — sigla de dois caracteres (ex.: SP)</td></tr>
+                        <tr><td class="td-name">TipoUsuario</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag disc">DISC</span> <span class="tag nn">NN</span></td><td class="td-desc">Discriminador TPH: Aluno | Professor | Coordenador | Admin</td></tr>
+                        <tr><td class="td-name">DataCadastro</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora do cadastro no sistema (UTC)</td></tr>
+                        <tr><td class="td-name">SenhaHash</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Hash BCrypt da senha do usuário</td></tr>
+                        <tr><td class="td-name">Ativo</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Situação da conta: 1 = ativa, 0 = desativada</td></tr>
+                        <tr><td class="td-name">Matricula <small style="color:#aaa">(Aluno)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Código de matrícula do aluno</td></tr>
+                        <tr><td class="td-name">TurmaAtual <small style="color:#aaa">(Aluno)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Nome da turma atual do aluno</td></tr>
+                        <tr><td class="td-name">CodigoRegistro <small style="color:#aaa">(Prof/Coord)</small></td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Código de registro profissional do professor ou coordenador</td></tr>
+                        <tr><td class="td-name">Especialidade <small style="color:#aaa">(Professor)</small></td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Área de especialidade do professor</td></tr>
+                        <tr><td class="td-name">CursoResponsavel <small style="color:#aaa">(Coordenador)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Nome do curso sob responsabilidade do coordenador</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 2 ══ -->
+        <div class="group-header">
+            <span class="grp-num">2</span> Estrutura Acadêmica
+        </div>
+
+        <!-- 2.1 Cursos -->
+        <div class="table-section" id="Cursos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">2.1</span> Cursos</h3>
+                <div class="tbl-desc">Catálogo de cursos ofertados pela plataforma.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do curso</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de registro interno do curso</td></tr>
+                        <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(150)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título do curso</td></tr>
+                        <tr><td class="td-name">Descricao</td><td class="td-type">NVARCHAR(1000)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Descrição detalhada do curso</td></tr>
+                        <tr><td class="td-name">Preco</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Preço do curso em reais (≥ 0)</td></tr>
+                        <tr><td class="td-name">CoordenadorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Coordenador responsável pelo curso → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">CriadoPor</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Administrador que criou o curso → Usuarios.Id</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2.2 Modulos -->
+        <div class="table-section" id="Modulos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">2.2</span> Modulos</h3>
+                <div class="tbl-desc">Unidades de aprendizagem que compõem um curso.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do módulo</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de registro interno do módulo</td></tr>
+                        <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(150)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título do módulo</td></tr>
+                        <tr><td class="td-name">DataCriacao</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação do módulo (UTC)</td></tr>
+                        <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso ao qual o módulo pertence → Cursos.Id</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2.3 Turmas -->
+        <div class="table-section" id="Turmas">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">2.3</span> Turmas</h3>
+                <div class="tbl-desc">Instâncias de um curso conduzidas por um professor em um determinado período.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da turma</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de registro interno da turma</td></tr>
+                        <tr><td class="td-name">NomeTurma</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nome ou identificação da turma</td></tr>
+                        <tr><td class="td-name">DataCriacao</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação da turma (UTC)</td></tr>
+                        <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso associado à turma → Cursos.Id</td></tr>
+                        <tr><td class="td-name">ProfessorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor responsável pela condução da turma → Usuarios.Id</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 2.4 Matriculas -->
+        <div class="table-section" id="Matriculas">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">2.4</span> Matriculas</h3>
+                <div class="tbl-desc">Vínculo entre aluno, curso e turma; controla o status e a nota final do aluno.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da matrícula</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de registro interno da matrícula</td></tr>
+                        <tr><td class="td-name">DataSolicitacao</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da solicitação de matrícula (UTC)</td></tr>
+                        <tr><td class="td-name">NotaFinal</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final do aluno no curso, na escala de 0 a 10</td></tr>
+                        <tr><td class="td-name">Status</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusMatricula — Pendente=0 | Aprovada=1 | Rejeitada=2 | Cancelada=3</td></tr>
+                        <tr><td class="td-name">AlunoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Aluno matriculado → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso da matrícula → Cursos.Id</td></tr>
+                        <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Turma vinculada após aprovação da matrícula → Turmas.Id</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 3 ══ -->
+        <div class="group-header">
+            <span class="grp-num">3</span> Conteúdo Didático
+        </div>
+
+        <!-- 3.1 ConteudosDidaticos -->
+        <div class="table-section" id="ConteudosDidaticos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">3.1</span> ConteudosDidaticos</h3>
+                <div class="tbl-desc">Materiais de aprendizagem publicados por professores, vinculados a módulos e turmas.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do conteúdo</td></tr>
+                        <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título do conteúdo didático</td></tr>
+                        <tr><td class="td-name">Descricao</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Descrição resumida do conteúdo</td></tr>
+                        <tr><td class="td-name">TipoConteudo</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoConteudoDidatico — Texto=1 | Pdf=2 | Video=3 | Link=4</td></tr>
+                        <tr><td class="td-name">CorpoTexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Conteúdo textual (utilizado quando TipoConteudo = Texto)</td></tr>
+                        <tr><td class="td-name">ArquivoUrl</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">URL do arquivo hospedado (PDF ou vídeo)</td></tr>
+                        <tr><td class="td-name">LinkUrl</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">URL externa (utilizada quando TipoConteudo = Link)</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor autor do conteúdo → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Turma à qual o conteúdo está disponibilizado → Turmas.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo ao qual o conteúdo pertence → Modulos.Id</td></tr>
+                        <tr><td class="td-name">StatusPublicacao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusPublicacao — Rascunho=1 | Publicado=2 | Arquivado=3</td></tr>
+                        <tr><td class="td-name">OrdemExibicao</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição de exibição dentro do módulo</td></tr>
+                        <tr><td class="td-name">PesoProgresso</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso do conteúdo no cálculo de progresso do módulo</td></tr>
+                        <tr><td class="td-name">PublicadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da publicação (UTC)</td></tr>
+                        <tr><td class="td-name">CriadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação do registro (UTC)</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da última atualização (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 4 ══ -->
+        <div class="group-header">
+            <span class="grp-num">4</span> Banco de Questões
+        </div>
+
+        <!-- 4.1 QuestoesBanco -->
+        <div class="table-section" id="QuestoesBanco">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">4.1</span> QuestoesBanco</h3>
+                <div class="tbl-desc">Repositório reutilizável de questões criadas por professores, independente de avaliações.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da questão</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a questão → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">TituloInterno</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título para identificação interna (não exibido ao aluno)</td></tr>
+                        <tr><td class="td-name">Contexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Texto introdutório ou situação-problema</td></tr>
+                        <tr><td class="td-name">Enunciado</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Enunciado da questão apresentado ao aluno</td></tr>
+                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Discursiva=3</td></tr>
+                        <tr><td class="td-name">Tema</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Tema principal da questão para fins de categorização</td></tr>
+                        <tr><td class="td-name">Subtema</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Assunto específico dentro do tema</td></tr>
+                        <tr><td class="td-name">Dificuldade</td><td class="td-type">TINYINT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nível de dificuldade de 1 (fácil) a 5 (muito difícil)</td></tr>
+                        <tr><td class="td-name">ExplicacaoPosResposta</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Explicação exibida ao aluno após a resposta</td></tr>
+                        <tr><td class="td-name">Ativa</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Indica se a questão está disponível para uso em avaliações</td></tr>
+                        <tr><td class="td-name">CriadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação (UTC)</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da última atualização (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4.2 AlternativasQuestoesBanco -->
+        <div class="table-section" id="AlternativasQuestoesBanco">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">4.2</span> AlternativasQuestoesBanco</h3>
+                <div class="tbl-desc">Alternativas das questões no banco — originais e editáveis pelo professor.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da alternativa</td></tr>
+                        <tr><td class="td-name">QuestaoBancoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão à qual a alternativa pertence → QuestoesBanco.Id</td></tr>
+                        <tr><td class="td-name">Letra</td><td class="td-type">NVARCHAR(1)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Letra identificadora da alternativa (A, B, C, D ou E)</td></tr>
+                        <tr><td class="td-name">Texto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Texto da alternativa exibido ao aluno</td></tr>
+                        <tr><td class="td-name">EhCorreta</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Indica se esta é a alternativa correta da questão</td></tr>
+                        <tr><td class="td-name">Justificativa</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Explicação do porquê a alternativa é correta ou incorreta</td></tr>
+                        <tr><td class="td-name">Ordem</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição de exibição da alternativa na questão</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4.3 AnexosQuestoesBanco -->
+        <div class="table-section" id="AnexosQuestoesBanco">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">4.3</span> AnexosQuestoesBanco</h3>
+                <div class="tbl-desc">Arquivos e mídias complementares vinculados às questões do banco.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do anexo</td></tr>
+                        <tr><td class="td-name">QuestaoBancoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão à qual o anexo está vinculado → QuestoesBanco.Id</td></tr>
+                        <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(160)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título descritivo do anexo</td></tr>
+                        <tr><td class="td-name">TipoAnexo</td><td class="td-type">NVARCHAR(40)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Tipo do arquivo (ex.: imagem, audio, pdf)</td></tr>
+                        <tr><td class="td-name">ArquivoUrl</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">URL do arquivo hospedado</td></tr>
+                        <tr><td class="td-name">Ordem</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição de exibição do anexo na questão</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 5 ══ -->
+        <div class="group-header">
+            <span class="grp-num">5</span> Avaliações
+        </div>
+
+        <!-- 5.1 Avaliacoes -->
+        <div class="table-section" id="Avaliacoes">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.1</span> Avaliacoes</h3>
+                <div class="tbl-desc">Provas, quizzes e exercícios publicados em um módulo e turma.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da avaliação</td></tr>
+                        <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título da avaliação</td></tr>
+                        <tr><td class="td-name">Descricao</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Instruções ou descrição geral da avaliação</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a avaliação → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Turma à qual a avaliação está associada → Turmas.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo ao qual a avaliação pertence → Modulos.Id</td></tr>
+                        <tr><td class="td-name">TipoAvaliacao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoAvaliacao — Quiz=1 | Prova=2 | Exercicio=3</td></tr>
+                        <tr><td class="td-name">StatusPublicacao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusPublicacao — Rascunho=1 | Publicado=2 | Arquivado=3</td></tr>
+                        <tr><td class="td-name">DataAbertura</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora de abertura para os alunos (UTC)</td></tr>
+                        <tr><td class="td-name">DataFechamento</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora de encerramento da avaliação (UTC)</td></tr>
+                        <tr><td class="td-name">TentativasPermitidas</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Número máximo de tentativas por aluno (mínimo 1)</td></tr>
+                        <tr><td class="td-name">TempoLimiteMinutos</td><td class="td-type">INT</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Tempo máximo em minutos para conclusão; nulo indica sem limite</td></tr>
+                        <tr><td class="td-name">NotaMaxima</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Valor máximo da avaliação (padrão 10,00)</td></tr>
+                        <tr><td class="td-name">PesoNota</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso da avaliação no cálculo da nota do módulo</td></tr>
+                        <tr><td class="td-name">PesoProgresso</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso da avaliação no cálculo de progresso do módulo</td></tr>
+                        <tr><td class="td-name">PublicadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da publicação (UTC)</td></tr>
+                        <tr><td class="td-name">CriadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação do registro (UTC)</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da última atualização (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5.2 QuestoesPublicadas -->
+        <div class="table-section" id="QuestoesPublicadas">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.2</span> QuestoesPublicadas</h3>
+                <div class="tbl-desc">Snapshot imutável de uma questão vinculada a uma avaliação no momento da publicação.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da questão publicada</td></tr>
+                        <tr><td class="td-name">AvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Avaliação à qual pertence → Avaliacoes.Id</td></tr>
+                        <tr><td class="td-name">QuestaoBancoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão de origem no repositório → QuestoesBanco.Id</td></tr>
+                        <tr><td class="td-name">Ordem</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição da questão na sequência da avaliação</td></tr>
+                        <tr><td class="td-name">ContextoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Cópia do contexto registrada no momento da publicação</td></tr>
+                        <tr><td class="td-name">EnunciadoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Cópia do enunciado registrada no momento da publicação</td></tr>
+                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Discursiva=3</td></tr>
+                        <tr><td class="td-name">ExplicacaoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Cópia da explicação pós-resposta registrada na publicação</td></tr>
+                        <tr><td class="td-name">Pontos</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Pontuação da questão na avaliação (padrão 1,00)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5.3 AlternativasQuestoesPublicadas -->
+        <div class="table-section" id="AlternativasQuestoesPublicadas">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.3</span> AlternativasQuestoesPublicadas</h3>
+                <div class="tbl-desc">Snapshot das alternativas vinculadas a questões publicadas em avaliações.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da alternativa publicada</td></tr>
+                        <tr><td class="td-name">QuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão publicada à qual pertence → QuestoesPublicadas.Id</td></tr>
+                        <tr><td class="td-name">Letra</td><td class="td-type">NVARCHAR(1)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Letra identificadora da alternativa (A, B, C, D ou E)</td></tr>
+                        <tr><td class="td-name">Texto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Texto da alternativa (snapshot)</td></tr>
+                        <tr><td class="td-name">EhCorreta</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Indica se esta é a alternativa correta</td></tr>
+                        <tr><td class="td-name">JustificativaSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Cópia da justificativa registrada no momento da publicação</td></tr>
+                        <tr><td class="td-name">Ordem</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição de exibição da alternativa</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5.4 TentativasAvaliacao -->
+        <div class="table-section" id="TentativasAvaliacao">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.4</span> TentativasAvaliacao</h3>
+                <div class="tbl-desc">Registro de cada tentativa realizada por um aluno em uma avaliação.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da tentativa</td></tr>
+                        <tr><td class="td-name">AvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Avaliação realizada → Avaliacoes.Id</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno que realizou a tentativa → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">NumeroTentativa</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Número sequencial da tentativa do aluno nesta avaliação</td></tr>
+                        <tr><td class="td-name">StatusTentativa</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusTentativaAvaliacao — EmAndamento=1 | Enviada=2 | Corrigida=3 | Expirada=4</td></tr>
+                        <tr><td class="td-name">IniciadaEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de início da tentativa (UTC)</td></tr>
+                        <tr><td class="td-name">EnviadaEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora de envio das respostas (UTC)</td></tr>
+                        <tr><td class="td-name">CorrigidaEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da correção da tentativa (UTC)</td></tr>
+                        <tr><td class="td-name">NotaBruta</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma dos pontos obtidos nas respostas antes da ponderação</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5.5 RespostasAlunos -->
+        <div class="table-section" id="RespostasAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.5</span> RespostasAlunos</h3>
+                <div class="tbl-desc">Resposta individual de um aluno para cada questão dentro de uma tentativa.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da resposta</td></tr>
+                        <tr><td class="td-name">TentativaAvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Tentativa à qual a resposta pertence → TentativasAvaliacao.Id</td></tr>
+                        <tr><td class="td-name">QuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão respondida → QuestoesPublicadas.Id</td></tr>
+                        <tr><td class="td-name">AlternativaQuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Alternativa selecionada; nulo para questões discursivas → AlternativasQuestoesPublicadas.Id</td></tr>
+                        <tr><td class="td-name">RespostaTexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Resposta textual; preenchida em questões discursivas</td></tr>
+                        <tr><td class="td-name">Correta</td><td class="td-type">BIT</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Resultado da correção; nulo indica aguardando correção manual</td></tr>
+                        <tr><td class="td-name">PontosObtidos</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Pontuação obtida nesta resposta</td></tr>
+                        <tr><td class="td-name">RespondidaEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora em que a resposta foi registrada (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 5.6 LancamentosNotasAlunos -->
+        <div class="table-section" id="LancamentosNotasAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">5.6</span> LancamentosNotasAlunos</h3>
+                <div class="tbl-desc">Nota oficial lançada por avaliação, podendo ter origem automática ou manual.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do lançamento</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">AvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Avaliação correspondente ao lançamento → Avaliacoes.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo da avaliação → Modulos.Id</td></tr>
+                        <tr><td class="td-name">TentativaAvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Tentativa de origem; nulo em lançamentos manuais → TentativasAvaliacao.Id</td></tr>
+                        <tr><td class="td-name">ProfessorResponsavelId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Professor responsável pela correção manual → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">NotaOficial</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final oficial lançada (≥ 0)</td></tr>
+                        <tr><td class="td-name">PesoNota</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso desta nota no cálculo da média do módulo</td></tr>
+                        <tr><td class="td-name">OrigemCorrecao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">OrigemCorrecaoNota — Automatica=1 | Manual=2 | Mista=3</td></tr>
+                        <tr><td class="td-name">LiberadaAoAlunoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora em que a nota foi liberada ao aluno (UTC)</td></tr>
+                        <tr><td class="td-name">FeedbackProfessor</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Comentário do professor sobre o desempenho do aluno</td></tr>
+                        <tr><td class="td-name">CriadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação do registro (UTC)</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora da última atualização (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 6 ══ -->
+        <div class="group-header">
+            <span class="grp-num">6</span> Progresso de Aprendizagem
+        </div>
+
+        <!-- 6.1 ProgressosConteudosAlunos -->
+        <div class="table-section" id="ProgressosConteudosAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">6.1</span> ProgressosConteudosAlunos</h3>
+                <div class="tbl-desc">Rastreamento granular do progresso de cada aluno por conteúdo didático.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do registro</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">ConteudoDidaticoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Conteúdo acessado → ConteudosDidaticos.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo do conteúdo → Modulos.Id</td></tr>
+                        <tr><td class="td-name">StatusProgresso</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusProgressoAprendizagem — NaoIniciado=1 | EmAndamento=2 | Concluido=3</td></tr>
+                        <tr><td class="td-name">PercentualConclusao</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Percentual de conclusão do conteúdo (0 a 100)</td></tr>
+                        <tr><td class="td-name">PrimeiroAcessoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora do primeiro acesso ao conteúdo (UTC)</td></tr>
+                        <tr><td class="td-name">UltimoAcessoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora do último acesso ao conteúdo (UTC)</td></tr>
+                        <tr><td class="td-name">ConcluidoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora em que o conteúdo foi concluído (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6.2 ProgressosModulosAlunos -->
+        <div class="table-section" id="ProgressosModulosAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">6.2</span> ProgressosModulosAlunos</h3>
+                <div class="tbl-desc">Agregação do progresso do aluno no nível do módulo, incluindo médias e contagens.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do registro</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo acompanhado → Modulos.Id</td></tr>
+                        <tr><td class="td-name">StatusProgresso</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusProgressoAprendizagem — NaoIniciado=1 | EmAndamento=2 | Concluido=3</td></tr>
+                        <tr><td class="td-name">PercentualConclusao</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Percentual ponderado de conclusão do módulo (0 a 100)</td></tr>
+                        <tr><td class="td-name">PesoConcluido</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma dos pesos dos itens concluídos</td></tr>
+                        <tr><td class="td-name">PesoTotal</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma total dos pesos do módulo</td></tr>
+                        <tr><td class="td-name">ConteudosConcluidos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Quantidade de conteúdos concluídos pelo aluno</td></tr>
+                        <tr><td class="td-name">TotalConteudos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de conteúdos existentes no módulo</td></tr>
+                        <tr><td class="td-name">AvaliacoesConcluidas</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Quantidade de avaliações concluídas pelo aluno</td></tr>
+                        <tr><td class="td-name">TotalAvaliacoes</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de avaliações existentes no módulo</td></tr>
+                        <tr><td class="td-name">MediaModulo</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no módulo</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da última atualização do registro (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6.3 ProgressosCursosAlunos -->
+        <div class="table-section" id="ProgressosCursosAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">6.3</span> ProgressosCursosAlunos</h3>
+                <div class="tbl-desc">Agregação do progresso do aluno no nível do curso.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do registro</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso acompanhado → Cursos.Id</td></tr>
+                        <tr><td class="td-name">StatusProgresso</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusProgressoAprendizagem — NaoIniciado=1 | EmAndamento=2 | Concluido=3</td></tr>
+                        <tr><td class="td-name">PercentualConclusao</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Percentual ponderado de conclusão do curso (0 a 100)</td></tr>
+                        <tr><td class="td-name">PesoConcluido</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma dos pesos dos módulos concluídos</td></tr>
+                        <tr><td class="td-name">PesoTotal</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma total dos pesos do curso</td></tr>
+                        <tr><td class="td-name">ModulosConcluidos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Quantidade de módulos concluídos pelo aluno</td></tr>
+                        <tr><td class="td-name">TotalModulos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de módulos existentes no curso</td></tr>
+                        <tr><td class="td-name">MediaCurso</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no curso</td></tr>
+                        <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da última atualização do registro (UTC)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 6.4 MarcosProgressosAlunos -->
+        <div class="table-section" id="MarcosProgressosAlunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">6.4</span> MarcosProgressosAlunos</h3>
+                <div class="tbl-desc">Eventos de progresso relevante gerados automaticamente pelo sistema (ex.: módulo concluído).</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do marco</td></tr>
+                        <tr><td class="td-name">MatriculaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Matrícula do aluno → Matriculas.Id</td></tr>
+                        <tr><td class="td-name">Escopo</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">EscopoMarcoProgresso — Curso=1 | Modulo=2</td></tr>
+                        <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso ao qual o marco se refere → Cursos.Id</td></tr>
+                        <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Módulo ao qual o marco se refere; nulo quando escopo = Curso → Modulos.Id</td></tr>
+                        <tr><td class="td-name">Origem</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">OrigemMarcoProgresso — ConteudoConcluido=1 | AvaliacaoConcluida=2 | ModuloAtualizado=3 | CursoAtualizado=4 | Recalculo=5</td></tr>
+                        <tr><td class="td-name">PercentualMarco</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Percentual registrado no momento do evento</td></tr>
+                        <tr><td class="td-name">ReferenciaId</td><td class="td-type">INT</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Identificador do item que originou o marco (ex.: ConteudoDidaticoId)</td></tr>
+                        <tr><td class="td-name">GeradoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de geração do marco (UTC)</td></tr>
+                        <tr><td class="td-name">ProcessadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora do processamento do marco (UTC)</td></tr>
+                        <tr><td class="td-name">Observacao</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Observação complementar sobre o marco gerado</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ GRUPO 7 ══ -->
+        <div class="group-header">
+            <span class="grp-num">7</span> Comunicação
+        </div>
+
+        <!-- 7.1 FeedbacksAcademicos -->
+        <div class="table-section" id="FeedbacksAcademicos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">7.1</span> FeedbacksAcademicos</h3>
+                <div class="tbl-desc">Mensagens acadêmicas enviadas entre usuários ou geradas pelo sistema.</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do feedback</td></tr>
+                        <tr><td class="td-name">DestinatarioId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Usuário destinatário da mensagem → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">AutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Usuário remetente; nulo indica mensagem gerada pelo sistema → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">Origem</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Contexto de origem da mensagem (ex.: "Avaliação X", "Sistema")</td></tr>
+                        <tr><td class="td-name">Mensagem</td><td class="td-type">NVARCHAR(1000)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Conteúdo textual do feedback</td></tr>
+                        <tr><td class="td-name">CriadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação do feedback (UTC)</td></tr>
+                        <tr><td class="td-name">Lido</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Indica se o destinatário leu a mensagem: 1 = lido, 0 = não lido</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════ APÊNDICE A ══ -->
+        <div class="group-header" id="enums">
+            <span class="grp-num">A</span> Apêndice — Enumeradores
+        </div>
+
+        <div class="intro-block" style="margin-bottom:24px;">
+            <h2>Sobre os Enumeradores</h2>
+            <p>Os enumeradores são armazenados como valores inteiros nas colunas do banco de dados. A tabela a seguir apresenta o mapeamento entre o valor numérico persistido e o seu significado semântico na aplicação.</p>
+        </div>
+
+        <div class="enums-grid">
+            <div class="enum-card">
+                <div class="enum-card-header">StatusMatricula</div>
+                <table><tbody>
+                    <tr><td class="td-val">0</td><td class="td-desc">Pendente</td></tr>
+                    <tr><td class="td-val">1</td><td class="td-desc">Aprovada</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Rejeitada</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Cancelada</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">TipoConteudoDidatico</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Texto</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Pdf</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Video</td></tr>
+                    <tr><td class="td-val">4</td><td class="td-desc">Link</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">StatusPublicacao</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Rascunho</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Publicado</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Arquivado</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">TipoQuestao</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Múltipla Escolha</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Verdadeiro / Falso</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Discursiva</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">TipoAvaliacao</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Quiz</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Prova</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Exercício</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">StatusTentativaAvaliacao</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Em Andamento</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Enviada</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Corrigida</td></tr>
+                    <tr><td class="td-val">4</td><td class="td-desc">Expirada</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">StatusProgressoAprendizagem</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Não Iniciado</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Em Andamento</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Concluído</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">OrigemCorrecaoNota</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Automática</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Manual</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Mista</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">EscopoMarcoProgresso</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Curso</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Módulo</td></tr>
+                </tbody></table>
+            </div>
+            <div class="enum-card">
+                <div class="enum-card-header">OrigemMarcoProgresso</div>
+                <table><tbody>
+                    <tr><td class="td-val">1</td><td class="td-desc">Conteúdo Concluído</td></tr>
+                    <tr><td class="td-val">2</td><td class="td-desc">Avaliação Concluída</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Módulo Atualizado</td></tr>
+                    <tr><td class="td-val">4</td><td class="td-desc">Curso Atualizado</td></tr>
+                    <tr><td class="td-val">5</td><td class="td-desc">Recálculo</td></tr>
+                </tbody></table>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+</body>
+</html>
