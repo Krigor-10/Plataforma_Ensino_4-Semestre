@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { InlineMessage, PanelCard, RouteLink, StatusPill } from "../components/Primitives.jsx";
+import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
+import LayoutWorkspace from "./workspace/LayoutWorkspace.jsx";
 import { SecaoAlunos } from "./workspace/SecaoAlunos.jsx";
 import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.jsx";
 import { SecaoConteudosProfessor } from "./workspace/SecaoConteudosProfessor.jsx";
@@ -12,6 +13,7 @@ import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
 import { SecaoTurmas } from "./workspace/SecaoTurmas.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
 import { ResumoWorkspace } from "./workspace/ResumoWorkspace.jsx";
+import { SecaoCertificados } from "./workspace/SecaoCertificados.jsx";
 import { APP_SECTIONS, getSectionMeta, MANAGER_ROLES, EMPTY_SNAPSHOT } from "../data/appConfig.js";
 import { hasSnapshotData, loadWorkspaceSnapshot, mapById } from "../lib/dashboard.js";
 import { ApiError } from "../lib/api.js";
@@ -60,7 +62,7 @@ export default function WorkspaceScreen({
     : "dashboard";
   const showOverviewCards = isManager
     ? activeSection === "dashboard"
-    : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos"].includes(activeSection));
+    : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "certificados"].includes(activeSection));
   const mostrarAcaoCriarConteudo = isProfessor && activeSection === "conteudos";
   const mostrarAcaoCriarAvaliacao = isProfessor && activeSection === "avaliacoes";
 
@@ -301,7 +303,6 @@ export default function WorkspaceScreen({
 
   const sectionMeta = getSectionMeta(activeSection, role);
   const hasData = hasSnapshotData(snapshot);
-  const sidebarHeading = isProfessor ? "Painel do professor" : isManager ? "Painel de gestao" : "Painel do aluno";
   const userInitials = useMemo(() => {
     const parts = String(usuario.nome || "")
       .trim()
@@ -463,72 +464,6 @@ export default function WorkspaceScreen({
 
   return (
     <div className="workspace-app">
-      <header className="workspace-globalbar">
-        <RouteLink className="workspace-brand" onNavigate={onNavigate} to="/app">
-          Ed<span>Tech</span>
-        </RouteLink>
-        <div className="workspace-globalbar__context">
-          <span className="workspace-globalbar__eyebrow">{sidebarHeading}</span>
-          <strong>{sectionMeta.title}</strong>
-        </div>
-        {isStudent ? (
-          <div className="workspace-globalbar__shortcuts">
-            <RouteLink
-              className={`workspace-globalbar__shortcut${activeSection === "meus-cursos" ? " workspace-globalbar__shortcut--active" : ""}`}
-              onNavigate={onNavigate}
-              to="/app/meus-cursos"
-            >
-              Meus cursos
-            </RouteLink>
-            <RouteLink
-              className={`workspace-globalbar__shortcut${activeSection === "avaliacoes" ? " workspace-globalbar__shortcut--active" : ""}`}
-              onNavigate={onNavigate}
-              to="/app/avaliacoes"
-            >
-              {"REALIZAR AVALIA\u00c7\u00c3O"}
-            </RouteLink>
-          </div>
-        ) : null}
-        <div className="workspace-globalbar__session" aria-label="Resumo da sessao">
-          <div className="workspace-globalbar__identity">
-            <button
-              aria-expanded={isProfileOpen}
-              aria-haspopup="dialog"
-              aria-label={`Abrir perfil de ${usuario.nome}`}
-              className="workspace-globalbar__avatar"
-              onClick={() => setIsProfileOpen(true)}
-              type="button"
-            >
-              {userInitials}
-            </button>
-            <span className="workspace-globalbar__user-name">{usuario.nome}</span>
-          </div>
-          <span className="workspace-globalbar__separator" aria-hidden="true">
-            |
-          </span>
-          <span className="workspace-globalbar__role">{role}</span>
-          {isDemoMode ? (
-            <>
-              <span className="workspace-globalbar__separator" aria-hidden="true">
-                |
-              </span>
-              <StatusPill tone="warning">Modo demo</StatusPill>
-              {canDisableDemoMode ? (
-                <button className="workspace-globalbar__logout" type="button" onClick={() => solicitarSaida("demo")}>
-                  Sair do demo
-                </button>
-              ) : null}
-            </>
-          ) : null}
-          <span className="workspace-globalbar__separator" aria-hidden="true">
-            |
-          </span>
-          <button className="workspace-globalbar__logout" type="button" onClick={() => solicitarSaida("sessao")}>
-            Sair
-          </button>
-        </div>
-      </header>
-
       {confirmacaoSessao ? (
         <ConfirmacaoSessaoModal
           confirmLabel={confirmacaoSessao.confirmLabel}
@@ -552,51 +487,17 @@ export default function WorkspaceScreen({
         />
       ) : null}
 
-      <div className="workspace-shell">
-      <aside className="workspace-sidebar">
-        <div className="workspace-sidebar__top">
-          <span className="eyebrow">Navegacao lateral</span>
-          <p className="workspace-sidebar__subtitle">Acesse as areas do seu workspace e acompanhe o contexto atual.</p>
-        </div>
-
-        <div className="workspace-sidebar__card workspace-sidebar__card--session">
-          <div className="workspace-sidebar__card-header">
-            <span className="eyebrow">Sessao atual</span>
-            <span className="workspace-sidebar__badge">{role}</span>
-          </div>
-          <strong className="workspace-sidebar__user-name">{usuario.nome}</strong>
-          <p className="workspace-sidebar__helper">Area aberta: {sectionMeta.title}</p>
-        </div>
-
-        <div className="workspace-sidebar__card">
-          <div className="workspace-sidebar__card-header">
-            <div>
-              <span className="eyebrow">Menu do workspace</span>
-              <h2 className="workspace-sidebar__card-title">Navegacao</h2>
-            </div>
-            <span className="workspace-sidebar__badge">{navSections.length} areas</span>
-          </div>
-          <nav className="workspace-nav" aria-label="Navegacao do painel">
-            {navSections.map((section) => {
-              const path = section.key === "dashboard" ? "/app" : `/app/${section.key}`;
-              const active = section.key === activeSection;
-
-              return (
-                <RouteLink
-                  className={`workspace-nav__item${active ? " workspace-nav__item--active" : ""}`}
-                  key={section.key}
-                  onNavigate={onNavigate}
-                  to={path}
-                >
-                  <span>{isProfessor && section.key === "turmas" ? "Minhas Turmas" : section.label}</span>
-                </RouteLink>
-              );
-            })}
-          </nav>
-        </div>
-      </aside>
-
-      <main className="workspace-main">
+      <LayoutWorkspace
+        usuario={usuario}
+        secaoAtual={activeSection}
+        sections={navSections}
+        cursos={snapshot.cursos}
+        modulos={snapshot.modulos}
+        contadorMatriculasPendentes={isManager ? snapshot.pendentes.length : 0}
+        onNavigate={onNavigate}
+        onAbrirPerfil={() => setIsProfileOpen(true)}
+        onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
+      >
         <header className="workspace-hero">
           <div className="workspace-hero__meta">
             <span className="eyebrow">Workspace React</span>
@@ -794,6 +695,15 @@ export default function WorkspaceScreen({
               />
             ) : null}
 
+            {activeSection === "certificados" ? (
+              <SecaoCertificados
+                avaliacoes={snapshot.avaliacoes}
+                matriculaRows={matriculaRows}
+                progressos={snapshot.progressos}
+                usuario={usuario}
+              />
+            ) : null}
+
             {activeSection === "turmas" ? (
               <SecaoTurmas
                 cursoPorId={cursoById}
@@ -811,8 +721,7 @@ export default function WorkspaceScreen({
             ) : null}
           </>
         ) : null}
-      </main>
-      </div>
+      </LayoutWorkspace>
     </div>
   );
 }

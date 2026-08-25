@@ -2552,6 +2552,172 @@
   }
 }
 
+.certificate-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.certificate-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(185, 153, 255, 0.12);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 16px;
+}
+
+.certificate-card--unlocked {
+  border-color: rgba(123, 47, 247, 0.3);
+}
+
+.certificate-card__icon {
+  align-items: center;
+  background: rgba(123, 47, 247, 0.14);
+  border: 1px solid rgba(185, 153, 255, 0.22);
+  border-radius: 999px;
+  color: var(--brand-mint);
+  display: inline-flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.certificate-card__info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.certificate-card__info strong {
+  color: var(--ink-strong);
+  overflow-wrap: anywhere;
+}
+
+.certificate-card__info p {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.certificate-card__status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--button-gap);
+  justify-content: flex-end;
+}
+
+.achievement-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.achievement-badge {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(185, 153, 255, 0.2);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  position: relative;
+}
+
+.achievement-badge strong {
+  color: var(--ink-strong);
+}
+
+.achievement-badge p {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.achievement-badge span {
+  font-size: 1.2rem;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+}
+
+.achievement-badge--unlocked {
+  background: rgba(123, 47, 247, 0.08);
+  border-style: solid;
+  border-color: rgba(123, 47, 247, 0.3);
+}
+
+.achievement-badge--unlocked span {
+  color: var(--brand-mint);
+}
+
+.certificate-sheet {
+  align-items: center;
+  background: linear-gradient(180deg, rgba(123, 47, 247, 0.06), transparent 60%), var(--card-strong);
+  border: 2px solid rgba(123, 47, 247, 0.3);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  margin: 0;
+  padding: 48px 32px;
+  text-align: center;
+}
+
+.certificate-sheet__eyebrow {
+  color: var(--brand-mint);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.certificate-sheet__intro,
+.certificate-sheet__body {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.certificate-sheet__name {
+  color: var(--ink-strong);
+  font-family: var(--font-display);
+  font-size: 2rem;
+}
+
+.certificate-sheet__course {
+  color: var(--brand-mint);
+  font-size: 1.3rem;
+}
+
+.certificate-sheet__meta {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  margin-top: 12px;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .certificate-print-area,
+  .certificate-print-area * {
+    visibility: visible;
+  }
+
+  .certificate-print-area {
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   .workspace-app,
   .workspace-globalbar,

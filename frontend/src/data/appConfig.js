@@ -11,7 +11,8 @@ export const APP_SECTIONS = [
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Coordenador", "Aluno"] },
-  { key: "turmas", label: "Turmas", roles: ["Admin", "Coordenador", "Professor"] }
+  { key: "turmas", label: "Turmas", roles: ["Admin", "Coordenador", "Professor"] },
+  { key: "certificados", label: "Certificados", roles: ["Aluno"] }
 ];
 
 export const PUBLIC_PILLARS = [
@@ -139,6 +140,10 @@ export function getSectionMeta(section, role) {
     turmas: {
       title: "Mapa de turmas",
       description: "Turmas organizadas para atribuicao e acompanhamento dentro do produto."
+    },
+    certificados: {
+      title: "Meus certificados",
+      description: "Diplomas digitais e conquistas desbloqueadas pelo seu progresso nos cursos."
     }
   };
 

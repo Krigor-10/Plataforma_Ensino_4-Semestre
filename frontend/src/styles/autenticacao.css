@@ -1,0 +1,625 @@
+/* ============================================================
+   TELA LOGIN
+   ============================================================ */
+.tela-login {
+  min-height: 100dvh;
+  display: flex;
+}
+
+.tela-login__visual {
+  flex: 1;
+  background: linear-gradient(135deg, var(--cor-fundo-alt) 0%, rgba(123, 47, 247, 0.15) 100%);
+  border-right: 1px solid var(--cor-borda);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco-2xl);
+}
+
+.tela-login--aluno .tela-login__visual {
+  background: #1a0d3e;
+}
+
+.tela-login__visual-conteudo {
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+}
+
+.visual-logo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.visual-logo__marca {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--fonte-display);
+  font-size: clamp(3.5rem, 6vw, 5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #fff;
+}
+
+.tela-login--aluno .visual-logo__marca span:last-child {
+  background: linear-gradient(180deg, #cb9cff 0%, #9d67ff 32%, #7b2ff7 72%, #5b19cf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.visual-logo__subtitulo {
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #fff;
+  margin-left: 0.15rem;
+}
+
+.tela-login__visual-tag {
+  display: inline-block;
+  background: rgba(123, 47, 247, 0.2);
+  color: var(--cor-marca-clara);
+  border: 1px solid var(--cor-borda-forte);
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--raio-circular);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: var(--espaco-lg);
+}
+
+.tela-login__visual-titulo {
+  font-family: var(--fonte-display);
+  font-size: clamp(2rem, 3vw, 3rem);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: var(--espaco-lg);
+}
+
+.tela-login__visual-titulo span {
+  background: linear-gradient(135deg, var(--cor-marca-clara), var(--cor-marca));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tela-login__visual-descricao {
+  color: var(--cor-texto-suave);
+  line-height: 1.7;
+}
+
+.login-aluno__destaques {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--espaco-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.login-aluno__destaques li {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  padding-left: var(--espaco-lg);
+  position: relative;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.login-aluno__destaques li::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.tela-login__formulario {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--espaco-xl);
+  overflow-y: auto;
+}
+
+.tela-login__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--espaco-2xl);
+}
+
+.tela-login__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-decoration: none;
+  color: var(--cor-texto-forte);
+}
+
+.tela-login__logo-marca {
+  align-items: baseline;
+  display: inline-flex;
+  font-family: var(--fonte-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.tela-login__logo-marca span:first-child {
+  color: var(--cor-texto-forte);
+}
+
+.tela-login__logo-marca span:last-child {
+  background: linear-gradient(180deg, #cb9cff 0%, #9d67ff 32%, #7b2ff7 72%, #5b19cf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tela-login__corpo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--espaco-lg);
+  max-width: 420px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tela-login__titulo {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--cor-texto-forte) 40%, var(--cor-marca-clara));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tela-login__subtitulo {
+  color: var(--cor-texto-suave);
+  font-size: 0.9rem;
+  margin-top: calc(-1 * var(--espaco-sm));
+}
+
+.tela-login__divisor {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  color: var(--cor-texto-suave);
+  font-size: 0.8rem;
+  margin: var(--espaco-sm) 0;
+}
+
+.tela-login__divisor::before,
+.tela-login__divisor::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--cor-borda);
+}
+
+.tela-login__rodape-texto {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  text-align: center;
+}
+
+.tela-login__acoes-rodape {
+  display: flex;
+  gap: var(--espaco-md);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--espaco-sm);
+}
+
+.login-aluno__perfil-demo {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  background: rgba(123, 47, 247, 0.08);
+  border: 2px solid var(--cor-marca);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-lg) var(--espaco-xl);
+  box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.1);
+}
+
+.login-aluno__avatar {
+  color: var(--cor-marca-clara);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-aluno__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.login-aluno__info strong {
+  font-size: 0.95rem;
+  color: var(--cor-texto-forte);
+}
+
+.login-aluno__info span {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.login-aluno__check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tela-login__perfis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  border: none;
+  padding: 0;
+}
+
+.cartao-perfil {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding: var(--espaco-lg) var(--espaco-xl);
+  border: 2px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  background: var(--cor-cartao);
+  cursor: pointer;
+  transition: all var(--transicao-normal);
+  text-align: left;
+  width: 100%;
+  position: relative;
+}
+
+.cartao-perfil:hover {
+  border-color: var(--cor-borda-forte);
+}
+
+.cartao-perfil--selecionado {
+  border-color: var(--cor-marca);
+  background: rgba(123, 47, 247, 0.08);
+  box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.1);
+}
+
+.cartao-perfil__icone {
+  color: var(--cor-marca-clara);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.cartao-perfil__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.cartao-perfil__rotulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.cartao-perfil__descricao {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.cartao-perfil__check {
+  align-items: center;
+  background: #22c55e;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 900;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+@media (max-width: 768px) {
+  .tela-login__visual {
+    display: none;
+  }
+
+  .tela-login__formulario {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .tela-login__formulario {
+    padding: var(--espaco-lg);
+  }
+}
+
+/* ============================================================
+   TELA DE CADASTRO
+   ============================================================ */
+.tela-cadastro {
+  min-height: 100vh;
+  background: var(--cor-fundo);
+  display: flex;
+  flex-direction: column;
+}
+
+.cadastro-cabecalho {
+  background: rgba(25, 27, 33, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--cor-borda);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.cadastro-cabecalho__inner {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--espaco-xl);
+  height: 64px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.cadastro-cabecalho__inner .cadastro-voltar {
+  justify-self: start;
+}
+
+.cadastro-cabecalho__inner .cabecalho-publico__logo {
+  justify-self: center;
+}
+
+.cadastro-cabecalho__inner .cadastro-cabecalho__legenda {
+  justify-self: end;
+}
+
+.cadastro-cabecalho__legenda {
+  font-size: 0.88rem;
+  color: var(--cor-texto-suave);
+}
+
+.link-botao {
+  background: none;
+  border: none;
+  color: var(--cor-marca-clara);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.link-botao:hover {
+  color: var(--cor-texto-forte);
+}
+
+.cadastro-principal {
+  flex: 1;
+  padding: var(--espaco-xl) var(--espaco-md);
+}
+
+.cadastro-container {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-xl);
+}
+
+.cadastro-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: none;
+  padding: 0.45rem 0;
+  color: var(--cor-marca-clara);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transicao-rapida), transform var(--transicao-rapida);
+  white-space: nowrap;
+}
+
+.cadastro-voltar:hover {
+  color: var(--cor-texto-forte);
+  transform: translateX(-2px);
+}
+
+.cadastro-entrar {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--cor-marca-clara);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transicao-rapida);
+  white-space: nowrap;
+}
+
+.cadastro-entrar:hover {
+  color: var(--cor-texto-forte);
+}
+
+.cadastro-intro__titulo {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  color: var(--cor-texto-forte);
+  margin-bottom: var(--espaco-sm);
+}
+
+.cadastro-intro__subtitulo {
+  color: var(--cor-texto-suave);
+  font-size: 0.95rem;
+}
+
+.formulario-cadastro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-lg);
+}
+
+.formulario-cadastro__grupo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.formulario-cadastro__legenda {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--cor-marca-clara);
+  margin-bottom: var(--espaco-sm);
+}
+
+.grade-endereco {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: var(--espaco-md);
+}
+
+.campo__dica {
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.campo__linha {
+  display: flex;
+  gap: var(--espaco-sm);
+  align-items: center;
+}
+
+.campo__linha .campo__entrada {
+  flex: 1;
+}
+
+.campo__indicador {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.campo--erro .campo__entrada {
+  border-color: #ef4444;
+  outline-color: #ef4444;
+}
+
+.campo__erro {
+  font-size: 0.78rem;
+  color: #f87171;
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.formulario-cadastro__rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding-bottom: var(--espaco-xl);
+}
+
+.tela-cadastro--confirmacao {
+  align-items: center;
+  justify-content: center;
+}
+
+.cadastro-confirmacao {
+  max-width: 480px;
+  text-align: center;
+  padding: var(--espaco-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-lg);
+  margin: auto;
+}
+
+.cadastro-confirmacao__icone {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #22c55e;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cadastro-confirmacao__titulo {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--cor-texto-forte);
+}
+
+.cadastro-confirmacao__texto {
+  color: var(--cor-texto-suave);
+  line-height: 1.7;
+}
+
+.cadastro-confirmacao__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .grade-endereco {
+    grid-template-columns: 1fr;
+  }
+
+  .formulario-cadastro__rodape {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .formulario-cadastro__grupo {
+    padding: var(--espaco-lg);
+  }
+
+  .cadastro-cabecalho__inner {
+    padding: 0 var(--espaco-md);
+  }
+}

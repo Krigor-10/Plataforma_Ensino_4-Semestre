@@ -1,60 +1,50 @@
 import { PUBLIC_NAV_LINKS } from "../data/appConfig.js";
-import { RouteLink, StatusPill } from "./Primitives.jsx";
+import { RouteLink } from "./Primitives.jsx";
+import Insignia from "./Insignia.jsx";
 
 export default function GlobalHeader({ hasSession, isDemoMode, onNavigate }) {
   return (
-    <header className="global-header">
-      <div className="global-header__inner">
-        <RouteLink className="marketing-brand global-header__brand" onNavigate={onNavigate} to="/">
-          <span className="marketing-brand__copy">
-            <span className="marketing-brand__wordmark" aria-label="CodeRyse">
-              <span className="marketing-brand__wordmark-code">Code</span>
-              <span className="marketing-brand__wordmark-rise">Ryse</span>
-            </span>
-            <span className="marketing-brand__subtitle">Academy</span>
+    <header className="cabecalho-publico" role="banner">
+      <div className="cabecalho-publico__inner">
+        <RouteLink className="cabecalho-publico__logo" onNavigate={onNavigate} to="/">
+          <span className="cabecalho-publico__logo-marca" aria-hidden="true">
+            <span>Ed</span>
+            <span>Tech</span>
           </span>
+          <span className="cabecalho-publico__logo-subtitulo">Academy</span>
         </RouteLink>
 
-        <nav className="global-header__nav" aria-label="Navegacao global">
+        <nav className="cabecalho-publico__nav" aria-label="Navegacao principal">
           {PUBLIC_NAV_LINKS.map((item) => (
-            <a className="button button--secondary global-header__nav-link" href={item.href} key={item.href}>
-              {item.label}
+            <a className="cabecalho-publico__link" href={item.href} key={item.href}>
+              <span className="nav-texto">{item.label}</span>
             </a>
           ))}
-        </nav>
+          <span className="topbar__separador" aria-hidden="true" />
 
-        <div className="global-header__actions">
-          {hasSession ? (
+          {isDemoMode ? (
             <>
-              <div className="global-header__session">
-                <StatusPill tone={isDemoMode ? "warning" : "success"}>
-                  {isDemoMode ? "Modo demo" : "Sessao ativa"}
-                </StatusPill>
-                <span className="global-header__session-copy">
-                  {isDemoMode
-                    ? "Navegacao e dados estao simulados localmente para apresentacao."
-                    : "Continue do ponto onde voce parou."}
-                </span>
-              </div>
-              <RouteLink className="button button--secondary global-header__action" onNavigate={onNavigate} to="/app">
-                Abrir painel
-              </RouteLink>
+              <Insignia texto="Modo demo" variante="aviso" />
+              <span className="topbar__separador" aria-hidden="true" />
             </>
+          ) : null}
+
+          {hasSession ? (
+            <RouteLink className="cabecalho-publico__link" onNavigate={onNavigate} to="/app">
+              <span className="nav-texto">Abrir painel</span>
+            </RouteLink>
           ) : (
             <>
-              {isDemoMode ? <StatusPill tone="warning">Modo demo</StatusPill> : null}
-              <RouteLink className="button button--secondary global-header__action global-header__action--admin" onNavigate={onNavigate} to="/login">
-                Acesso administrativo
+              <RouteLink className="cabecalho-publico__link" onNavigate={onNavigate} to="/login">
+                <span className="nav-texto">Entrar</span>
               </RouteLink>
-              <RouteLink className="button button--secondary global-header__action" onNavigate={onNavigate} to="/login">
-                Entrar
-              </RouteLink>
-              <RouteLink className="solid-button global-header__action global-header__action--wide" onNavigate={onNavigate} to="/cadastro">
-                Criar conta
+              <span className="topbar__separador" aria-hidden="true" />
+              <RouteLink className="botao botao--sucesso botao--pequeno" onNavigate={onNavigate} to="/cadastro">
+                <span className="nav-texto">Criar conta</span>
               </RouteLink>
             </>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );

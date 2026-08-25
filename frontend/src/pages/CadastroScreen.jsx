@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
+import Botao from "../components/Botao.jsx";
 import { SIGNUP_INITIAL_STATE } from "../data/appConfig.js";
 import { formatCep, onlyDigits } from "../lib/format.js";
 import { apiRequest } from "../lib/api.js";
+
+const ABAS = ["Dados Pessoais e Senha", "Endereco"];
+const CAMPOS_ABA_0 = ["nome", "email", "cpf", "telefone", "cursoId", "senha", "confirmarSenha"];
 
 export default function CadastroScreen({ isDemoMode, onNavigate }) {
   const [form, setForm] = useState(SIGNUP_INITIAL_STATE);
@@ -11,6 +15,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState("info");
+  const [abaAtual, setAbaAtual] = useState(0);
 
   useEffect(() => {
     let ignore = false;
@@ -47,6 +52,20 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       ...current,
       [name]: value
     }));
+  }
+
+  function avancarAba() {
+    const faltando = CAMPOS_ABA_0.some((campo) => !String(form[campo] || "").trim());
+
+    if (faltando) {
+      setTone("error");
+      setMessage("Preencha todos os campos desta etapa antes de continuar.");
+      return;
+    }
+
+    setTone("info");
+    setMessage("");
+    setAbaAtual(1);
   }
 
   async function handleSubmit(event) {
@@ -100,20 +119,51 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
     }
   }
 
-  return (
-    <div className="auth-shell auth-shell--wide">
-      <div className="marketing-backdrop" />
+  if (status === "success") {
+    return (
+      <div className="tela-cadastro tela-cadastro--confirmacao">
+        <div className="cadastro-confirmacao">
+          <span className="cadastro-confirmacao__icone" aria-hidden="true">✓</span>
+          <h1 className="cadastro-confirmacao__titulo">Cadastro enviado!</h1>
+          <p className="cadastro-confirmacao__texto">{message || "Sua solicitacao de matricula foi registrada. Voce ja pode entrar com o e-mail cadastrado."}</p>
+          <div className="cadastro-confirmacao__acoes">
+            <Botao variante="primario" tamanho="grande" onClick={() => onNavigate("/login")}>
+              Acessar plataforma
+            </Botao>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      <main className="auth-stage">
-        <section className="auth-card auth-card--wide">
-          <header className="auth-card__header">
-            <button className="back-link back-link--home" type="button" onClick={() => onNavigate("/")}>
-              Voltar para a home
+  return (
+    <div className="tela-cadastro">
+      <header className="cadastro-cabecalho">
+        <div className="cadastro-cabecalho__inner">
+          <button className="cadastro-voltar" type="button" onClick={() => onNavigate("/")}>
+            ← Voltar
+          </button>
+          <a className="cabecalho-publico__logo" href="/" onClick={(event) => { event.preventDefault(); onNavigate("/"); }}>
+            <span className="cabecalho-publico__logo-marca" aria-hidden="true">
+              <span>Ed</span>
+              <span>Tech</span>
+            </span>
+          </a>
+          <span className="cadastro-cabecalho__legenda">
+            Ja tem conta?{" "}
+            <button className="cadastro-entrar" type="button" onClick={() => onNavigate("/login")}>
+              Entrar
             </button>
-            <span className="eyebrow">Cadastro do aluno</span>
-            <h1>Solicitar matricula na EdTech</h1>
-            <p>O formulario React envia o cadastro completo e ja cria a solicitacao de matricula na API.</p>
-          </header>
+          </span>
+        </div>
+      </header>
+
+      <main className="cadastro-principal">
+        <div className="cadastro-container">
+          <div>
+            <h1 className="cadastro-intro__titulo">Solicitar matricula na EdTech</h1>
+            <p className="cadastro-intro__subtitulo">O formulario envia o cadastro completo e ja cria a solicitacao de matricula na API.</p>
+          </div>
 
           {isDemoMode ? (
             <InlineMessage tone="info">
@@ -121,180 +171,246 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
             </InlineMessage>
           ) : null}
 
-          <form className="field-grid field-grid--wide" onSubmit={handleSubmit}>
-            <label className="field field--full">
-              <span>Nome completo</span>
-              <input
-                name="nome"
-                type="text"
-                value={form.nome}
-                onChange={(event) => updateField("nome", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>E-mail</span>
-              <input
-                autoComplete="email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={(event) => updateField("email", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>CPF</span>
-              <input
-                inputMode="numeric"
-                name="cpf"
-                type="text"
-                value={form.cpf}
-                onChange={(event) => updateField("cpf", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Telefone</span>
-              <input
-                inputMode="tel"
-                name="telefone"
-                type="text"
-                value={form.telefone}
-                onChange={(event) => updateField("telefone", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>CEP</span>
-              <input
-                inputMode="numeric"
-                name="cep"
-                type="text"
-                value={form.cep}
-                onChange={(event) => updateField("cep", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field field--full">
-              <span>Rua</span>
-              <input
-                name="rua"
-                type="text"
-                value={form.rua}
-                onChange={(event) => updateField("rua", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Numero</span>
-              <input
-                name="numero"
-                type="text"
-                value={form.numero}
-                onChange={(event) => updateField("numero", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Bairro</span>
-              <input
-                name="bairro"
-                type="text"
-                value={form.bairro}
-                onChange={(event) => updateField("bairro", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Cidade</span>
-              <input
-                name="cidade"
-                type="text"
-                value={form.cidade}
-                onChange={(event) => updateField("cidade", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Estado</span>
-              <input
-                maxLength={2}
-                name="estado"
-                type="text"
-                value={form.estado}
-                onChange={(event) => updateField("estado", event.target.value.toUpperCase())}
-                required
-              />
-            </label>
-
-            <label className="field field--full">
-              <span>Curso desejado</span>
-              <select
-                name="cursoId"
-                value={form.cursoId}
-                onChange={(event) => updateField("cursoId", event.target.value)}
-                required
+          <nav className="abas-matriculas" aria-label="Etapas do cadastro">
+            {ABAS.map((rotulo, indice) => (
+              <button
+                className={`abas-matriculas__aba${abaAtual === indice ? " abas-matriculas__aba--ativa" : ""}`}
+                disabled={indice > abaAtual}
+                key={rotulo}
+                onClick={() => indice <= abaAtual && setAbaAtual(indice)}
+                type="button"
               >
-                <option value="">
-                  {catalogStatus === "loading" ? "Carregando cursos..." : "Selecione um curso"}
-                </option>
-                {cursos.map((curso) => (
-                  <option key={curso.id} value={curso.id}>
-                    {curso.titulo}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>Senha</span>
-              <input
-                autoComplete="new-password"
-                minLength={6}
-                name="senha"
-                type="password"
-                value={form.senha}
-                onChange={(event) => updateField("senha", event.target.value)}
-                required
-              />
-            </label>
-
-            <label className="field">
-              <span>Confirmar senha</span>
-              <input
-                autoComplete="new-password"
-                minLength={6}
-                name="confirmarSenha"
-                type="password"
-                value={form.confirmarSenha}
-                onChange={(event) => updateField("confirmarSenha", event.target.value)}
-                required
-              />
-            </label>
-
-            <div className="form-actions field--full">
-              <button className="solid-button" disabled={status === "pending" || catalogStatus === "loading"} type="submit">
-                {status === "pending" ? "Enviando..." : "Enviar solicitacao"}
+                {rotulo}
               </button>
+            ))}
+          </nav>
 
-              <button className="button button--secondary" type="button" onClick={() => onNavigate("/login")}>
-                Ja tenho acesso
-              </button>
-            </div>
+          <form className="formulario-cadastro" onSubmit={handleSubmit}>
+            {abaAtual === 0 ? (
+              <div className="formulario-cadastro__grupo">
+                <span className="formulario-cadastro__legenda">Dados pessoais</span>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-nome">Nome completo</label>
+                  <input
+                    className="campo__entrada"
+                    id="cad-nome"
+                    name="nome"
+                    type="text"
+                    value={form.nome}
+                    onChange={(event) => updateField("nome", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-email">E-mail</label>
+                  <input
+                    autoComplete="email"
+                    className="campo__entrada"
+                    id="cad-email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => updateField("email", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-cpf">CPF</label>
+                  <input
+                    className="campo__entrada"
+                    id="cad-cpf"
+                    inputMode="numeric"
+                    name="cpf"
+                    type="text"
+                    value={form.cpf}
+                    onChange={(event) => updateField("cpf", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-telefone">Telefone</label>
+                  <input
+                    className="campo__entrada"
+                    id="cad-telefone"
+                    inputMode="tel"
+                    name="telefone"
+                    type="text"
+                    value={form.telefone}
+                    onChange={(event) => updateField("telefone", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-curso">Curso desejado</label>
+                  <select
+                    className="campo__entrada"
+                    id="cad-curso"
+                    name="cursoId"
+                    value={form.cursoId}
+                    onChange={(event) => updateField("cursoId", event.target.value)}
+                    required
+                  >
+                    <option value="">
+                      {catalogStatus === "loading" ? "Carregando cursos..." : "Selecione um curso"}
+                    </option>
+                    {cursos.map((curso) => (
+                      <option key={curso.id} value={curso.id}>
+                        {curso.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-senha">Senha</label>
+                  <input
+                    autoComplete="new-password"
+                    className="campo__entrada"
+                    id="cad-senha"
+                    minLength={6}
+                    name="senha"
+                    type="password"
+                    value={form.senha}
+                    onChange={(event) => updateField("senha", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-confirmar-senha">Confirmar senha</label>
+                  <input
+                    autoComplete="new-password"
+                    className="campo__entrada"
+                    id="cad-confirmar-senha"
+                    minLength={6}
+                    name="confirmarSenha"
+                    type="password"
+                    value={form.confirmarSenha}
+                    onChange={(event) => updateField("confirmarSenha", event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="formulario-cadastro__grupo">
+                <span className="formulario-cadastro__legenda">Endereco</span>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-cep">CEP</label>
+                  <input
+                    className="campo__entrada"
+                    id="cad-cep"
+                    inputMode="numeric"
+                    name="cep"
+                    type="text"
+                    value={form.cep}
+                    onChange={(event) => updateField("cep", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="grade-endereco">
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="cad-rua">Rua</label>
+                    <input
+                      className="campo__entrada"
+                      id="cad-rua"
+                      name="rua"
+                      type="text"
+                      value={form.rua}
+                      onChange={(event) => updateField("rua", event.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="cad-numero">Numero</label>
+                    <input
+                      className="campo__entrada"
+                      id="cad-numero"
+                      name="numero"
+                      type="text"
+                      value={form.numero}
+                      onChange={(event) => updateField("numero", event.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="cad-bairro">Bairro</label>
+                  <input
+                    className="campo__entrada"
+                    id="cad-bairro"
+                    name="bairro"
+                    type="text"
+                    value={form.bairro}
+                    onChange={(event) => updateField("bairro", event.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="grade-endereco">
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="cad-cidade">Cidade</label>
+                    <input
+                      className="campo__entrada"
+                      id="cad-cidade"
+                      name="cidade"
+                      type="text"
+                      value={form.cidade}
+                      onChange={(event) => updateField("cidade", event.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="cad-estado">Estado</label>
+                    <input
+                      className="campo__entrada"
+                      id="cad-estado"
+                      maxLength={2}
+                      name="estado"
+                      type="text"
+                      value={form.estado}
+                      onChange={(event) => updateField("estado", event.target.value.toUpperCase())}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {message ? <InlineMessage tone={tone}>{message}</InlineMessage> : null}
+
+            <footer className="formulario-cadastro__rodape">
+              {abaAtual === 0 ? (
+                <Botao variante="fantasma" onClick={() => onNavigate("/")} type="button">
+                  Cancelar
+                </Botao>
+              ) : (
+                <Botao variante="fantasma" onClick={() => setAbaAtual(0)} type="button">
+                  Anterior
+                </Botao>
+              )}
+
+              {abaAtual === 0 ? (
+                <Botao variante="primario" onClick={avancarAba} type="button">
+                  Proximo
+                </Botao>
+              ) : (
+                <Botao variante="primario" disabled={status === "pending" || catalogStatus === "loading"} type="submit">
+                  {status === "pending" ? "Enviando..." : "Enviar solicitacao"}
+                </Botao>
+              )}
+            </footer>
           </form>
-
-          {message ? <InlineMessage tone={tone}>{message}</InlineMessage> : null}
-        </section>
+        </div>
       </main>
     </div>
   );

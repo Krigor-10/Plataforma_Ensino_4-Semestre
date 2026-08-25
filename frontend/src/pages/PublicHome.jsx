@@ -1,17 +1,51 @@
 import { useEffect, useState } from "react";
-import FeaturedCoursesCarousel from "../components/FeaturedCoursesCarousel.jsx";
+import { TbChevronDown, TbSend, TbX } from "react-icons/tb";
+import { MdPersonAdd } from "react-icons/md";
 import GlobalHeader from "../components/GlobalHeader.jsx";
+import Botao from "../components/Botao.jsx";
+import Modal from "../components/Modal.jsx";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { CURATED_COURSES, PUBLIC_PILLARS } from "../data/appConfig.js";
+import { formatMoney } from "../lib/format.js";
 import homeBannerImage from "../assets/home-publica-banner.png";
+import courseArchitectureCover from "../assets/course-arquitetura-soft.jpg";
+import courseAutomationTestingCover from "../assets/course-automacao-teste.jpg";
+import courseDataScienceCover from "../assets/course-ciencia-dados.jpg";
+import courseCyberSecurityCover from "../assets/course-cyber-sec.png";
+import courseDevopsCloudCover from "../assets/course-devops-cloud.jpg";
+import courseMobileReactCover from "../assets/course-mobile-react.jpg";
+import coursePromptEngineeringCover from "../assets/course-eng-ia.png";
+import coursePythonCover from "../assets/couse-python.jpg";
+import courseTestCover from "../assets/course-test-cover.svg";
+import courseUxDigitalCover from "../assets/course-ux-digitais.jpg";
+import courseWebFullstackCover from "../assets/course-web-fullstack.png";
 import { apiRequest } from "../lib/api.js";
 
 const HIDDEN_PUBLIC_COURSE_TITLES = new Set(["product analytics para edtech"]);
+
+const COURSE_COVERS_BY_TITLE = {
+  "arquitetura de software moderna": courseArchitectureCover,
+  "ciencia de dados aplicada": courseDataScienceCover,
+  "cyberseguranca para aplicacoes web": courseCyberSecurityCover,
+  "desenvolvimento web full stack": courseWebFullstackCover,
+  "devops e cloud foundations": courseDevopsCloudCover,
+  "engenharia de prompt e ia generativa": coursePromptEngineeringCover,
+  "mobile com react native": courseMobileReactCover,
+  "python para automacao e dados": coursePythonCover,
+  "qa e automacao de testes": courseAutomationTestingCover,
+  "ux para produtos digitais": courseUxDigitalCover
+};
+
+function getCourseCover(course) {
+  const title = String(course.titulo || "").trim().toLowerCase();
+  return COURSE_COVERS_BY_TITLE[title] || courseTestCover;
+}
 
 export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
   const [courses, setCourses] = useState(() => filterPublicCourses(CURATED_COURSES));
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [cursoModal, setCursoModal] = useState(null);
 
   useEffect(() => {
     let ignore = false;
@@ -47,19 +81,25 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
   }, []);
 
   return (
-    <div className="marketing-shell">
-      <div className="marketing-backdrop" />
+    <>
+      <a href="#conteudo-principal" className="pular-para-conteudo">
+        Pular para o conteudo principal
+      </a>
+
       <GlobalHeader hasSession={hasSession} isDemoMode={isDemoMode} onNavigate={onNavigate} />
 
-      <main className="marketing-main">
-        <section className="public-hero" aria-labelledby="public-hero-title">
-          <img className="public-hero__banner" src={homeBannerImage} alt="" aria-hidden="true" />
-          <div className="public-hero__scene" aria-hidden="true" />
+      <main id="conteudo-principal">
+        <section className="secao-hero" aria-labelledby="titulo-hero">
+          <img className="secao-hero__banner" src={homeBannerImage} alt="" aria-hidden="true" />
 
-          <article className="public-hero__content">
-            <span className="eyebrow">Cursos digitais com acompanhamento academico</span>
-            <h1 id="public-hero-title">CodeRyse Academy</h1>
-            <p>
+          <div className="secao-hero__conteudo">
+            <p className="secao-hero__tag">Cursos digitais com acompanhamento academico</p>
+            <h1 className="secao-hero__titulo" id="titulo-hero">
+              EdTech
+              <br />
+              <span className="secao-hero__titulo--destaque">Academy</span>
+            </h1>
+            <p className="secao-hero__descricao">
               Escolha uma trilha, solicite sua matricula e acompanhe tudo em um painel academico integrado.
             </p>
 
@@ -69,65 +109,161 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               </InlineMessage>
             ) : null}
 
-            <div className="hero-actions">
-              <button
-                className="solid-button"
-                type="button"
+            <div className="secao-hero__acoes">
+              <Botao
+                variante="sucesso"
+                tamanho="grande"
                 onClick={() => onNavigate("/cadastro")}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
               >
-                Solicitar matricula
-              </button>
-
-              <button className="button button--secondary" type="button" onClick={() => onNavigate(hasSession ? "/app" : "/login")}>
-                {hasSession ? "Ir para o painel" : "Entrar"}
-              </button>
+                <TbSend size={18} aria-hidden="true" /> Solicitar matricula
+              </Botao>
+              <a href="#cursos" className="botao botao--fantasma botao--grande" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                Ver cursos <TbChevronDown size={18} aria-hidden="true" />
+              </a>
             </div>
-          </article>
-        </section>
-
-        <section className="public-proof" aria-label="Diferenciais da plataforma">
-          <div className="signal-grid">
-            {PUBLIC_PILLARS.map((pillar) => (
-              <article className="signal-card signal-card--quiet" key={pillar.title}>
-                <strong>{pillar.title}</strong>
-                <p>{pillar.text}</p>
-              </article>
-            ))}
           </div>
         </section>
 
-        <section className="content-section" id="catalogo">
-          <div className="section-head">
-            <div>
-              <span className="eyebrow">Catalogo conectado</span>
-              <h2>Escolha uma trilha e comece pela matricula</h2>
-            </div>
-            <p>
-              {status === "loading"
-                ? "Lendo os cursos publicados..."
-                : "Percorra as opcoes disponiveis."}
-            </p>
+        <section className="secao-pilares" id="sobre" aria-labelledby="titulo-pilares">
+          <div className="secao-pilares__inner">
+            <h2 className="visualmente-oculto" id="titulo-pilares">Diferenciais da plataforma</h2>
+            <ul className="grade-pilares grade-pilares--publica" role="list">
+              {PUBLIC_PILLARS.map((pilar) => (
+                <li key={pilar.title} className="cartao-pilar">
+                  <h3 className="cartao-pilar__titulo">{pilar.title}</h3>
+                  <p className="cartao-pilar__descricao">{pilar.text}</p>
+                </li>
+              ))}
+            </ul>
           </div>
+        </section>
 
-          {error ? <InlineMessage tone="error">{error}</InlineMessage> : null}
+        <section className="secao-cursos" id="cursos" aria-labelledby="titulo-cursos">
+          <div className="secao-cursos__inner">
+            <header className="secao-cabecalho">
+              <div>
+                <p className="secao-cabecalho__etiqueta">Catalogo de cursos ativos</p>
+                <h2 className="secao-cabecalho__titulo" id="titulo-cursos">
+                  Escolha uma trilha e comece pela matricula
+                </h2>
+              </div>
+              <p className="secao-cabecalho__subtitulo">
+                {status === "loading"
+                  ? "Lendo os cursos publicados..."
+                  : `${courses.length} curso(s) disponivel(is) para matricula.`}
+              </p>
+            </header>
 
-          <FeaturedCoursesCarousel courses={courses} onNavigate={onNavigate} />
+            {error ? <InlineMessage tone="error">{error}</InlineMessage> : null}
+
+            <ul className="grade-cursos" role="list" aria-label="Cursos disponiveis">
+              {courses.map((curso) => (
+                <li key={curso.id}>
+                  <article
+                    className="cartao-curso cartao-curso--clicavel"
+                    aria-labelledby={`curso-titulo-${curso.id}`}
+                    onClick={() => setCursoModal(curso)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => event.key === "Enter" && setCursoModal(curso)}
+                  >
+                    <div className="cartao-curso__topo" aria-hidden="true">
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        className="cartao-curso__imagem"
+                        loading="lazy"
+                        src={getCourseCover(curso)}
+                      />
+                    </div>
+
+                    <div className="cartao-curso__corpo">
+                      <h3 className="cartao-curso__titulo" id={`curso-titulo-${curso.id}`}>
+                        {curso.titulo}
+                      </h3>
+                      <p className="cartao-curso__descricao">{curso.descricao}</p>
+                    </div>
+
+                    <footer className="cartao-curso__rodape">
+                      <strong className="cartao-curso__preco">{formatMoney(curso.preco)}</strong>
+                      <Botao
+                        variante="primario"
+                        tamanho="pequeno"
+                        onClick={(event) => { event.stopPropagation(); onNavigate("/cadastro"); }}
+                        aria-label={`Cadastrar-se em ${curso.titulo}`}
+                        style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                      >
+                        <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
+                      </Botao>
+                    </footer>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          </div>
         </section>
       </main>
 
-      <footer className="footer-bar">
-        <div className="footer-brand">
-          <span className="footer-brand__copy">
-            <span className="footer-brand__wordmark" aria-label="CodeRyse">
-              <span className="footer-brand__wordmark-code">Code</span>
-              <span className="footer-brand__wordmark-rise">Ryse</span>
-            </span>
-            <span className="footer-brand__subtitle">Academy</span>
-          </span>
+      {cursoModal ? (
+        <Modal titulo={cursoModal.titulo} onFechar={() => setCursoModal(null)}>
+          <dl className="lista-detalhes">
+            <div className="lista-detalhes__item">
+              <dt>Investimento</dt>
+              <dd>{formatMoney(cursoModal.preco)}</dd>
+            </div>
+            <div className="lista-detalhes__item">
+              <dt>Descricao</dt>
+              <dd>{cursoModal.descricao}</dd>
+            </div>
+          </dl>
+          <footer className="modal-rodape">
+            <Botao variante="perigo" onClick={() => setCursoModal(null)} style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
+              <TbX size={15} aria-hidden="true" /> Fechar
+            </Botao>
+            <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      <footer className="rodape-publico" role="contentinfo">
+        <div className="rodape-publico__inner">
+          <div className="rodape-publico__marca-bloco">
+            <p className="rodape-publico__marca">EdTech Academy</p>
+            <p className="rodape-publico__direitos">
+              Cursos digitais e gestao academica em uma unica plataforma.
+            </p>
+          </div>
+
+          <nav className="rodape-publico__nav" aria-label="Links do rodape">
+            <p className="rodape-publico__nav-titulo">Plataforma</p>
+            <ul className="rodape-publico__nav-lista">
+              <li>
+                <a className="rodape-publico__nav-link" href="#cursos">Cursos</a>
+              </li>
+              <li>
+                <button className="rodape-publico__nav-link" onClick={() => onNavigate("/login")} type="button">
+                  Entrar
+                </button>
+              </li>
+              <li>
+                <button className="rodape-publico__nav-link" onClick={() => onNavigate("/cadastro")} type="button">
+                  Criar conta
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
-        <span>Cursos digitais e gestao academica em uma unica plataforma</span>
+
+        <div className="rodape-publico__barra-inferior">
+          <p className="rodape-publico__copyright">
+            © {new Date().getFullYear()} EdTech Academy. Todos os direitos reservados.
+          </p>
+        </div>
       </footer>
-    </div>
+    </>
   );
 }
 

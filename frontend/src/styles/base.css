@@ -1,4 +1,77 @@
+/* ============================================================
+   CODERYSE ACADEMY — SISTEMA DE DESIGN GLOBAL
+   Tokens portados do protótipo (fonte da verdade visual).
+   Os tokens em inglês abaixo (--brand, --ink-strong, --bg-main...)
+   são mantidos por compatibilidade com telas ainda não portadas
+   (Etapas 2-6) — não remover até a última seção ser reskinada.
+   ============================================================ */
 :root {
+  --fonte-principal: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --fonte-display: "Inter", system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  --fonte-mono: "Cascadia Code", "Consolas", "Courier New", monospace;
+
+  --texto-xs: 0.75rem;
+  --texto-sm: 0.8125rem;
+  --texto-md: 0.875rem;
+  --texto-lg: 1rem;
+
+  --cor-fundo: #191b21;
+  --cor-fundo-alt: #1e2028;
+  --cor-fundo-elevado: #22242e;
+
+  --cor-marca: #7b2ff7;
+  --cor-marca-profunda: #5b19cf;
+  --cor-marca-clara: #b992ff;
+  --cor-acento: #9d67ff;
+
+  --cor-sucesso: #22c55e;
+  --cor-sucesso-fundo: rgba(34, 197, 94, 0.12);
+  --cor-aviso: #f59e0b;
+  --cor-aviso-fundo: rgba(245, 158, 11, 0.12);
+  --cor-erro: #ef4444;
+  --cor-erro-fundo: rgba(239, 68, 68, 0.12);
+  --cor-info: #3b82f6;
+  --cor-info-fundo: rgba(59, 130, 246, 0.12);
+
+  --cor-texto-forte: #f3f5ff;
+  --cor-texto-suave: #aeb6cb;
+  --cor-texto-mudo: #8b92a8;
+
+  --cor-cartao: rgba(33, 36, 46, 0.9);
+  --cor-borda: rgba(185, 153, 255, 0.12);
+  --cor-borda-forte: rgba(123, 47, 247, 0.28);
+
+  --sombra-sm: 0 4px 12px rgba(8, 8, 12, 0.2);
+  --sombra-md: 0 18px 44px rgba(8, 8, 12, 0.28);
+  --sombra-lg: 0 28px 80px rgba(8, 8, 12, 0.46);
+  --sombra-acento: 0 20px 48px rgba(123, 47, 247, 0.22);
+
+  --espaco-xs: 0.25rem;
+  --espaco-sm: 0.5rem;
+  --espaco-md: 1rem;
+  --espaco-lg: 1.5rem;
+  --espaco-xl: 2rem;
+  --espaco-2xl: 3rem;
+
+  --raio-sm: 6px;
+  --raio-md: 10px;
+  --raio-lg: 16px;
+  --raio-xl: 24px;
+  --raio-circular: 9999px;
+
+  --transicao-rapida: 120ms ease;
+  --transicao-normal: 200ms ease;
+  --transicao-lenta: 320ms ease;
+
+  --altura-topbar: 88px;
+  --largura-sidebar: 272px;
+
+  /* ------------------------------------------------------------
+     Tokens legados (em inglês) — usados pelas telas ainda não
+     portadas ao estilo do protótipo. Ver nota no topo do arquivo.
+     ------------------------------------------------------------ */
   --global-header-height: 119px;
   --page-max-width: 1280px;
   --header-max-width: 1480px;
@@ -45,40 +118,175 @@
   --button-gap-loose: 12px;
   --font-body: "Aptos", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
   --font-display: "Aptos Display", "Bahnschrift", "Segoe UI Variable Display", sans-serif;
-  color: var(--ink-strong);
-  font-family: var(--font-body);
-  background: var(--bg-main);
 }
 
-* {
+/* ------------------------------------------------------------
+   TEMA CLARO
+   ------------------------------------------------------------ */
+[data-tema="claro"] {
+  --cor-fundo: #f0f2f8;
+  --cor-fundo-alt: #e6e9f3;
+  --cor-fundo-elevado: #ffffff;
+
+  --cor-marca-clara: #5b19cf;
+  --cor-acento: #6b21e8;
+
+  --cor-sucesso-fundo: rgba(34, 197, 94, 0.10);
+  --cor-aviso-fundo: rgba(245, 158, 11, 0.10);
+  --cor-erro-fundo: rgba(239, 68, 68, 0.10);
+  --cor-info-fundo: rgba(59, 130, 246, 0.10);
+
+  --cor-texto-forte: #0d0f18;
+  --cor-texto-suave: #4a5068;
+  --cor-texto-mudo: #5a6175;
+
+  --cor-cartao: rgba(255, 255, 255, 0.92);
+  --cor-borda: rgba(123, 47, 247, 0.14);
+  --cor-borda-forte: rgba(123, 47, 247, 0.32);
+
+  --sombra-sm: 0 4px 12px rgba(0, 0, 0, 0.07);
+  --sombra-md: 0 18px 44px rgba(0, 0, 0, 0.10);
+  --sombra-lg: 0 28px 80px rgba(0, 0, 0, 0.16);
+  --sombra-acento: 0 20px 48px rgba(123, 47, 247, 0.16);
+}
+
+[data-tema="claro"] .topbar {
+  background: linear-gradient(180deg, rgba(240, 242, 248, 0.97), rgba(230, 233, 243, 0.90));
+}
+
+[data-tema="claro"] .topbar__perfil {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(123, 47, 247, 0.18);
+}
+
+[data-tema="claro"] .topbar__perfil:hover {
+  background: rgba(123, 47, 247, 0.08);
+  border-color: var(--cor-borda-forte);
+}
+
+[data-tema="claro"] .sidebar {
+  background: linear-gradient(180deg, #e8eaf4 0%, #dde0ef 100%);
+  box-shadow: 18px 0 44px rgba(0, 0, 0, 0.08);
+}
+
+[data-tema="claro"] .sidebar__logo-marca span:first-child {
+  color: #0d0f18;
+}
+
+[data-tema="claro"] .sidebar__logo-subtitulo {
+  color: rgba(13, 15, 24, 0.55);
+}
+
+[data-tema="claro"] .sidebar__item-icone {
+  background: rgba(123, 47, 247, 0.10);
+  border-color: rgba(123, 47, 247, 0.18);
+  color: var(--cor-marca-clara);
+}
+
+[data-tema="claro"] .sidebar__item:hover {
+  background: rgba(123, 47, 247, 0.07);
+  color: var(--cor-texto-forte);
+}
+
+[data-tema="claro"] .sidebar__item--ativo {
+  background: rgba(123, 47, 247, 0.12);
+  border-color: rgba(123, 47, 247, 0.30);
+  box-shadow: inset 3px 0 rgba(91, 25, 207, 0.55);
+}
+
+[data-tema="claro"] .botao--fantasma {
+  background: #fff;
+  color: var(--cor-texto-suave);
+  border-color: var(--cor-borda-forte);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+[data-tema="claro"] .botao--fantasma:hover:not(:disabled) {
+  background: var(--cor-fundo-alt);
+  border-color: rgba(0, 0, 0, 0.22);
+  color: var(--cor-texto-forte);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+[data-tema="claro"] .botao--perigo {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.1);
+}
+[data-tema="claro"] .botao--perigo:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #991b1b;
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.18);
+}
+
+[data-tema="claro"] .botao--secundario {
+  background: rgba(123, 47, 247, 0.08);
+  color: var(--cor-marca);
+  border-color: rgba(123, 47, 247, 0.3);
+  box-shadow: 0 1px 3px rgba(123, 47, 247, 0.1);
+}
+[data-tema="claro"] .botao--secundario:hover:not(:disabled) {
+  background: rgba(123, 47, 247, 0.14);
+  border-color: rgba(123, 47, 247, 0.45);
+  box-shadow: 0 3px 10px rgba(123, 47, 247, 0.18);
+}
+
+@media print {
+  :root {
+    --cor-fundo:         #ffffff;
+    --cor-fundo-alt:     #f4f5f9;
+    --cor-fundo-elevado: #ffffff;
+    --cor-cartao:        #ffffff;
+
+    --cor-texto-forte:   #0d0f18;
+    --cor-texto-suave:   #4a5068;
+    --cor-texto-mudo:    #8b92a8;
+
+    --cor-borda:         rgba(0, 0, 0, 0.12);
+    --cor-borda-forte:   rgba(0, 0, 0, 0.22);
+
+    --sombra-sm: none;
+    --sombra-md: none;
+    --sombra-lg: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   RESET & BASE
+   ------------------------------------------------------------ */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html {
   min-width: 320px;
   scroll-behavior: smooth;
   scroll-padding-top: var(--global-header-height);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background-color: var(--bg-main);
-  margin: 0;
-  min-height: 100vh;
+  font-family: var(--fonte-principal);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--cor-texto-forte);
+  background-color: var(--cor-fundo);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
   overflow-x: hidden;
-}
-
-body,
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 img,
-picture,
-svg,
 video,
+svg,
+picture,
 canvas {
   display: block;
   max-width: 100%;
@@ -91,6 +299,20 @@ a {
 
 button {
   cursor: pointer;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  max-width: 100%;
+}
+
+ul,
+ol {
+  list-style: none;
 }
 
 a,
@@ -106,26 +328,69 @@ textarea {
     transform 160ms ease;
 }
 
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.32);
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--fonte-display);
+  line-height: 1.2;
+  color: var(--cor-texto-forte);
 }
 
-button,
-input,
-select,
-textarea {
-  max-width: 100%;
-}
+h1 { letter-spacing: -0.03em; }
+h2 { letter-spacing: -0.02em; }
+h3 { letter-spacing: -0.015em; }
+h4 { letter-spacing: -0.01em; }
+
+#versao-impressao { display: none; }
 
 #root {
   min-height: 100vh;
 }
 
+/* ------------------------------------------------------------
+   FOCO — ACESSIBILIDADE
+   ------------------------------------------------------------ */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(123, 47, 247, 0.5);
+  border-radius: var(--raio-sm);
+}
+
+/* ------------------------------------------------------------
+   SCROLLBAR PERSONALIZADA
+   ------------------------------------------------------------ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cor-borda-forte);
+  border-radius: var(--raio-circular);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cor-marca);
+}
+
+/* ------------------------------------------------------------
+   UTILITÁRIOS GLOBAIS
+   ------------------------------------------------------------ */
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------
+   CLASSES GENÉRICAS LEGADAS — ainda usadas pelas telas não
+   portadas (Login/Cadastro/Home/gestão). Ver nota no topo.
+   ------------------------------------------------------------ */
 .eyebrow {
   color: var(--brand);
   display: inline-block;

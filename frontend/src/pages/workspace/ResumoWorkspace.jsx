@@ -1,3 +1,4 @@
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { EmptyState, MiniList, PanelCard, StatusPill } from "../../components/Primitives.jsx";
 import {
   describeCourse,
@@ -9,8 +10,36 @@ import {
   normalizeProgressStatus,
   normalizePublicationStatus,
   normalizeStatus,
+  parseApiDate,
   progressStatusTone
 } from "../../lib/format.js";
+
+const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function buildEnrollmentsByMonth(matriculas) {
+  const datas = matriculas.map((matricula) => parseApiDate(matricula.dataSolicitacao)).filter(Boolean);
+  const base = datas.length ? new Date(Math.max(...datas.map((data) => data.getTime()))) : new Date();
+
+  return Array.from({ length: 6 }, (_, indice) => {
+    const referencia = new Date(base.getFullYear(), base.getMonth() - (5 - indice), 1);
+    const total = matriculas.filter((matricula) => {
+      const data = parseApiDate(matricula.dataSolicitacao);
+      return data && data.getFullYear() === referencia.getFullYear() && data.getMonth() === referencia.getMonth();
+    }).length;
+
+    return { mes: MESES_PT[referencia.getMonth()], total };
+  });
+}
+
+function ChartTooltipStyle() {
+  return {
+    background: "var(--card-strong)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: "8px",
+    color: "var(--ink-strong)",
+    fontSize: "0.82rem"
+  };
+}
 
 export function ResumoWorkspace({
   avaliacoes = [],
@@ -217,6 +246,60 @@ export function ResumoWorkspace({
           </div>
         </PanelCard>
       ) : null}
+
+      {ehGestor ? (
+        <PanelCard description="Volume de solicitacoes de matricula nos ultimos 6 meses." title="Matriculas por mes">
+          <EnrollmentsChart matriculas={matriculas} />
+        </PanelCard>
+      ) : null}
+
+      {ehAluno && desempenhoCursosAluno.length ? (
+        <PanelCard description="Percentual de conclusao das suas matriculas aprovadas." title="Progresso por curso">
+          <StudentProgressChart itens={desempenhoCursosAluno} />
+        </PanelCard>
+      ) : null}
     </section>
+  );
+}
+
+function EnrollmentsChart({ matriculas }) {
+  const dados = buildEnrollmentsByMonth(matriculas);
+  const maxTotal = Math.max(...dados.map((item) => item.total), 1);
+
+  if (!matriculas.length) {
+    return <EmptyState message="Ainda nao ha matriculas registradas para montar o grafico." />;
+  }
+
+  return (
+    <ResponsiveContainer height={220} width="100%">
+      <BarChart barCategoryGap="30%" data={dados} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+        <XAxis axisLine={false} dataKey="mes" tick={{ fill: "var(--ink-soft)", fontSize: 12 }} tickLine={false} />
+        <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--ink-soft)", fontSize: 11 }} tickLine={false} width={32} />
+        <Tooltip cursor={{ fill: "rgba(123,47,247,0.08)" }} contentStyle={ChartTooltipStyle()} formatter={(valor) => [valor, "Matriculas"]} />
+        <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+          {dados.map((item, indice) => (
+            <Cell fill={item.total === maxTotal ? "var(--brand)" : "var(--brand-mint)"} key={indice} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function StudentProgressChart({ itens }) {
+  const dados = itens.map((item) => ({
+    curso: item.curso.length > 18 ? `${item.curso.slice(0, 16)}...` : item.curso,
+    progresso: Math.max(0, Math.min(item.progresso, 100))
+  }));
+
+  return (
+    <ResponsiveContainer height={Math.max(160, dados.length * 46)} width="100%">
+      <BarChart data={dados} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 0 }}>
+        <XAxis axisLine={false} domain={[0, 100]} tick={{ fill: "var(--ink-soft)", fontSize: 11 }} tickLine={false} type="number" />
+        <YAxis axisLine={false} dataKey="curso" tick={{ fill: "var(--ink-soft)", fontSize: 12 }} tickLine={false} type="category" width={140} />
+        <Tooltip cursor={{ fill: "rgba(123,47,247,0.08)" }} contentStyle={ChartTooltipStyle()} formatter={(valor) => [`${valor}%`, "Progresso"]} />
+        <Bar dataKey="progresso" fill="var(--brand)" radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
