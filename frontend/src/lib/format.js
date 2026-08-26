@@ -1,3 +1,28 @@
+export function iniciaisNome(nome = "") {
+  return String(nome || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0])
+    .join("")
+    .toUpperCase();
+}
+
+export function siglas(titulo = "") {
+  const palavras = String(titulo || "").trim().split(/\s+/).filter(Boolean);
+
+  if (!palavras.length) {
+    return "--";
+  }
+
+  if (palavras.length === 1) {
+    return palavras[0].slice(0, 2).toUpperCase();
+  }
+
+  return palavras.slice(0, 2).map((palavra) => palavra[0]).join("").toUpperCase();
+}
+
 export function normalizeStatus(status) {
   const labels = ["Pendente", "Aprovada", "Rejeitada", "Cancelada"];
 

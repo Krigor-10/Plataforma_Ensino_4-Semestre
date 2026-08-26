@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { TbArrowLeft, TbArrowRight, TbChevronDown, TbChevronUp, TbFile, TbFileText, TbPlayerPlay, TbExternalLink } from "react-icons/tb";
 import { DataTable, EmptyState, InlineMessage, PanelCard, RouteLink, StatusPill } from "../../components/Primitives.jsx";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
@@ -413,6 +417,8 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
   const [carregandoQuestoes, setCarregandoQuestoes] = useState(false);
   const [enviandoRespostas, setEnviandoRespostas] = useState(false);
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
+  const [indiceAtual, setIndiceAtual] = useState(0);
+  const [apoioAberto, setApoioAberto] = useState(true);
 
   const avaliacoesOrdenadas = useMemo(
     () =>
@@ -465,6 +471,8 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setQuestoes([]);
     setRespostas({});
     setMensagem({ tone: "", message: "" });
+    setIndiceAtual(0);
+    setApoioAberto(true);
     setCarregandoQuestoes(true);
 
     try {
@@ -492,6 +500,22 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setQuestoes([]);
     setRespostas({});
     setMensagem({ tone: "", message: "" });
+    setIndiceAtual(0);
+  }
+
+  function irParaQuestao(indice) {
+    setIndiceAtual(Math.max(0, Math.min(indice, questoes.length - 1)));
+    setApoioAberto(true);
+  }
+
+  function questaoRespondida(questao) {
+    const resposta = respostas[questao.id];
+
+    if (Number(questao.tipoQuestao) === 3) {
+      return Boolean(String(resposta?.respostaTexto || "").trim());
+    }
+
+    return Boolean(resposta?.alternativaId);
   }
 
   function atualizarAlternativa(questaoId, alternativaId) {
@@ -577,191 +601,189 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     }
   }
 
+  const questaoAtual = questoes[indiceAtual] || null;
+  const ehUltimaQuestao = indiceAtual === questoes.length - 1;
+
   return (
-    <div className="content-section content-section--student">
-      {!avaliacaoEmExecucao && mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+    <div className="tela-avaliacoes-aluno">
+      <header className="cabecalho-pagina">
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Realizar avaliacao</h1>
+          <p className="cabecalho-pagina__subtitulo">Somente avaliacoes publicadas para as suas turmas aprovadas aparecem aqui.</p>
+        </div>
+      </header>
 
-      <PanelCard
-        description="Somente avaliacoes publicadas para as suas turmas aprovadas aparecem nesta lista."
-        title="Realizar avaliacao"
-      >
-        <DataTable
-          columns={[
-            {
-              key: "titulo",
-              label: "Avaliacao",
-              render: (row) => (
-                <div className="table-cell-stack">
-                  <strong>{row.titulo}</strong>
-                  <p>{compactText(row.descricao || "-", 88)}</p>
-                </div>
-              )
-            },
-            {
-              key: "turma",
-              label: "Turma",
-              render: (row) => (
-                <div className="table-cell-stack">
-                  <strong>{row.turmaNome || `Turma #${row.turmaId}`}</strong>
-                  <p>{row.cursoTitulo || `Curso #${row.cursoId}`}</p>
-                </div>
-              )
-            },
-            { key: "moduloTitulo", label: "Modulo" },
-            {
-              key: "tipoAvaliacao",
-              label: "Tipo",
-              render: (row) => <span className="chip">{normalizeEvaluationType(row.tipoAvaliacao)}</span>
-            },
-            {
-              key: "periodo",
-              label: "Periodo",
-              render: (row) => (
-                <div className="table-cell-stack">
-                  <strong>{row.dataAbertura ? formatDate(row.dataAbertura) : "Aberta"}</strong>
-                  <p>{row.dataFechamento ? `Fecha em ${formatDate(row.dataFechamento)}` : "Sem fechamento"}</p>
-                </div>
-              )
-            },
-            {
-              key: "tentativas",
-              label: "Tentativas",
-              render: (row) => `${row.tentativasRealizadas || 0}/${row.tentativasPermitidas || 1}`
-            },
-            {
-              key: "status",
-              label: "Status",
-              render: (row) => {
-                const disponibilidade = obterDisponibilidadeAvaliacao(row);
+      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
-                return (
-                  <div className="table-cell-stack">
-                    <StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill>
-                    <p>{row.ultimaNota !== null && row.ultimaNota !== undefined ? `Ultima nota ${formatScore(row.ultimaNota)}` : `${row.totalQuestoes || 0} questao(oes)`}</p>
+      {avaliacoesOrdenadas.length === 0 ? (
+        <EmptyState message="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui." />
+      ) : (
+        <ul aria-label="Avaliacoes disponiveis" className="grade-avaliacoes" role="list">
+          {avaliacoesOrdenadas.map((avaliacao) => {
+            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+
+            return (
+              <li
+                className={`cartao-avaliacao${disponibilidade.podeRealizar ? " cartao-avaliacao--disponivel" : " cartao-avaliacao--bloqueado"}`}
+                key={avaliacao.id}
+              >
+                <div className="cartao-avaliacao__topo">
+                  <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
+                  <StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill>
+                </div>
+                <div className="cartao-avaliacao__corpo">
+                  <dl className="cartao-avaliacao__meta">
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Turma</dt>
+                      <dd>{avaliacao.turmaNome || `Turma #${avaliacao.turmaId}`}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Modulo</dt>
+                      <dd>{avaliacao.moduloTitulo || "-"}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Tipo</dt>
+                      <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Tentativas</dt>
+                      <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? "Ultima nota" : "Questoes"}</dt>
+                      <dd>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? formatScore(avaliacao.ultimaNota) : avaliacao.totalQuestoes || 0}</dd>
+                    </div>
+                  </dl>
+                  <div className="cartao-avaliacao__rodape">
+                    {disponibilidade.podeRealizar ? (
+                      <Botao
+                        disabled={carregandoQuestoes || enviandoRespostas}
+                        onClick={() => abrirExecucaoAvaliacao(avaliacao)}
+                        tamanho="pequeno"
+                        variante="primario"
+                      >
+                        Realizar avaliacao
+                      </Botao>
+                    ) : (
+                      <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
+                    )}
                   </div>
-                );
-              }
-            },
-            {
-              key: "acoes",
-              label: "Acao",
-              render: (row) => {
-                const disponibilidade = obterDisponibilidadeAvaliacao(row);
-
-                return (
-                  <button
-                    className="table-action"
-                    disabled={!disponibilidade.podeRealizar || carregandoQuestoes || enviandoRespostas}
-                    onClick={() => abrirExecucaoAvaliacao(row)}
-                    type="button"
-                  >
-                    Realizar avaliacao
-                  </button>
-                );
-              }
-            }
-          ]}
-          emptyMessage="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui."
-          rows={avaliacoesOrdenadas}
-        />
-      </PanelCard>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {avaliacaoEmExecucao ? (
-        <div
-          className="content-form-modal"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              fecharExecucaoAvaliacao();
-            }
-          }}
-        >
-          <div
-            aria-label="Realizar avaliacao"
-            aria-modal="true"
-            className="content-form-modal__card"
-            role="dialog"
-          >
-            <button
-              className="content-form-modal__close"
-              disabled={enviandoRespostas}
-              onClick={fecharExecucaoAvaliacao}
-              type="button"
-            >
-              Fechar
-            </button>
-            <PanelCard
-              description={`${avaliacaoEmExecucao.cursoTitulo || "Curso"} - ${avaliacaoEmExecucao.turmaNome || "Turma"}`}
-              title={avaliacaoEmExecucao.titulo}
-            >
+        <Modal onFechar={fecharExecucaoAvaliacao} titulo={avaliacaoEmExecucao.titulo}>
+          {carregandoQuestoes ? (
+            <EmptyState message="Carregando questoes da avaliacao." />
+          ) : (
+            <>
+              <header className="quiz-cabecalho">
+                <div className="quiz-embutido__info">
+                  <p className="quiz-embutido__curso">{avaliacaoEmExecucao.cursoTitulo || "Curso"} - {avaliacaoEmExecucao.turmaNome || "Turma"}</p>
+                </div>
+                <div className="quiz-cabecalho__steps">
+                  <span className="quiz-cabecalho__contador">Questao {indiceAtual + 1} de {questoes.length}</span>
+                  <nav aria-label="Progresso da avaliacao" className="quiz-steps">
+                    {questoes.map((questao, indice) => (
+                      <button
+                        aria-current={indice === indiceAtual ? "step" : undefined}
+                        aria-label={`Questao ${indice + 1}${questaoRespondida(questao) ? " - respondida" : ""}`}
+                        className={`quiz-step${questaoRespondida(questao) ? " quiz-step--respondida" : ""}${indice === indiceAtual ? " quiz-step--ativo" : ""}`}
+                        disabled={enviandoRespostas}
+                        key={questao.id}
+                        onClick={() => irParaQuestao(indice)}
+                        type="button"
+                      >
+                        {indice + 1}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </header>
+
               {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
-              {carregandoQuestoes ? (
-                <EmptyState message="Carregando questoes da avaliacao." />
-              ) : (
-                <form className="student-evaluation-form" onSubmit={enviarRespostas}>
-                  {questoes.map((questao) => (
-                    <article className="student-evaluation-question" key={questao.id}>
-                      <div className="student-evaluation-question__header">
-                        <div>
-                          <div className="table-badge-list">
-                            <span className="chip">Questao {questao.ordem}</span>
-                            <span className="chip">{normalizeQuestionType(questao.tipoQuestao)}</span>
-                            <span className="chip">{formatScore(questao.pontos)} ponto(s)</span>
-                          </div>
-                          <h3>{questao.enunciado}</h3>
+              {questaoAtual ? (
+                <form className="quiz-corpo" onSubmit={enviarRespostas}>
+                  {questaoAtual.contexto ? (
+                    <section className="quiz-apoio">
+                      <button aria-expanded={apoioAberto} className="quiz-apoio__toggle" onClick={() => setApoioAberto((atual) => !atual)} type="button">
+                        <span>Contexto de apoio</span>
+                        <span aria-hidden="true">{apoioAberto ? <TbChevronUp size={14} /> : <TbChevronDown size={14} />}</span>
+                      </button>
+                      {apoioAberto ? (
+                        <div className="quiz-apoio__conteudo">
+                          <p>{questaoAtual.contexto}</p>
                         </div>
-                      </div>
+                      ) : null}
+                    </section>
+                  ) : null}
 
-                      {questao.contexto ? <p className="student-evaluation-question__context">{questao.contexto}</p> : null}
+                  <section className="quiz-enunciado">
+                    <h3 className="quiz-enunciado__titulo">Questao {questaoAtual.ordem} - {normalizeQuestionType(questaoAtual.tipoQuestao)} - {formatScore(questaoAtual.pontos)} ponto(s)</h3>
+                    <div className="quiz-enunciado__texto">
+                      <p>{questaoAtual.enunciado}</p>
+                    </div>
+                  </section>
 
-                      {Number(questao.tipoQuestao) === 3 ? (
-                        <label className="management-field management-field--wide">
-                          <span>Resposta</span>
-                          <textarea
-                            disabled={enviandoRespostas}
-                            onChange={(event) => atualizarRespostaTexto(questao.id, event.target.value)}
-                            placeholder="Digite sua resposta."
-                            value={respostas[questao.id]?.respostaTexto || ""}
-                          />
-                        </label>
-                      ) : (
-                        <div className="student-evaluation-options">
-                          {questao.alternativas.map((alternativa) => (
-                            <label className="student-evaluation-option" key={alternativa.id}>
-                              <input
-                                checked={respostas[questao.id]?.alternativaId === alternativa.id}
-                                disabled={enviandoRespostas}
-                                name={`questao-${questao.id}`}
-                                onChange={() => atualizarAlternativa(questao.id, alternativa.id)}
-                                type="radio"
-                              />
-                              <span>{alternativa.letra}</span>
-                              <strong>{alternativa.texto}</strong>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </article>
-                  ))}
+                  {Number(questaoAtual.tipoQuestao) === 3 ? (
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor={`resposta-${questaoAtual.id}`}>Resposta</label>
+                      <textarea
+                        className="campo__entrada"
+                        disabled={enviandoRespostas}
+                        id={`resposta-${questaoAtual.id}`}
+                        onChange={(event) => atualizarRespostaTexto(questaoAtual.id, event.target.value)}
+                        placeholder="Digite sua resposta."
+                        value={respostas[questaoAtual.id]?.respostaTexto || ""}
+                      />
+                    </div>
+                  ) : (
+                    <fieldset className="quiz-alternativas" disabled={enviandoRespostas}>
+                      <legend className="visualmente-oculto">Alternativas da questao {indiceAtual + 1}</legend>
+                      {questaoAtual.alternativas.map((alternativa) => (
+                        <button
+                          aria-pressed={respostas[questaoAtual.id]?.alternativaId === alternativa.id}
+                          className={`quiz-alternativa${respostas[questaoAtual.id]?.alternativaId === alternativa.id ? " quiz-alternativa--selecionada" : ""}`}
+                          key={alternativa.id}
+                          onClick={() => atualizarAlternativa(questaoAtual.id, alternativa.id)}
+                          type="button"
+                        >
+                          <span aria-hidden="true" className="quiz-alternativa__letra">{alternativa.letra}</span>
+                          <span className="quiz-alternativa__texto">{alternativa.texto}</span>
+                        </button>
+                      ))}
+                    </fieldset>
+                  )}
 
-                  <div className="management-form__actions">
-                    <button className="solid-button" disabled={enviandoRespostas || carregandoQuestoes} type="submit">
-                      {enviandoRespostas ? "Enviando..." : "Enviar avaliacao"}
-                    </button>
-                    <button
-                      className="button button--secondary exit-button"
-                      disabled={enviandoRespostas}
-                      onClick={fecharExecucaoAvaliacao}
-                      type="button"
-                    >
-                      Fechar
-                    </button>
+                  <div className="quiz-acoes">
+                    {indiceAtual > 0 ? (
+                      <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual - 1)} type="button" variante="fantasma">
+                        <TbArrowLeft aria-hidden="true" size={16} /> Voltar
+                      </Botao>
+                    ) : (
+                      <span />
+                    )}
+
+                    {ehUltimaQuestao ? (
+                      <Botao disabled={enviandoRespostas} type="submit" variante="primario">
+                        {enviandoRespostas ? "Enviando..." : "Enviar avaliacao"}
+                      </Botao>
+                    ) : (
+                      <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual + 1)} type="button" variante="primario">
+                        Proxima questao <TbArrowRight aria-hidden="true" size={16} />
+                      </Botao>
+                    )}
                   </div>
                 </form>
-              )}
-            </PanelCard>
-          </div>
-        </div>
+              ) : null}
+            </>
+          )}
+        </Modal>
       ) : null}
     </div>
   );
@@ -772,8 +794,7 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [conteudosConcluidosLocais, setConteudosConcluidosLocais] = useState(() => new Set());
   const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState(null);
-  const [cursosAbertos, setCursosAbertos] = useState({});
-  const [modulosAbertos, setModulosAbertos] = useState({});
+  const [slideAtual, setSlideAtual] = useState(0);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const moduloPorId = useMemo(() => mapById(modulos), [modulos]);
@@ -981,48 +1002,6 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
   );
 
   useEffect(() => {
-    setCursosAbertos((atuais) => {
-      const proximos = {};
-
-      gruposConteudosPorCurso.forEach((curso, index) => {
-        const possuiSelecionado = curso.modulos.some((modulo) => modulo.conteudos.some((conteudo) => conteudo.id === conteudoSelecionadoId));
-        proximos[curso.id] = Object.prototype.hasOwnProperty.call(atuais, curso.id)
-          ? atuais[curso.id]
-          : Boolean(possuiSelecionado || curso.proximoConteudo || index === 0);
-      });
-
-      const chavesAtuais = Object.keys(atuais);
-      const chavesProximas = Object.keys(proximos);
-      const semMudancas =
-        chavesAtuais.length === chavesProximas.length && chavesProximas.every((chave) => atuais[chave] === proximos[chave]);
-
-      return semMudancas ? atuais : proximos;
-    });
-  }, [conteudoSelecionadoId, gruposConteudosPorCurso]);
-
-  useEffect(() => {
-    setModulosAbertos((atuais) => {
-      const proximos = {};
-
-      gruposConteudosPorCurso.forEach((curso) => {
-        curso.modulos.forEach((modulo, index) => {
-          const chaveModulo = obterChaveModuloConteudo(curso.id, modulo.id);
-          proximos[chaveModulo] = Object.prototype.hasOwnProperty.call(atuais, chaveModulo)
-            ? atuais[chaveModulo]
-            : modulo.concluidos < modulo.conteudos.length || index === 0;
-        });
-      });
-
-      const chavesAtuais = Object.keys(atuais);
-      const chavesProximas = Object.keys(proximos);
-      const semMudancas =
-        chavesAtuais.length === chavesProximas.length && chavesProximas.every((chave) => atuais[chave] === proximos[chave]);
-
-      return semMudancas ? atuais : proximos;
-    });
-  }, [gruposConteudosPorCurso]);
-
-  useEffect(() => {
     if (!conteudosDaTrilha.length) {
       setConteudoSelecionadoId(null);
       return;
@@ -1033,32 +1012,15 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
     }
   }, [conteudoSelecionadoId, conteudosDaTrilha]);
 
-  useEffect(() => {
-    if (!conteudoSelecionado?.moduloChave) {
-      return;
-    }
+  const total = gruposConteudosPorCurso.length;
+  const slide = Math.min(slideAtual, Math.max(0, total - 1));
 
-    setModulosAbertos((atuais) => (atuais[conteudoSelecionado.moduloChave] ? atuais : { ...atuais, [conteudoSelecionado.moduloChave]: true }));
-  }, [conteudoSelecionado]);
-
-  function alternarCursoConteudos(chaveCurso) {
-    setCursosAbertos((atuais) => ({
-      ...atuais,
-      [chaveCurso]: !atuais[chaveCurso]
-    }));
+  function irPara(indice) {
+    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
   }
 
-  function alternarModuloConteudos(chaveModulo) {
-    setModulosAbertos((atuais) => ({
-      ...atuais,
-      [chaveModulo]: !atuais[chaveModulo]
-    }));
-  }
-
-  function selecionarConteudoAluno(conteudoId, chaveCurso, chaveModulo) {
+  function selecionarConteudoAluno(conteudoId) {
     setConteudoSelecionadoId((atual) => (atual === conteudoId ? null : conteudoId));
-    setCursosAbertos((atuais) => (atuais[chaveCurso] ? atuais : { ...atuais, [chaveCurso]: true }));
-    setModulosAbertos((atuais) => (atuais[chaveModulo] ? atuais : { ...atuais, [chaveModulo]: true }));
   }
 
   async function marcarConteudoConcluido(conteudoId) {
@@ -1086,235 +1048,174 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
     }
   }
 
-  const resumoAluno = useMemo(() => {
-    const turmasUnicas = new Set(gruposConteudosPorCurso.flatMap((curso) => curso.turmas)).size;
-    const modulosUnicos = gruposConteudosPorCurso.reduce((total, curso) => total + curso.modulos.length, 0);
-    const totalTextos = conteudosOrdenados.filter((conteudo) => Number(conteudo.tipoConteudo) === 1).length;
-    const totalPdfs = conteudosOrdenados.filter((conteudo) => Number(conteudo.tipoConteudo) === 2).length;
-    const totalRecursos = conteudosOrdenados.filter((conteudo) => [3, 4].includes(Number(conteudo.tipoConteudo))).length;
-
-    return [
-      `${matriculasAprovadas.length} matricula(s) ativa(s)`,
-      `${gruposConteudosPorCurso.length} curso(s) em trilha`,
-      `${turmasUnicas} turma(s) ativa(s)`,
-      `${modulosUnicos} modulo(s) do curso`,
-      `${formatPercent(calcularMediaGruposConteudo(gruposConteudosPorCurso))} de progresso`,
-      `${totalTextos} texto(s)`,
-      `${totalPdfs} pdf(s)`,
-      `${totalRecursos} recurso(s)`
-    ];
-  }, [conteudosOrdenados, gruposConteudosPorCurso, matriculasAprovadas.length]);
+  const resumoSubtitulo = `${matriculasAprovadas.length} matricula(s) ativa(s) - ${gruposConteudosPorCurso.length} curso(s) em trilha - ${formatPercent(calcularMediaGruposConteudo(gruposConteudosPorCurso))} de progresso geral`;
 
   return (
-    <div className="content-section content-section--student">
+    <div className="tela-conteudos-aluno">
+      <header className="cabecalho-pagina">
+        <div style={{ flex: 1 }}>
+          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+            <h1 className="cabecalho-pagina__titulo">Conteudos</h1>
+            {total > 0 ? (
+              <select
+                aria-label="Navegar para curso"
+                className="campo__entrada barra-filtros__select"
+                onChange={(event) => irPara(Number(event.target.value))}
+                style={{ marginLeft: "auto", maxWidth: "240px" }}
+                value={slide}
+              >
+                {gruposConteudosPorCurso.map((curso, indice) => (
+                  <option key={curso.id} value={indice}>
+                    {curso.titulo}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+          <p className="cabecalho-pagina__subtitulo">{resumoSubtitulo}</p>
+        </div>
+      </header>
+
       {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
-      <div className="student-study-layout">
-        <PanelCard
-          description="Biblioteca em formato de trilha: abra um curso, depois um modulo, e avance pelos materiais publicados."
-          title="Biblioteca da sua trilha"
-        >
-          {gruposConteudosPorCurso.length ? (
-            <div className="student-content-course-list">
-              {gruposConteudosPorCurso.map((curso) => {
-                const moduloDoProximo = curso.modulos.find((modulo) => modulo.conteudos.some((conteudo) => conteudo.id === curso.proximoConteudo?.id));
-                const chaveModuloProximo = moduloDoProximo ? obterChaveModuloConteudo(curso.id, moduloDoProximo.id) : "";
-                const cursoAberto = Boolean(cursosAbertos[curso.id]);
-
-                return (
-                  <section
-                    className={`student-content-course${cursoAberto ? " student-content-course--open" : ""}`}
+      {total === 0 ? (
+        <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
+      ) : (
+        <div className="carrossel-cursos">
+          {total > 1 ? (
+            <nav aria-label="Navegacao entre cursos" className="carrossel-cursos__nav">
+              <button aria-label="Curso anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <div aria-label="Cursos" className="carrossel-cursos__indicadores" role="tablist">
+                {gruposConteudosPorCurso.map((curso, indice) => (
+                  <button
+                    aria-label={`Curso ${indice + 1}: ${curso.titulo}`}
+                    aria-selected={indice === slide}
+                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
                     key={curso.id}
-                    style={{
-                      "--course-accent": curso.acento.solid,
-                      "--course-accent-border": curso.acento.border,
-                      "--course-accent-soft": curso.acento.soft
-                    }}
+                    onClick={() => irPara(indice)}
+                    role="tab"
+                    type="button"
+                  />
+                ))}
+              </div>
+              <button aria-label="Proximo curso" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </nav>
+          ) : null}
+
+          <div className="carrossel-cursos__janela">
+            <SlideConteudosCurso
+              conteudoProcessando={conteudoProcessando}
+              conteudoSelecionadoId={conteudoSelecionadoId}
+              curso={gruposConteudosPorCurso[slide]}
+              onConcluir={marcarConteudoConcluido}
+              onSelecionar={selecionarConteudoAluno}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const ICONE_TIPO_CONTEUDO_ALUNO = {
+  1: <TbFileText aria-hidden="true" size={22} />,
+  2: <TbFile aria-hidden="true" size={22} />,
+  3: <TbPlayerPlay aria-hidden="true" size={22} />,
+  4: <TbExternalLink aria-hidden="true" size={22} />
+};
+
+function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onSelecionar }) {
+  const itens = curso.modulos.flatMap((modulo) => modulo.conteudos.map((conteudo) => ({ ...conteudo, moduloTitulo: modulo.titulo })));
+
+  return (
+    <div className="conteudos-aluno">
+      <header className="conteudos-aluno__cabecalho">
+        <div className="conteudos-aluno__curso-info">
+          <h2 className="conteudos-aluno__curso-titulo">{curso.titulo}</h2>
+          <div className="conteudos-aluno__meta-chips">
+            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">{formatPercent(curso.progresso)} de progresso</span>
+            <span className="conteudos-aluno__meta-chip">{curso.modulos.length} modulo{curso.modulos.length === 1 ? "" : "s"}</span>
+            <span className="conteudos-aluno__meta-chip">{curso.turmas.length ? curso.turmas.join(", ") : "Turma em definicao"}</span>
+          </div>
+        </div>
+      </header>
+
+      {curso.proximoConteudo ? (
+        <div className="cartao-curso-ativo" style={{ marginBottom: "var(--espaco-md)" }}>
+          <div className="cartao-curso-ativo__info">
+            <strong className="cartao-curso-ativo__titulo">Continue de onde parou</strong>
+            <p className="cartao-curso-ativo__meta">{curso.proximoConteudo.titulo}</p>
+          </div>
+          <Botao onClick={() => onSelecionar(curso.proximoConteudo.id)} tamanho="pequeno" variante="primario">
+            Abrir
+          </Botao>
+        </div>
+      ) : null}
+
+      {itens.length === 0 ? (
+        <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
+      ) : (
+        <ul aria-label={`Conteudos de ${curso.titulo}`} className="lista-conteudos-completa" role="list">
+          {itens.map((conteudo) => {
+            const acao = obterAcaoConteudoAluno(conteudo);
+            const processando = conteudoProcessando === conteudo.id;
+            const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
+
+            return (
+              <li className="cartao-conteudo" key={conteudo.id} style={{ alignItems: "flex-start", flexDirection: "column" }}>
+                <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
+                  <span aria-hidden="true" className="cartao-conteudo__icone">
+                    {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText size={22} />}
+                  </span>
+                  <button
+                    aria-expanded={conteudoAtivo}
+                    className="cartao-conteudo__info"
+                    onClick={() => onSelecionar(conteudo.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
+                    type="button"
                   >
-                    <button
-                      aria-expanded={cursoAberto}
-                      className="student-content-course__toggle"
-                      onClick={() => alternarCursoConteudos(curso.id)}
-                      type="button"
-                    >
-                      <span className="student-content-course__copy">
-                        <span className="eyebrow">Curso</span>
-                        <strong>{curso.titulo}</strong>
-                        <span>{curso.turmas.length ? curso.turmas.join(", ") : "Turma em definicao"}</span>
-                      </span>
-                      <span className="student-content-course__summary">
-                        <span className="chip">{curso.modulos.length} modulo{curso.modulos.length === 1 ? "" : "s"}</span>
-                        <span className="chip">{curso.totalConteudos} material{curso.totalConteudos === 1 ? "" : "s"}</span>
-                        <span className="chip">{formatPercent(curso.progresso)} de progresso</span>
-                        <span className="student-content-course__toggle-symbol" aria-hidden="true">
-                          {cursoAberto ? "-" : "+"}
-                        </span>
-                      </span>
-                    </button>
-
-                    <div className="student-content-card__progress student-content-course__progress">
-                      <div className="student-progress-bar" aria-hidden="true">
-                        <span style={{ width: `${Math.max(0, Math.min(curso.progresso, 100))}%` }} />
-                      </div>
-                    </div>
-
-                    {cursoAberto ? (
-                      <>
-                        {curso.proximoConteudo ? (
-                          <div className="student-content-course__next">
-                            <span>Continue de onde parou</span>
-                            <strong>{curso.proximoConteudo.titulo}</strong>
-                            <button
-                              className="table-action"
-                              onClick={() => selecionarConteudoAluno(curso.proximoConteudo.id, curso.id, chaveModuloProximo)}
-                              type="button"
-                            >
-                              Abrir
-                            </button>
-                          </div>
-                        ) : null}
-
-                        <div className="student-content-module-list">
-                          {curso.modulos.map((modulo) => {
-                            const chaveModulo = obterChaveModuloConteudo(curso.id, modulo.id);
-                            const moduloAberto = Boolean(modulosAbertos[chaveModulo]);
-                            const moduloSemConteudo = modulo.conteudos.length === 0;
-
-                            return (
-                              <article
-                                className="student-content-module"
-                                key={modulo.id}
-                                style={{
-                                  "--module-accent": modulo.acento.solid,
-                                  "--module-accent-border": modulo.acento.border,
-                                  "--module-accent-soft": modulo.acento.soft
-                                }}
-                              >
-                                <button
-                                  aria-expanded={moduloAberto}
-                                  className="student-content-module__toggle"
-                                  onClick={() => alternarModuloConteudos(chaveModulo)}
-                                  type="button"
-                                >
-                                  <span className="student-content-module__copy">
-                                    <span>Modulo</span>
-                                    <strong>{modulo.titulo}</strong>
-                                  </span>
-                                  <span className="student-content-module__summary">
-                                    <StatusPill tone={moduloSemConteudo ? "info" : modulo.concluidos === modulo.conteudos.length ? "success" : "warning"}>
-                                      {moduloSemConteudo
-                                        ? "Aguardando conteudos"
-                                        : `${modulo.concluidos}/${modulo.conteudos.length} concluido${modulo.conteudos.length === 1 ? "" : "s"}`}
-                                    </StatusPill>
-                                    <span>{formatPercent(modulo.progresso)}</span>
-                                    <span className="student-content-module__toggle-symbol" aria-hidden="true">
-                                      {moduloAberto ? "-" : "+"}
-                                    </span>
-                                  </span>
-                                </button>
-
-                                {moduloAberto ? (
-                                  <div className="student-content-compact-list">
-                                    {modulo.conteudos.length ? (
-                                      modulo.conteudos.map((conteudo) => {
-                                        const acao = obterAcaoConteudoAluno(conteudo);
-                                        const processando = conteudoProcessando === conteudo.id;
-                                        const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
-
-                                        return (
-                                          <article
-                                            className={`student-content-item${conteudoAtivo ? " student-content-item--active" : ""}`}
-                                            key={conteudo.id}
-                                          >
-                                            <button
-                                              aria-expanded={conteudoAtivo}
-                                              className="student-content-item__main"
-                                              onClick={() => selecionarConteudoAluno(conteudo.id, curso.id, chaveModulo)}
-                                              type="button"
-                                            >
-                                              <span className="student-content-item__order">
-                                                {typeof conteudo.ordemExibicao === "number" ? String(conteudo.ordemExibicao).padStart(2, "0") : "--"}
-                                              </span>
-                                              <span className="student-content-item__copy">
-                                                <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                                                <strong>{conteudo.titulo}</strong>
-                                              </span>
-                                            </button>
-
-                                            <div className="student-content-item__status">
-                                              <StatusPill tone={conteudo.concluido ? "success" : progressStatusTone(conteudo.statusProgresso)}>
-                                                {conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)}
-                                              </StatusPill>
-                                              <span>{formatPercent(conteudo.progressoPercentual)}</span>
-                                            </div>
-
-                                            <div className="student-content-item__actions">
-                                              {acao ? (
-                                                <a className="student-content-card__link" href={acao.href} rel="noreferrer" target="_blank">
-                                                  {acao.label}
-                                                </a>
-                                              ) : null}
-                                              {!conteudo.concluido ? (
-                                                <button
-                                                  className="table-action"
-                                                  disabled={processando}
-                                                  onClick={() => marcarConteudoConcluido(conteudo.id)}
-                                                  type="button"
-                                                >
-                                                  {processando ? "Salvando..." : "Concluir"}
-                                                </button>
-                                              ) : null}
-                                            </div>
-
-                                            {conteudoAtivo ? (
-                                              <div className="student-content-item__detail">
-                                                <p>{obterPreviaConteudoAluno(conteudo)}</p>
-                                                {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
-                                                <span>
-                                                  {conteudo.publicadoEm
-                                                    ? `Publicado em ${formatDate(conteudo.publicadoEm)}`
-                                                    : `Atualizado em ${formatDate(conteudo.atualizadoEm || conteudo.criadoEm)}`}
-                                                </span>
-                                              </div>
-                                            ) : null}
-                                          </article>
-                                        );
-                                      })
-                                    ) : (
-                                      <p className="student-content-module__empty">Nenhum material publicado neste modulo ainda.</p>
-                                    )}
-                                  </div>
-                                ) : null}
-                              </article>
-                            );
-                          })}
-                        </div>
-                      </>
+                    <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
+                    <p className="cartao-conteudo__modulo">{conteudo.moduloTitulo}</p>
+                  </button>
+                  <div className="cartao-conteudo__meta">
+                    <Insignia texto={conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)} variante={conteudo.concluido ? "sucesso" : undefined} />
+                  </div>
+                  <div className="cartao-conteudo__acoes">
+                    {acao ? (
+                      <a href={acao.href} rel="noreferrer" style={{ color: "var(--cor-marca-clara)", fontSize: "0.82rem", fontWeight: 600 }} target="_blank">
+                        {acao.label}
+                      </a>
                     ) : null}
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
-          )}
-        </PanelCard>
-      </div>
+                    {!conteudo.concluido ? (
+                      <Botao disabled={processando} onClick={() => onConcluir(conteudo.id)} tamanho="pequeno" variante="fantasma">
+                        {processando ? "Salvando..." : "Concluir"}
+                      </Botao>
+                    ) : null}
+                  </div>
+                </div>
 
-      <section className="content-section__intro">
-        <div className="content-section__intro-copy">
-          <span className="eyebrow">Experiencia do aluno</span>
-          <h2>Materiais liberados para a sua jornada</h2>
-          <p>Acompanhe o que ja foi publicado para as suas turmas e avance por curso, modulo e formato de estudo.</p>
-        </div>
-        <div className="content-section__highlights" aria-label="Resumo da trilha do aluno">
-          {resumoAluno.map((item) => (
-            <span className="chip" key={item}>
-              {item}
-            </span>
-          ))}
-        </div>
-      </section>
+                {conteudoAtivo ? (
+                  <div style={{ color: "var(--cor-texto-suave)", fontSize: "0.85rem", padding: "var(--espaco-sm) 0 0 calc(1.5rem + var(--espaco-md))" }}>
+                    <p>{obterPreviaConteudoAluno(conteudo)}</p>
+                    {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
+                    <span>
+                      {conteudo.publicadoEm ? `Publicado em ${formatDate(conteudo.publicadoEm)}` : `Atualizado em ${formatDate(conteudo.atualizadoEm || conteudo.criadoEm)}`}
+                    </span>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

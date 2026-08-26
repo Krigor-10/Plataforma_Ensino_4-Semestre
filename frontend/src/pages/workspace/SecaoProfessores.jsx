@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import { MdGroups, MdSave, MdSchool } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
+import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
+import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { formatCep, onlyDigits } from "../../lib/format.js";
+import { formatCep, formatDate, iniciaisNome, maskCpf, onlyDigits } from "../../lib/format.js";
 
-const ESTADO_INICIAL_FORMULARIO_PROFESSOR = {
+const ITENS_POR_PAGINA = 8;
+
+const ESTADO_INICIAL_FORMULARIO = {
   nome: "",
   email: "",
   cpf: "",
@@ -23,206 +32,156 @@ const ESTADO_INICIAL_FORMULARIO_PROFESSOR = {
 function normalizarBusca(valor) {
   return String(valor ?? "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
 }
 
+function IconeOrdenacao({ direcao }) {
+  return direcao === "asc" ? <TbChevronUp aria-hidden="true" size={14} /> : <TbChevronDown aria-hidden="true" size={14} />;
+}
+
 export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, professores = [], turmas = [] }) {
-  const [buscaProfessor, setBuscaProfessor] = useState("");
-  const [filtroCurso, setFiltroCurso] = useState("todos");
-  const [formularioProfessorAberto, setFormularioProfessorAberto] = useState(false);
-  const [professorCursosSelecionado, setProfessorCursosSelecionado] = useState(null);
-  const [dadosFormularioProfessor, setDadosFormularioProfessor] = useState(ESTADO_INICIAL_FORMULARIO_PROFESSOR);
-  const [mensagemFormularioProfessor, setMensagemFormularioProfessor] = useState({ tone: "", message: "" });
-  const [mensagemTabelaProfessor, setMensagemTabelaProfessor] = useState({ tone: "", message: "" });
-  const [salvandoProfessor, setSalvandoProfessor] = useState(false);
-  const termoBusca = useMemo(() => normalizarBusca(buscaProfessor), [buscaProfessor]);
+  const [busca, setBusca] = useState("");
+  const [direcao, setDirecao] = useState("asc");
+  const [pagina, setPagina] = useState(1);
+  const [kebabAbertoId, setKebabAbertoId] = useState(null);
+  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
+  const [professorDetalhe, setProfessorDetalhe] = useState(null);
+  const [formularioAberto, setFormularioAberto] = useState(false);
+  const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
+  const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
+  const [salvando, setSalvando] = useState(false);
+  const kebabRef = useRef(null);
+
+  useEffect(() => {
+    if (!kebabAbertoId) {
+      return undefined;
+    }
+
+    function fechar(event) {
+      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
+        setKebabAbertoId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", fechar);
+    return () => document.removeEventListener("mousedown", fechar);
+  }, [kebabAbertoId]);
+
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
-  const cursosPorProfessor = useMemo(() => {
-    const cursosMapeados = new Map();
+  const turmasPorProfessor = useMemo(() => {
+    const mapa = new Map();
 
     turmas.forEach((turma) => {
       const professorId = Number(turma.professorId);
-      const cursoId = Number(turma.cursoId);
 
-      if (!professorId || !cursoId) {
+      if (!professorId) {
         return;
       }
 
-      if (!cursosMapeados.has(professorId)) {
-        cursosMapeados.set(professorId, new Set());
+      if (!mapa.has(professorId)) {
+        mapa.set(professorId, []);
       }
 
-      cursosMapeados.get(professorId).add(cursoId);
+      mapa.get(professorId).push(turma);
     });
 
-    return cursosMapeados;
+    return mapa;
   }, [turmas]);
-  const cursosComProfessores = useMemo(() => {
-    const idsCursos = new Set(turmas.map((turma) => Number(turma.cursoId)).filter(Boolean));
+
+  const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
+  const professoresFiltrados = useMemo(() => {
+    let proximos = professores;
+
+    if (termoBusca) {
+      proximos = proximos.filter((professor) => {
+        const campos = [professor.nome, professor.email, professor.especialidade, professor.codigoRegistro];
+        return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
+      });
+    }
+
+    return [...proximos].sort((left, right) => {
+      const comparacao = String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR");
+      return direcao === "asc" ? comparacao : -comparacao;
+    });
+  }, [direcao, professores, termoBusca]);
+
+  const totalPaginas = Math.max(1, Math.ceil(professoresFiltrados.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
+  const itensPagina = professoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+  function limparFiltros() {
+    setBusca("");
+    setPagina(1);
+  }
+
+  function alternarOrdenacao() {
+    setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
+    setPagina(1);
+  }
+
+  function abrirKebab(event, professorId) {
+    event.stopPropagation();
+    const retangulo = event.currentTarget.getBoundingClientRect();
+    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
+    setKebabAbertoId((atual) => (atual === professorId ? null : professorId));
+  }
+
+  function obterCursosDoProfessor(professor) {
+    const turmasDoProfessor = turmasPorProfessor.get(Number(professor.id)) || [];
+    const idsCursos = new Set(turmasDoProfessor.map((turma) => Number(turma.cursoId)));
 
     return [...idsCursos]
       .map((cursoId) => cursoPorId.get(cursoId) || { id: cursoId, titulo: `Curso #${cursoId}` })
       .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
-  }, [cursoPorId, turmas]);
-  const professoresFiltrados = useMemo(() => {
-    let proximosProfessores = professores;
+  }
 
-    if (filtroCurso !== "todos") {
-      const cursoId = Number(filtroCurso);
-      proximosProfessores = proximosProfessores.filter((professor) =>
-        cursosPorProfessor.get(Number(professor.id))?.has(cursoId)
-      );
-    }
+  function abrirFormulario() {
+    setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
+  }
 
-    if (!termoBusca) {
-      return proximosProfessores;
-    }
-
-    return proximosProfessores.filter((professor) => {
-      const cursosDoProfessor = [...(cursosPorProfessor.get(Number(professor.id)) || [])];
-      const nomesCursos = cursosDoProfessor.map((cursoId) => cursoPorId.get(cursoId)?.titulo || `Curso #${cursoId}`);
-      const status = professor.ativo ? "Ativo" : "Inativo";
-      const campos = [
-        professor.codigoRegistro,
-        professor.nome,
-        professor.email,
-        String(cursosDoProfessor.length),
-        ...nomesCursos,
-        status
-      ];
-
-      return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
-    });
-  }, [cursoPorId, cursosPorProfessor, filtroCurso, professores, termoBusca]);
-  const temFiltroAtivo = Boolean(termoBusca || filtroCurso !== "todos");
-
-  useEffect(() => {
-    if (!formularioProfessorAberto && !professorCursosSelecionado) {
+  function fecharFormulario() {
+    if (salvando) {
       return;
     }
 
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      if (professorCursosSelecionado) {
-        fecharCursosProfessor();
-        return;
-      }
-
-      if (!salvandoProfessor) {
-        fecharFormularioProfessor();
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [formularioProfessorAberto, professorCursosSelecionado, salvandoProfessor]);
-
-  function limparFiltros() {
-    setBuscaProfessor("");
-    setFiltroCurso("todos");
+    setFormularioAberto(false);
   }
 
-  function abrirFormularioProfessor() {
-    setDadosFormularioProfessor(ESTADO_INICIAL_FORMULARIO_PROFESSOR);
-    setMensagemFormularioProfessor({ tone: "", message: "" });
-    setMensagemTabelaProfessor({ tone: "", message: "" });
-    setFormularioProfessorAberto(true);
-  }
-
-  function fecharFormularioProfessor() {
-    if (salvandoProfessor) {
-      return;
-    }
-
-    setFormularioProfessorAberto(false);
-    setMensagemFormularioProfessor({ tone: "", message: "" });
-  }
-
-  function fecharCursosProfessor() {
-    setProfessorCursosSelecionado(null);
-  }
-
-  function obterCursosDoProfessor(professor) {
-    const idsCursos = [...(cursosPorProfessor.get(Number(professor.id)) || [])];
-
-    return idsCursos
-      .map((cursoId) => cursoPorId.get(cursoId) || { id: cursoId, titulo: `Curso #${cursoId}` })
-      .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
-  }
-
-  function abrirCursosProfessor(professor) {
-    const cursosDoProfessor = obterCursosDoProfessor(professor);
-
-    if (cursosDoProfessor.length <= 1) {
-      return;
-    }
-
-    setProfessorCursosSelecionado({
-      professor,
-      cursos: cursosDoProfessor
-    });
-  }
-
-  function atualizarCampoFormularioProfessor(event) {
+  function atualizarCampo(event) {
     const { name, value } = event.target;
-
-    setDadosFormularioProfessor((current) => ({
-      ...current,
-      [name]: value
-    }));
+    setDadosFormulario((atual) => ({ ...atual, [name]: value }));
   }
 
-  function validarFormularioProfessor() {
-    const camposObrigatorios = [
-      "nome",
-      "email",
-      "cpf",
-      "telefone",
-      "cep",
-      "rua",
-      "numero",
-      "bairro",
-      "cidade",
-      "estado",
-      "especialidade",
-      "senha",
-      "confirmarSenha"
-    ];
-    const campoVazio = camposObrigatorios.find((campo) => !String(dadosFormularioProfessor[campo] || "").trim());
+  function validarFormulario() {
+    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado", "especialidade", "senha", "confirmarSenha"];
+    const campoVazio = obrigatorios.find((campo) => !String(dadosFormulario[campo] || "").trim());
 
     if (campoVazio) {
       return "Preencha todos os campos para cadastrar o professor.";
     }
 
-    if (onlyDigits(dadosFormularioProfessor.cpf).length !== 11) {
+    if (onlyDigits(dadosFormulario.cpf).length !== 11) {
       return "Informe um CPF com 11 digitos.";
     }
 
-    if (onlyDigits(dadosFormularioProfessor.cep).length !== 8) {
+    if (onlyDigits(dadosFormulario.cep).length !== 8) {
       return "Informe um CEP com 8 digitos.";
     }
 
-    if (dadosFormularioProfessor.estado.trim().length !== 2) {
+    if (dadosFormulario.estado.trim().length !== 2) {
       return "Informe a UF com 2 letras.";
     }
 
-    if (dadosFormularioProfessor.senha.length < 6) {
+    if (dadosFormulario.senha.length < 6) {
       return "A senha precisa ter pelo menos 6 caracteres.";
     }
 
-    if (dadosFormularioProfessor.senha !== dadosFormularioProfessor.confirmarSenha) {
+    if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
       return "As senhas nao coincidem.";
     }
 
@@ -232,38 +191,36 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   async function salvarProfessor(event) {
     event.preventDefault();
 
-    const erroValidacao = validarFormularioProfessor();
-    if (erroValidacao) {
-      setMensagemFormularioProfessor({ tone: "error", message: erroValidacao });
+    const erro = validarFormulario();
+    if (erro) {
+      setMensagemFormulario({ tone: "error", message: erro });
       return;
     }
 
-    setSalvandoProfessor(true);
-    setMensagemFormularioProfessor({ tone: "", message: "" });
+    setSalvando(true);
+    setMensagemFormulario({ tone: "", message: "" });
 
     try {
       await apiRequest("/Professores", {
         method: "POST",
         body: JSON.stringify({
-          nome: dadosFormularioProfessor.nome.trim(),
-          email: dadosFormularioProfessor.email.trim(),
-          cpf: onlyDigits(dadosFormularioProfessor.cpf),
-          telefone: dadosFormularioProfessor.telefone.trim(),
-          cep: formatCep(onlyDigits(dadosFormularioProfessor.cep)),
-          rua: dadosFormularioProfessor.rua.trim(),
-          numero: dadosFormularioProfessor.numero.trim(),
-          bairro: dadosFormularioProfessor.bairro.trim(),
-          cidade: dadosFormularioProfessor.cidade.trim(),
-          estado: dadosFormularioProfessor.estado.trim().toUpperCase(),
-          especialidade: dadosFormularioProfessor.especialidade.trim(),
-          senha: dadosFormularioProfessor.senha,
+          nome: dadosFormulario.nome.trim(),
+          email: dadosFormulario.email.trim(),
+          cpf: onlyDigits(dadosFormulario.cpf),
+          telefone: dadosFormulario.telefone.trim(),
+          cep: formatCep(onlyDigits(dadosFormulario.cep)),
+          rua: dadosFormulario.rua.trim(),
+          numero: dadosFormulario.numero.trim(),
+          bairro: dadosFormulario.bairro.trim(),
+          cidade: dadosFormulario.cidade.trim(),
+          estado: dadosFormulario.estado.trim().toUpperCase(),
+          especialidade: dadosFormulario.especialidade.trim(),
+          senha: dadosFormulario.senha,
           ativo: true
         })
       });
 
-      setDadosFormularioProfessor(ESTADO_INICIAL_FORMULARIO_PROFESSOR);
-      setFormularioProfessorAberto(false);
-      setMensagemTabelaProfessor({ tone: "success", message: "Professor cadastrado com sucesso." });
+      setFormularioAberto(false);
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -271,401 +228,301 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         return;
       }
 
-      setMensagemFormularioProfessor({
-        tone: "error",
-        message: err.message || "Nao foi possivel cadastrar o professor agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel cadastrar o professor agora." });
     } finally {
-      setSalvandoProfessor(false);
+      setSalvando(false);
     }
   }
 
-  function renderFormularioProfessor() {
-    if (!formularioProfessorAberto) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharFormularioProfessor();
-          }
-        }}
-      >
-        <div aria-label="Cadastrar professor" aria-modal="true" className="content-form-modal__card" role="dialog">
-          <button
-            className="content-form-modal__close"
-            disabled={salvandoProfessor}
-            onClick={fecharFormularioProfessor}
-            type="button"
-          >
-            Fechar
-          </button>
-
-          <PanelCard
-            description="Preencha os dados de acesso e identificacao do docente antes de vincula-lo as turmas."
-            title="Cadastrar professor"
-          >
-            <form className="management-form" onSubmit={salvarProfessor}>
-              <div className="management-form__grid">
-                <label className="management-field management-field--wide">
-                  <span>Nome</span>
-                  <input
-                    autoComplete="name"
-                    disabled={salvandoProfessor}
-                    maxLength={150}
-                    name="nome"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="Nome completo"
-                    type="text"
-                    value={dadosFormularioProfessor.nome}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>E-mail</span>
-                  <input
-                    autoComplete="email"
-                    disabled={salvandoProfessor}
-                    name="email"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="professor@exemplo.com"
-                    type="email"
-                    value={dadosFormularioProfessor.email}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>CPF</span>
-                  <input
-                    autoComplete="off"
-                    disabled={salvandoProfessor}
-                    inputMode="numeric"
-                    maxLength={14}
-                    name="cpf"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="Somente numeros"
-                    type="text"
-                    value={dadosFormularioProfessor.cpf}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Telefone</span>
-                  <input
-                    autoComplete="tel"
-                    disabled={salvandoProfessor}
-                    maxLength={20}
-                    name="telefone"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="(11) 99999-9999"
-                    type="text"
-                    value={dadosFormularioProfessor.telefone}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>CEP</span>
-                  <input
-                    autoComplete="postal-code"
-                    disabled={salvandoProfessor}
-                    inputMode="numeric"
-                    maxLength={9}
-                    name="cep"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="00000-000"
-                    type="text"
-                    value={dadosFormularioProfessor.cep}
-                  />
-                </label>
-
-                <label className="management-field management-field--wide">
-                  <span>Rua</span>
-                  <input
-                    autoComplete="address-line1"
-                    disabled={salvandoProfessor}
-                    maxLength={200}
-                    name="rua"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="Endereco"
-                    type="text"
-                    value={dadosFormularioProfessor.rua}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Numero</span>
-                  <input
-                    autoComplete="address-line2"
-                    disabled={salvandoProfessor}
-                    maxLength={20}
-                    name="numero"
-                    onChange={atualizarCampoFormularioProfessor}
-                    type="text"
-                    value={dadosFormularioProfessor.numero}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Bairro</span>
-                  <input
-                    autoComplete="address-level3"
-                    disabled={salvandoProfessor}
-                    maxLength={120}
-                    name="bairro"
-                    onChange={atualizarCampoFormularioProfessor}
-                    type="text"
-                    value={dadosFormularioProfessor.bairro}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Cidade</span>
-                  <input
-                    autoComplete="address-level2"
-                    disabled={salvandoProfessor}
-                    maxLength={120}
-                    name="cidade"
-                    onChange={atualizarCampoFormularioProfessor}
-                    type="text"
-                    value={dadosFormularioProfessor.cidade}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>UF</span>
-                  <input
-                    autoComplete="address-level1"
-                    disabled={salvandoProfessor}
-                    maxLength={2}
-                    name="estado"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="SP"
-                    type="text"
-                    value={dadosFormularioProfessor.estado}
-                  />
-                </label>
-
-                <label className="management-field management-field--wide">
-                  <span>Especialidade</span>
-                  <input
-                    autoComplete="off"
-                    disabled={salvandoProfessor}
-                    maxLength={120}
-                    name="especialidade"
-                    onChange={atualizarCampoFormularioProfessor}
-                    placeholder="Ex.: Engenharia de Software"
-                    type="text"
-                    value={dadosFormularioProfessor.especialidade}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Senha</span>
-                  <input
-                    autoComplete="new-password"
-                    disabled={salvandoProfessor}
-                    minLength={6}
-                    name="senha"
-                    onChange={atualizarCampoFormularioProfessor}
-                    type="password"
-                    value={dadosFormularioProfessor.senha}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Confirmar senha</span>
-                  <input
-                    autoComplete="new-password"
-                    disabled={salvandoProfessor}
-                    minLength={6}
-                    name="confirmarSenha"
-                    onChange={atualizarCampoFormularioProfessor}
-                    type="password"
-                    value={dadosFormularioProfessor.confirmarSenha}
-                  />
-                </label>
-              </div>
-
-              {mensagemFormularioProfessor.message ? (
-                <InlineMessage tone={mensagemFormularioProfessor.tone}>{mensagemFormularioProfessor.message}</InlineMessage>
-              ) : null}
-
-              <div className="management-form__actions">
-                <button className="solid-button professor-create-button" disabled={salvandoProfessor} type="submit">
-                  {salvandoProfessor ? "Salvando..." : "Cadastrar professor"}
-                </button>
-
-                <button
-                  className="button button--secondary exit-button"
-                  disabled={salvandoProfessor}
-                  onClick={fecharFormularioProfessor}
-                  type="button"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
-
-  function renderCursosProfessor(professor) {
-    const cursosDoProfessor = obterCursosDoProfessor(professor);
-
-    if (!cursosDoProfessor.length) {
-      return <span className="table-muted">Nenhum curso</span>;
-    }
-
-    return (
-      <div className="course-preview-cell">
-        <span className="course-preview-cell__name">{cursosDoProfessor[0].titulo}</span>
-        {cursosDoProfessor.length > 1 ? (
-          <button
-            aria-label={`Ver todos os cursos de ${professor.nome}`}
-            className="course-preview-cell__more"
-            onClick={() => abrirCursosProfessor(professor)}
-            title="Ver cursos"
-            type="button"
-          >
-            +
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  function renderCursosProfessorPopup() {
-    if (!professorCursosSelecionado) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharCursosProfessor();
-          }
-        }}
-      >
-        <div
-          aria-label={`Cursos em andamento de ${professorCursosSelecionado.professor.nome}`}
-          aria-modal="true"
-          className="content-form-modal__card content-form-modal__card--compact"
-          role="dialog"
-        >
-          <button className="content-form-modal__close" onClick={fecharCursosProfessor} type="button">
-            Fechar
-          </button>
-
-          <PanelCard
-            description={professorCursosSelecionado.professor.nome}
-            title="Cursos em andamento"
-          >
-            <ul className="professor-course-list">
-              {professorCursosSelecionado.cursos.map((curso) => (
-                <li key={curso.id}>{curso.titulo}</li>
-              ))}
-            </ul>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
+  const professorKebab = professores.find((professor) => professor.id === kebabAbertoId);
+  const cursosDetalhe = professorDetalhe ? obterCursosDoProfessor(professorDetalhe) : [];
+  const turmasDetalhe = professorDetalhe ? turmasPorProfessor.get(Number(professorDetalhe.id)) || [] : [];
 
   return (
-    <PanelCard description="Corpo docente disponivel para composicao das turmas." title="Professores cadastrados">
-      {renderFormularioProfessor()}
-      {renderCursosProfessorPopup()}
+    <div className="tela-professores">
+      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Professores</h1>
+          <p className="cabecalho-pagina__subtitulo">{professores.length} cadastrado{professores.length === 1 ? "" : "s"}</p>
+        </div>
+        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
+          <TbSearch
+            aria-hidden="true"
+            size={15}
+            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
+          />
+          <label className="visualmente-oculto" htmlFor="busca-professores">Buscar professor</label>
+          <input
+            className="campo__entrada"
+            id="busca-professores"
+            onChange={(event) => {
+              setBusca(event.target.value);
+              setPagina(1);
+            }}
+            placeholder="Buscar por nome, e-mail ou especialidade..."
+            style={{ paddingLeft: "32px", width: "100%" }}
+            type="search"
+            value={busca}
+          />
+        </div>
+      </header>
 
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar professores"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaProfessor(event.target.value)}
-              placeholder="Pesquisar professores"
-              type="search"
-              value={buscaProfessor}
-            />
-          </label>
-          <select
-            aria-label="Filtrar professores por curso"
-            className="table-inline-select"
-            onChange={(event) => setFiltroCurso(event.target.value)}
-            value={filtroCurso}
-          >
-            <option value="todos">Todos os cursos</option>
-            {cursosComProfessores.map((curso) => (
-              <option key={curso.id} value={curso.id}>
-                {curso.titulo}
-              </option>
-            ))}
-          </select>
-          <button className="table-action" disabled={!temFiltroAtivo} onClick={limparFiltros} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <div className="table-actions">
-          <button
-            className="solid-button professor-create-button"
-            disabled={salvandoProfessor}
-            onClick={abrirFormularioProfessor}
-            type="button"
-          >
-            Cadastrar professor
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {professoresFiltrados.length} de {professores.length} professor{professores.length === 1 ? "" : "es"}
-        </p>
+      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+        <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+          Limpar filtros
+        </Botao>
+        <Botao onClick={abrirFormulario} style={{ marginLeft: "auto" }} variante="primario">
+          <TbPlus aria-hidden="true" size={18} /> Cadastrar professor
+        </Botao>
       </div>
 
-      {mensagemTabelaProfessor.message ? (
-        <InlineMessage tone={mensagemTabelaProfessor.tone}>{mensagemTabelaProfessor.message}</InlineMessage>
+      <div className="tabela-dados-container painel-secao">
+        <table aria-label="Lista de professores" className="tabela-dados">
+          <thead>
+            <tr>
+              <th scope="col">
+                <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
+                  Professor <IconeOrdenacao direcao={direcao} />
+                </button>
+              </th>
+              <th scope="col">Especialidade</th>
+              <th scope="col">Cursos em andamento</th>
+              <th scope="col">Status</th>
+              <th scope="col" style={{ width: 48 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {itensPagina.length === 0 ? (
+              <tr className="tabela-dados--sem-dados">
+                <td colSpan={5}>Nenhum professor encontrado.</td>
+              </tr>
+            ) : (
+              itensPagina.map((professor) => {
+                const cursosDoProfessor = obterCursosDoProfessor(professor);
+
+                return (
+                  <tr className="tabela-linha-clicavel" key={professor.id} onClick={() => setProfessorDetalhe(professor)}>
+                    <td>
+                      <div className="tabela-aluno">
+                        <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
+                          {iniciaisNome(professor.nome)}
+                        </div>
+                        <div>
+                          <strong className="tabela-aluno__nome">{professor.nome}</strong>
+                          <span className="tabela-aluno__email">{professor.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{professor.especialidade || "-"}</td>
+                    <td>
+                      {cursosDoProfessor.length === 0 ? (
+                        <span className="tabela-matricula__vazio">Nenhum curso</span>
+                      ) : (
+                        <span>{cursosDoProfessor[0].titulo}{cursosDoProfessor.length > 1 ? ` +${cursosDoProfessor.length - 1}` : ""}</span>
+                      )}
+                    </td>
+                    <td>
+                      <Insignia texto={professor.ativo ? "Ativo" : "Inativo"} variante={professor.ativo ? "sucesso" : "erro"} />
+                    </td>
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <button
+                        aria-expanded={kebabAbertoId === professor.id}
+                        aria-haspopup="menu"
+                        aria-label={`Acoes para ${professor.nome}`}
+                        className="kebab-btn"
+                        onClick={(event) => abrirKebab(event, professor.id)}
+                        type="button"
+                      >
+                        <TbDotsVertical aria-hidden="true" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPaginas > 1 ? (
+        <nav aria-label="Paginacao de professores" className="paginacao">
+          <span className="paginacao__info">
+            {inicio + 1}-{Math.min(inicio + ITENS_POR_PAGINA, professoresFiltrados.length)} de {professoresFiltrados.length}
+          </span>
+          <div className="paginacao__controles">
+            <Botao disabled={paginaSegura === 1} onClick={() => setPagina((atual) => Math.max(1, atual - 1))} tamanho="pequeno" variante="fantasma">
+              <TbChevronLeft aria-hidden="true" size={14} /> Anterior
+            </Botao>
+            {Array.from({ length: totalPaginas }, (_, indice) => indice + 1).map((numero) => (
+              <button
+                aria-current={paginaSegura === numero ? "page" : undefined}
+                className={`paginacao__pagina${paginaSegura === numero ? " paginacao__pagina--ativa" : ""}`}
+                key={numero}
+                onClick={() => setPagina(numero)}
+                type="button"
+              >
+                {numero}
+              </button>
+            ))}
+            <Botao disabled={paginaSegura === totalPaginas} onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} tamanho="pequeno" variante="fantasma">
+              Proxima <TbChevronRight aria-hidden="true" size={14} />
+            </Botao>
+          </div>
+        </nav>
       ) : null}
 
-      <DataTable
-        columns={[
-          {
-            key: "codigoRegistro",
-            label: "REGISTRO DO PROFESSOR",
-            render: (professor) => professor.codigoRegistro || "Sem registro"
-          },
-          { key: "nome", label: "Nome" },
-          { key: "email", label: "E-mail" },
-          {
-            key: "cursosEmAndamento",
-            label: "Cursos em andamento",
-            render: renderCursosProfessor
-          },
-          {
-            key: "ativo",
-            label: "STATUS",
-            render: (professor) => (
-              <StatusPill tone={professor.ativo ? "success" : "danger"}>
-                {professor.ativo ? "Ativo" : "Inativo"}
-              </StatusPill>
-            )
-          }
-        ]}
-        emptyMessage="Nenhum professor encontrado."
-        rows={professoresFiltrados}
-      />
-    </PanelCard>
+      {kebabAbertoId && professorKebab
+        ? createPortal(
+            <div className="kebab-menu" ref={kebabRef} role="menu" style={{ left: kebabPos.left, top: kebabPos.top }}>
+              <button
+                className="kebab-menu__item"
+                onClick={() => {
+                  setProfessorDetalhe(professorKebab);
+                  setKebabAbertoId(null);
+                }}
+                role="menuitem"
+                type="button"
+              >
+                Ver detalhes
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {professorDetalhe ? (
+        <Modal onFechar={() => setProfessorDetalhe(null)} titulo="Detalhes do professor">
+          <div className="detalhe-usuario__perfil">
+            <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
+              {iniciaisNome(professorDetalhe.nome)}
+            </div>
+            <div className="detalhe-usuario__identidade">
+              <h3 className="detalhe-usuario__nome">{professorDetalhe.nome}</h3>
+              <span className="detalhe-usuario__email">{professorDetalhe.email}</span>
+            </div>
+            <Insignia texto={professorDetalhe.ativo ? "Ativo" : "Inativo"} variante={professorDetalhe.ativo ? "sucesso" : "erro"} />
+          </div>
+
+          <dl className="detalhe-usuario__dados">
+            <div className="detalhe-usuario__dado">
+              <dt>Registro</dt>
+              <dd>{professorDetalhe.codigoRegistro || "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Especialidade</dt>
+              <dd>{professorDetalhe.especialidade || "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>CPF</dt>
+              <dd>{maskCpf(professorDetalhe.cpf)}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Cadastro</dt>
+              <dd>{formatDate(professorDetalhe.dataCadastro)}</dd>
+            </div>
+          </dl>
+
+          <section aria-label="Resumo de atividade" style={{ marginBottom: "var(--espaco-lg)" }}>
+            <div className="grade-estatisticas">
+              <CartaoEstatistica icone={<MdGroups size={22} />} rotulo="Turmas" valor={turmasDetalhe.length} />
+              <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdSchool size={22} />} rotulo="Cursos" valor={cursosDetalhe.length} />
+            </div>
+          </section>
+
+          <section>
+            <h4 className="detalhe-usuario__secao-titulo">Cursos em andamento</h4>
+            {cursosDetalhe.length === 0 ? (
+              <p className="texto-vazio">Nenhum curso vinculado.</p>
+            ) : (
+              <ul className="detalhe-usuario__lista" role="list">
+                {cursosDetalhe.map((curso) => (
+                  <li className="detalhe-usuario__item" key={curso.id}>
+                    {curso.titulo}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <footer className="modal-rodape">
+            <Botao onClick={() => setProfessorDetalhe(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Fechar
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      {formularioAberto ? (
+        <Modal onFechar={fecharFormulario} titulo="Cadastrar professor">
+          <form className="formulario-modal" onSubmit={salvarProfessor}>
+            <div className="formulario-perfil__grade">
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="professor-nome">Nome completo *</label>
+                <input autoComplete="name" className="campo__entrada" disabled={salvando} id="professor-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-email">E-mail *</label>
+                <input autoComplete="email" className="campo__entrada" disabled={salvando} id="professor-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-cpf">CPF *</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-telefone">Telefone *</label>
+                <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="professor-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-cep">CEP *</label>
+                <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="professor-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
+              </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="professor-rua">Rua *</label>
+                <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="professor-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-numero">Numero *</label>
+                <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="professor-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-bairro">Bairro *</label>
+                <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="professor-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-cidade">Cidade *</label>
+                <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="professor-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-estado">UF *</label>
+                <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="professor-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
+              </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="professor-especialidade">Especialidade *</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-especialidade" maxLength={120} name="especialidade" onChange={atualizarCampo} placeholder="Ex.: Engenharia de Software" value={dadosFormulario.especialidade} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-senha">Senha *</label>
+                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="professor-confirmar-senha">Confirmar senha *</label>
+                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+              </div>
+            </div>
+
+            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
+
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Cadastrar professor"}
+              </Botao>
+            </footer>
+          </form>
+        </Modal>
+      ) : null}
+    </div>
   );
 }

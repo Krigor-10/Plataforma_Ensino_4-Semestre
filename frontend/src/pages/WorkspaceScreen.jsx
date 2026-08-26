@@ -12,7 +12,10 @@ import { SecaoMatriculas } from "./workspace/SecaoMatriculas.jsx";
 import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
 import { SecaoTurmas } from "./workspace/SecaoTurmas.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
-import { ResumoWorkspace } from "./workspace/ResumoWorkspace.jsx";
+import { DashboardAdmin } from "./workspace/DashboardAdmin.jsx";
+import { DashboardAluno } from "./workspace/DashboardAluno.jsx";
+import { DashboardCoordenador } from "./workspace/DashboardCoordenador.jsx";
+import { DashboardProfessor } from "./workspace/DashboardProfessor.jsx";
 import { SecaoCertificados } from "./workspace/SecaoCertificados.jsx";
 import { APP_SECTIONS, getSectionMeta, MANAGER_ROLES, EMPTY_SNAPSHOT } from "../data/appConfig.js";
 import { hasSnapshotData, loadWorkspaceSnapshot, mapById } from "../lib/dashboard.js";
@@ -60,9 +63,12 @@ export default function WorkspaceScreen({
   const activeSection = sections.some((section) => section.key === route.section)
     ? route.section
     : "dashboard";
-  const showOverviewCards = isManager
-    ? activeSection === "dashboard"
-    : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "certificados"].includes(activeSection));
+  const isDashboard = activeSection === "dashboard";
+  const showOverviewCards =
+    !isDashboard &&
+    (isManager
+      ? false
+      : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "certificados"].includes(activeSection)));
   const mostrarAcaoCriarConteudo = isProfessor && activeSection === "conteudos";
   const mostrarAcaoCriarAvaliacao = isProfessor && activeSection === "avaliacoes";
 
@@ -498,28 +504,30 @@ export default function WorkspaceScreen({
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
       >
-        <header className="workspace-hero">
-          <div className="workspace-hero__meta">
-            <span className="eyebrow">Workspace React</span>
-            <h1>{sectionMeta.title}</h1>
-            <p>{sectionMeta.description}</p>
-          </div>
-          {mostrarAcaoCriarConteudo || mostrarAcaoCriarAvaliacao ? (
-            <div className="workspace-hero__actions">
-              <button
-                className="solid-button workspace-hero__primary-action"
-                onClick={() =>
-                  mostrarAcaoCriarAvaliacao
-                    ? setSolicitacaoNovaAvaliacao((current) => current + 1)
-                    : setSolicitacaoNovoConteudo((current) => current + 1)
-                }
-                type="button"
-              >
-                {mostrarAcaoCriarAvaliacao ? "Adicionar nova avaliacao" : "Adicionar novo conteudo"}
-              </button>
+        {!isDashboard ? (
+          <header className="workspace-hero">
+            <div className="workspace-hero__meta">
+              <span className="eyebrow">Workspace React</span>
+              <h1>{sectionMeta.title}</h1>
+              <p>{sectionMeta.description}</p>
             </div>
-          ) : null}
-        </header>
+            {mostrarAcaoCriarConteudo || mostrarAcaoCriarAvaliacao ? (
+              <div className="workspace-hero__actions">
+                <button
+                  className="solid-button workspace-hero__primary-action"
+                  onClick={() =>
+                    mostrarAcaoCriarAvaliacao
+                      ? setSolicitacaoNovaAvaliacao((current) => current + 1)
+                      : setSolicitacaoNovoConteudo((current) => current + 1)
+                  }
+                  type="button"
+                >
+                  {mostrarAcaoCriarAvaliacao ? "Adicionar nova avaliacao" : "Adicionar novo conteudo"}
+                </button>
+              </div>
+            ) : null}
+          </header>
+        ) : null}
 
         {status === "loading" && !hasData ? (
           <PanelCard description="Buscando informacoes da API para montar o painel." title="Carregando workspace" />
@@ -543,28 +551,38 @@ export default function WorkspaceScreen({
 
             {activeSection === "dashboard" ? (
               isProfessor ? (
-                <SecaoConteudosProfessor
-                  conteudos={snapshot.conteudos}
+                <DashboardProfessor
+                  avaliacoes={snapshot.avaliacoes}
+                  cursos={professorCursos}
+                  onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
+                  turmas={professorTurmas}
+                  usuario={usuario}
+                />
+              ) : role === "Admin" ? (
+                <DashboardAdmin
+                  alunos={snapshot.alunos}
+                  matriculas={matriculaRows}
+                  onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
+                  pendencias={pendingRows}
+                  professores={snapshot.professores}
+                />
+              ) : role === "Coordenador" ? (
+                <DashboardCoordenador
                   cursos={snapshot.cursos}
-                  modulos={snapshot.modulos}
-                  onRefresh={() => setRefreshKey((current) => current + 1)}
-                  onSessionExpired={onSessionExpired}
-                  mostrarCardConteudosPublicados={false}
+                  matriculas={matriculaRows}
+                  onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
+                  professores={snapshot.professores}
                   turmas={snapshot.turmas}
                   usuario={usuario}
                 />
               ) : (
-                <ResumoWorkspace
+                <DashboardAluno
                   avaliacoes={snapshot.avaliacoes}
                   conteudos={snapshot.conteudos}
-                  cursos={visibleCursos}
-                  ehGestor={isManager}
-                  ehProfessor={isProfessor}
-                  ehAluno={isStudent}
                   matriculas={matriculaRows}
-                  pendencias={pendingRows}
+                  modulos={snapshot.modulos}
+                  onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   progressos={snapshot.progressos}
-                  turmas={visibleTurmas}
                   usuario={usuario}
                 />
               )
@@ -618,6 +636,7 @@ export default function WorkspaceScreen({
                 onAbrirSecaoCurso={abrirSecaoRelacionadaAoCurso}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
+                professores={snapshot.professores}
                 turmas={snapshot.turmas}
               />
             ) : null}
@@ -646,7 +665,6 @@ export default function WorkspaceScreen({
                   modulos={snapshot.modulos}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
-                  mostrarCardVinculosEnsino={false}
                   turmas={snapshot.turmas}
                   usuario={usuario}
                 />
@@ -706,6 +724,7 @@ export default function WorkspaceScreen({
 
             {activeSection === "turmas" ? (
               <SecaoTurmas
+                alunos={snapshot.alunos}
                 cursoPorId={cursoById}
                 cursoEmFoco={cursoEmFocoPorSecao.turmas}
                 ehGestor={isManager}

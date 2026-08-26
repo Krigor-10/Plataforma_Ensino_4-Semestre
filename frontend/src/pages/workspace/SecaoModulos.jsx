@@ -1,34 +1,15 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { InlineMessage, PanelCard } from "../../components/Primitives.jsx";
+import { useEffect, useMemo, useState } from "react";
+import { TbDotsVertical, TbFileText, TbPlus, TbStack, TbX } from "react-icons/tb";
+import { MdLayers, MdSave } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
+import Modal from "../../components/Modal.jsx";
+import SelectSimples from "../../components/SelectSimples.jsx";
+import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { normalizeStatus } from "../../lib/format.js";
+import { formatDate, normalizeStatus } from "../../lib/format.js";
 
-const ESTADO_INICIAL_FORMULARIO_MODULO = {
-  cursoId: "",
-  titulo: ""
-};
-
-// Mantem a busca consistente com as demais tabelas do workspace.
-function normalizarBusca(valor) {
-  return String(valor ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function alunoEstaAtivo(aluno) {
-  if (!aluno || typeof aluno.ativo === "undefined") {
-    return true;
-  }
-
-  if (typeof aluno.ativo === "string") {
-    return !["false", "0", "inativo", "inativa"].includes(normalizarBusca(aluno.ativo));
-  }
-
-  return Boolean(aluno.ativo);
-}
+const ESTADO_INICIAL_FORMULARIO = { cursoId: "", titulo: "" };
 
 export function SecaoModulos({
   alunos = [],
@@ -42,46 +23,39 @@ export function SecaoModulos({
   professores = [],
   turmas = []
 }) {
-  const [dadosFormularioModulo, setDadosFormularioModulo] = useState(ESTADO_INICIAL_FORMULARIO_MODULO);
+  const [slideAtual, setSlideAtual] = useState(0);
+  const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
   const [moduloEmEdicaoId, setModuloEmEdicaoId] = useState(null);
-  const [mensagemFormularioModulo, setMensagemFormularioModulo] = useState({ tone: "", message: "" });
-  const [modulosSelecionados, setModulosSelecionados] = useState(() => new Set());
-  const [salvandoModulo, setSalvandoModulo] = useState(false);
-  const [buscaModulo, setBuscaModulo] = useState("");
-  const [filtroCurso, setFiltroCurso] = useState("todos");
-  const [formularioModuloAberto, setFormularioModuloAberto] = useState(false);
-  const [moduloDetalhadoId, setModuloDetalhadoId] = useState(null);
-  const [cursosExpandidos, setCursosExpandidos] = useState(() => new Set());
-  const detalheModuloRef = useRef(null);
-
-  const cursosOrdenados = useMemo(
-    () => [...cursos].sort((cursoA, cursoB) => cursoA.titulo.localeCompare(cursoB.titulo, "pt-BR")),
-    [cursos]
-  );
-  const termoBusca = useMemo(() => normalizarBusca(buscaModulo), [buscaModulo]);
-  const cursoEmFocoId = Number(cursoEmFoco?.cursoId || 0);
+  const [formularioAberto, setFormularioAberto] = useState(false);
+  const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
+  const [salvando, setSalvando] = useState(false);
+  const [moduloDetalheId, setModuloDetalheId] = useState(null);
+  const [moduloParaExcluir, setModuloParaExcluir] = useState(null);
+  const [menuAbertoId, setMenuAbertoId] = useState(null);
 
   useEffect(() => {
-    if (moduloEmEdicaoId || dadosFormularioModulo.cursoId || !cursosOrdenados.length) {
-      return;
+    if (menuAbertoId === null) {
+      return undefined;
     }
 
-    // Preenche o curso padrao para agilizar a criacao de um novo modulo.
-    setDadosFormularioModulo((dadosAtuais) => ({
-      ...dadosAtuais,
-      cursoId: filtroCurso !== "todos" ? filtroCurso : String(cursosOrdenados[0].id)
-    }));
-  }, [moduloEmEdicaoId, dadosFormularioModulo.cursoId, cursosOrdenados, filtroCurso]);
+    function fechar() {
+      setMenuAbertoId(null);
+    }
+
+    document.addEventListener("click", fechar);
+    return () => document.removeEventListener("click", fechar);
+  }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const alunoPorId = useMemo(() => mapById(alunos), [alunos]);
   const professorPorId = useMemo(() => mapById(professores), [professores]);
-  const cursoFiltrado = useMemo(
-    () => (filtroCurso === "todos" ? null : cursoPorId.get(Number(filtroCurso)) || null),
-    [cursoPorId, filtroCurso]
+  const cursosOrdenados = useMemo(
+    () => [...cursos].sort((cursoA, cursoB) => String(cursoA.titulo || "").localeCompare(String(cursoB.titulo || ""), "pt-BR")),
+    [cursos]
   );
+
   const professoresPorCurso = useMemo(() => {
-    const professoresMapeados = new Map();
+    const mapa = new Map();
 
     turmas.forEach((turma) => {
       const cursoId = Number(turma.cursoId);
@@ -91,24 +65,23 @@ export function SecaoModulos({
         return;
       }
 
-      if (!professoresMapeados.has(cursoId)) {
-        professoresMapeados.set(cursoId, new Map());
+      if (!mapa.has(cursoId)) {
+        mapa.set(cursoId, new Map());
       }
 
-      professoresMapeados
-        .get(cursoId)
-        .set(professorId, professorPorId.get(professorId) || { id: professorId, nome: `Professor #${professorId}` });
+      mapa.get(cursoId).set(professorId, professorPorId.get(professorId) || { id: professorId, nome: `Professor #${professorId}` });
     });
 
     return new Map(
-      [...professoresMapeados.entries()].map(([cursoId, professoresDoCurso]) => [
+      [...mapa.entries()].map(([cursoId, mapaProfessores]) => [
         cursoId,
-        [...professoresDoCurso.values()].sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"))
+        [...mapaProfessores.values()].sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"))
       ])
     );
   }, [professorPorId, turmas]);
+
   const alunosAtivosPorCurso = useMemo(() => {
-    const alunosPorCurso = new Map();
+    const porCurso = new Map();
 
     matriculas.forEach((matricula) => {
       const alunoId = Number(matricula.alunoId);
@@ -120,318 +93,122 @@ export function SecaoModulos({
 
       const aluno = alunoPorId.get(alunoId) || matricula.aluno;
 
-      if (!alunoEstaAtivo(aluno)) {
+      if (aluno && typeof aluno.ativo !== "undefined" && !aluno.ativo) {
         return;
       }
 
-      if (!alunosPorCurso.has(cursoId)) {
-        alunosPorCurso.set(cursoId, new Set());
+      if (!porCurso.has(cursoId)) {
+        porCurso.set(cursoId, new Set());
       }
 
-      alunosPorCurso.get(cursoId).add(alunoId);
+      porCurso.get(cursoId).add(alunoId);
     });
 
-    return new Map([...alunosPorCurso.entries()].map(([cursoId, idsAlunos]) => [cursoId, idsAlunos.size]));
+    return new Map([...porCurso.entries()].map(([cursoId, idsAlunos]) => [cursoId, idsAlunos.size]));
   }, [alunoPorId, matriculas]);
-  const modulosOrdenados = useMemo(
-    () =>
-      [...modulos].sort((moduloA, moduloB) => {
-        const tituloCursoA = cursoPorId.get(moduloA.cursoId)?.titulo || "";
-        const tituloCursoB = cursoPorId.get(moduloB.cursoId)?.titulo || "";
-        const comparacaoCurso = tituloCursoA.localeCompare(tituloCursoB, "pt-BR");
 
-        if (comparacaoCurso !== 0) {
-          return comparacaoCurso;
-        }
+  const modulosPorCursoId = useMemo(() => {
+    const mapa = new Map();
 
-        return moduloA.titulo.localeCompare(moduloB.titulo, "pt-BR");
-      }),
-    [cursoPorId, modulos]
-  );
-  // A tabela trabalha sempre em cima do recorte filtrado para que busca, contagem e selecao falem a mesma lingua.
-  const linhasModulos = useMemo(
-    () => {
-      let proximosModulos = modulosOrdenados;
-
-      if (filtroCurso !== "todos") {
-        const cursoId = Number(filtroCurso);
-        proximosModulos = proximosModulos.filter((modulo) => Number(modulo.cursoId) === cursoId);
-      }
-
-      if (!termoBusca) {
-        return proximosModulos;
-      }
-
-      return proximosModulos.filter((modulo) => {
-        const nomeCurso = cursoPorId.get(modulo.cursoId)?.titulo || `Curso #${modulo.cursoId}`;
-        const quantidadeAlunosAtivos = alunosAtivosPorCurso.get(modulo.cursoId) || 0;
-        const campos = [modulo.codigoRegistro, modulo.titulo, nomeCurso, String(quantidadeAlunosAtivos)];
-
-        return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
-      });
-    },
-    [alunosAtivosPorCurso, cursoPorId, filtroCurso, modulosOrdenados, termoBusca]
-  );
-  const idsModulos = useMemo(() => new Set(linhasModulos.map((modulo) => modulo.id)), [linhasModulos]);
-  const gruposModulosPorCurso = useMemo(() => {
-    const grupos = new Map();
-
-    linhasModulos.forEach((modulo) => {
+    modulos.forEach((modulo) => {
       const cursoId = Number(modulo.cursoId);
 
-      if (!grupos.has(cursoId)) {
-        grupos.set(cursoId, {
-          curso: cursoPorId.get(cursoId) || { id: cursoId, titulo: `Curso #${cursoId}` },
-          modulos: []
-        });
+      if (!mapa.has(cursoId)) {
+        mapa.set(cursoId, []);
       }
 
-      grupos.get(cursoId).modulos.push(modulo);
+      mapa.get(cursoId).push(modulo);
     });
 
-    return [...grupos.values()];
-  }, [cursoPorId, linhasModulos]);
-  const modulosMarcados = useMemo(
-    () => linhasModulos.filter((modulo) => modulosSelecionados.has(modulo.id)),
-    [linhasModulos, modulosSelecionados]
-  );
-  const todosModulosSelecionados =
-    linhasModulos.length > 0 && linhasModulos.every((modulo) => modulosSelecionados.has(modulo.id));
-  const quantidadeSelecionada = modulosMarcados.length;
-  const temFiltroAtivo = Boolean(termoBusca || filtroCurso !== "todos");
-  const moduloDetalhado = useMemo(
-    () => modulos.find((modulo) => modulo.id === moduloDetalhadoId) || null,
-    [moduloDetalhadoId, modulos]
-  );
-
-  useEffect(() => {
-    // Remove da selecao itens que sumiram da lista visivel apos filtro ou refresh.
-    setModulosSelecionados((atuais) => {
-      const proximos = new Set([...atuais].filter((id) => idsModulos.has(id)));
-      return proximos.size === atuais.size ? atuais : proximos;
+    mapa.forEach((itens) => {
+      itens.sort((moduloA, moduloB) => {
+        const dataA = new Date(moduloA.dataCriacao || 0).getTime();
+        const dataB = new Date(moduloB.dataCriacao || 0).getTime();
+        return dataA - dataB || Number(moduloA.id) - Number(moduloB.id);
+      });
     });
-  }, [idsModulos]);
 
-  useEffect(() => {
-    if (moduloDetalhadoId && !moduloDetalhado) {
-      setModuloDetalhadoId(null);
-    }
-  }, [moduloDetalhado, moduloDetalhadoId]);
+    return mapa;
+  }, [modulos]);
+
+  const grupos = useMemo(
+    () => cursosOrdenados.map((curso) => ({ curso, itens: modulosPorCursoId.get(Number(curso.id)) || [] })),
+    [cursosOrdenados, modulosPorCursoId]
+  );
+
+  const total = grupos.length;
+  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+  const cursoEmFocoId = Number(cursoEmFoco?.cursoId || 0);
 
   useEffect(() => {
     if (!cursoEmFocoId) {
       return;
     }
 
-    setBuscaModulo("");
-    setFiltroCurso(String(cursoEmFocoId));
-    setDadosFormularioModulo((dadosAtuais) => ({
-      ...dadosAtuais,
-      cursoId: moduloEmEdicaoId ? dadosAtuais.cursoId : String(cursoEmFocoId)
-    }));
-    setCursosExpandidos((atuais) => {
-      const proximos = new Set(atuais);
-      proximos.add(cursoEmFocoId);
-      return proximos;
-    });
+    const indice = grupos.findIndex((grupo) => Number(grupo.curso.id) === cursoEmFocoId);
+
+    if (indice >= 0) {
+      setSlideAtual(indice);
+    }
+
     onCursoEmFocoAplicado?.();
-  }, [cursoEmFocoId, moduloEmEdicaoId, onCursoEmFocoAplicado]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursoEmFocoId]);
+
+  const moduloDetalhe = useMemo(() => modulos.find((modulo) => modulo.id === moduloDetalheId) || null, [moduloDetalheId, modulos]);
 
   useEffect(() => {
-    if (!formularioModuloAberto) {
-      return;
+    if (moduloDetalheId && !moduloDetalhe) {
+      setModuloDetalheId(null);
     }
+  }, [moduloDetalhe, moduloDetalheId]);
 
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !salvandoModulo) {
-        fecharFormularioModulo();
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [formularioModuloAberto, salvandoModulo]);
-
-  // Atualiza o estado do formulario sem perder os outros campos em edicao.
-  function atualizarCampoFormularioModulo(event) {
-    const { name, value } = event.target;
-
-    setDadosFormularioModulo((dadosAtuais) => ({
-      ...dadosAtuais,
-      [name]: value
-    }));
-  }
-
-  function limparFormularioModulo() {
-    setModuloEmEdicaoId(null);
-    setModulosSelecionados(new Set());
-    setDadosFormularioModulo({
-      cursoId: filtroCurso !== "todos" ? filtroCurso : cursosOrdenados[0] ? String(cursosOrdenados[0].id) : "",
-      titulo: ""
-    });
+  function irPara(indice) {
+    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
   }
 
   function abrirFormularioNovoModulo() {
     setModuloEmEdicaoId(null);
-    setModulosSelecionados(new Set());
-    setDadosFormularioModulo({
-      cursoId: filtroCurso !== "todos" ? filtroCurso : cursosOrdenados[0] ? String(cursosOrdenados[0].id) : "",
-      titulo: ""
-    });
-    setMensagemFormularioModulo({ tone: "", message: "" });
-    setFormularioModuloAberto(true);
+    setDadosFormulario({ cursoId: String(grupos[slide]?.curso.id || cursosOrdenados[0]?.id || ""), titulo: "" });
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
   }
 
-  function fecharFormularioModulo() {
-    if (salvandoModulo) {
-      return;
-    }
-
-    setFormularioModuloAberto(false);
-    setMensagemFormularioModulo({ tone: "", message: "" });
-    limparFormularioModulo();
-  }
-
-  // Carrega um unico modulo selecionado no formulario para reaproveitar o mesmo fluxo de criacao/edicao.
   function abrirEdicaoModulo(modulo) {
     setModuloEmEdicaoId(modulo.id);
-    setDadosFormularioModulo({
-      cursoId: String(modulo.cursoId),
-      titulo: modulo.titulo
-    });
-    setMensagemFormularioModulo({ tone: "", message: "" });
-    setFormularioModuloAberto(true);
+    setDadosFormulario({ cursoId: String(modulo.cursoId), titulo: modulo.titulo });
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
   }
 
-  function limparFiltros() {
-    setBuscaModulo("");
-    setFiltroCurso("todos");
-  }
-
-  function abrirDetalheModulo(modulo) {
-    setModuloDetalhadoId(modulo.id);
-
-    if (window.innerWidth <= 900) {
-      window.requestAnimationFrame(() => {
-        detalheModuloRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
-  }
-
-  function fecharDetalheModulo() {
-    setModuloDetalhadoId(null);
-  }
-
-  function alternarCursoExpandido(cursoId) {
-    setCursosExpandidos((atuais) => {
-      const proximos = new Set(atuais);
-
-      if (proximos.has(cursoId)) {
-        proximos.delete(cursoId);
-      } else {
-        proximos.add(cursoId);
-      }
-
-      return proximos;
-    });
-  }
-
-  function selecionarModulosDoCurso(event, grupo) {
-    event.stopPropagation();
-
-    if (salvandoModulo || !grupo.modulos.length) {
+  function fecharFormulario() {
+    if (salvando) {
       return;
     }
 
-    const todosDoCursoSelecionados = grupo.modulos.every((modulo) => modulosSelecionados.has(modulo.id));
-
-    setModulosSelecionados((atuais) => {
-      const proximos = new Set(atuais);
-
-      grupo.modulos.forEach((modulo) => {
-        if (todosDoCursoSelecionados) {
-          proximos.delete(modulo.id);
-        } else {
-          proximos.add(modulo.id);
-        }
-      });
-
-      return proximos;
-    });
+    setFormularioAberto(false);
+    setModuloEmEdicaoId(null);
+    setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
+    setMensagemFormulario({ tone: "", message: "" });
   }
 
-  // A selecao em lote fica restrita aos modulos visiveis para evitar operacoes escondidas por filtros.
-  function alternarModulo(modulo) {
-    if (salvandoModulo) {
-      return;
-    }
-
-    setModulosSelecionados((atuais) => {
-      const proximos = new Set(atuais);
-
-      if (proximos.has(modulo.id)) {
-        proximos.delete(modulo.id);
-      } else {
-        proximos.add(modulo.id);
-      }
-
-      return proximos;
-    });
-  }
-
-  function alternarTodosModulos() {
-    if (salvandoModulo || !linhasModulos.length) {
-      return;
-    }
-
-    setModulosSelecionados((atuais) => {
-      if (todosModulosSelecionados) {
-        return new Set();
-      }
-
-      const proximos = new Set(atuais);
-      linhasModulos.forEach((modulo) => proximos.add(modulo.id));
-      return proximos;
-    });
-  }
-
-  function editarSelecionado() {
-    if (quantidadeSelecionada !== 1) {
-      setMensagemFormularioModulo({
-        tone: "error",
-        message: "Selecione exatamente um modulo para editar."
-      });
-      return;
-    }
-
-    abrirEdicaoModulo(modulosMarcados[0]);
-  }
-
-  // Centraliza validacao e chamada da API tanto para criacao quanto para edicao.
   async function salvarModulo(event) {
     event.preventDefault();
 
-    const tituloNormalizado = dadosFormularioModulo.titulo.trim();
+    const tituloNormalizado = dadosFormulario.titulo.trim();
 
     if (!tituloNormalizado) {
-      setMensagemFormularioModulo({ tone: "error", message: "Informe o titulo do modulo antes de salvar." });
+      setMensagemFormulario({ tone: "error", message: "Informe o titulo do modulo antes de salvar." });
       return;
     }
 
-    if (!dadosFormularioModulo.cursoId) {
-      setMensagemFormularioModulo({ tone: "error", message: "Selecione um curso para vincular o modulo." });
+    if (!dadosFormulario.cursoId) {
+      setMensagemFormulario({ tone: "error", message: "Selecione um curso para vincular o modulo." });
       return;
     }
 
-    setSalvandoModulo(true);
-    setMensagemFormularioModulo({ tone: "", message: "" });
+    setSalvando(true);
+    setMensagemFormulario({ tone: "", message: "" });
 
     try {
       if (moduloEmEdicaoId) {
@@ -439,22 +216,14 @@ export function SecaoModulos({
           method: "PUT",
           body: JSON.stringify({ titulo: tituloNormalizado })
         });
-
-        setMensagemFormularioModulo({ tone: "success", message: "Modulo atualizado com sucesso." });
       } else {
         await apiRequest("/Modulos", {
           method: "POST",
-          body: JSON.stringify({
-            titulo: tituloNormalizado,
-            cursoId: Number(dadosFormularioModulo.cursoId)
-          })
+          body: JSON.stringify({ titulo: tituloNormalizado, cursoId: Number(dadosFormulario.cursoId) })
         });
-
-        setMensagemFormularioModulo({ tone: "success", message: "Modulo criado com sucesso." });
       }
 
-      limparFormularioModulo();
-      setFormularioModuloAberto(false);
+      fecharFormulario();
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -462,50 +231,27 @@ export function SecaoModulos({
         return;
       }
 
-      setMensagemFormularioModulo({
-        tone: "error",
-        message: err.message || "Nao foi possivel salvar o modulo agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel salvar o modulo agora." });
     } finally {
-      setSalvandoModulo(false);
+      setSalvando(false);
     }
   }
 
-  // Exclui em lote os modulos marcados e reidrata a tabela depois da operacao.
-  async function excluirSelecionados() {
-    if (!quantidadeSelecionada) {
-      setMensagemFormularioModulo({ tone: "error", message: "Selecione ao menos um modulo para excluir." });
+  async function confirmarExclusao() {
+    if (!moduloParaExcluir) {
       return;
     }
 
-    const rotulo = quantidadeSelecionada === 1 ? `"${modulosMarcados[0].titulo}"` : `${quantidadeSelecionada} modulos`;
-    const exclusaoConfirmada = window.confirm(`Deseja excluir ${rotulo}?`);
-
-    if (!exclusaoConfirmada) {
-      return;
-    }
-
-    setSalvandoModulo(true);
-    setMensagemFormularioModulo({ tone: "", message: "" });
+    setSalvando(true);
 
     try {
-      for (const modulo of modulosMarcados) {
-        await apiRequest(`/Modulos/${modulo.id}`, { method: "DELETE" });
+      await apiRequest(`/Modulos/${moduloParaExcluir.id}`, { method: "DELETE" });
+      setModuloParaExcluir(null);
+
+      if (moduloDetalheId === moduloParaExcluir.id) {
+        setModuloDetalheId(null);
       }
 
-      if (modulosMarcados.some((modulo) => modulo.id === moduloEmEdicaoId)) {
-        setModuloEmEdicaoId(null);
-      }
-
-      if (modulosMarcados.some((modulo) => modulo.id === moduloDetalhadoId)) {
-        setModuloDetalhadoId(null);
-      }
-
-      setModulosSelecionados(new Set());
-      setMensagemFormularioModulo({
-        tone: "success",
-        message: `${quantidadeSelecionada} modulo${quantidadeSelecionada > 1 ? "s excluidos" : " excluido"} com sucesso.`
-      });
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -513,468 +259,301 @@ export function SecaoModulos({
         return;
       }
 
-      setMensagemFormularioModulo({
-        tone: "error",
-        message: err.message || "Nao foi possivel excluir os modulos selecionados agora."
-      });
-      onRefresh();
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir o modulo agora." });
+      setModuloParaExcluir(null);
     } finally {
-      setSalvandoModulo(false);
+      setSalvando(false);
     }
-  }
-
-  function renderSelecaoModulo(modulo) {
-    return (
-      <label className="table-select-cell" onClick={(event) => event.stopPropagation()}>
-        <input
-          aria-label={`Selecionar modulo ${modulo.titulo}`}
-          checked={modulosSelecionados.has(modulo.id)}
-          className="table-select-input"
-          disabled={salvandoModulo}
-          onChange={() => alternarModulo(modulo)}
-          type="checkbox"
-        />
-      </label>
-    );
-  }
-
-  function renderAcaoDetalheModulo(modulo) {
-    return (
-      <button
-        aria-label={`Ver detalhes do modulo ${modulo.titulo}`}
-        className="table-row-arrow"
-        onClick={(event) => {
-          event.stopPropagation();
-          abrirDetalheModulo(modulo);
-        }}
-        title="Ver detalhes"
-        type="button"
-      >
-        &gt;
-      </button>
-    );
-  }
-
-  function renderTituloModulo(modulo) {
-    return (
-      <div className="module-title-cell">
-        <strong>{modulo.titulo}</strong>
-        <span>{modulo.codigoRegistro || "Sem codigo"}</span>
-      </div>
-    );
-  }
-
-  function renderBarraAcoesModulos() {
-    return (
-      <div className="table-toolbar table-toolbar--matriculas">
-        <div className="table-actions table-actions--bulk">
-          <label className="table-bulk-toggle">
-            <input
-              checked={todosModulosSelecionados}
-              className="table-select-input"
-              disabled={salvandoModulo || !linhasModulos.length}
-              onChange={alternarTodosModulos}
-              type="checkbox"
-            />
-            <span>Selecionar todos</span>
-          </label>
-          <button
-            className="table-action"
-            disabled={salvandoModulo || quantidadeSelecionada !== 1}
-            onClick={editarSelecionado}
-            type="button"
-          >
-            Editar selecionado
-          </button>
-          <button
-            className="table-action table-action--danger"
-            disabled={salvandoModulo || quantidadeSelecionada === 0}
-            onClick={excluirSelecionados}
-            type="button"
-          >
-            Excluir selecionados
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {quantidadeSelecionada
-            ? `${quantidadeSelecionada} selecionado${quantidadeSelecionada > 1 ? "s" : ""}`
-            : `${linhasModulos.length} de ${modulos.length} modulo${modulos.length === 1 ? "" : "s"}`}
-        </p>
-      </div>
-    );
-  }
-
-  function renderFormularioModulo() {
-    if (!formularioModuloAberto) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharFormularioModulo();
-          }
-        }}
-      >
-        <div
-          aria-label={moduloEmEdicaoId ? "Editar modulo" : "Criar modulo"}
-          aria-modal="true"
-          className="content-form-modal__card"
-          role="dialog"
-        >
-          <button
-            className="content-form-modal__close"
-            disabled={salvandoModulo}
-            onClick={fecharFormularioModulo}
-            type="button"
-          >
-            Fechar
-          </button>
-
-          <PanelCard
-            description={
-              cursoFiltrado && !moduloEmEdicaoId
-                ? `Crie um modulo para ${cursoFiltrado.titulo} com o curso ja preselecionado.`
-                : "Organize a estrutura modular antes de ligar conteudos e avaliacoes."
-            }
-            title={moduloEmEdicaoId ? "Editar modulo" : "Criar modulo"}
-          >
-            <form className="management-form" onSubmit={salvarModulo}>
-              <div className="management-form__grid">
-                <label className="management-field">
-                  <span>Curso</span>
-                  <select
-                    disabled={salvandoModulo || moduloEmEdicaoId !== null || !cursosOrdenados.length}
-                    name="cursoId"
-                    onChange={atualizarCampoFormularioModulo}
-                    value={dadosFormularioModulo.cursoId}
-                  >
-                    {!cursosOrdenados.length ? <option value="">Nenhum curso disponivel</option> : null}
-                    {cursosOrdenados.map((curso) => (
-                      <option key={curso.id} value={curso.id}>
-                        {curso.titulo}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="management-field management-field--wide">
-                  <span>Titulo do modulo</span>
-                  <input
-                    autoComplete="off"
-                    disabled={salvandoModulo}
-                    maxLength={150}
-                    name="titulo"
-                    onChange={atualizarCampoFormularioModulo}
-                    placeholder="Ex.: Fundamentos de Programacao"
-                    type="text"
-                    value={dadosFormularioModulo.titulo}
-                  />
-                </label>
-              </div>
-
-              {moduloEmEdicaoId ? (
-                <p className="management-form__hint">
-                  O curso fica travado durante a edicao porque a API atual permite atualizar apenas o titulo do modulo.
-                </p>
-              ) : null}
-
-              {mensagemFormularioModulo.message ? (
-                <InlineMessage tone={mensagemFormularioModulo.tone}>{mensagemFormularioModulo.message}</InlineMessage>
-              ) : null}
-
-              <div className="management-form__actions">
-                <button className="solid-button" disabled={salvandoModulo || !cursosOrdenados.length} type="submit">
-                  {salvandoModulo ? "Salvando..." : moduloEmEdicaoId ? "Salvar alteracoes" : "Criar modulo"}
-                </button>
-
-                <button
-                  className="button button--secondary exit-button"
-                  disabled={salvandoModulo}
-                  onClick={fecharFormularioModulo}
-                  type="button"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
-
-  // Replica o toolbar de filtros usado nas outras secoes administrativas.
-  function renderBarraFiltrosModulos() {
-    return (
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar modulos"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaModulo(event.target.value)}
-              placeholder="Pesquisar modulos"
-              type="search"
-              value={buscaModulo}
-            />
-          </label>
-          <select
-            aria-label="Filtrar modulos por curso"
-            className="table-inline-select"
-            onChange={(event) => setFiltroCurso(event.target.value)}
-            value={filtroCurso}
-          >
-            <option value="todos">Todos os cursos</option>
-            {cursosOrdenados.map((curso) => (
-              <option key={curso.id} value={curso.id}>
-                {curso.titulo}
-              </option>
-            ))}
-          </select>
-          <button className="table-action" disabled={!temFiltroAtivo} onClick={limparFiltros} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <div className="table-actions">
-          <button
-            className="solid-button"
-            disabled={salvandoModulo || !cursosOrdenados.length}
-            onClick={abrirFormularioNovoModulo}
-            type="button"
-          >
-            Criar modulo
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function renderDetalheModulo() {
-    if (!moduloDetalhado) {
-      return null;
-    }
-
-    const curso = cursoPorId.get(Number(moduloDetalhado.cursoId));
-    const professoresDoCurso = professoresPorCurso.get(Number(moduloDetalhado.cursoId)) || [];
-    const nomesProfessores = professoresDoCurso.length
-      ? professoresDoCurso.map((professor) => professor.nome).join(", ")
-      : "Sem professor vinculado";
-    const alunosAtivos = alunosAtivosPorCurso.get(Number(moduloDetalhado.cursoId)) || 0;
-
-    return (
-      <aside className="module-detail-column" ref={detalheModuloRef}>
-        <PanelCard
-          description="Resumo academico do modulo selecionado."
-          title="Informacoes do modulo"
-        >
-          <div className="module-detail-panel-actions">
-            <button className="table-action module-detail-close" onClick={fecharDetalheModulo} type="button">
-              Fechar detalhe
-            </button>
-          </div>
-          <div className="module-detail-grid">
-            <article className="module-detail-card">
-              <span>Codigo do modulo</span>
-              <strong>{moduloDetalhado.codigoRegistro || "Sem codigo"}</strong>
-            </article>
-            <article className="module-detail-card">
-              <span>Modulo</span>
-              <strong>{moduloDetalhado.titulo}</strong>
-            </article>
-            <article className="module-detail-card">
-              <span>Curso</span>
-              <strong>{curso?.titulo || `Curso #${moduloDetalhado.cursoId}`}</strong>
-            </article>
-            <article className="module-detail-card">
-              <span>Professor</span>
-              <strong>{nomesProfessores}</strong>
-            </article>
-            <article className="module-detail-card">
-              <span>Quantidade de alunos ativos</span>
-              <strong>{alunosAtivos}</strong>
-            </article>
-          </div>
-        </PanelCard>
-      </aside>
-    );
-  }
-
-  function renderSelecaoCurso(grupo) {
-    const todosDoCursoSelecionados =
-      grupo.modulos.length > 0 && grupo.modulos.every((modulo) => modulosSelecionados.has(modulo.id));
-
-    return (
-      <label className="table-select-cell" onClick={(event) => event.stopPropagation()}>
-        <input
-          aria-label={`Selecionar modulos de ${grupo.curso.titulo}`}
-          checked={todosDoCursoSelecionados}
-          className="table-select-input"
-          disabled={salvandoModulo || !grupo.modulos.length}
-          onChange={(event) => selecionarModulosDoCurso(event, grupo)}
-          type="checkbox"
-        />
-      </label>
-    );
-  }
-
-  function obterResumoProfessoresCurso(cursoId) {
-    const professoresDoCurso = professoresPorCurso.get(Number(cursoId)) || [];
-
-    if (!professoresDoCurso.length) {
-      return "Sem professor vinculado";
-    }
-
-    return professoresDoCurso.map((professor) => professor.nome).join(", ");
-  }
-
-  function acionarPorTeclado(event, acao) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      acao();
-    }
-  }
-
-  function renderTabelaModulosPorCurso() {
-    if (!gruposModulosPorCurso.length) {
-      return (
-        <div className="empty-state">
-          {temFiltroAtivo ? "Nenhum modulo encontrado com os filtros aplicados." : "Nenhum modulo cadastrado ainda."}
-        </div>
-      );
-    }
-
-    return (
-      <div className="table-wrap">
-        <table className="data-table module-accordion-table">
-          <thead>
-            <tr>
-              <th>Selecionar</th>
-              <th>Curso / modulo</th>
-              <th>Codigo</th>
-              <th>Resumo</th>
-              <th>Alunos ativos</th>
-              <th>Detalhes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gruposModulosPorCurso.map((grupo) => {
-              const cursoId = Number(grupo.curso.id);
-              const cursoExpandido = cursosExpandidos.has(cursoId);
-              const alunosAtivos = alunosAtivosPorCurso.get(cursoId) || 0;
-              const modulosSelecionadosNoCurso = grupo.modulos.filter((modulo) => modulosSelecionados.has(modulo.id)).length;
-
-              return (
-                <Fragment key={cursoId}>
-                  <tr
-                    aria-expanded={cursoExpandido}
-                    aria-label={`${cursoExpandido ? "Recolher" : "Expandir"} modulos de ${grupo.curso.titulo}`}
-                    className={`module-course-row table-row--clickable${cursoExpandido ? " module-course-row--expanded" : ""}`}
-                    onClick={() => alternarCursoExpandido(cursoId)}
-                    onKeyDown={(event) => acionarPorTeclado(event, () => alternarCursoExpandido(cursoId))}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <td data-label="Selecionar">{renderSelecaoCurso(grupo)}</td>
-                    <td data-label="Curso">
-                      <div className="module-course-summary">
-                        <strong>{grupo.curso.titulo}</strong>
-                        <span>{grupo.curso.codigoRegistro || "Sem codigo do curso"}</span>
-                      </div>
-                    </td>
-                    <td data-label="Codigo">{grupo.curso.codigoRegistro || "Sem codigo"}</td>
-                    <td data-label="Resumo">
-                      <div className="table-cell-stack">
-                        <strong>
-                          {grupo.modulos.length} modulo{grupo.modulos.length === 1 ? "" : "s"}
-                        </strong>
-                        <p>
-                          {modulosSelecionadosNoCurso
-                            ? `${modulosSelecionadosNoCurso} selecionado${modulosSelecionadosNoCurso > 1 ? "s" : ""}`
-                            : obterResumoProfessoresCurso(cursoId)}
-                        </p>
-                      </div>
-                    </td>
-                    <td data-label="Alunos ativos">{alunosAtivos}</td>
-                    <td data-label="Detalhes">
-                      <button
-                        aria-label={`${cursoExpandido ? "Recolher" : "Expandir"} modulos de ${grupo.curso.titulo}`}
-                        className={`table-row-arrow module-course-toggle${cursoExpandido ? " module-course-toggle--open" : ""}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          alternarCursoExpandido(cursoId);
-                        }}
-                        title={cursoExpandido ? "Recolher modulos" : "Ver modulos"}
-                        type="button"
-                      >
-                        {cursoExpandido ? "v" : ">"}
-                      </button>
-                    </td>
-                  </tr>
-
-                  {cursoExpandido
-                    ? grupo.modulos.map((modulo) => (
-                        <tr
-                          aria-label={`Ver detalhes do modulo ${modulo.titulo}`}
-                          className={`module-child-row table-row--clickable${
-                            modulo.id === moduloDetalhadoId ? " table-row--selected" : ""
-                          }`}
-                          key={modulo.id}
-                          onClick={() => abrirDetalheModulo(modulo)}
-                          onKeyDown={(event) => acionarPorTeclado(event, () => abrirDetalheModulo(modulo))}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <td data-label="Selecionar">{renderSelecaoModulo(modulo)}</td>
-                          <td data-label="Modulo">{renderTituloModulo(modulo)}</td>
-                          <td data-label="Codigo">{modulo.codigoRegistro || "Sem codigo"}</td>
-                          <td data-label="Resumo">
-                            <span className="table-muted">Modulo do curso</span>
-                          </td>
-                          <td data-label="Alunos ativos">{alunosAtivosPorCurso.get(modulo.cursoId) || 0}</td>
-                          <td data-label="Detalhes">{renderAcaoDetalheModulo(modulo)}</td>
-                        </tr>
-                      ))
-                    : null}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
   }
 
   return (
-    <div className={`module-management-layout${moduloDetalhado ? " module-management-layout--with-detail" : ""}`}>
-      {renderFormularioModulo()}
+    <div className="tela-modulos">
+      <header className="cabecalho-pagina">
+        <div style={{ flex: 1 }}>
+          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+            <h1 className="cabecalho-pagina__titulo">Modulos</h1>
+            {total > 0 ? (
+              <>
+                <label className="visualmente-oculto" htmlFor="filtro-modulo-curso">Selecionar curso</label>
+                <select
+                  aria-label="Navegar para curso"
+                  className="campo__entrada barra-filtros__select"
+                  id="filtro-modulo-curso"
+                  onChange={(event) => irPara(Number(event.target.value))}
+                  style={{ marginLeft: "auto", maxWidth: "220px" }}
+                  value={slide}
+                >
+                  {grupos.map(({ curso }, indice) => (
+                    <option key={curso.id} value={indice}>
+                      {curso.titulo}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
+            {cursosOrdenados.length ? (
+              <>
+                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
+                <Botao onClick={abrirFormularioNovoModulo} variante="primario">
+                  <TbPlus aria-hidden="true" size={18} /> Novo modulo
+                </Botao>
+              </>
+            ) : null}
+          </div>
+          <p className="cabecalho-pagina__subtitulo">
+            {modulos.length} modulo{modulos.length === 1 ? "" : "s"} cadastrado{modulos.length === 1 ? "" : "s"}
+          </p>
+        </div>
+      </header>
 
-      <PanelCard
-        description={
-          cursoFiltrado
-            ? `Mostrando apenas os modulos de ${cursoFiltrado.titulo}. Use Limpar filtros para voltar ao catalogo completo.`
-            : "Lista consolidada dos modulos cadastrados, com vinculo direto ao curso correspondente."
-        }
-        title="Modulos cadastrados"
-      >
-        {renderBarraFiltrosModulos()}
-        {renderBarraAcoesModulos()}
-        {!formularioModuloAberto && mensagemFormularioModulo.message ? (
-          <InlineMessage tone={mensagemFormularioModulo.tone}>{mensagemFormularioModulo.message}</InlineMessage>
-        ) : null}
-        {renderTabelaModulosPorCurso()}
-      </PanelCard>
-      {renderDetalheModulo()}
+      {total === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">
+          Cadastre um curso antes de criar modulos.
+        </p>
+      ) : (
+        <div className="carrossel-cursos">
+          {total > 1 ? (
+            <nav aria-label="Navegacao entre cursos" className="carrossel-cursos__nav">
+              <button
+                aria-label="Curso anterior"
+                className="carrossel-cursos__seta"
+                disabled={slide === 0}
+                onClick={() => irPara(slide - 1)}
+                type="button"
+              >
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+
+              <div aria-label="Cursos" className="carrossel-cursos__indicadores" role="tablist">
+                {grupos.map(({ curso }, indice) => (
+                  <button
+                    aria-label={`Curso ${indice + 1}: ${curso.titulo}`}
+                    aria-selected={indice === slide}
+                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
+                    key={curso.id}
+                    onClick={() => irPara(indice)}
+                    role="tab"
+                    type="button"
+                  />
+                ))}
+              </div>
+
+              <button
+                aria-label="Proximo curso"
+                className="carrossel-cursos__seta"
+                disabled={slide === total - 1}
+                onClick={() => irPara(slide + 1)}
+                type="button"
+              >
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </nav>
+          ) : null}
+
+          <div className="carrossel-cursos__janela">
+            <SlideCurso
+              alunosAtivos={alunosAtivosPorCurso.get(Number(grupos[slide].curso.id)) || 0}
+              curso={grupos[slide].curso}
+              itens={grupos[slide].itens}
+              menuAbertoId={menuAbertoId}
+              onExcluir={setModuloParaExcluir}
+              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+              onVerDetalhes={setModuloDetalheId}
+            />
+          </div>
+        </div>
+      )}
+
+      {moduloDetalhe ? (
+        <Modal onFechar={() => setModuloDetalheId(null)} titulo={moduloDetalhe.titulo}>
+          <dl className="lista-detalhes">
+            <div className="lista-detalhes__item">
+              <dt>Codigo do modulo</dt>
+              <dd>{moduloDetalhe.codigoRegistro || "Sem codigo"}</dd>
+            </div>
+            <div className="lista-detalhes__item">
+              <dt>Curso</dt>
+              <dd>{cursoPorId.get(moduloDetalhe.cursoId)?.titulo || `Curso #${moduloDetalhe.cursoId}`}</dd>
+            </div>
+            <div className="lista-detalhes__item">
+              <dt>Professor(es) do curso</dt>
+              <dd>
+                {(professoresPorCurso.get(Number(moduloDetalhe.cursoId)) || []).map((professor) => professor.nome).join(", ") ||
+                  "Sem professor vinculado"}
+              </dd>
+            </div>
+            <div className="lista-detalhes__item">
+              <dt>Alunos ativos no curso</dt>
+              <dd>{alunosAtivosPorCurso.get(Number(moduloDetalhe.cursoId)) || 0}</dd>
+            </div>
+            <div className="lista-detalhes__item">
+              <dt>Criado em</dt>
+              <dd>{formatDate(moduloDetalhe.dataCriacao)}</dd>
+            </div>
+          </dl>
+          <footer className="modal-rodape">
+            <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: "auto" }} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Fechar
+            </Botao>
+            <Botao
+              onClick={() => {
+                setModuloDetalheId(null);
+                abrirEdicaoModulo(moduloDetalhe);
+              }}
+              variante="primario"
+            >
+              Editar titulo
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      {moduloParaExcluir ? (
+        <Modal onFechar={() => setModuloParaExcluir(null)} titulo="Excluir modulo">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          <footer className="modal-rodape">
+            <Botao disabled={salvando} onClick={() => setModuloParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
+              {salvando ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      {formularioAberto ? (
+        <Modal onFechar={fecharFormulario} titulo={moduloEmEdicaoId ? "Editar modulo" : "Novo modulo"}>
+          <form className="formulario-modal" onSubmit={salvarModulo}>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="modulo-curso">Curso *</label>
+              <SelectSimples
+                id="modulo-curso"
+                onChange={(valor) => setDadosFormulario((atual) => ({ ...atual, cursoId: valor }))}
+                opcoes={cursosOrdenados.map((curso) => ({ valor: String(curso.id), rotulo: curso.titulo }))}
+                placeholder="Selecione um curso"
+                value={dadosFormulario.cursoId}
+              />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="modulo-titulo">Titulo *</label>
+              <input
+                autoComplete="off"
+                className="campo__entrada"
+                id="modulo-titulo"
+                maxLength={150}
+                onChange={(event) => setDadosFormulario((atual) => ({ ...atual, titulo: event.target.value }))}
+                placeholder="Ex: Fundamentos de Programacao"
+                type="text"
+                value={dadosFormulario.titulo}
+              />
+            </div>
+            {moduloEmEdicaoId ? (
+              <p className="texto-mudo" style={{ fontSize: "0.8rem" }}>
+                O curso fica travado durante a edicao porque a API atual permite atualizar apenas o titulo do modulo.
+              </p>
+            ) : null}
+            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          </form>
+        </Modal>
+      ) : null}
+    </div>
+  );
+}
+
+function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onToggleMenu, onVerDetalhes }) {
+  return (
+    <div className="conteudos-aluno">
+      <header className="conteudos-aluno__cabecalho">
+        <div className="conteudos-aluno__curso-info">
+          <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)" }}>
+            <div aria-hidden="true" className="cartao-progresso-aluno__avatar conteudos-aluno__avatar-desktop">
+              <MdLayers size={20} />
+            </div>
+            <h2 className="conteudos-aluno__curso-titulo">{curso.titulo}</h2>
+          </div>
+          <div className="conteudos-aluno__meta-chips">
+            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
+              <TbStack aria-hidden="true" size={12} />
+              {itens.length} modulo{itens.length !== 1 ? "s" : ""}
+            </span>
+            <span className="conteudos-aluno__meta-chip">
+              <TbFileText aria-hidden="true" size={12} />
+              {alunosAtivos} aluno{alunosAtivos !== 1 ? "s" : ""} ativo{alunosAtivos !== 1 ? "s" : ""}
+            </span>
+            {curso.codigoRegistro ? <span className="conteudos-aluno__meta-chip">{curso.codigoRegistro}</span> : null}
+          </div>
+        </div>
+      </header>
+
+      {itens.length === 0 ? (
+        <p className="texto-vazio" role="status">Nenhum modulo cadastrado neste curso.</p>
+      ) : (
+        <ul aria-label={`Modulos de ${curso.titulo}`} className="lista-aproveitamento" role="list">
+          {itens.map((modulo, indice) => (
+            <li className="item-aproveitamento" key={modulo.id}>
+              <span aria-hidden="true" className="item-aproveitamento__num">
+                {indice + 1}
+              </span>
+              <div className="item-aproveitamento__info">
+                <span className="item-aproveitamento__titulo">
+                  {modulo.titulo}
+                  <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.78rem", marginLeft: "0.5rem" }}>
+                    {modulo.codigoRegistro}
+                  </span>
+                </span>
+              </div>
+              <div className="item-aproveitamento__badges">
+                <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                  {formatDate(modulo.dataCriacao)}
+                </span>
+              </div>
+              <div className="menu-contexto">
+                <button
+                  aria-expanded={menuAbertoId === modulo.id}
+                  aria-label={`Opcoes para ${modulo.titulo}`}
+                  className="menu-contexto__botao"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleMenu(modulo.id);
+                  }}
+                  type="button"
+                >
+                  <TbDotsVertical aria-hidden="true" size={16} />
+                </button>
+                {menuAbertoId === modulo.id ? (
+                  <ul className="menu-contexto__lista" role="menu">
+                    <li>
+                      <button onClick={() => onVerDetalhes(modulo.id)} role="menuitem" type="button">
+                        Ver detalhes
+                      </button>
+                    </li>
+                    <li>
+                      <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} role="menuitem" type="button">
+                        Excluir
+                      </button>
+                    </li>
+                  </ul>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

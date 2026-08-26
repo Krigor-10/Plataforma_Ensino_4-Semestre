@@ -1,260 +1,351 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { DataTable, PanelCard, StatusPill } from "../../components/Primitives.jsx";
-import { maskCpf } from "../../lib/format.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
 import { mapById } from "../../lib/dashboard.js";
+import { formatDate, iniciaisNome, maskCpf, normalizeStatus } from "../../lib/format.js";
+
+const ITENS_POR_PAGINA = 8;
 
 function normalizarBusca(valor) {
   return String(valor ?? "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
 }
 
+function IconeOrdenacao({ ativo, direcao }) {
+  if (!ativo) {
+    return <TbSelector aria-hidden="true" size={14} />;
+  }
+
+  return direcao === "asc" ? <TbChevronUp aria-hidden="true" size={14} /> : <TbChevronDown aria-hidden="true" size={14} />;
+}
+
 export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
-  const [buscaAluno, setBuscaAluno] = useState("");
+  const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
-  const [alunoCursosSelecionado, setAlunoCursosSelecionado] = useState(null);
-  const termoBusca = useMemo(() => normalizarBusca(buscaAluno), [buscaAluno]);
+  const [direcao, setDirecao] = useState("asc");
+  const [pagina, setPagina] = useState(1);
+  const [kebabAbertoId, setKebabAbertoId] = useState(null);
+  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
+  const [alunoDetalhe, setAlunoDetalhe] = useState(null);
+  const kebabRef = useRef(null);
+
+  useEffect(() => {
+    if (!kebabAbertoId) {
+      return undefined;
+    }
+
+    function fechar(event) {
+      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
+        setKebabAbertoId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", fechar);
+    return () => document.removeEventListener("mousedown", fechar);
+  }, [kebabAbertoId]);
+
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
-  const cursosPorAluno = useMemo(() => {
-    const cursosMapeados = new Map();
+  const matriculasPorAluno = useMemo(() => {
+    const mapa = new Map();
 
     matriculas.forEach((matricula) => {
       const alunoId = Number(matricula.alunoId);
-      const cursoId = Number(matricula.cursoId);
 
-      if (!alunoId || !cursoId) {
+      if (!alunoId) {
         return;
       }
 
-      if (!cursosMapeados.has(alunoId)) {
-        cursosMapeados.set(alunoId, new Map());
+      if (!mapa.has(alunoId)) {
+        mapa.set(alunoId, []);
       }
 
-      const curso = cursoPorId.get(cursoId);
-      cursosMapeados.get(alunoId).set(cursoId, {
-        id: cursoId,
-        titulo: curso?.titulo || curso?.nome || `Curso #${cursoId}`
+      const curso = cursoPorId.get(Number(matricula.cursoId));
+
+      mapa.get(alunoId).push({
+        id: matricula.id,
+        cursoTitulo: curso?.titulo || `Curso #${matricula.cursoId}`,
+        status: normalizeStatus(matricula.status)
       });
     });
 
-    return new Map(
-      [...cursosMapeados.entries()].map(([alunoId, cursosAluno]) => [
-        alunoId,
-        [...cursosAluno.values()].sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"))
-      ])
-    );
+    return mapa;
   }, [cursoPorId, matriculas]);
-  const obterMatriculaAluno = useCallback(
-    (aluno) => String(aluno.matricula || "").trim() || "Sem registro",
-    []
-  );
+
+  const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
   const alunosFiltrados = useMemo(() => {
-    let proximosAlunos = alunos;
+    let proximos = alunos;
 
     if (filtroStatus === "ativos") {
-      proximosAlunos = proximosAlunos.filter((aluno) => aluno.ativo);
+      proximos = proximos.filter((aluno) => aluno.ativo);
     } else if (filtroStatus === "inativos") {
-      proximosAlunos = proximosAlunos.filter((aluno) => !aluno.ativo);
+      proximos = proximos.filter((aluno) => !aluno.ativo);
     }
 
-    if (!termoBusca) {
-      return proximosAlunos;
+    if (termoBusca) {
+      proximos = proximos.filter((aluno) => {
+        const campos = [aluno.nome, aluno.email, maskCpf(aluno.cpf)];
+        return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
+      });
     }
 
-    return proximosAlunos.filter((aluno) => {
-      const cpfFormatado = maskCpf(aluno.cpf);
-      const status = aluno.ativo ? "Ativo" : "Inativo";
-      const cursosDoAluno = cursosPorAluno.get(aluno.id) || [];
-      const campos = [
-        aluno.nome,
-        aluno.email,
-        aluno.cpf,
-        cpfFormatado,
-        obterMatriculaAluno(aluno),
-        String(cursosDoAluno.length),
-        ...cursosDoAluno.map((curso) => curso.titulo),
-        status
-      ];
-
-      return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
+    return [...proximos].sort((left, right) => {
+      const comparacao = String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR");
+      return direcao === "asc" ? comparacao : -comparacao;
     });
-  }, [alunos, cursosPorAluno, filtroStatus, obterMatriculaAluno, termoBusca]);
-  const temFiltroAtivo = Boolean(termoBusca || filtroStatus !== "todos");
+  }, [alunos, direcao, filtroStatus, termoBusca]);
 
-  useEffect(() => {
-    if (!alunoCursosSelecionado) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setAlunoCursosSelecionado(null);
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [alunoCursosSelecionado]);
+  const totalPaginas = Math.max(1, Math.ceil(alunosFiltrados.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
+  const itensPagina = alunosFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+  const totalAtivos = alunos.filter((aluno) => aluno.ativo).length;
 
   function limparFiltros() {
-    setBuscaAluno("");
+    setBusca("");
     setFiltroStatus("todos");
+    setPagina(1);
   }
 
-  function obterCursosDoAluno(aluno) {
-    return cursosPorAluno.get(Number(aluno.id)) || [];
+  function alternarOrdenacao() {
+    setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
+    setPagina(1);
   }
 
-  function abrirCursosAluno(aluno) {
-    const cursosDoAluno = obterCursosDoAluno(aluno);
-
-    if (cursosDoAluno.length <= 1) {
-      return;
-    }
-
-    setAlunoCursosSelecionado({
-      aluno,
-      cursos: cursosDoAluno
-    });
+  function abrirKebab(event, alunoId) {
+    event.stopPropagation();
+    const retangulo = event.currentTarget.getBoundingClientRect();
+    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
+    setKebabAbertoId((atual) => (atual === alunoId ? null : alunoId));
   }
 
-  function fecharCursosAluno() {
-    setAlunoCursosSelecionado(null);
-  }
-
-  function renderCursosAluno(aluno) {
-    const cursosDoAluno = obterCursosDoAluno(aluno);
-
-    if (!cursosDoAluno.length) {
-      return <span className="table-muted">Nenhum curso</span>;
-    }
-
-    return (
-      <div className="course-preview-cell">
-        <span className="course-preview-cell__name">{cursosDoAluno[0].titulo}</span>
-        {cursosDoAluno.length > 1 ? (
-          <button
-            aria-label={`Ver todos os cursos de ${aluno.nome}`}
-            className="course-preview-cell__more"
-            onClick={() => abrirCursosAluno(aluno)}
-            title="Ver cursos"
-            type="button"
-          >
-            +
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  function renderCursosAlunoPopup() {
-    if (!alunoCursosSelecionado) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharCursosAluno();
-          }
-        }}
-      >
-        <div
-          aria-label={`Cursos cadastrados de ${alunoCursosSelecionado.aluno.nome}`}
-          aria-modal="true"
-          className="content-form-modal__card content-form-modal__card--compact"
-          role="dialog"
-        >
-          <button className="content-form-modal__close" onClick={fecharCursosAluno} type="button">
-            Fechar
-          </button>
-
-          <PanelCard description={alunoCursosSelecionado.aluno.nome} title="Cursos cadastrados">
-            <ul className="student-course-list">
-              {alunoCursosSelecionado.cursos.map((curso) => (
-                <li key={curso.id}>{curso.titulo}</li>
-              ))}
-            </ul>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
+  const alunoKebab = alunos.find((aluno) => aluno.id === kebabAbertoId);
 
   return (
-    <PanelCard description="Lista vinda da API protegida para administracao e coordenacao." title="Base de alunos">
-      {renderCursosAlunoPopup()}
-
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar alunos"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaAluno(event.target.value)}
-              placeholder="Pesquisar alunos"
-              type="search"
-              value={buscaAluno}
-            />
-          </label>
-          <select
-            aria-label="Filtrar alunos por status"
-            className="table-inline-select"
-            onChange={(event) => setFiltroStatus(event.target.value)}
-            value={filtroStatus}
-          >
-            <option value="todos">Todos os status</option>
-            <option value="ativos">Ativos</option>
-            <option value="inativos">Inativos</option>
-          </select>
-          <button className="table-action" disabled={!temFiltroAtivo} onClick={limparFiltros} type="button">
-            Limpar filtros
-          </button>
+    <div className="tela-alunos">
+      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Alunos</h1>
+          <p className="cabecalho-pagina__subtitulo">
+            {alunos.length} cadastrado{alunos.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
+          </p>
         </div>
-        <p className="table-toolbar__summary">
-          {alunosFiltrados.length} de {alunos.length} aluno{alunos.length === 1 ? "" : "s"}
-        </p>
+        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
+          <TbSearch
+            aria-hidden="true"
+            size={15}
+            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
+          />
+          <label className="visualmente-oculto" htmlFor="busca-alunos">Buscar aluno</label>
+          <input
+            className="campo__entrada"
+            id="busca-alunos"
+            onChange={(event) => {
+              setBusca(event.target.value);
+              setPagina(1);
+            }}
+            placeholder="Buscar por nome ou e-mail..."
+            style={{ paddingLeft: "32px", width: "100%" }}
+            type="search"
+            value={busca}
+          />
+        </div>
+      </header>
+
+      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+        <select
+          aria-label="Filtrar alunos por status"
+          className="campo__entrada"
+          onChange={(event) => {
+            setFiltroStatus(event.target.value);
+            setPagina(1);
+          }}
+          style={{ maxWidth: "180px" }}
+          value={filtroStatus}
+        >
+          <option value="todos">Todos os status</option>
+          <option value="ativos">Ativos</option>
+          <option value="inativos">Inativos</option>
+        </select>
+        <Botao disabled={!(termoBusca || filtroStatus !== "todos")} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+          Limpar filtros
+        </Botao>
       </div>
-      <DataTable
-        columns={[
-          { key: "matricula", label: "REGISTRO DO ALUNO", render: obterMatriculaAluno },
-          { key: "nome", label: "NOME" },
-          { key: "email", label: "EMAIL" },
-          {
-            key: "cursosCadastrados",
-            label: "CURSOS CADASTRADOS",
-            render: renderCursosAluno
-          },
-          {
-            key: "ativo",
-            label: "STATUS",
-            render: (aluno) => (
-              <StatusPill tone={aluno.ativo ? "success" : "danger"}>{aluno.ativo ? "Ativo" : "Inativo"}</StatusPill>
-            )
-          }
-        ]}
-        emptyMessage="Nenhum aluno encontrado."
-        rows={alunosFiltrados}
-      />
-    </PanelCard>
+
+      <div className="tabela-dados-container painel-secao">
+        <table aria-label="Lista de alunos" className="tabela-dados">
+          <thead>
+            <tr>
+              <th scope="col">
+                <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
+                  Aluno <IconeOrdenacao ativo direcao={direcao} />
+                </button>
+              </th>
+              <th scope="col">Cadastro</th>
+              <th scope="col">Cursos matriculados</th>
+              <th scope="col">Status</th>
+              <th scope="col" style={{ width: 48 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {itensPagina.length === 0 ? (
+              <tr className="tabela-dados--sem-dados">
+                <td colSpan={5}>Nenhum aluno encontrado.</td>
+              </tr>
+            ) : (
+              itensPagina.map((aluno) => {
+                const cursosDoAluno = matriculasPorAluno.get(Number(aluno.id)) || [];
+
+                return (
+                  <tr className="tabela-linha-clicavel" key={aluno.id} onClick={() => setAlunoDetalhe(aluno)}>
+                    <td>
+                      <div className="tabela-aluno">
+                        <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
+                          {iniciaisNome(aluno.nome)}
+                        </div>
+                        <div>
+                          <strong className="tabela-aluno__nome">{aluno.nome}</strong>
+                          <span className="tabela-aluno__email">{aluno.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{formatDate(aluno.dataCadastro)}</td>
+                    <td>
+                      {cursosDoAluno.length === 0 ? (
+                        <span className="tabela-matricula__vazio">Nenhum curso</span>
+                      ) : (
+                        <span>{cursosDoAluno[0].cursoTitulo}{cursosDoAluno.length > 1 ? ` +${cursosDoAluno.length - 1}` : ""}</span>
+                      )}
+                    </td>
+                    <td>
+                      <Insignia texto={aluno.ativo ? "Ativo" : "Inativo"} variante={aluno.ativo ? "sucesso" : "erro"} />
+                    </td>
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <button
+                        aria-expanded={kebabAbertoId === aluno.id}
+                        aria-haspopup="menu"
+                        aria-label={`Acoes para ${aluno.nome}`}
+                        className="kebab-btn"
+                        onClick={(event) => abrirKebab(event, aluno.id)}
+                        type="button"
+                      >
+                        <TbDotsVertical aria-hidden="true" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPaginas > 1 ? (
+        <nav aria-label="Paginacao de alunos" className="paginacao">
+          <span className="paginacao__info">
+            {inicio + 1}-{Math.min(inicio + ITENS_POR_PAGINA, alunosFiltrados.length)} de {alunosFiltrados.length}
+          </span>
+          <div className="paginacao__controles">
+            <Botao disabled={paginaSegura === 1} onClick={() => setPagina((atual) => Math.max(1, atual - 1))} tamanho="pequeno" variante="fantasma">
+              <TbChevronLeft aria-hidden="true" size={14} /> Anterior
+            </Botao>
+            {Array.from({ length: totalPaginas }, (_, indice) => indice + 1).map((numero) => (
+              <button
+                aria-current={paginaSegura === numero ? "page" : undefined}
+                className={`paginacao__pagina${paginaSegura === numero ? " paginacao__pagina--ativa" : ""}`}
+                key={numero}
+                onClick={() => setPagina(numero)}
+                type="button"
+              >
+                {numero}
+              </button>
+            ))}
+            <Botao disabled={paginaSegura === totalPaginas} onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} tamanho="pequeno" variante="fantasma">
+              Proxima <TbChevronRight aria-hidden="true" size={14} />
+            </Botao>
+          </div>
+        </nav>
+      ) : null}
+
+      {kebabAbertoId && alunoKebab
+        ? createPortal(
+            <div className="kebab-menu" ref={kebabRef} role="menu" style={{ left: kebabPos.left, top: kebabPos.top }}>
+              <button
+                className="kebab-menu__item"
+                onClick={() => {
+                  setAlunoDetalhe(alunoKebab);
+                  setKebabAbertoId(null);
+                }}
+                role="menuitem"
+                type="button"
+              >
+                Ver detalhes
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {alunoDetalhe ? (
+        <Modal onFechar={() => setAlunoDetalhe(null)} titulo="Detalhes do aluno">
+          <div className="detalhe-usuario__perfil">
+            <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
+              {iniciaisNome(alunoDetalhe.nome)}
+            </div>
+            <div className="detalhe-usuario__identidade">
+              <h3 className="detalhe-usuario__nome">{alunoDetalhe.nome}</h3>
+              <span className="detalhe-usuario__email">{alunoDetalhe.email}</span>
+            </div>
+            <Insignia texto={alunoDetalhe.ativo ? "Ativo" : "Inativo"} variante={alunoDetalhe.ativo ? "sucesso" : "erro"} />
+          </div>
+
+          <dl className="detalhe-usuario__dados">
+            <div className="detalhe-usuario__dado">
+              <dt>CPF</dt>
+              <dd>{maskCpf(alunoDetalhe.cpf)}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Telefone</dt>
+              <dd>{alunoDetalhe.telefone || "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Cidade/UF</dt>
+              <dd>{alunoDetalhe.cidade ? `${alunoDetalhe.cidade}/${alunoDetalhe.estado}` : "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Cadastro</dt>
+              <dd>{formatDate(alunoDetalhe.dataCadastro)}</dd>
+            </div>
+          </dl>
+
+          <section>
+            <h4 className="detalhe-usuario__secao-titulo">Cursos matriculados</h4>
+            {(matriculasPorAluno.get(Number(alunoDetalhe.id)) || []).length === 0 ? (
+              <p className="texto-vazio">Nenhuma matricula registrada.</p>
+            ) : (
+              <ul className="detalhe-usuario__lista" role="list">
+                {(matriculasPorAluno.get(Number(alunoDetalhe.id)) || []).map((matricula) => (
+                  <li className="detalhe-usuario__item" key={matricula.id}>
+                    {matricula.cursoTitulo}
+                    <Insignia texto={matricula.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <footer className="modal-rodape">
+            <Botao onClick={() => setAlunoDetalhe(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Fechar
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+    </div>
   );
 }

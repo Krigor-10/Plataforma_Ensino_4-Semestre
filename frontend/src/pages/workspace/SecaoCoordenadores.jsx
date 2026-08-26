@@ -1,9 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
+import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatCep, onlyDigits } from "../../lib/format.js";
+import { formatCep, formatDate, iniciaisNome, maskCpf, onlyDigits } from "../../lib/format.js";
 
-const ESTADO_INICIAL_FORMULARIO_COORDENADOR = {
+const ITENS_POR_PAGINA = 8;
+
+const ESTADO_INICIAL_FORMULARIO = {
   nome: "",
   email: "",
   cpf: "",
@@ -22,24 +30,45 @@ const ESTADO_INICIAL_FORMULARIO_COORDENADOR = {
 function normalizarBusca(valor) {
   return String(valor ?? "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
 }
 
+function IconeOrdenacao({ direcao }) {
+  return direcao === "asc" ? <TbChevronUp aria-hidden="true" size={14} /> : <TbChevronDown aria-hidden="true" size={14} />;
+}
+
 export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh, onSessionExpired }) {
-  const [buscaCoordenador, setBuscaCoordenador] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("todos");
-  const [formularioCoordenadorAberto, setFormularioCoordenadorAberto] = useState(false);
-  const [coordenadorCursosSelecionado, setCoordenadorCursosSelecionado] = useState(null);
-  const [dadosFormularioCoordenador, setDadosFormularioCoordenador] = useState(ESTADO_INICIAL_FORMULARIO_COORDENADOR);
-  const [mensagemFormularioCoordenador, setMensagemFormularioCoordenador] = useState({ tone: "", message: "" });
-  const [mensagemTabelaCoordenador, setMensagemTabelaCoordenador] = useState({ tone: "", message: "" });
-  const [salvandoCoordenador, setSalvandoCoordenador] = useState(false);
-  const termoBusca = useMemo(() => normalizarBusca(buscaCoordenador), [buscaCoordenador]);
+  const [busca, setBusca] = useState("");
+  const [direcao, setDirecao] = useState("asc");
+  const [pagina, setPagina] = useState(1);
+  const [kebabAbertoId, setKebabAbertoId] = useState(null);
+  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
+  const [coordenadorDetalhe, setCoordenadorDetalhe] = useState(null);
+  const [formularioAberto, setFormularioAberto] = useState(false);
+  const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
+  const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
+  const [salvando, setSalvando] = useState(false);
+  const kebabRef = useRef(null);
+
+  useEffect(() => {
+    if (!kebabAbertoId) {
+      return undefined;
+    }
+
+    function fechar(event) {
+      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
+        setKebabAbertoId(null);
+      }
+    }
+
+    document.addEventListener("mousedown", fechar);
+    return () => document.removeEventListener("mousedown", fechar);
+  }, [kebabAbertoId]);
 
   const cursosPorCoordenador = useMemo(() => {
-    const cursosMapeados = new Map();
+    const mapa = new Map();
 
     cursos.forEach((curso) => {
       const coordenadorId = Number(curso.coordenadorId);
@@ -48,181 +77,114 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         return;
       }
 
-      if (!cursosMapeados.has(coordenadorId)) {
-        cursosMapeados.set(coordenadorId, []);
+      if (!mapa.has(coordenadorId)) {
+        mapa.set(coordenadorId, []);
       }
 
-      cursosMapeados.get(coordenadorId).push(curso);
+      mapa.get(coordenadorId).push(curso);
     });
 
-    cursosMapeados.forEach((listaCursos) => {
-      listaCursos.sort((left, right) => String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR"));
-    });
+    mapa.forEach((lista) => lista.sort((left, right) => String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR")));
 
-    return cursosMapeados;
+    return mapa;
   }, [cursos]);
-
-  const coordenadoresFiltrados = useMemo(() => {
-    let proximosCoordenadores = coordenadores;
-
-    if (filtroStatus === "ativos") {
-      proximosCoordenadores = proximosCoordenadores.filter((coordenador) => coordenador.ativo);
-    } else if (filtroStatus === "inativos") {
-      proximosCoordenadores = proximosCoordenadores.filter((coordenador) => !coordenador.ativo);
-    }
-
-    if (!termoBusca) {
-      return proximosCoordenadores;
-    }
-
-    return proximosCoordenadores.filter((coordenador) => {
-      const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
-      const status = coordenador.ativo ? "Ativo" : "Inativo";
-      const campos = [
-        coordenador.codigoRegistro,
-        coordenador.nome,
-        coordenador.email,
-        coordenador.cursoResponsavel,
-        status,
-        ...cursosSupervisionados.map((curso) => curso.titulo)
-      ];
-
-      return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
-    });
-  }, [coordenadores, filtroStatus, termoBusca]);
-
-  const temFiltroAtivo = Boolean(termoBusca || filtroStatus !== "todos");
-
-  useEffect(() => {
-    if (!formularioCoordenadorAberto && !coordenadorCursosSelecionado) {
-      return undefined;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      if (coordenadorCursosSelecionado) {
-        fecharCursosCoordenador();
-        return;
-      }
-
-      if (!salvandoCoordenador) {
-        fecharFormularioCoordenador();
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [formularioCoordenadorAberto, coordenadorCursosSelecionado, salvandoCoordenador]);
-
-  function limparFiltros() {
-    setBuscaCoordenador("");
-    setFiltroStatus("todos");
-  }
-
-  function abrirFormularioCoordenador() {
-    setDadosFormularioCoordenador(ESTADO_INICIAL_FORMULARIO_COORDENADOR);
-    setMensagemFormularioCoordenador({ tone: "", message: "" });
-    setMensagemTabelaCoordenador({ tone: "", message: "" });
-    setFormularioCoordenadorAberto(true);
-  }
-
-  function fecharFormularioCoordenador() {
-    if (salvandoCoordenador) {
-      return;
-    }
-
-    setFormularioCoordenadorAberto(false);
-    setMensagemFormularioCoordenador({ tone: "", message: "" });
-  }
 
   function obterCursosDoCoordenador(coordenador) {
     return cursosPorCoordenador.get(Number(coordenador.id)) || [];
   }
 
-  function obterCursoPrincipal(coordenador) {
-    const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
+  const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
+  const coordenadoresFiltrados = useMemo(() => {
+    let proximos = coordenadores;
 
-    if (cursosSupervisionados.length) {
-      return cursosSupervisionados[0].titulo;
+    if (termoBusca) {
+      proximos = proximos.filter((coordenador) => {
+        const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
+        const campos = [
+          coordenador.nome,
+          coordenador.email,
+          coordenador.codigoRegistro,
+          coordenador.cursoResponsavel,
+          ...cursosSupervisionados.map((curso) => curso.titulo)
+        ];
+
+        return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
+      });
     }
 
-    return String(coordenador.cursoResponsavel || "").trim();
+    return [...proximos].sort((left, right) => {
+      const comparacao = String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR");
+      return direcao === "asc" ? comparacao : -comparacao;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coordenadores, cursosPorCoordenador, direcao, termoBusca]);
+
+  const totalPaginas = Math.max(1, Math.ceil(coordenadoresFiltrados.length / ITENS_POR_PAGINA));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+  const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
+  const itensPagina = coordenadoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+  function limparFiltros() {
+    setBusca("");
+    setPagina(1);
   }
 
-  function abrirCursosCoordenador(coordenador) {
-    const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
+  function alternarOrdenacao() {
+    setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
+    setPagina(1);
+  }
 
-    if (cursosSupervisionados.length <= 1) {
+  function abrirKebab(event, coordenadorId) {
+    event.stopPropagation();
+    const retangulo = event.currentTarget.getBoundingClientRect();
+    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
+    setKebabAbertoId((atual) => (atual === coordenadorId ? null : coordenadorId));
+  }
+
+  function abrirFormulario() {
+    setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
+  }
+
+  function fecharFormulario() {
+    if (salvando) {
       return;
     }
 
-    setCoordenadorCursosSelecionado({
-      coordenador,
-      cursos: cursosSupervisionados
-    });
+    setFormularioAberto(false);
   }
 
-  function fecharCursosCoordenador() {
-    setCoordenadorCursosSelecionado(null);
-  }
-
-  function atualizarCampoFormularioCoordenador(event) {
+  function atualizarCampo(event) {
     const { name, value } = event.target;
-
-    setDadosFormularioCoordenador((current) => ({
-      ...current,
-      [name]: value
-    }));
+    setDadosFormulario((atual) => ({ ...atual, [name]: value }));
   }
 
-  function validarFormularioCoordenador() {
-    const camposObrigatorios = [
-      "nome",
-      "email",
-      "cpf",
-      "telefone",
-      "cep",
-      "rua",
-      "numero",
-      "bairro",
-      "cidade",
-      "estado",
-      "senha",
-      "confirmarSenha"
-    ];
-    const campoVazio = camposObrigatorios.find((campo) => !String(dadosFormularioCoordenador[campo] || "").trim());
+  function validarFormulario() {
+    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado", "senha", "confirmarSenha"];
+    const campoVazio = obrigatorios.find((campo) => !String(dadosFormulario[campo] || "").trim());
 
     if (campoVazio) {
       return "Preencha todos os campos obrigatorios para cadastrar a coordenacao.";
     }
 
-    if (onlyDigits(dadosFormularioCoordenador.cpf).length !== 11) {
+    if (onlyDigits(dadosFormulario.cpf).length !== 11) {
       return "Informe um CPF com 11 digitos.";
     }
 
-    if (onlyDigits(dadosFormularioCoordenador.cep).length !== 8) {
+    if (onlyDigits(dadosFormulario.cep).length !== 8) {
       return "Informe um CEP com 8 digitos.";
     }
 
-    if (dadosFormularioCoordenador.estado.trim().length !== 2) {
+    if (dadosFormulario.estado.trim().length !== 2) {
       return "Informe a UF com 2 letras.";
     }
 
-    if (dadosFormularioCoordenador.senha.length < 6) {
+    if (dadosFormulario.senha.length < 6) {
       return "A senha precisa ter pelo menos 6 caracteres.";
     }
 
-    if (dadosFormularioCoordenador.senha !== dadosFormularioCoordenador.confirmarSenha) {
+    if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
       return "As senhas nao coincidem.";
     }
 
@@ -232,38 +194,36 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   async function salvarCoordenador(event) {
     event.preventDefault();
 
-    const erroValidacao = validarFormularioCoordenador();
-    if (erroValidacao) {
-      setMensagemFormularioCoordenador({ tone: "error", message: erroValidacao });
+    const erro = validarFormulario();
+    if (erro) {
+      setMensagemFormulario({ tone: "error", message: erro });
       return;
     }
 
-    setSalvandoCoordenador(true);
-    setMensagemFormularioCoordenador({ tone: "", message: "" });
+    setSalvando(true);
+    setMensagemFormulario({ tone: "", message: "" });
 
     try {
       await apiRequest("/Coordenadores", {
         method: "POST",
         body: JSON.stringify({
-          nome: dadosFormularioCoordenador.nome.trim(),
-          email: dadosFormularioCoordenador.email.trim(),
-          cpf: onlyDigits(dadosFormularioCoordenador.cpf),
-          telefone: dadosFormularioCoordenador.telefone.trim(),
-          cep: formatCep(onlyDigits(dadosFormularioCoordenador.cep)),
-          rua: dadosFormularioCoordenador.rua.trim(),
-          numero: dadosFormularioCoordenador.numero.trim(),
-          bairro: dadosFormularioCoordenador.bairro.trim(),
-          cidade: dadosFormularioCoordenador.cidade.trim(),
-          estado: dadosFormularioCoordenador.estado.trim().toUpperCase(),
-          cursoResponsavel: dadosFormularioCoordenador.cursoResponsavel.trim() || null,
-          senha: dadosFormularioCoordenador.senha,
+          nome: dadosFormulario.nome.trim(),
+          email: dadosFormulario.email.trim(),
+          cpf: onlyDigits(dadosFormulario.cpf),
+          telefone: dadosFormulario.telefone.trim(),
+          cep: formatCep(onlyDigits(dadosFormulario.cep)),
+          rua: dadosFormulario.rua.trim(),
+          numero: dadosFormulario.numero.trim(),
+          bairro: dadosFormulario.bairro.trim(),
+          cidade: dadosFormulario.cidade.trim(),
+          estado: dadosFormulario.estado.trim().toUpperCase(),
+          cursoResponsavel: dadosFormulario.cursoResponsavel.trim() || null,
+          senha: dadosFormulario.senha,
           ativo: true
         })
       });
 
-      setDadosFormularioCoordenador(ESTADO_INICIAL_FORMULARIO_COORDENADOR);
-      setFormularioCoordenadorAberto(false);
-      setMensagemTabelaCoordenador({ tone: "success", message: "Coordenacao cadastrada com sucesso." });
+      setFormularioAberto(false);
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -271,396 +231,292 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         return;
       }
 
-      setMensagemFormularioCoordenador({
-        tone: "error",
-        message: err.message || "Nao foi possivel cadastrar a coordenacao agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel cadastrar a coordenacao agora." });
     } finally {
-      setSalvandoCoordenador(false);
+      setSalvando(false);
     }
   }
 
-  function renderFormularioCoordenador() {
-    if (!formularioCoordenadorAberto) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharFormularioCoordenador();
-          }
-        }}
-      >
-        <div aria-label="Cadastrar coordenacao" aria-modal="true" className="content-form-modal__card" role="dialog">
-          <button
-            className="content-form-modal__close"
-            disabled={salvandoCoordenador}
-            onClick={fecharFormularioCoordenador}
-            type="button"
-          >
-            Fechar
-          </button>
-
-          <PanelCard
-            description="Preencha os dados de acesso e identificacao para liberar a coordenacao no workspace."
-            title="Cadastrar coordenacao"
-          >
-            <form className="management-form" onSubmit={salvarCoordenador}>
-              <div className="management-form__grid">
-                <label className="management-field management-field--wide">
-                  <span>Nome</span>
-                  <input
-                    autoComplete="name"
-                    disabled={salvandoCoordenador}
-                    maxLength={150}
-                    name="nome"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="Nome completo"
-                    type="text"
-                    value={dadosFormularioCoordenador.nome}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>E-mail</span>
-                  <input
-                    autoComplete="email"
-                    disabled={salvandoCoordenador}
-                    name="email"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="coordenacao@exemplo.com"
-                    type="email"
-                    value={dadosFormularioCoordenador.email}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>CPF</span>
-                  <input
-                    autoComplete="off"
-                    disabled={salvandoCoordenador}
-                    inputMode="numeric"
-                    maxLength={14}
-                    name="cpf"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="Somente numeros"
-                    type="text"
-                    value={dadosFormularioCoordenador.cpf}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Telefone</span>
-                  <input
-                    autoComplete="tel"
-                    disabled={salvandoCoordenador}
-                    maxLength={20}
-                    name="telefone"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="(11) 99999-9999"
-                    type="text"
-                    value={dadosFormularioCoordenador.telefone}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>CEP</span>
-                  <input
-                    autoComplete="postal-code"
-                    disabled={salvandoCoordenador}
-                    inputMode="numeric"
-                    maxLength={9}
-                    name="cep"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="00000-000"
-                    type="text"
-                    value={dadosFormularioCoordenador.cep}
-                  />
-                </label>
-
-                <label className="management-field management-field--wide">
-                  <span>Rua</span>
-                  <input
-                    autoComplete="address-line1"
-                    disabled={salvandoCoordenador}
-                    maxLength={200}
-                    name="rua"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="Endereco"
-                    type="text"
-                    value={dadosFormularioCoordenador.rua}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Numero</span>
-                  <input
-                    autoComplete="address-line2"
-                    disabled={salvandoCoordenador}
-                    maxLength={20}
-                    name="numero"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    type="text"
-                    value={dadosFormularioCoordenador.numero}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Bairro</span>
-                  <input
-                    autoComplete="address-level3"
-                    disabled={salvandoCoordenador}
-                    maxLength={120}
-                    name="bairro"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    type="text"
-                    value={dadosFormularioCoordenador.bairro}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Cidade</span>
-                  <input
-                    autoComplete="address-level2"
-                    disabled={salvandoCoordenador}
-                    maxLength={120}
-                    name="cidade"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    type="text"
-                    value={dadosFormularioCoordenador.cidade}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>UF</span>
-                  <input
-                    autoComplete="address-level1"
-                    disabled={salvandoCoordenador}
-                    maxLength={2}
-                    name="estado"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="SP"
-                    type="text"
-                    value={dadosFormularioCoordenador.estado}
-                  />
-                </label>
-
-                <label className="management-field management-field--wide">
-                  <span>Curso sob supervisao</span>
-                  <input
-                    autoComplete="off"
-                    disabled={salvandoCoordenador}
-                    maxLength={150}
-                    name="cursoResponsavel"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    placeholder="Ex.: Trilhas EdTech"
-                    type="text"
-                    value={dadosFormularioCoordenador.cursoResponsavel}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Senha</span>
-                  <input
-                    autoComplete="new-password"
-                    disabled={salvandoCoordenador}
-                    minLength={6}
-                    name="senha"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    type="password"
-                    value={dadosFormularioCoordenador.senha}
-                  />
-                </label>
-
-                <label className="management-field">
-                  <span>Confirmar senha</span>
-                  <input
-                    autoComplete="new-password"
-                    disabled={salvandoCoordenador}
-                    minLength={6}
-                    name="confirmarSenha"
-                    onChange={atualizarCampoFormularioCoordenador}
-                    type="password"
-                    value={dadosFormularioCoordenador.confirmarSenha}
-                  />
-                </label>
-              </div>
-
-              {mensagemFormularioCoordenador.message ? (
-                <InlineMessage tone={mensagemFormularioCoordenador.tone}>{mensagemFormularioCoordenador.message}</InlineMessage>
-              ) : null}
-
-              <div className="management-form__actions">
-                <button className="solid-button professor-create-button" disabled={salvandoCoordenador} type="submit">
-                  {salvandoCoordenador ? "Salvando..." : "Cadastrar coordenacao"}
-                </button>
-
-                <button
-                  className="button button--secondary exit-button"
-                  disabled={salvandoCoordenador}
-                  onClick={fecharFormularioCoordenador}
-                  type="button"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
-
-  function renderCursoSupervisao(coordenador) {
-    const cursoPrincipal = obterCursoPrincipal(coordenador);
-    const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
-
-    if (!cursoPrincipal) {
-      return <span className="table-muted">Sem curso</span>;
-    }
-
-    return (
-      <div className="course-preview-cell">
-        <span className="course-preview-cell__name">{cursoPrincipal}</span>
-        {cursosSupervisionados.length > 1 ? (
-          <button
-            aria-label={`Ver todos os cursos de ${coordenador.nome}`}
-            className="course-preview-cell__more"
-            onClick={() => abrirCursosCoordenador(coordenador)}
-            title="Ver cursos"
-            type="button"
-          >
-            +
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
-  function renderCursosCoordenadorPopup() {
-    if (!coordenadorCursosSelecionado) {
-      return null;
-    }
-
-    return (
-      <div
-        className="content-form-modal"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            fecharCursosCoordenador();
-          }
-        }}
-      >
-        <div
-          aria-label={`Cursos sob supervisao de ${coordenadorCursosSelecionado.coordenador.nome}`}
-          aria-modal="true"
-          className="content-form-modal__card content-form-modal__card--compact"
-          role="dialog"
-        >
-          <button className="content-form-modal__close" onClick={fecharCursosCoordenador} type="button">
-            Fechar
-          </button>
-
-          <PanelCard description={coordenadorCursosSelecionado.coordenador.nome} title="Cursos sob supervisao">
-            <ul className="coordinator-course-list">
-              {coordenadorCursosSelecionado.cursos.map((curso) => (
-                <li key={curso.id}>{curso.titulo}</li>
-              ))}
-            </ul>
-          </PanelCard>
-        </div>
-      </div>
-    );
-  }
+  const coordenadorKebab = coordenadores.find((coordenador) => coordenador.id === kebabAbertoId);
+  const cursosDetalhe = coordenadorDetalhe ? obterCursosDoCoordenador(coordenadorDetalhe) : [];
 
   return (
-    <PanelCard description="Coordenadores cadastrados para supervisao dos cursos ativos." title="Coordenadores cadastrados">
-      {renderFormularioCoordenador()}
-      {renderCursosCoordenadorPopup()}
+    <div className="tela-coordenadores">
+      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Coordenadores</h1>
+          <p className="cabecalho-pagina__subtitulo">{coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"}</p>
+        </div>
+        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
+          <TbSearch
+            aria-hidden="true"
+            size={15}
+            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
+          />
+          <label className="visualmente-oculto" htmlFor="busca-coordenadores">Buscar coordenador</label>
+          <input
+            className="campo__entrada"
+            id="busca-coordenadores"
+            onChange={(event) => {
+              setBusca(event.target.value);
+              setPagina(1);
+            }}
+            placeholder="Buscar por nome ou e-mail..."
+            style={{ paddingLeft: "32px", width: "100%" }}
+            type="search"
+            value={busca}
+          />
+        </div>
+      </header>
 
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar coordenadores"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaCoordenador(event.target.value)}
-              placeholder="Pesquisar coordenadores"
-              type="search"
-              value={buscaCoordenador}
-            />
-          </label>
-          <select
-            aria-label="Filtrar coordenadores por status"
-            className="table-inline-select"
-            onChange={(event) => setFiltroStatus(event.target.value)}
-            value={filtroStatus}
-          >
-            <option value="todos">Todos os status</option>
-            <option value="ativos">Ativos</option>
-            <option value="inativos">Inativos</option>
-          </select>
-          <button className="table-action" disabled={!temFiltroAtivo} onClick={limparFiltros} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <div className="table-actions">
-          <button
-            className="solid-button professor-create-button"
-            disabled={salvandoCoordenador}
-            onClick={abrirFormularioCoordenador}
-            type="button"
-          >
-            Cadastrar coordenacao
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {coordenadoresFiltrados.length} de {coordenadores.length} coordenador{coordenadores.length === 1 ? "" : "es"}
-        </p>
+      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+        <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+          Limpar filtros
+        </Botao>
+        <Botao onClick={abrirFormulario} style={{ marginLeft: "auto" }} variante="primario">
+          <TbPlus aria-hidden="true" size={18} /> Cadastrar coordenacao
+        </Botao>
       </div>
 
-      {mensagemTabelaCoordenador.message ? (
-        <InlineMessage tone={mensagemTabelaCoordenador.tone}>{mensagemTabelaCoordenador.message}</InlineMessage>
+      <div className="tabela-dados-container painel-secao">
+        <table aria-label="Lista de coordenadores" className="tabela-dados">
+          <thead>
+            <tr>
+              <th scope="col">
+                <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
+                  Coordenador <IconeOrdenacao direcao={direcao} />
+                </button>
+              </th>
+              <th scope="col">Curso sob supervisao</th>
+              <th scope="col">Status</th>
+              <th scope="col" style={{ width: 48 }} />
+            </tr>
+          </thead>
+          <tbody>
+            {itensPagina.length === 0 ? (
+              <tr className="tabela-dados--sem-dados">
+                <td colSpan={4}>Nenhum coordenador encontrado.</td>
+              </tr>
+            ) : (
+              itensPagina.map((coordenador) => {
+                const cursosDoCoordenador = obterCursosDoCoordenador(coordenador);
+                const cursoPrincipal = cursosDoCoordenador[0]?.titulo || String(coordenador.cursoResponsavel || "").trim();
+
+                return (
+                  <tr className="tabela-linha-clicavel" key={coordenador.id} onClick={() => setCoordenadorDetalhe(coordenador)}>
+                    <td>
+                      <div className="tabela-aluno">
+                        <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
+                          {iniciaisNome(coordenador.nome)}
+                        </div>
+                        <div>
+                          <strong className="tabela-aluno__nome">{coordenador.nome}</strong>
+                          <span className="tabela-aluno__email">{coordenador.email}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      {cursoPrincipal ? (
+                        <span>{cursoPrincipal}{cursosDoCoordenador.length > 1 ? ` +${cursosDoCoordenador.length - 1}` : ""}</span>
+                      ) : (
+                        <span className="tabela-matricula__vazio">Sem curso</span>
+                      )}
+                    </td>
+                    <td>
+                      <Insignia texto={coordenador.ativo ? "Ativo" : "Inativo"} variante={coordenador.ativo ? "sucesso" : "erro"} />
+                    </td>
+                    <td onClick={(event) => event.stopPropagation()}>
+                      <button
+                        aria-expanded={kebabAbertoId === coordenador.id}
+                        aria-haspopup="menu"
+                        aria-label={`Acoes para ${coordenador.nome}`}
+                        className="kebab-btn"
+                        onClick={(event) => abrirKebab(event, coordenador.id)}
+                        type="button"
+                      >
+                        <TbDotsVertical aria-hidden="true" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPaginas > 1 ? (
+        <nav aria-label="Paginacao de coordenadores" className="paginacao">
+          <span className="paginacao__info">
+            {inicio + 1}-{Math.min(inicio + ITENS_POR_PAGINA, coordenadoresFiltrados.length)} de {coordenadoresFiltrados.length}
+          </span>
+          <div className="paginacao__controles">
+            <Botao disabled={paginaSegura === 1} onClick={() => setPagina((atual) => Math.max(1, atual - 1))} tamanho="pequeno" variante="fantasma">
+              <TbChevronLeft aria-hidden="true" size={14} /> Anterior
+            </Botao>
+            {Array.from({ length: totalPaginas }, (_, indice) => indice + 1).map((numero) => (
+              <button
+                aria-current={paginaSegura === numero ? "page" : undefined}
+                className={`paginacao__pagina${paginaSegura === numero ? " paginacao__pagina--ativa" : ""}`}
+                key={numero}
+                onClick={() => setPagina(numero)}
+                type="button"
+              >
+                {numero}
+              </button>
+            ))}
+            <Botao disabled={paginaSegura === totalPaginas} onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} tamanho="pequeno" variante="fantasma">
+              Proxima <TbChevronRight aria-hidden="true" size={14} />
+            </Botao>
+          </div>
+        </nav>
       ) : null}
 
-      <DataTable
-        columns={[
-          {
-            key: "codigoRegistro",
-            label: "REGISTRO DO COORDENADOR",
-            render: (coordenador) => coordenador.codigoRegistro || "Sem registro"
-          },
-          { key: "nome", label: "NOME" },
-          { key: "email", label: "EMAIL" },
-          {
-            key: "cursoSupervisao",
-            label: "CURSO SOB SUPERVISAO",
-            render: renderCursoSupervisao
-          },
-          {
-            key: "ativo",
-            label: "STATUS",
-            render: (coordenador) => (
-              <StatusPill tone={coordenador.ativo ? "success" : "danger"}>
-                {coordenador.ativo ? "Ativo" : "Inativo"}
-              </StatusPill>
-            )
-          }
-        ]}
-        emptyMessage="Nenhum coordenador encontrado."
-        rows={coordenadoresFiltrados}
-      />
-    </PanelCard>
+      {kebabAbertoId && coordenadorKebab
+        ? createPortal(
+            <div className="kebab-menu" ref={kebabRef} role="menu" style={{ left: kebabPos.left, top: kebabPos.top }}>
+              <button
+                className="kebab-menu__item"
+                onClick={() => {
+                  setCoordenadorDetalhe(coordenadorKebab);
+                  setKebabAbertoId(null);
+                }}
+                role="menuitem"
+                type="button"
+              >
+                Ver detalhes
+              </button>
+            </div>,
+            document.body
+          )
+        : null}
+
+      {coordenadorDetalhe ? (
+        <Modal onFechar={() => setCoordenadorDetalhe(null)} titulo="Detalhes do coordenador">
+          <div className="detalhe-usuario__perfil">
+            <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
+              {iniciaisNome(coordenadorDetalhe.nome)}
+            </div>
+            <div className="detalhe-usuario__identidade">
+              <h3 className="detalhe-usuario__nome">{coordenadorDetalhe.nome}</h3>
+              <span className="detalhe-usuario__email">{coordenadorDetalhe.email}</span>
+            </div>
+            <Insignia texto={coordenadorDetalhe.ativo ? "Ativo" : "Inativo"} variante={coordenadorDetalhe.ativo ? "sucesso" : "erro"} />
+          </div>
+
+          <dl className="detalhe-usuario__dados">
+            <div className="detalhe-usuario__dado">
+              <dt>Registro</dt>
+              <dd>{coordenadorDetalhe.codigoRegistro || "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>CPF</dt>
+              <dd>{maskCpf(coordenadorDetalhe.cpf)}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Telefone</dt>
+              <dd>{coordenadorDetalhe.telefone || "-"}</dd>
+            </div>
+            <div className="detalhe-usuario__dado">
+              <dt>Cadastro</dt>
+              <dd>{formatDate(coordenadorDetalhe.dataCadastro)}</dd>
+            </div>
+          </dl>
+
+          <section>
+            <h4 className="detalhe-usuario__secao-titulo">Cursos sob supervisao</h4>
+            {cursosDetalhe.length === 0 ? (
+              <p className="texto-vazio">Nenhum curso sob supervisao.</p>
+            ) : (
+              <ul className="detalhe-usuario__lista" role="list">
+                {cursosDetalhe.map((curso) => (
+                  <li className="detalhe-usuario__item" key={curso.id}>
+                    {curso.titulo}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <footer className="modal-rodape">
+            <Botao onClick={() => setCoordenadorDetalhe(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Fechar
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      {formularioAberto ? (
+        <Modal onFechar={fecharFormulario} titulo="Cadastrar coordenacao">
+          <form className="formulario-modal" onSubmit={salvarCoordenador}>
+            <div className="formulario-perfil__grade">
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="coordenador-nome">Nome completo *</label>
+                <input autoComplete="name" className="campo__entrada" disabled={salvando} id="coordenador-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-email">E-mail *</label>
+                <input autoComplete="email" className="campo__entrada" disabled={salvando} id="coordenador-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-cpf">CPF *</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-telefone">Telefone *</label>
+                <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="coordenador-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-cep">CEP *</label>
+                <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="coordenador-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
+              </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="coordenador-rua">Rua *</label>
+                <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="coordenador-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-numero">Numero *</label>
+                <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="coordenador-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-bairro">Bairro *</label>
+                <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="coordenador-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-cidade">Cidade *</label>
+                <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="coordenador-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-estado">UF *</label>
+                <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
+              </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="coordenador-curso">Curso sob supervisao</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-curso" maxLength={150} name="cursoResponsavel" onChange={atualizarCampo} placeholder="Ex.: Trilhas EdTech" value={dadosFormulario.cursoResponsavel} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>
+                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="coordenador-confirmar-senha">Confirmar senha *</label>
+                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+              </div>
+            </div>
+
+            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
+
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Cadastrar coordenacao"}
+              </Botao>
+            </footer>
+          </form>
+        </Modal>
+      ) : null}
+    </div>
   );
 }

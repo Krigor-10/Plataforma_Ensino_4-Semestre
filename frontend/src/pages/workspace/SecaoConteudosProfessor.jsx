@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { TbDotsVertical, TbExternalLink, TbFile, TbFileText, TbPlayerPlay, TbPlus, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
+import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import {
-  compactText,
-  formatDate,
-  normalizeContentType,
-  normalizePublicationStatus,
-  publicationStatusTone
-} from "../../lib/format.js";
+import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
 
 const OPCOES_TIPO_CONTEUDO = [
   { value: "1", label: "Texto" },
@@ -23,37 +22,35 @@ const OPCOES_STATUS_PUBLICACAO = [
   { value: "3", label: "Arquivado" }
 ];
 
-function normalizarBusca(valor) {
-  return String(valor ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
+const ICONE_TIPO_CONTEUDO = {
+  1: <TbFileText aria-hidden="true" size={22} />,
+  2: <TbFile aria-hidden="true" size={22} />,
+  3: <TbPlayerPlay aria-hidden="true" size={22} />,
+  4: <TbExternalLink aria-hidden="true" size={22} />
+};
 
-export function SecaoConteudosProfessor({
-  conteudos,
-  solicitacaoNovoConteudo = 0,
-  cursos,
-  modulos,
-  onRefresh,
-  onSessionExpired,
-  mostrarCardConteudosPublicados = true,
-  mostrarCardVinculosEnsino = true,
-  turmas,
-  usuario
-}) {
-  const [dadosFormularioConteudo, setDadosFormularioConteudo] = useState(() => criarEstadoInicialFormularioConteudo([], []));
+export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0, cursos, modulos, onRefresh, onSessionExpired, turmas, usuario }) {
+  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario([], []));
   const [conteudoEmEdicaoId, setConteudoEmEdicaoId] = useState(null);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
-  const [mensagemTabela, setMensagemTabela] = useState({ tone: "", message: "" });
-  const [salvandoConteudo, setSalvandoConteudo] = useState(false);
-  const [idsConteudosSelecionados, setIdsConteudosSelecionados] = useState([]);
-  const [formularioConteudoAberto, setFormularioConteudoAberto] = useState(false);
-  const [buscaConteudo, setBuscaConteudo] = useState("");
-  const [filtroCursoConteudo, setFiltroCursoConteudo] = useState("todos");
-  const [filtroTurmaConteudo, setFiltroTurmaConteudo] = useState("todos");
-  const [filtroStatusConteudo, setFiltroStatusConteudo] = useState("todos");
+  const [salvando, setSalvando] = useState(false);
+  const [formularioAberto, setFormularioAberto] = useState(false);
+  const [conteudoParaExcluir, setConteudoParaExcluir] = useState(null);
+  const [menuAbertoId, setMenuAbertoId] = useState(null);
+  const [slideAtual, setSlideAtual] = useState(0);
+
+  useEffect(() => {
+    if (menuAbertoId === null) {
+      return undefined;
+    }
+
+    function fechar() {
+      setMenuAbertoId(null);
+    }
+
+    document.addEventListener("click", fechar);
+    return () => document.removeEventListener("click", fechar);
+  }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
@@ -62,15 +59,8 @@ export function SecaoConteudosProfessor({
       [...turmas]
         .filter((turma) => turma.professorId === usuario.id)
         .sort((left, right) => {
-          const leftCourse = cursoPorId.get(left.cursoId)?.titulo || "";
-          const rightCourse = cursoPorId.get(right.cursoId)?.titulo || "";
-          const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-          if (courseComparison !== 0) {
-            return courseComparison;
-          }
-
-          return left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
+          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
+          return courseComparison !== 0 ? courseComparison : left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
         }),
     [cursoPorId, turmas, usuario.id]
   );
@@ -80,326 +70,146 @@ export function SecaoConteudosProfessor({
       [...modulos]
         .filter((modulo) => turmasDoProfessor.some((turma) => turma.cursoId === modulo.cursoId))
         .sort((left, right) => {
-          const leftCourse = cursoPorId.get(left.cursoId)?.titulo || "";
-          const rightCourse = cursoPorId.get(right.cursoId)?.titulo || "";
-          const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-          if (courseComparison !== 0) {
-            return courseComparison;
-          }
-
-          return left.titulo.localeCompare(right.titulo, "pt-BR");
+          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
+          return courseComparison !== 0 ? courseComparison : left.titulo.localeCompare(right.titulo, "pt-BR");
         }),
     [cursoPorId, modulos, turmasDoProfessor]
   );
 
   const modulosPorCursoId = useMemo(() => {
-    const modulosAgrupados = new Map();
-
+    const agrupados = new Map();
     modulosDoProfessor.forEach((modulo) => {
-      const modulosAtuais = modulosAgrupados.get(modulo.cursoId) || [];
-      modulosAtuais.push(modulo);
-      modulosAgrupados.set(modulo.cursoId, modulosAtuais);
+      const atuais = agrupados.get(modulo.cursoId) || [];
+      atuais.push(modulo);
+      agrupados.set(modulo.cursoId, atuais);
     });
-
-    return modulosAgrupados;
+    return agrupados;
   }, [modulosDoProfessor]);
 
-  const linhasVinculosEnsino = useMemo(
-    () =>
-      [...turmasDoProfessor]
-        .sort((left, right) => {
-          const leftCourse = cursoPorId.get(left.cursoId)?.titulo || "";
-          const rightCourse = cursoPorId.get(right.cursoId)?.titulo || "";
-          const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-          if (courseComparison !== 0) {
-            return courseComparison;
-          }
-
-          return (left.nomeTurma || "").localeCompare(right.nomeTurma || "", "pt-BR");
-        })
-        .map((turma) => {
-          const curso = cursoPorId.get(turma.cursoId) || null;
-          const modulosDaTurma = modulosPorCursoId.get(turma.cursoId) || [];
-
-          return {
-            id: turma.id,
-            curso,
-            turma,
-            modulos: modulosDaTurma
-          };
-        }),
-    [cursoPorId, modulosPorCursoId, turmasDoProfessor]
-  );
-
   useEffect(() => {
-    if (conteudoEmEdicaoId || dadosFormularioConteudo.turmaId || !turmasDoProfessor.length) {
+    if (conteudoEmEdicaoId || dadosFormulario.turmaId || !turmasDoProfessor.length) {
       return;
     }
 
-    setDadosFormularioConteudo(criarEstadoInicialFormularioConteudo(turmasDoProfessor, modulosDoProfessor));
-  }, [conteudoEmEdicaoId, dadosFormularioConteudo.turmaId, modulosDoProfessor, turmasDoProfessor]);
+    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
+  }, [conteudoEmEdicaoId, dadosFormulario.turmaId, modulosDoProfessor, turmasDoProfessor]);
 
-  const turmaSelecionada = useMemo(
-    () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormularioConteudo.turmaId) || null,
-    [dadosFormularioConteudo.turmaId, turmasDoProfessor]
+  const turmaSelecionadaFormulario = useMemo(
+    () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormulario.turmaId) || null,
+    [dadosFormulario.turmaId, turmasDoProfessor]
   );
 
   const modulosDisponiveis = useMemo(() => {
-    if (!turmaSelecionada) {
+    if (!turmaSelecionadaFormulario) {
       return [];
     }
 
-    return modulosPorCursoId.get(turmaSelecionada.cursoId) || [];
-  }, [modulosPorCursoId, turmaSelecionada]);
+    return modulosPorCursoId.get(turmaSelecionadaFormulario.cursoId) || [];
+  }, [modulosPorCursoId, turmaSelecionadaFormulario]);
 
   useEffect(() => {
-    if (!turmaSelecionada || conteudoEmEdicaoId) {
+    if (!turmaSelecionadaFormulario || conteudoEmEdicaoId) {
       return;
     }
 
-    if (!modulosDisponiveis.length && dadosFormularioConteudo.moduloId) {
-      setDadosFormularioConteudo((current) => ({
-        ...current,
-        moduloId: ""
-      }));
+    if (!modulosDisponiveis.length && dadosFormulario.moduloId) {
+      setDadosFormulario((current) => ({ ...current, moduloId: "" }));
       return;
     }
 
-    const hasCurrentModule = modulosDisponiveis.some((modulo) => String(modulo.id) === dadosFormularioConteudo.moduloId);
+    const hasCurrentModule = modulosDisponiveis.some((modulo) => String(modulo.id) === dadosFormulario.moduloId);
     if (!hasCurrentModule && modulosDisponiveis[0]) {
-      setDadosFormularioConteudo((current) => ({
-        ...current,
-        moduloId: String(modulosDisponiveis[0].id)
-      }));
+      setDadosFormulario((current) => ({ ...current, moduloId: String(modulosDisponiveis[0].id) }));
     }
-  }, [modulosDisponiveis, conteudoEmEdicaoId, dadosFormularioConteudo.moduloId, turmaSelecionada]);
-
-  const tituloCursoSelecionado = turmaSelecionada
-    ? cursoPorId.get(turmaSelecionada.cursoId)?.titulo || `Curso #${turmaSelecionada.cursoId}`
-    : "";
-  const termoBuscaConteudo = useMemo(() => normalizarBusca(buscaConteudo), [buscaConteudo]);
-
-  const linhasConteudosOrdenadas = useMemo(
-    () =>
-      [...conteudos].sort((left, right) => {
-        const leftCourse = left.cursoTitulo || "";
-        const rightCourse = right.cursoTitulo || "";
-        const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-        if (courseComparison !== 0) {
-          return courseComparison;
-        }
-
-        const turmaComparison = (left.turmaNome || "").localeCompare(right.turmaNome || "", "pt-BR");
-        if (turmaComparison !== 0) {
-          return turmaComparison;
-        }
-
-        const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
-        if (moduloComparison !== 0) {
-          return moduloComparison;
-        }
-
-        if (left.ordemExibicao !== right.ordemExibicao) {
-          return left.ordemExibicao - right.ordemExibicao;
-        }
-
-        return left.titulo.localeCompare(right.titulo, "pt-BR");
-      }),
-    [conteudos]
-  );
-  const cursosDosConteudos = useMemo(() => {
-    const cursosMapeados = new Map();
-
-    turmasDoProfessor.forEach((turma) => {
-      const curso = cursoPorId.get(turma.cursoId);
-      cursosMapeados.set(turma.cursoId, curso || { id: turma.cursoId, titulo: `Curso #${turma.cursoId}` });
-    });
-
-    return [...cursosMapeados.values()].sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
-  }, [cursoPorId, turmasDoProfessor]);
-  const turmasFiltradasPorCurso = useMemo(() => {
-    if (filtroCursoConteudo === "todos") {
-      return turmasDoProfessor;
-    }
-
-    const cursoId = Number(filtroCursoConteudo);
-    return turmasDoProfessor.filter((turma) => Number(turma.cursoId) === cursoId);
-  }, [filtroCursoConteudo, turmasDoProfessor]);
-  const linhasConteudos = useMemo(() => {
-    let proximasLinhas = linhasConteudosOrdenadas;
-
-    if (filtroCursoConteudo !== "todos") {
-      const cursoId = Number(filtroCursoConteudo);
-      proximasLinhas = proximasLinhas.filter((row) => Number(row.cursoId) === cursoId);
-    }
-
-    if (filtroTurmaConteudo !== "todos") {
-      const turmaId = Number(filtroTurmaConteudo);
-      proximasLinhas = proximasLinhas.filter((row) => Number(row.turmaId) === turmaId);
-    }
-
-    if (filtroStatusConteudo !== "todos") {
-      proximasLinhas = proximasLinhas.filter((row) => String(row.statusPublicacao ?? "") === filtroStatusConteudo);
-    }
-
-    if (!termoBuscaConteudo) {
-      return proximasLinhas;
-    }
-
-    return proximasLinhas.filter((row) => {
-      const campos = [
-        row.titulo,
-        row.descricao,
-        row.corpoTexto,
-        row.linkUrl,
-        row.arquivoUrl,
-        row.turmaNome,
-        row.cursoTitulo,
-        row.moduloTitulo,
-        normalizeContentType(row.tipoConteudo),
-        normalizePublicationStatus(row.statusPublicacao),
-        formatDate(row.publicadoEm)
-      ];
-
-      return campos.some((campo) => normalizarBusca(campo).includes(termoBuscaConteudo));
-    });
-  }, [
-    filtroCursoConteudo,
-    filtroStatusConteudo,
-    filtroTurmaConteudo,
-    linhasConteudosOrdenadas,
-    termoBuscaConteudo
-  ]);
-  const temFiltroConteudoAtivo = Boolean(
-    termoBuscaConteudo ||
-      filtroCursoConteudo !== "todos" ||
-      filtroTurmaConteudo !== "todos" ||
-      filtroStatusConteudo !== "todos"
-  );
-
-  const linhasConteudosSelecionadas = useMemo(
-    () => linhasConteudos.filter((row) => idsConteudosSelecionados.includes(row.id)),
-    [idsConteudosSelecionados, linhasConteudos]
-  );
-
-  const todosConteudosSelecionados =
-    linhasConteudos.length > 0 && linhasConteudos.every((row) => idsConteudosSelecionados.includes(row.id));
-
-  useEffect(() => {
-    setIdsConteudosSelecionados((current) =>
-      current.filter((id) => linhasConteudos.some((row) => row.id === id))
-    );
-  }, [linhasConteudos]);
-
-  const resumoConteudos = useMemo(() => {
-    const totalPublicados = conteudos.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Publicado"
-    ).length;
-    const totalRascunhos = conteudos.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Rascunho"
-    ).length;
-    const totalArquivados = conteudos.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Arquivado"
-    ).length;
-
-    return [
-      `${turmasDoProfessor.length} turma(s)`,
-      `${modulosDoProfessor.length} modulo(s)`,
-      `${conteudos.length} conteudo(s)`,
-      `${totalPublicados} publicado(s)`,
-      `${totalRascunhos} rascunho(s)`,
-      `${totalArquivados} arquivado(s)`
-    ];
-  }, [conteudos, modulosDoProfessor.length, turmasDoProfessor.length]);
-
-  const tipoConteudoSelecionado = Number(dadosFormularioConteudo.tipoConteudo || OPCOES_TIPO_CONTEUDO[0].value);
-  const exigeTexto = tipoConteudoSelecionado === 1;
-  const exigeUrlPdf = tipoConteudoSelecionado === 2;
-  const exigeUrlRecurso = tipoConteudoSelecionado === 3 || tipoConteudoSelecionado === 4;
-
-  useEffect(() => {
-    if (!formularioConteudoAberto) {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !salvandoConteudo) {
-        setFormularioConteudoAberto(false);
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [formularioConteudoAberto, salvandoConteudo]);
+  }, [modulosDisponiveis, conteudoEmEdicaoId, dadosFormulario.moduloId, turmaSelecionadaFormulario]);
 
   useEffect(() => {
     if (solicitacaoNovoConteudo > 0) {
       abrirFormularioNovoConteudo();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solicitacaoNovoConteudo]);
 
-  function limparFormularioConteudo() {
+  const grupos = useMemo(
+    () =>
+      turmasDoProfessor.map((turma) => ({
+        turma,
+        curso: cursoPorId.get(turma.cursoId) || null,
+        itens: [...conteudos]
+          .filter((conteudo) => conteudo.turmaId === turma.id)
+          .sort((left, right) => {
+            const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
+            if (moduloComparison !== 0) {
+              return moduloComparison;
+            }
+
+            if ((left.ordemExibicao ?? 0) !== (right.ordemExibicao ?? 0)) {
+              return (left.ordemExibicao ?? 0) - (right.ordemExibicao ?? 0);
+            }
+
+            return (left.titulo || "").localeCompare(right.titulo || "", "pt-BR");
+          })
+      })),
+    [conteudos, cursoPorId, turmasDoProfessor]
+  );
+
+  const total = grupos.length;
+  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+
+  function irPara(indice) {
+    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  }
+
+  const tipoConteudoSelecionado = Number(dadosFormulario.tipoConteudo || OPCOES_TIPO_CONTEUDO[0].value);
+  const exigeTexto = tipoConteudoSelecionado === 1;
+  const exigeUrlPdf = tipoConteudoSelecionado === 2;
+  const exigeUrlRecurso = tipoConteudoSelecionado === 3 || tipoConteudoSelecionado === 4;
+
+  function limparFormulario() {
     setConteudoEmEdicaoId(null);
-    setDadosFormularioConteudo(criarEstadoInicialFormularioConteudo(turmasDoProfessor, modulosDoProfessor));
+    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
     setMensagemFormulario({ tone: "", message: "" });
   }
 
   function abrirFormularioNovoConteudo() {
-    limparFormularioConteudo();
-    setIdsConteudosSelecionados([]);
-    setMensagemTabela({ tone: "", message: "" });
-    setFormularioConteudoAberto(true);
+    limparFormulario();
+    setFormularioAberto(true);
   }
 
-  function fecharFormularioConteudo() {
-    if (salvandoConteudo) {
+  function fecharFormulario() {
+    if (salvando) {
       return;
     }
 
-    limparFormularioConteudo();
-    setFormularioConteudoAberto(false);
+    limparFormulario();
+    setFormularioAberto(false);
   }
 
-  function atualizarCampoFormularioConteudo(event) {
+  function atualizarCampoFormulario(event) {
     const { name, value } = event.target;
 
     if (name === "turmaId") {
-      const nextTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
-      const nextModules = nextTurma ? modulosPorCursoId.get(nextTurma.cursoId) || [] : [];
+      const proximaTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
+      const proximosModulos = proximaTurma ? modulosPorCursoId.get(proximaTurma.cursoId) || [] : [];
 
-      setDadosFormularioConteudo((current) => ({
+      setDadosFormulario((current) => ({
         ...current,
         turmaId: value,
-        moduloId: nextModules.some((modulo) => String(modulo.id) === current.moduloId)
+        moduloId: proximosModulos.some((modulo) => String(modulo.id) === current.moduloId)
           ? current.moduloId
-          : nextModules[0]
-            ? String(nextModules[0].id)
+          : proximosModulos[0]
+            ? String(proximosModulos[0].id)
             : ""
       }));
       return;
     }
 
-    setDadosFormularioConteudo((current) => ({
-      ...current,
-      [name]: value
-    }));
+    setDadosFormulario((current) => ({ ...current, [name]: value }));
   }
 
   function abrirEdicaoConteudo(conteudo) {
     setConteudoEmEdicaoId(conteudo.id);
-    setIdsConteudosSelecionados([conteudo.id]);
-    setMensagemTabela({ tone: "", message: "" });
-    setDadosFormularioConteudo({
+    setDadosFormulario({
       turmaId: String(conteudo.turmaId),
       moduloId: String(conteudo.moduloId),
       titulo: conteudo.titulo || "",
@@ -413,25 +223,26 @@ export function SecaoConteudosProfessor({
       pesoProgresso: String(conteudo.pesoProgresso ?? 1)
     });
     setMensagemFormulario({ tone: "", message: "" });
-    setFormularioConteudoAberto(true);
+    setFormularioAberto(true);
+    setMenuAbertoId(null);
   }
 
   async function salvarConteudoDidatico(event) {
     event.preventDefault();
 
-    const tituloNormalizado = dadosFormularioConteudo.titulo.trim();
+    const tituloNormalizado = dadosFormulario.titulo.trim();
     const dadosEnvio = {
       titulo: tituloNormalizado,
-      descricao: dadosFormularioConteudo.descricao.trim(),
-      tipoConteudo: Number(dadosFormularioConteudo.tipoConteudo),
-      corpoTexto: exigeTexto ? dadosFormularioConteudo.corpoTexto.trim() : "",
-      arquivoUrl: exigeUrlPdf ? dadosFormularioConteudo.arquivoUrl.trim() : "",
-      linkUrl: exigeUrlRecurso ? dadosFormularioConteudo.linkUrl.trim() : "",
-      turmaId: Number(dadosFormularioConteudo.turmaId),
-      moduloId: Number(dadosFormularioConteudo.moduloId),
-      statusPublicacao: Number(dadosFormularioConteudo.statusPublicacao),
-      ordemExibicao: Number(dadosFormularioConteudo.ordemExibicao),
-      pesoProgresso: Number(dadosFormularioConteudo.pesoProgresso)
+      descricao: dadosFormulario.descricao.trim(),
+      tipoConteudo: Number(dadosFormulario.tipoConteudo),
+      corpoTexto: exigeTexto ? dadosFormulario.corpoTexto.trim() : "",
+      arquivoUrl: exigeUrlPdf ? dadosFormulario.arquivoUrl.trim() : "",
+      linkUrl: exigeUrlRecurso ? dadosFormulario.linkUrl.trim() : "",
+      turmaId: Number(dadosFormulario.turmaId),
+      moduloId: Number(dadosFormulario.moduloId),
+      statusPublicacao: Number(dadosFormulario.statusPublicacao),
+      ordemExibicao: Number(dadosFormulario.ordemExibicao),
+      pesoProgresso: Number(dadosFormulario.pesoProgresso)
     };
 
     if (!turmasDoProfessor.length) {
@@ -484,30 +295,18 @@ export function SecaoConteudosProfessor({
       return;
     }
 
-    setSalvandoConteudo(true);
+    setSalvando(true);
     setMensagemFormulario({ tone: "", message: "" });
 
     try {
-      const mensagemSucesso = conteudoEmEdicaoId ? "Conteudo atualizado com sucesso." : "Conteudo criado com sucesso.";
-
       if (conteudoEmEdicaoId) {
-        await apiRequest(`/ConteudosDidaticos/${conteudoEmEdicaoId}`, {
-          method: "PUT",
-          body: JSON.stringify(dadosEnvio)
-        });
+        await apiRequest(`/ConteudosDidaticos/${conteudoEmEdicaoId}`, { method: "PUT", body: JSON.stringify(dadosEnvio) });
       } else {
-        await apiRequest("/ConteudosDidaticos", {
-          method: "POST",
-          body: JSON.stringify(dadosEnvio)
-        });
+        await apiRequest("/ConteudosDidaticos", { method: "POST", body: JSON.stringify(dadosEnvio) });
       }
 
-      setConteudoEmEdicaoId(null);
-      setDadosFormularioConteudo(criarEstadoInicialFormularioConteudo(turmasDoProfessor, modulosDoProfessor));
-      setIdsConteudosSelecionados([]);
-      setMensagemFormulario({ tone: "", message: "" });
-      setMensagemTabela({ tone: "success", message: mensagemSucesso });
-      setFormularioConteudoAberto(false);
+      limparFormulario();
+      setFormularioAberto(false);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -515,77 +314,27 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemFormulario({
-        tone: "error",
-        message: err.message || "Nao foi possivel salvar o conteudo agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel salvar o conteudo agora." });
     } finally {
-      setSalvandoConteudo(false);
+      setSalvando(false);
     }
   }
 
-  function alternarSelecaoConteudo(conteudoId) {
-    setIdsConteudosSelecionados((current) =>
-      current.includes(conteudoId) ? current.filter((id) => id !== conteudoId) : [...current, conteudoId]
-    );
-  }
-
-  function alternarSelecaoTodosConteudos() {
-    if (salvandoConteudo || !linhasConteudos.length) {
+  async function confirmarExclusao() {
+    if (!conteudoParaExcluir) {
       return;
     }
 
-    setIdsConteudosSelecionados((current) =>
-      linhasConteudos.every((row) => current.includes(row.id)) ? [] : linhasConteudos.map((row) => row.id)
-    );
-  }
-
-  function editarConteudoSelecionado() {
-    if (linhasConteudosSelecionadas.length !== 1) {
-      return;
-    }
-
-    abrirEdicaoConteudo(linhasConteudosSelecionadas[0]);
-  }
-
-  async function excluirConteudosSelecionados(linhasParaExcluir = linhasConteudosSelecionadas) {
-    if (!linhasParaExcluir.length) {
-      return;
-    }
-
-    const exclusaoConfirmada = window.confirm(
-      linhasParaExcluir.length === 1
-        ? `Deseja excluir o conteudo "${linhasParaExcluir[0].titulo}"?`
-        : `Deseja excluir ${linhasParaExcluir.length} conteudos selecionados?`
-    );
-
-    if (!exclusaoConfirmada) {
-      return;
-    }
-
-    setSalvandoConteudo(true);
-    setMensagemFormulario({ tone: "", message: "" });
-    setMensagemTabela({ tone: "", message: "" });
+    setSalvando(true);
 
     try {
-      for (const conteudo of linhasParaExcluir) {
-        await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, { method: "DELETE" });
+      await apiRequest(`/ConteudosDidaticos/${conteudoParaExcluir.id}`, { method: "DELETE" });
+
+      if (conteudoEmEdicaoId === conteudoParaExcluir.id) {
+        limparFormulario();
       }
 
-      if (conteudoEmEdicaoId && linhasParaExcluir.some((conteudo) => conteudo.id === conteudoEmEdicaoId)) {
-        limparFormularioConteudo();
-      }
-
-      setIdsConteudosSelecionados((current) =>
-        current.filter((id) => !linhasParaExcluir.some((conteudo) => conteudo.id === id))
-      );
-      setMensagemTabela({
-        tone: "success",
-        message:
-          linhasParaExcluir.length === 1
-            ? "Conteudo excluido com sucesso."
-            : `${linhasParaExcluir.length} conteudos foram excluidos com sucesso.`
-      });
+      setConteudoParaExcluir(null);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -593,210 +342,131 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemTabela({
-        tone: "error",
-        message: err.message || "Nao foi possivel excluir os conteudos selecionados agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir o conteudo agora." });
+      setConteudoParaExcluir(null);
     } finally {
-      setSalvandoConteudo(false);
+      setSalvando(false);
     }
-  }
-
-  function alterarFiltroCursoConteudo(event) {
-    setFiltroCursoConteudo(event.target.value);
-    setFiltroTurmaConteudo("todos");
-  }
-
-  function limparFiltrosConteudos() {
-    setBuscaConteudo("");
-    setFiltroCursoConteudo("todos");
-    setFiltroTurmaConteudo("todos");
-    setFiltroStatusConteudo("todos");
-  }
-
-  function renderBarraFiltrosConteudos() {
-    return (
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar conteudos"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaConteudo(event.target.value)}
-              placeholder="Pesquisar conteudos"
-              type="search"
-              value={buscaConteudo}
-            />
-          </label>
-          <select
-            aria-label="Filtrar conteudos por curso"
-            className="table-inline-select"
-            onChange={alterarFiltroCursoConteudo}
-            value={filtroCursoConteudo}
-          >
-            <option value="todos">Todos os cursos</option>
-            {cursosDosConteudos.map((curso) => (
-              <option key={curso.id} value={curso.id}>
-                {curso.titulo}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar conteudos por turma"
-            className="table-inline-select"
-            onChange={(event) => setFiltroTurmaConteudo(event.target.value)}
-            value={filtroTurmaConteudo}
-          >
-            <option value="todos">Todas as turmas</option>
-            {turmasFiltradasPorCurso.map((turma) => (
-              <option key={turma.id} value={turma.id}>
-                {turma.nomeTurma}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar conteudos por status"
-            className="table-inline-select"
-            onChange={(event) => setFiltroStatusConteudo(event.target.value)}
-            value={filtroStatusConteudo}
-          >
-            <option value="todos">Todos os status</option>
-            {OPCOES_STATUS_PUBLICACAO.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button className="table-action" disabled={!temFiltroConteudoAtivo} onClick={limparFiltrosConteudos} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {linhasConteudos.length} de {conteudos.length} conteudo{conteudos.length === 1 ? "" : "s"}
-        </p>
-      </div>
-    );
   }
 
   return (
-    <div className="content-section">
-      <section className="content-section__intro">
-        <div className="content-section__intro-copy">
-          <span className="eyebrow">Operacao de conteudos</span>
-          <h2>Publicacao por turma e modulo</h2>
-          <p>Uma visao mais direta para consultar vinculos, cadastrar materiais e organizar a trilha do professor.</p>
+    <div className="tela-conteudos">
+      <header className="cabecalho-pagina">
+        <div style={{ flex: 1 }}>
+          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+            <h1 className="cabecalho-pagina__titulo">Conteudos</h1>
+            {total > 0 ? (
+              <select
+                aria-label="Navegar para turma"
+                className="campo__entrada barra-filtros__select"
+                onChange={(event) => irPara(Number(event.target.value))}
+                style={{ marginLeft: "auto", maxWidth: "240px" }}
+                value={slide}
+              >
+                {grupos.map(({ turma }, indice) => (
+                  <option key={turma.id} value={indice}>
+                    {turma.nomeTurma}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            {turmasDoProfessor.length ? (
+              <>
+                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
+                <Botao onClick={abrirFormularioNovoConteudo} variante="primario">
+                  <TbPlus aria-hidden="true" size={18} /> Novo conteudo
+                </Botao>
+              </>
+            ) : null}
+          </div>
+          <p className="cabecalho-pagina__subtitulo">{conteudos.length} conteudo{conteudos.length === 1 ? "" : "s"} publicado{conteudos.length === 1 ? "" : "s"}</p>
         </div>
-        <div className="content-section__highlights" aria-label="Resumo de conteudos">
-          {resumoConteudos.map((item) => (
-            <span className="chip" key={item}>
-              {item}
-            </span>
-          ))}
-        </div>
-      </section>
+      </header>
 
-      {mostrarCardVinculosEnsino ? (
-        <PanelCard
-          description="Cursos, turmas padrao e modulos disponiveis para publicacao no seu login."
-          title="Seus vinculos de ensino"
-        >
-          <DataTable
-            columns={[
-              {
-                key: "curso",
-                label: "Curso",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.curso?.titulo || `Curso #${row.turma.cursoId}`}</strong>
-                    <p>{row.modulos.length} modulo(s) disponivel(is) para esta turma</p>
-                  </div>
-                )
-              },
-              {
-                key: "turma",
-                label: "Turma",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.turma.nomeTurma}</strong>
-                  </div>
-                )
-              },
-              {
-                key: "modulos",
-                label: "Modulos",
-                render: (row) =>
-                  row.modulos.length ? (
-                    <div className="table-badge-list">
-                      {row.modulos.map((modulo) => (
-                        <span className="chip" key={modulo.id}>
-                          {modulo.titulo}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span>-</span>
-                  )
-              }
-            ]}
-            emptyMessage="Nenhum vinculo academico encontrado para o professor autenticado."
-            rows={linhasVinculosEnsino}
-          />
-        </PanelCard>
+      {total === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">
+          Seu usuario ainda nao possui turmas atribuidas.
+        </p>
+      ) : (
+        <div className="carrossel-cursos">
+          {total > 1 ? (
+            <nav aria-label="Navegacao entre turmas" className="carrossel-cursos__nav">
+              <button aria-label="Turma anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <div aria-label="Turmas" className="carrossel-cursos__indicadores" role="tablist">
+                {grupos.map(({ turma }, indice) => (
+                  <button
+                    aria-label={`Turma ${indice + 1}: ${turma.nomeTurma}`}
+                    aria-selected={indice === slide}
+                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
+                    key={turma.id}
+                    onClick={() => irPara(indice)}
+                    role="tab"
+                    type="button"
+                  />
+                ))}
+              </div>
+              <button aria-label="Proxima turma" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </nav>
+          ) : null}
+
+          <div className="carrossel-cursos__janela">
+            <SlideConteudos
+              curso={grupos[slide].curso}
+              itens={grupos[slide].itens}
+              menuAbertoId={menuAbertoId}
+              onEditar={abrirEdicaoConteudo}
+              onExcluir={(conteudo) => {
+                setConteudoParaExcluir(conteudo);
+                setMenuAbertoId(null);
+              }}
+              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+              turma={grupos[slide].turma}
+            />
+          </div>
+        </div>
+      )}
+
+      {conteudoParaExcluir ? (
+        <Modal onFechar={() => setConteudoParaExcluir(null)} titulo="Excluir conteudo">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir o conteudo <strong>{conteudoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          <footer className="modal-rodape">
+            <Botao disabled={salvando} onClick={() => setConteudoParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
+              {salvando ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
+        </Modal>
       ) : null}
 
-      {formularioConteudoAberto ? (
-        <div
-          className="content-form-modal"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              fecharFormularioConteudo();
-            }
-          }}
-        >
-          <div
-            aria-label={conteudoEmEdicaoId ? "Editar conteudo didatico" : "Novo conteudo didatico"}
-            aria-modal="true"
-            className="content-form-modal__card"
-            role="dialog"
-          >
-            <button
-              className="content-form-modal__close"
-              disabled={salvandoConteudo}
-              onClick={fecharFormularioConteudo}
-              type="button"
-            >
-              Fechar
-            </button>
-      <PanelCard
-        description="Cadastre ou ajuste materiais ligados a uma turma e a um modulo."
-        title={conteudoEmEdicaoId ? "Editar conteudo didatico" : "Novo conteudo didatico"}
-      >
-        {!turmasDoProfessor.length ? (
-          <InlineMessage tone="info">
-            Seu usuario ainda nao possui turmas atribuidas. Assim que uma turma for vinculada ao seu perfil, a publicacao fica disponivel aqui.
-          </InlineMessage>
-        ) : !modulosDoProfessor.length ? (
-          <InlineMessage tone="info">
-            As suas turmas ja existem, mas ainda nao ha modulos cadastrados nos cursos correspondentes. Peca ao time de coordenacao para estruturar os modulos antes de publicar.
-          </InlineMessage>
-        ) : (
-          <form className="management-form" onSubmit={salvarConteudoDidatico}>
-            <div className="management-form__grid">
-              <label className="management-field">
-                <span>Turma</span>
+      {formularioAberto ? (
+        <Modal onFechar={fecharFormulario} titulo={conteudoEmEdicaoId ? "Editar conteudo" : "Novo conteudo"}>
+          {!turmasDoProfessor.length ? (
+            <InlineMessage tone="info">Seu usuario ainda nao possui turmas atribuidas.</InlineMessage>
+          ) : !modulosDoProfessor.length ? (
+            <InlineMessage tone="info">Suas turmas ainda nao tem modulos cadastrados nos cursos correspondentes.</InlineMessage>
+          ) : (
+            <form className="formulario-modal" onSubmit={salvarConteudoDidatico}>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-turma">Turma *</label>
                 <select
-                  disabled={salvandoConteudo || !turmasDoProfessor.length}
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-turma"
                   name="turmaId"
-                  onChange={atualizarCampoFormularioConteudo}
-                  value={dadosFormularioConteudo.turmaId}
+                  onChange={atualizarCampoFormulario}
+                  value={dadosFormulario.turmaId}
                 >
                   {turmasDoProfessor.map((turma) => (
                     <option key={turma.id} value={turma.id}>
@@ -804,17 +474,18 @@ export function SecaoConteudosProfessor({
                     </option>
                   ))}
                 </select>
-                {tituloCursoSelecionado ? <small>Curso vinculado: {tituloCursoSelecionado}</small> : null}
-              </label>
+              </div>
 
-              <label className="management-field">
-                <span>Modulo</span>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-modulo">Modulo *</label>
                 <select
-                  disabled={salvandoConteudo || !modulosDisponiveis.length}
-                  key={dadosFormularioConteudo.turmaId || "sem-turma"}
+                  className="campo__entrada"
+                  disabled={salvando || !modulosDisponiveis.length}
+                  id="conteudo-modulo"
+                  key={dadosFormulario.turmaId || "sem-turma"}
                   name="moduloId"
-                  onChange={atualizarCampoFormularioConteudo}
-                  value={dadosFormularioConteudo.moduloId}
+                  onChange={atualizarCampoFormulario}
+                  value={dadosFormulario.moduloId}
                 >
                   {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
                   {modulosDisponiveis.map((modulo) => (
@@ -823,302 +494,230 @@ export function SecaoConteudosProfessor({
                     </option>
                   ))}
                 </select>
-                {tituloCursoSelecionado ? <small>Mostrando modulos do curso: {tituloCursoSelecionado}</small> : null}
-              </label>
+              </div>
 
-              <label className="management-field">
-                <span>Tipo de conteudo</span>
-                <select
-                  disabled={salvandoConteudo}
-                  name="tipoConteudo"
-                  onChange={atualizarCampoFormularioConteudo}
-                  value={dadosFormularioConteudo.tipoConteudo}
-                >
-                  {OPCOES_TIPO_CONTEUDO.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-tipo">Tipo de conteudo *</label>
+                <select className="campo__entrada" disabled={salvando} id="conteudo-tipo" name="tipoConteudo" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoConteudo}>
+                  {OPCOES_TIPO_CONTEUDO.map((opcao) => (
+                    <option key={opcao.value} value={opcao.value}>
+                      {opcao.label}
                     </option>
                   ))}
                 </select>
-                <small>Escolha como esse material sera entregue para a turma.</small>
-              </label>
+              </div>
 
-              <label className="management-field">
-                <span>Status</span>
-                <select
-                  disabled={salvandoConteudo}
-                  name="statusPublicacao"
-                  onChange={atualizarCampoFormularioConteudo}
-                  value={dadosFormularioConteudo.statusPublicacao}
-                >
-                  {OPCOES_STATUS_PUBLICACAO.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-status">Status *</label>
+                <select className="campo__entrada" disabled={salvando} id="conteudo-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
+                  {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
+                    <option key={opcao.value} value={opcao.value}>
+                      {opcao.label}
                     </option>
                   ))}
                 </select>
-                <small>Defina se o item fica em rascunho, publicado ou arquivado.</small>
-              </label>
+              </div>
 
-              <label className="management-field management-field--wide">
-                <span>Titulo</span>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-titulo">Titulo *</label>
                 <input
-                  autoComplete="off"
-                  disabled={salvandoConteudo}
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-titulo"
                   maxLength={180}
                   name="titulo"
-                  onChange={atualizarCampoFormularioConteudo}
+                  onChange={atualizarCampoFormulario}
                   placeholder="Ex.: Aula 01 - Panorama do modulo"
                   type="text"
-                  value={dadosFormularioConteudo.titulo}
+                  value={dadosFormulario.titulo}
                 />
-              </label>
+              </div>
 
-              <label className="management-field management-field--wide">
-                <span>Descricao curta</span>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-descricao">Descricao curta</label>
                 <textarea
-                  disabled={salvandoConteudo}
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-descricao"
                   maxLength={500}
                   name="descricao"
-                  onChange={atualizarCampoFormularioConteudo}
-                  placeholder="Explique rapidamente o objetivo desse material para a turma."
-                  value={dadosFormularioConteudo.descricao}
+                  onChange={atualizarCampoFormulario}
+                  placeholder="Explique rapidamente o objetivo desse material."
+                  value={dadosFormulario.descricao}
                 />
-              </label>
+              </div>
 
               {exigeTexto ? (
-                <label className="management-field management-field--wide">
-                  <span>Corpo do texto</span>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-corpo">Corpo do texto *</label>
                   <textarea
-                    disabled={salvandoConteudo}
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-corpo"
                     name="corpoTexto"
-                    onChange={atualizarCampoFormularioConteudo}
-                    placeholder="Escreva aqui o material principal que sera exibido para os alunos."
-                    value={dadosFormularioConteudo.corpoTexto}
+                    onChange={atualizarCampoFormulario}
+                    placeholder="Escreva aqui o material principal."
+                    value={dadosFormulario.corpoTexto}
                   />
-                </label>
+                </div>
               ) : null}
 
               {exigeUrlPdf ? (
-                <label className="management-field management-field--wide">
-                  <span>URL do PDF</span>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-arquivo">URL do PDF *</label>
                   <input
-                    autoComplete="off"
-                    disabled={salvandoConteudo}
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-arquivo"
                     name="arquivoUrl"
-                    onChange={atualizarCampoFormularioConteudo}
+                    onChange={atualizarCampoFormulario}
                     placeholder="https://..."
                     type="url"
-                    value={dadosFormularioConteudo.arquivoUrl}
+                    value={dadosFormulario.arquivoUrl}
                   />
-                  <small>Use um link direto para o arquivo que a turma deve abrir ou baixar.</small>
-                </label>
+                </div>
               ) : null}
 
               {exigeUrlRecurso ? (
-                <label className="management-field management-field--wide">
-                  <span>{tipoConteudoSelecionado === 3 ? "URL do video" : "URL do recurso"}</span>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-link">{tipoConteudoSelecionado === 3 ? "URL do video *" : "URL do recurso *"}</label>
                   <input
-                    autoComplete="off"
-                    disabled={salvandoConteudo}
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-link"
                     name="linkUrl"
-                    onChange={atualizarCampoFormularioConteudo}
+                    onChange={atualizarCampoFormulario}
                     placeholder="https://..."
                     type="url"
-                    value={dadosFormularioConteudo.linkUrl}
+                    value={dadosFormulario.linkUrl}
                   />
-                  <small>
-                    {tipoConteudoSelecionado === 3
-                      ? "Cole o link do video ou da aula gravada."
-                      : "Cole o link externo que deve complementar o modulo."}
-                  </small>
-                </label>
+                </div>
               ) : null}
 
-              <label className="management-field">
-                <span>Ordem de exibicao</span>
-                <input
-                  disabled={salvandoConteudo}
-                  min="0"
-                  name="ordemExibicao"
-                  onChange={atualizarCampoFormularioConteudo}
-                  type="number"
-                  value={dadosFormularioConteudo.ordemExibicao}
-                />
-                <small>Controla a sequencia em que o conteudo aparece no modulo.</small>
-              </label>
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-ordem">Ordem de exibicao</label>
+                  <input
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-ordem"
+                    min="0"
+                    name="ordemExibicao"
+                    onChange={atualizarCampoFormulario}
+                    type="number"
+                    value={dadosFormulario.ordemExibicao}
+                  />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-peso">Peso de progresso</label>
+                  <input
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-peso"
+                    min="0.01"
+                    name="pesoProgresso"
+                    onChange={atualizarCampoFormulario}
+                    step="0.01"
+                    type="number"
+                    value={dadosFormulario.pesoProgresso}
+                  />
+                </div>
+              </div>
 
-              <label className="management-field">
-                <span>Peso de progresso</span>
-                <input
-                  disabled={salvandoConteudo}
-                  min="0.01"
-                  name="pesoProgresso"
-                  onChange={atualizarCampoFormularioConteudo}
-                  step="0.01"
-                  type="number"
-                  value={dadosFormularioConteudo.pesoProgresso}
-                />
-                <small>Define quanto este item pesa no avanco pedagogico do aluno.</small>
-              </label>
-            </div>
+              {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
 
-            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-            <div className="management-form__actions">
-              <button
-                className="solid-button"
-                disabled={salvandoConteudo || !turmasDoProfessor.length || !modulosDisponiveis.length}
-                type="submit"
-              >
-                {salvandoConteudo ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
-              </button>
-
-              <button
-                className="button button--secondary exit-button"
-                disabled={salvandoConteudo}
-                onClick={fecharFormularioConteudo}
-                type="button"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        )}
-      </PanelCard>
-          </div>
-        </div>
-      ) : null}
-
-      {mostrarCardConteudosPublicados ? (
-        <div className="content-section__block content-section__block--published">
-        <PanelCard
-          description="Selecione itens para editar ou excluir e acompanhe a organizacao por turma e modulo."
-          title="Conteudos publicados e rascunhos"
-        >
-          {renderBarraFiltrosConteudos()}
-
-          <div className="table-toolbar">
-            <div className="table-actions">
-              <button
-                className="table-action"
-                disabled={salvandoConteudo || linhasConteudosSelecionadas.length !== 1}
-                onClick={editarConteudoSelecionado}
-                type="button"
-              >
-                Editar
-              </button>
-              <button
-                className="table-action table-action--danger"
-                disabled={salvandoConteudo || !linhasConteudosSelecionadas.length}
-                onClick={() => excluirConteudosSelecionados()}
-                type="button"
-              >
-                Excluir
-              </button>
-            </div>
-            <p className="table-toolbar__summary">
-              {linhasConteudosSelecionadas.length
-                ? `${linhasConteudosSelecionadas.length} conteudo(s) selecionado(s).`
-                : "Selecione um ou mais conteudos visiveis pela caixa ao lado esquerdo."}
-            </p>
-          </div>
-
-          {mensagemTabela.message ? <InlineMessage tone={mensagemTabela.tone}>{mensagemTabela.message}</InlineMessage> : null}
-
-          <DataTable
-            columns={[
-              {
-                key: "selecionar",
-                label: (
-                  <div className="table-select-cell">
-                    <input
-                      aria-label={todosConteudosSelecionados ? "Desmarcar todos os conteudos" : "Selecionar todos os conteudos"}
-                      checked={todosConteudosSelecionados}
-                      className="table-select-input"
-                      disabled={salvandoConteudo || !linhasConteudos.length}
-                      onChange={alternarSelecaoTodosConteudos}
-                      type="checkbox"
-                    />
-                  </div>
-                ),
-                render: (row) => (
-                  <div className="table-select-cell">
-                    <input
-                      aria-label={`Selecionar conteudo ${row.titulo}`}
-                      checked={idsConteudosSelecionados.includes(row.id)}
-                      className="table-select-input"
-                      disabled={salvandoConteudo}
-                      onChange={() => alternarSelecaoConteudo(row.id)}
-                      type="checkbox"
-                    />
-                  </div>
-                )
-              },
-              {
-                key: "titulo",
-                label: "Conteudo",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.titulo}</strong>
-                    <p>{compactText(row.descricao || row.corpoTexto || row.linkUrl || row.arquivoUrl || "-", 96)}</p>
-                  </div>
-                )
-              },
-              {
-                key: "turmaNome",
-                label: "Turma",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.turmaNome || `Turma #${row.turmaId}`}</strong>
-                    <p>{row.cursoTitulo || `Curso #${row.cursoId}`}</p>
-                  </div>
-                )
-              },
-              { key: "moduloTitulo", label: "Modulo" },
-              {
-                key: "tipoConteudo",
-                label: "Formato",
-                render: (row) => <span className="chip">{normalizeContentType(row.tipoConteudo)}</span>
-              },
-              {
-                key: "statusPublicacao",
-                label: "Status",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <StatusPill tone={publicationStatusTone(row.statusPublicacao)}>
-                      {normalizePublicationStatus(row.statusPublicacao)}
-                    </StatusPill>
-                    <p>{row.publicadoEm ? `Publicado em ${formatDate(row.publicadoEm)}` : "Ainda nao publicado"}</p>
-                  </div>
-                )
-              },
-              { key: "ordemExibicao", label: "Ordem" },
-              {
-                key: "pesoProgresso",
-                label: "Progresso",
-                render: (row) => Number(row.pesoProgresso || 0).toFixed(2).replace(".", ",")
-              }
-            ]}
-            emptyMessage={
-              temFiltroConteudoAtivo
-                ? "Nenhum conteudo encontrado com os filtros aplicados."
-                : "Nenhum conteudo cadastrado ainda."
-            }
-            rows={linhasConteudos}
-          />
-        </PanelCard>
-        </div>
+              <footer className="modal-rodape">
+                <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                  <TbX aria-hidden="true" size={15} /> Cancelar
+                </Botao>
+                <Botao disabled={salvando || !modulosDisponiveis.length} type="submit" variante="primario">
+                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
+                </Botao>
+              </footer>
+            </form>
+          )}
+        </Modal>
       ) : null}
     </div>
   );
 }
 
-function criarEstadoInicialFormularioConteudo(turmas, modulos, overrides = {}) {
+function SlideConteudos({ curso, itens, menuAbertoId, onEditar, onExcluir, onToggleMenu, turma }) {
+  return (
+    <div className="conteudos-aluno">
+      <header className="conteudos-aluno__cabecalho">
+        <div className="conteudos-aluno__curso-info">
+          <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)" }}>
+            <div aria-hidden="true" className="cartao-progresso-aluno__avatar conteudos-aluno__avatar-desktop">
+              <TbFileText size={20} />
+            </div>
+            <h2 className="conteudos-aluno__curso-titulo">{turma.nomeTurma}</h2>
+          </div>
+          <div className="conteudos-aluno__meta-chips">
+            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
+              {itens.length} conteudo{itens.length !== 1 ? "s" : ""}
+            </span>
+            {curso ? <span className="conteudos-aluno__meta-chip">{curso.titulo}</span> : null}
+          </div>
+        </div>
+      </header>
+
+      {itens.length === 0 ? (
+        <p className="texto-vazio" role="status">Nenhum conteudo publicado para esta turma.</p>
+      ) : (
+        <ul aria-label={`Conteudos de ${turma.nomeTurma}`} className="lista-conteudos-completa" role="list">
+          {itens.map((conteudo) => (
+            <li className="cartao-conteudo" key={conteudo.id}>
+              <span aria-hidden="true" className="cartao-conteudo__icone">
+                {ICONE_TIPO_CONTEUDO[Number(conteudo.tipoConteudo)] || <TbFileText size={22} />}
+              </span>
+              <div className="cartao-conteudo__info">
+                <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
+                <p className="cartao-conteudo__modulo">{conteudo.moduloTitulo || "Sem modulo"}</p>
+              </div>
+              <div className="cartao-conteudo__meta">
+                <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
+                <span className="cartao-conteudo__duracao">{normalizeContentType(conteudo.tipoConteudo)}</span>
+              </div>
+              <div className="cartao-conteudo__acoes menu-contexto">
+                <button
+                  aria-expanded={menuAbertoId === conteudo.id}
+                  aria-label={`Opcoes para ${conteudo.titulo}`}
+                  className="menu-contexto__botao"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleMenu(conteudo.id);
+                  }}
+                  type="button"
+                >
+                  <TbDotsVertical aria-hidden="true" size={18} />
+                </button>
+                {menuAbertoId === conteudo.id ? (
+                  <ul className="menu-contexto__lista" role="menu">
+                    <li>
+                      <button onClick={() => onEditar(conteudo)} role="menuitem" type="button">
+                        Editar
+                      </button>
+                    </li>
+                    <li>
+                      <button className="menu-item--perigo" onClick={() => onExcluir(conteudo)} role="menuitem" type="button">
+                        Excluir
+                      </button>
+                    </li>
+                  </ul>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {
   const primeiraTurma = turmas[0] || null;
-  const modulosDaPrimeiraTurma = primeiraTurma
-    ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId)
-    : [];
+  const modulosDaPrimeiraTurma = primeiraTurma ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId) : [];
 
   return {
     turmaId: primeiraTurma ? String(primeiraTurma.id) : "",

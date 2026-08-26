@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { TbDotsVertical, TbSearch } from "react-icons/tb";
+import { MdGroups, MdLayers, MdMenuBook, MdSchool } from "react-icons/md";
+import { InlineMessage } from "../../components/Primitives.jsx";
+import Botao from "../../components/Botao.jsx";
+import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import { mapById } from "../../lib/dashboard.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { compactText } from "../../lib/format.js";
+import { siglas } from "../../lib/format.js";
 
 function normalizarBusca(valor) {
   return String(valor ?? "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
 }
@@ -19,6 +25,7 @@ export function SecaoCursos({
   ehProfessor,
   matriculas = [],
   modulos = [],
+  professores = [],
   turmas = [],
   onAbrirSecaoCurso,
   onRefresh,
@@ -30,16 +37,40 @@ export function SecaoCursos({
   const [buscaCurso, setBuscaCurso] = useState("");
   const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
   const [salvando, setSalvando] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(null);
+
+  useEffect(() => {
+    if (menuAberto === null) {
+      return undefined;
+    }
+
+    function fechar() {
+      setMenuAberto(null);
+    }
+
+    document.addEventListener("click", fechar);
+    return () => document.removeEventListener("click", fechar);
+  }, [menuAberto]);
 
   const coordenadoresOrdenados = useMemo(
     () => [...coordenadores].sort((left, right) => String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR")),
     [coordenadores]
   );
-  const coordenadorPorId = useMemo(
-    () => new Map(coordenadoresOrdenados.map((coordenador) => [coordenador.id, coordenador])),
-    [coordenadoresOrdenados]
-  );
-  // Consolida os numeros do curso para reforcar a hierarquia entre catalogo, estrutura e operacao.
+  const coordenadorPorId = useMemo(() => mapById(coordenadoresOrdenados), [coordenadoresOrdenados]);
+  const professorPorId = useMemo(() => mapById(professores), [professores]);
+  // Assume uma turma padrao por curso (regra aplicada na criacao de turmas).
+  const turmaPorCursoId = useMemo(() => {
+    const mapa = new Map();
+
+    turmas.forEach((turma) => {
+      if (!mapa.has(turma.cursoId)) {
+        mapa.set(turma.cursoId, turma);
+      }
+    });
+
+    return mapa;
+  }, [turmas]);
+
   const resumoPorCursoId = useMemo(() => {
     const resumoInicial = new Map(cursos.map((curso) => [curso.id, { modulos: 0, turmas: 0, matriculas: 0 }]));
 
@@ -94,7 +125,6 @@ export function SecaoCursos({
         curso.descricao,
         coordenacao,
         `${resumo.modulos} modulos`,
-        resumo.turmas ? "turma padrao configurada" : "turma padrao pendente",
         `${resumo.matriculas} matriculas`
       ];
 
@@ -204,109 +234,97 @@ export function SecaoCursos({
     }
   }
 
-  function renderSelecao(curso) {
-    return (
-      <label className="table-select-cell">
-        <input
-          aria-label={`Selecionar curso ${curso.titulo}`}
-          checked={cursosSelecionados.has(curso.id)}
-          className="table-select-input"
-          disabled={!ehAdmin || salvando}
-          onChange={() => alternarCurso(curso)}
-          type="checkbox"
-        />
-      </label>
-    );
-  }
-
   function abrirSecaoRelacionada(section, curso) {
+    setMenuAberto(null);
     onAbrirSecaoCurso?.(section, curso);
   }
 
-  function renderCursoPrincipal(curso) {
-    return (
-      <div className="course-admin-cell">
-        <span className="chip">{curso.codigoRegistro || "Sem codigo"}</span>
+  const totalMatriculas = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.matriculas || 0), 0);
+  const totalModulos = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.modulos || 0), 0);
+
+  return (
+    <div className="tela-cursos">
+      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
         <div>
-          <strong>{curso.titulo}</strong>
-          <p>{compactText(curso.descricao, 128)}</p>
+          <h1 className="cabecalho-pagina__titulo">Cursos</h1>
+          <p className="cabecalho-pagina__subtitulo">
+            {ehCoordenador
+              ? "Cursos ativos vinculados a sua coordenacao."
+              : ehAdmin
+                ? `${cursos.length} curso${cursos.length === 1 ? "" : "s"} cadastrado${cursos.length === 1 ? "" : "s"}`
+                : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
+          </p>
         </div>
-      </div>
-    );
-  }
-
-  function renderEstruturaAcademica(curso) {
-    const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, turmas: 0, matriculas: 0 };
-
-    return (
-      <div className="table-cell-stack">
-        <strong>{resumo.modulos} modulo{resumo.modulos === 1 ? "" : "s"}</strong>
-        <p>{resumo.turmas ? "Turma padrao configurada" : "Turma padrao pendente"}</p>
-        <div className="table-badge-list">
-          <span className="chip">{resumo.matriculas} matricula{resumo.matriculas === 1 ? "" : "s"}</span>
-          <span className="chip">{resumo.turmas} turma{resumo.turmas === 1 ? "" : "s"}</span>
+        <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
+        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
+          <TbSearch
+            aria-hidden="true"
+            size={15}
+            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
+          />
+          <input
+            className="campo__entrada"
+            id="busca-cursos"
+            onChange={(event) => setBuscaCurso(event.target.value)}
+            placeholder="Pesquisar cursos"
+            style={{ paddingLeft: "32px", width: "100%" }}
+            type="search"
+            value={buscaCurso}
+          />
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  function renderCoordenacao(curso) {
-    const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
-    const nomeCoordenador = coordenador?.nome || (curso.coordenadorId ? `Usuario #${curso.coordenadorId}` : "Nao atribuida");
+      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-lg)" }}>
+        <div className="grade-estatisticas">
+          <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos listados" valor={cursosFiltrados.length} />
+          <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdLayers size={22} />} rotulo="Modulos no total" valor={totalModulos} />
+          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<MdGroups size={22} />} rotulo="Matriculas no total" valor={totalMatriculas} />
+        </div>
+      </section>
 
-    return (
-      <div className="table-cell-stack">
-        <StatusPill tone={coordenador || curso.coordenadorId ? "success" : "warning"}>
-          {coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"}
-        </StatusPill>
-        <p>{nomeCoordenador}</p>
-      </div>
-    );
-  }
+      {ehAdmin ? (
+        <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+          <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
+          <select
+            className="campo__entrada"
+            id="filtro-coordenador"
+            onChange={(event) => setFiltroCoordenador(event.target.value)}
+            style={{ maxWidth: "220px" }}
+            value={filtroCoordenador}
+          >
+            <option value="todos">Todos os coordenadores</option>
+            <option value="aguardando">Aguardando coordenador</option>
+            {coordenadoresOrdenados.map((coordenador) => (
+              <option key={coordenador.id} value={coordenador.id}>
+                {coordenador.nome}
+              </option>
+            ))}
+          </select>
+          <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+            Limpar filtros
+          </Botao>
 
-  function renderAcoesCurso(curso) {
-    return (
-      <div className="table-actions table-actions--compact">
-        {!ehProfessor ? (
-          <button className="table-action" onClick={() => abrirSecaoRelacionada("modulos", curso)} type="button">
-            Ver modulos
-          </button>
-        ) : null}
-        <button className="table-action" onClick={() => abrirSecaoRelacionada("turmas", curso)} type="button">
-          Ver turma padrao
-        </button>
-      </div>
-    );
-  }
+          <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
 
-  function renderBarraAtribuicao() {
-    if (!ehAdmin) {
-      return null;
-    }
-
-    return (
-      <div className="table-toolbar table-toolbar--assignment">
-        <div className="table-actions table-actions--bulk">
-          <label className="table-bulk-toggle">
+          <label style={{ alignItems: "center", color: "var(--cor-texto-suave)", display: "flex", fontSize: "0.82rem", gap: "6px" }}>
             <input
               checked={todosCursosSelecionados}
-              className="table-select-input"
               disabled={salvando || !cursosFiltrados.length}
               onChange={alternarTodosCursos}
               type="checkbox"
             />
-            <span>Selecionar cursos</span>
+            Selecionar cursos
           </label>
+          <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir</label>
           <select
-            aria-label="Coordenador para atribuir aos cursos"
-            className="table-inline-select table-inline-select--bulk"
+            className="campo__entrada"
             disabled={salvando || !coordenadoresOrdenados.length}
+            id="coordenador-atribuir"
             onChange={(event) => setCoordenadorSelecionado(event.target.value)}
+            style={{ maxWidth: "220px" }}
             value={coordenadorSelecionado}
           >
-            <option value="">
-              Selecionar coordenador
-            </option>
+            <option value="">Selecionar coordenador</option>
             <option value="0">Aguardando coordenador</option>
             {coordenadoresOrdenados.map((coordenador) => (
               <option key={coordenador.id} value={coordenador.id}>
@@ -314,96 +332,140 @@ export function SecaoCursos({
               </option>
             ))}
           </select>
-          <button className="table-action" disabled={salvando} onClick={atribuirCoordenador} type="button">
+          <Botao disabled={salvando} onClick={atribuirCoordenador} tamanho="pequeno" variante="primario">
             {salvando ? "Salvando..." : "Atribuir coordenador"}
-          </button>
+          </Botao>
+          <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.8rem", marginLeft: "auto" }}>
+            {quantidadeSelecionada
+              ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s selecionados" : " selecionado"}`
+              : `${cursosFiltrados.length} de ${cursos.length} curso${cursos.length === 1 ? "" : "s"}`}
+          </p>
         </div>
-        <p className="table-toolbar__summary">
-          {quantidadeSelecionada
-            ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s selecionados" : " selecionado"}`
-            : `${cursosFiltrados.length} de ${cursos.length} curso${cursos.length === 1 ? "" : "s"}`}
-        </p>
-      </div>
-    );
-  }
+      ) : null}
 
-  function renderBarraFiltros() {
-    return (
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar cursos"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaCurso(event.target.value)}
-              placeholder="Pesquisar cursos"
-              type="search"
-              value={buscaCurso}
-            />
-          </label>
-          {ehAdmin ? (
-            <select
-              aria-label="Filtrar cursos por coordenador"
-              className="table-inline-select"
-              disabled={salvando}
-              onChange={(event) => setFiltroCoordenador(event.target.value)}
-              value={filtroCoordenador}
-            >
-              <option value="todos">Todos os coordenadores</option>
-              <option value="aguardando">Aguardando coordenador</option>
-              {coordenadoresOrdenados.map((coordenador) => (
-                <option key={coordenador.id} value={coordenador.id}>
-                  {coordenador.nome}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <button className="table-action" disabled={!temFiltroAtivo} onClick={limparFiltros} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {cursosFiltrados.length} de {cursos.length} curso{cursos.length === 1 ? "" : "s"}
-        </p>
-      </div>
-    );
-  }
-
-  const colunas = [
-    ...(ehAdmin ? [{ key: "selecionar", label: "Selecionar", render: renderSelecao }] : []),
-    { key: "curso", label: "Curso", render: renderCursoPrincipal },
-    { key: "estrutura", label: "Estrutura academica", render: renderEstruturaAcademica },
-    { key: "coordenacao", label: "Coordenacao", render: renderCoordenacao },
-    { key: "acoes", label: "Acoes", render: renderAcoesCurso }
-  ];
-
-  return (
-    <PanelCard
-      description={
-        ehCoordenador
-          ? "Cursos ativos vinculados a sua coordenacao, com leitura direta de modulos, turma padrao e matriculas."
-          : ehAdmin
-          ? "Selecione cursos, atribua coordenacao em lote e use cada linha como ponto de partida para modulos e turma padrao."
-          : "Catalogo de cursos reutilizado na home publica e no ambiente autenticado."
-      }
-      title="Cursos ativos"
-    >
-      {renderBarraFiltros()}
-      {renderBarraAtribuicao()}
       {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
-      <DataTable
-        columns={colunas}
-        emptyMessage={ehCoordenador ? "Nenhum curso ativo sob sua coordenacao." : "Nenhum curso encontrado."}
-        rows={cursosFiltrados}
-      />
-    </PanelCard>
+
+      {cursosFiltrados.length === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">
+          {temFiltroAtivo ? "Nenhum curso encontrado com os filtros aplicados." : ehCoordenador ? "Nenhum curso ativo sob sua coordenacao." : "Nenhum curso encontrado."}
+        </p>
+      ) : (
+        <>
+          <div className="desempenho-cursos-cabecalho" aria-hidden="true">
+            {ehAdmin ? <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--checkbox" /> : null}
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--avatar" />
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--identidade">
+              <MdMenuBook size={13} /> Curso
+            </span>
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--turma">
+              <MdGroups size={13} /> Turma / Professor
+            </span>
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--alunos">
+              <MdSchool size={13} /> Matriculas
+            </span>
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--metricas">Estrutura</span>
+            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--acoes" />
+          </div>
+
+          <ul aria-label="Cursos" className="desempenho-cursos" role="list">
+            {cursosFiltrados.map((curso) => {
+              const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, turmas: 0, matriculas: 0 };
+              const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
+              const turmaPadrao = turmaPorCursoId.get(curso.id) || null;
+              const professorNome = turmaPadrao?.professorId ? professorPorId.get(turmaPadrao.professorId)?.nome : null;
+              const selecionado = cursosSelecionados.has(curso.id);
+
+              return (
+                <li
+                  className={`desempenho-curso-item${selecionado ? " desempenho-curso-item--selecionado" : ""}`}
+                  key={curso.id}
+                >
+                  {ehAdmin ? (
+                    <div className="desempenho-curso-item__checkbox">
+                      <input
+                        aria-label={`Selecionar ${curso.titulo}`}
+                        checked={selecionado}
+                        disabled={salvando}
+                        onChange={() => alternarCurso(curso)}
+                        type="checkbox"
+                      />
+                    </div>
+                  ) : null}
+
+                  <div aria-hidden="true" className="cartao-progresso-aluno__avatar">
+                    {siglas(curso.titulo)}
+                  </div>
+
+                  <div className="desempenho-curso-item__identidade">
+                    <div className="desempenho-curso-item__cabecalho">
+                      <h3 className="desempenho-curso-item__titulo">{curso.titulo}</h3>
+                    </div>
+                    <div className="desempenho-curso-item__meta">
+                      <span className="desempenho-curso-item__codigo">{curso.codigoRegistro || "Sem codigo"}</span>
+                    </div>
+                  </div>
+
+                  <div className="desempenho-curso-item__turma">
+                    <span aria-hidden="true" className="dado-rotulo">Turma / Professor</span>
+                    {turmaPadrao ? (
+                      <>
+                        <span className="desempenho-curso-item__turma-nome">{turmaPadrao.nomeTurma}</span>
+                        <span className="desempenho-curso-item__professor">{professorNome || "Sem professor"}</span>
+                      </>
+                    ) : (
+                      <span className="desempenho-curso-item__sem-turma">Sem turma padrao</span>
+                    )}
+                  </div>
+
+                  <div className="desempenho-curso-item__alunos">
+                    <span aria-hidden="true" className="dado-rotulo">Matriculas</span>
+                    <span className="desempenho-curso-item__alunos-num">{resumo.matriculas}</span>
+                  </div>
+
+                  <div className="desempenho-curso-item__metricas">
+                    <span aria-hidden="true" className="dado-rotulo">Estrutura / Coordenacao</span>
+                    <span className="desempenho-metrica">
+                      <strong>{resumo.modulos}</strong> modulo{resumo.modulos === 1 ? "" : "s"}
+                    </span>
+                    <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} />
+                  </div>
+
+                  <div className="menu-contexto">
+                    <button
+                      aria-expanded={menuAberto === curso.id}
+                      aria-label={`Opcoes para ${curso.titulo}`}
+                      className="menu-contexto__botao"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setMenuAberto((atual) => (atual === curso.id ? null : curso.id));
+                      }}
+                      type="button"
+                    >
+                      <TbDotsVertical aria-hidden="true" size={18} />
+                    </button>
+                    {menuAberto === curso.id ? (
+                      <ul className="menu-contexto__lista" role="menu">
+                        {!ehProfessor ? (
+                          <li>
+                            <button onClick={() => abrirSecaoRelacionada("modulos", curso)} role="menuitem" type="button">
+                              Ver modulos
+                            </button>
+                          </li>
+                        ) : null}
+                        <li>
+                          <button onClick={() => abrirSecaoRelacionada("turmas", curso)} role="menuitem" type="button">
+                            Ver turma padrao
+                          </button>
+                        </li>
+                      </ul>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
   );
 }

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { TbDotsVertical, TbPlus, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
+import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import {
-  compactText,
-  formatDate,
-  normalizePublicationStatus,
-  parseApiDate,
-  publicationStatusTone
-} from "../../lib/format.js";
+import { compactText, formatDate, normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
 
 const OPCOES_TIPO_AVALIACAO = [
   { value: "1", label: "Quiz" },
@@ -30,40 +29,14 @@ const OPCOES_TIPO_QUESTAO = [
 
 const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D"];
 
-function normalizarBusca(valor) {
-  return String(valor ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
 function normalizeEvaluationType(type) {
-  const labels = {
-    1: "Quiz",
-    2: "Prova",
-    3: "Exercicio"
-  };
-
-  if (typeof type === "number") {
-    return labels[type] || "Desconhecido";
-  }
-
-  return type || "Desconhecido";
+  const labels = { 1: "Quiz", 2: "Prova", 3: "Exercicio" };
+  return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
 }
 
 function normalizeQuestionType(type) {
-  const labels = {
-    1: "Multipla escolha",
-    2: "Verdadeiro/Falso",
-    3: "Discursiva"
-  };
-
-  if (typeof type === "number") {
-    return labels[type] || "Desconhecido";
-  }
-
-  return type || "Desconhecido";
+  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Discursiva" };
+  return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
 }
 
 function formatDecimal(value) {
@@ -80,8 +53,7 @@ function toDatetimeLocalValue(value) {
     return "";
   }
 
-  const localDate = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000);
-  return localDate.toISOString().slice(0, 16);
+  return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 function toIsoOrNull(value) {
@@ -93,36 +65,35 @@ function toIsoOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-export function SecaoAvaliacoesProfessor({
-  avaliacoes,
-  cursos,
-  modulos,
-  onRefresh,
-  onSessionExpired,
-  solicitacaoNovaAvaliacao = 0,
-  turmas,
-  usuario
-}) {
-  const [dadosFormularioAvaliacao, setDadosFormularioAvaliacao] = useState(() =>
-    criarEstadoInicialFormularioAvaliacao([], [])
-  );
+export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefresh, onSessionExpired, solicitacaoNovaAvaliacao = 0, turmas, usuario }) {
+  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario([], []));
   const [avaliacaoEmEdicaoId, setAvaliacaoEmEdicaoId] = useState(null);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
-  const [mensagemTabela, setMensagemTabela] = useState({ tone: "", message: "" });
-  const [salvandoAvaliacao, setSalvandoAvaliacao] = useState(false);
-  const [idsAvaliacoesSelecionadas, setIdsAvaliacoesSelecionadas] = useState([]);
-  const [formularioAvaliacaoAberto, setFormularioAvaliacaoAberto] = useState(false);
-  const [buscaAvaliacao, setBuscaAvaliacao] = useState("");
-  const [filtroCursoAvaliacao, setFiltroCursoAvaliacao] = useState("todos");
-  const [filtroTurmaAvaliacao, setFiltroTurmaAvaliacao] = useState("todos");
-  const [filtroStatusAvaliacao, setFiltroStatusAvaliacao] = useState("todos");
-  const [filtroTipoAvaliacao, setFiltroTipoAvaliacao] = useState("todos");
+  const [salvando, setSalvando] = useState(false);
+  const [formularioAberto, setFormularioAberto] = useState(false);
+  const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
+  const [menuAbertoId, setMenuAbertoId] = useState(null);
+  const [slideAtual, setSlideAtual] = useState(0);
+
   const [avaliacaoEmMontagem, setAvaliacaoEmMontagem] = useState(null);
   const [questoesAvaliacao, setQuestoesAvaliacao] = useState([]);
   const [dadosFormularioQuestao, setDadosFormularioQuestao] = useState(() => criarEstadoInicialFormularioQuestao());
   const [carregandoQuestoes, setCarregandoQuestoes] = useState(false);
   const [salvandoQuestao, setSalvandoQuestao] = useState(false);
   const [mensagemQuestoes, setMensagemQuestoes] = useState({ tone: "", message: "" });
+
+  useEffect(() => {
+    if (menuAbertoId === null) {
+      return undefined;
+    }
+
+    function fechar() {
+      setMenuAbertoId(null);
+    }
+
+    document.addEventListener("click", fechar);
+    return () => document.removeEventListener("click", fechar);
+  }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
@@ -131,15 +102,8 @@ export function SecaoAvaliacoesProfessor({
       [...turmas]
         .filter((turma) => turma.professorId === usuario.id)
         .sort((left, right) => {
-          const leftCourse = cursoPorId.get(left.cursoId)?.titulo || "";
-          const rightCourse = cursoPorId.get(right.cursoId)?.titulo || "";
-          const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-          if (courseComparison !== 0) {
-            return courseComparison;
-          }
-
-          return left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
+          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
+          return courseComparison !== 0 ? courseComparison : left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
         }),
     [cursoPorId, turmas, usuario.id]
   );
@@ -149,323 +113,133 @@ export function SecaoAvaliacoesProfessor({
       [...modulos]
         .filter((modulo) => turmasDoProfessor.some((turma) => turma.cursoId === modulo.cursoId))
         .sort((left, right) => {
-          const leftCourse = cursoPorId.get(left.cursoId)?.titulo || "";
-          const rightCourse = cursoPorId.get(right.cursoId)?.titulo || "";
-          const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-          if (courseComparison !== 0) {
-            return courseComparison;
-          }
-
-          return left.titulo.localeCompare(right.titulo, "pt-BR");
+          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
+          return courseComparison !== 0 ? courseComparison : left.titulo.localeCompare(right.titulo, "pt-BR");
         }),
     [cursoPorId, modulos, turmasDoProfessor]
   );
 
   const modulosPorCursoId = useMemo(() => {
-    const modulosAgrupados = new Map();
-
+    const agrupados = new Map();
     modulosDoProfessor.forEach((modulo) => {
-      const modulosAtuais = modulosAgrupados.get(modulo.cursoId) || [];
-      modulosAtuais.push(modulo);
-      modulosAgrupados.set(modulo.cursoId, modulosAtuais);
+      const atuais = agrupados.get(modulo.cursoId) || [];
+      atuais.push(modulo);
+      agrupados.set(modulo.cursoId, atuais);
     });
-
-    return modulosAgrupados;
+    return agrupados;
   }, [modulosDoProfessor]);
 
   useEffect(() => {
-    if (avaliacaoEmEdicaoId || dadosFormularioAvaliacao.turmaId || !turmasDoProfessor.length) {
+    if (avaliacaoEmEdicaoId || dadosFormulario.turmaId || !turmasDoProfessor.length) {
       return;
     }
 
-    setDadosFormularioAvaliacao(criarEstadoInicialFormularioAvaliacao(turmasDoProfessor, modulosDoProfessor));
-  }, [avaliacaoEmEdicaoId, dadosFormularioAvaliacao.turmaId, modulosDoProfessor, turmasDoProfessor]);
+    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
+  }, [avaliacaoEmEdicaoId, dadosFormulario.turmaId, modulosDoProfessor, turmasDoProfessor]);
 
-  const turmaSelecionada = useMemo(
-    () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormularioAvaliacao.turmaId) || null,
-    [dadosFormularioAvaliacao.turmaId, turmasDoProfessor]
+  const turmaSelecionadaFormulario = useMemo(
+    () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormulario.turmaId) || null,
+    [dadosFormulario.turmaId, turmasDoProfessor]
   );
 
   const modulosDisponiveis = useMemo(() => {
-    if (!turmaSelecionada) {
+    if (!turmaSelecionadaFormulario) {
       return [];
     }
 
-    return modulosPorCursoId.get(turmaSelecionada.cursoId) || [];
-  }, [modulosPorCursoId, turmaSelecionada]);
+    return modulosPorCursoId.get(turmaSelecionadaFormulario.cursoId) || [];
+  }, [modulosPorCursoId, turmaSelecionadaFormulario]);
 
   useEffect(() => {
-    if (!turmaSelecionada || avaliacaoEmEdicaoId) {
+    if (!turmaSelecionadaFormulario || avaliacaoEmEdicaoId) {
       return;
     }
 
-    if (!modulosDisponiveis.length && dadosFormularioAvaliacao.moduloId) {
-      setDadosFormularioAvaliacao((current) => ({
-        ...current,
-        moduloId: ""
-      }));
+    if (!modulosDisponiveis.length && dadosFormulario.moduloId) {
+      setDadosFormulario((current) => ({ ...current, moduloId: "" }));
       return;
     }
 
-    const hasCurrentModule = modulosDisponiveis.some(
-      (modulo) => String(modulo.id) === dadosFormularioAvaliacao.moduloId
-    );
-
+    const hasCurrentModule = modulosDisponiveis.some((modulo) => String(modulo.id) === dadosFormulario.moduloId);
     if (!hasCurrentModule && modulosDisponiveis[0]) {
-      setDadosFormularioAvaliacao((current) => ({
-        ...current,
-        moduloId: String(modulosDisponiveis[0].id)
-      }));
+      setDadosFormulario((current) => ({ ...current, moduloId: String(modulosDisponiveis[0].id) }));
     }
-  }, [avaliacaoEmEdicaoId, dadosFormularioAvaliacao.moduloId, modulosDisponiveis, turmaSelecionada]);
-
-  useEffect(() => {
-    if (!formularioAvaliacaoAberto) {
-      return undefined;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !salvandoAvaliacao) {
-        setFormularioAvaliacaoAberto(false);
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [formularioAvaliacaoAberto, salvandoAvaliacao]);
-
-  useEffect(() => {
-    if (!avaliacaoEmMontagem) {
-      return undefined;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape" && !salvandoQuestao) {
-        fecharMontagemQuestoes();
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [avaliacaoEmMontagem, salvandoQuestao]);
+  }, [avaliacaoEmEdicaoId, dadosFormulario.moduloId, modulosDisponiveis, turmaSelecionadaFormulario]);
 
   useEffect(() => {
     if (solicitacaoNovaAvaliacao > 0) {
       abrirFormularioNovaAvaliacao();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solicitacaoNovaAvaliacao]);
 
-  const tituloCursoSelecionado = turmaSelecionada
-    ? cursoPorId.get(turmaSelecionada.cursoId)?.titulo || `Curso #${turmaSelecionada.cursoId}`
-    : "";
-
-  const termoBuscaAvaliacao = useMemo(() => normalizarBusca(buscaAvaliacao), [buscaAvaliacao]);
-
-  const linhasAvaliacoesOrdenadas = useMemo(
+  const grupos = useMemo(
     () =>
-      [...avaliacoes].sort((left, right) => {
-        const leftCourse = left.cursoTitulo || "";
-        const rightCourse = right.cursoTitulo || "";
-        const courseComparison = leftCourse.localeCompare(rightCourse, "pt-BR");
-
-        if (courseComparison !== 0) {
-          return courseComparison;
-        }
-
-        const turmaComparison = (left.turmaNome || "").localeCompare(right.turmaNome || "", "pt-BR");
-        if (turmaComparison !== 0) {
-          return turmaComparison;
-        }
-
-        const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
-        if (moduloComparison !== 0) {
-          return moduloComparison;
-        }
-
-        return (left.titulo || "").localeCompare(right.titulo || "", "pt-BR");
-      }),
-    [avaliacoes]
+      turmasDoProfessor.map((turma) => ({
+        turma,
+        curso: cursoPorId.get(turma.cursoId) || null,
+        itens: [...avaliacoes]
+          .filter((avaliacao) => avaliacao.turmaId === turma.id)
+          .sort((left, right) => {
+            const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
+            return moduloComparison !== 0 ? moduloComparison : (left.titulo || "").localeCompare(right.titulo || "", "pt-BR");
+          })
+      })),
+    [avaliacoes, cursoPorId, turmasDoProfessor]
   );
 
-  const cursosDasAvaliacoes = useMemo(() => {
-    const cursosMapeados = new Map();
+  const total = grupos.length;
+  const slide = Math.min(slideAtual, Math.max(0, total - 1));
 
-    turmasDoProfessor.forEach((turma) => {
-      const curso = cursoPorId.get(turma.cursoId);
-      cursosMapeados.set(turma.cursoId, curso || { id: turma.cursoId, titulo: `Curso #${turma.cursoId}` });
-    });
+  function irPara(indice) {
+    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  }
 
-    return [...cursosMapeados.values()].sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
-  }, [cursoPorId, turmasDoProfessor]);
-
-  const turmasFiltradasPorCurso = useMemo(() => {
-    if (filtroCursoAvaliacao === "todos") {
-      return turmasDoProfessor;
-    }
-
-    const cursoId = Number(filtroCursoAvaliacao);
-    return turmasDoProfessor.filter((turma) => Number(turma.cursoId) === cursoId);
-  }, [filtroCursoAvaliacao, turmasDoProfessor]);
-
-  const linhasAvaliacoes = useMemo(() => {
-    let proximasLinhas = linhasAvaliacoesOrdenadas;
-
-    if (filtroCursoAvaliacao !== "todos") {
-      const cursoId = Number(filtroCursoAvaliacao);
-      proximasLinhas = proximasLinhas.filter((row) => Number(row.cursoId) === cursoId);
-    }
-
-    if (filtroTurmaAvaliacao !== "todos") {
-      const turmaId = Number(filtroTurmaAvaliacao);
-      proximasLinhas = proximasLinhas.filter((row) => Number(row.turmaId) === turmaId);
-    }
-
-    if (filtroStatusAvaliacao !== "todos") {
-      proximasLinhas = proximasLinhas.filter((row) => String(row.statusPublicacao ?? "") === filtroStatusAvaliacao);
-    }
-
-    if (filtroTipoAvaliacao !== "todos") {
-      proximasLinhas = proximasLinhas.filter((row) => String(row.tipoAvaliacao ?? "") === filtroTipoAvaliacao);
-    }
-
-    if (!termoBuscaAvaliacao) {
-      return proximasLinhas;
-    }
-
-    return proximasLinhas.filter((row) => {
-      const campos = [
-        row.titulo,
-        row.descricao,
-        row.turmaNome,
-        row.cursoTitulo,
-        row.moduloTitulo,
-        normalizeEvaluationType(row.tipoAvaliacao),
-        normalizePublicationStatus(row.statusPublicacao),
-        formatDate(row.dataAbertura),
-        formatDate(row.dataFechamento)
-      ];
-
-      return campos.some((campo) => normalizarBusca(campo).includes(termoBuscaAvaliacao));
-    });
-  }, [
-    filtroCursoAvaliacao,
-    filtroStatusAvaliacao,
-    filtroTipoAvaliacao,
-    filtroTurmaAvaliacao,
-    linhasAvaliacoesOrdenadas,
-    termoBuscaAvaliacao
-  ]);
-
-  const temFiltroAvaliacaoAtivo = Boolean(
-    termoBuscaAvaliacao ||
-      filtroCursoAvaliacao !== "todos" ||
-      filtroTurmaAvaliacao !== "todos" ||
-      filtroStatusAvaliacao !== "todos" ||
-      filtroTipoAvaliacao !== "todos"
-  );
-
-  const linhasAvaliacoesSelecionadas = useMemo(
-    () => linhasAvaliacoes.filter((row) => idsAvaliacoesSelecionadas.includes(row.id)),
-    [idsAvaliacoesSelecionadas, linhasAvaliacoes]
-  );
-
-  const todasAvaliacoesSelecionadas =
-    linhasAvaliacoes.length > 0 && linhasAvaliacoes.every((row) => idsAvaliacoesSelecionadas.includes(row.id));
-
-  useEffect(() => {
-    setIdsAvaliacoesSelecionadas((current) =>
-      current.filter((id) => linhasAvaliacoes.some((row) => row.id === id))
-    );
-  }, [linhasAvaliacoes]);
-
-  const resumoAvaliacoes = useMemo(() => {
-    const totalPublicadas = avaliacoes.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Publicado"
-    ).length;
-    const totalRascunhos = avaliacoes.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Rascunho"
-    ).length;
-    const totalArquivadas = avaliacoes.filter(
-      (item) => normalizePublicationStatus(item.statusPublicacao) === "Arquivado"
-    ).length;
-
-    return [
-      `${turmasDoProfessor.length} turma(s)`,
-      `${modulosDoProfessor.length} modulo(s)`,
-      `${avaliacoes.length} avaliacao(oes)`,
-      `${totalPublicadas} publicada(s)`,
-      `${totalRascunhos} rascunho(s)`,
-      `${totalArquivadas} arquivada(s)`
-    ];
-  }, [avaliacoes, modulosDoProfessor.length, turmasDoProfessor.length]);
-
-  function limparFormularioAvaliacao() {
+  function limparFormulario() {
     setAvaliacaoEmEdicaoId(null);
-    setDadosFormularioAvaliacao(criarEstadoInicialFormularioAvaliacao(turmasDoProfessor, modulosDoProfessor));
+    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
     setMensagemFormulario({ tone: "", message: "" });
   }
 
   function abrirFormularioNovaAvaliacao() {
-    limparFormularioAvaliacao();
-    setIdsAvaliacoesSelecionadas([]);
-    setMensagemTabela({ tone: "", message: "" });
-    setFormularioAvaliacaoAberto(true);
+    limparFormulario();
+    setFormularioAberto(true);
   }
 
-  function fecharFormularioAvaliacao() {
-    if (salvandoAvaliacao) {
+  function fecharFormulario() {
+    if (salvando) {
       return;
     }
 
-    limparFormularioAvaliacao();
-    setFormularioAvaliacaoAberto(false);
+    limparFormulario();
+    setFormularioAberto(false);
   }
 
-  function atualizarCampoFormularioAvaliacao(event) {
+  function atualizarCampoFormulario(event) {
     const { name, value } = event.target;
 
     if (name === "turmaId") {
-      const nextTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
-      const nextModules = nextTurma ? modulosPorCursoId.get(nextTurma.cursoId) || [] : [];
+      const proximaTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
+      const proximosModulos = proximaTurma ? modulosPorCursoId.get(proximaTurma.cursoId) || [] : [];
 
-      setDadosFormularioAvaliacao((current) => ({
+      setDadosFormulario((current) => ({
         ...current,
         turmaId: value,
-        moduloId: nextModules.some((modulo) => String(modulo.id) === current.moduloId)
+        moduloId: proximosModulos.some((modulo) => String(modulo.id) === current.moduloId)
           ? current.moduloId
-          : nextModules[0]
-            ? String(nextModules[0].id)
+          : proximosModulos[0]
+            ? String(proximosModulos[0].id)
             : ""
       }));
       return;
     }
 
-    setDadosFormularioAvaliacao((current) => ({
-      ...current,
-      [name]: value
-    }));
+    setDadosFormulario((current) => ({ ...current, [name]: value }));
   }
 
   function abrirEdicaoAvaliacao(avaliacao) {
     setAvaliacaoEmEdicaoId(avaliacao.id);
-    setIdsAvaliacoesSelecionadas([avaliacao.id]);
-    setMensagemTabela({ tone: "", message: "" });
-    setDadosFormularioAvaliacao({
+    setDadosFormulario({
       turmaId: String(avaliacao.turmaId),
       moduloId: String(avaliacao.moduloId),
       titulo: avaliacao.titulo || "",
@@ -481,29 +255,28 @@ export function SecaoAvaliacoesProfessor({
       pesoProgresso: String(avaliacao.pesoProgresso ?? 1)
     });
     setMensagemFormulario({ tone: "", message: "" });
-    setFormularioAvaliacaoAberto(true);
+    setFormularioAberto(true);
+    setMenuAbertoId(null);
   }
 
   async function salvarAvaliacao(event) {
     event.preventDefault();
 
-    const tituloNormalizado = dadosFormularioAvaliacao.titulo.trim();
+    const tituloNormalizado = dadosFormulario.titulo.trim();
     const dadosEnvio = {
       titulo: tituloNormalizado,
-      descricao: dadosFormularioAvaliacao.descricao.trim(),
-      turmaId: Number(dadosFormularioAvaliacao.turmaId),
-      moduloId: Number(dadosFormularioAvaliacao.moduloId),
-      tipoAvaliacao: Number(dadosFormularioAvaliacao.tipoAvaliacao),
-      statusPublicacao: Number(dadosFormularioAvaliacao.statusPublicacao),
-      dataAbertura: toIsoOrNull(dadosFormularioAvaliacao.dataAbertura),
-      dataFechamento: toIsoOrNull(dadosFormularioAvaliacao.dataFechamento),
-      tentativasPermitidas: Number(dadosFormularioAvaliacao.tentativasPermitidas),
-      tempoLimiteMinutos: dadosFormularioAvaliacao.tempoLimiteMinutos
-        ? Number(dadosFormularioAvaliacao.tempoLimiteMinutos)
-        : null,
-      notaMaxima: Number(dadosFormularioAvaliacao.notaMaxima),
-      pesoNota: Number(dadosFormularioAvaliacao.pesoNota),
-      pesoProgresso: Number(dadosFormularioAvaliacao.pesoProgresso)
+      descricao: dadosFormulario.descricao.trim(),
+      turmaId: Number(dadosFormulario.turmaId),
+      moduloId: Number(dadosFormulario.moduloId),
+      tipoAvaliacao: Number(dadosFormulario.tipoAvaliacao),
+      statusPublicacao: Number(dadosFormulario.statusPublicacao),
+      dataAbertura: toIsoOrNull(dadosFormulario.dataAbertura),
+      dataFechamento: toIsoOrNull(dadosFormulario.dataFechamento),
+      tentativasPermitidas: Number(dadosFormulario.tentativasPermitidas),
+      tempoLimiteMinutos: dadosFormulario.tempoLimiteMinutos ? Number(dadosFormulario.tempoLimiteMinutos) : null,
+      notaMaxima: Number(dadosFormulario.notaMaxima),
+      pesoNota: Number(dadosFormulario.pesoNota),
+      pesoProgresso: Number(dadosFormulario.pesoProgresso)
     };
 
     if (!turmasDoProfessor.length) {
@@ -561,32 +334,18 @@ export function SecaoAvaliacoesProfessor({
       return;
     }
 
-    setSalvandoAvaliacao(true);
+    setSalvando(true);
     setMensagemFormulario({ tone: "", message: "" });
 
     try {
-      const mensagemSucesso = avaliacaoEmEdicaoId
-        ? "Avaliacao atualizada com sucesso."
-        : "Avaliacao criada com sucesso.";
-
       if (avaliacaoEmEdicaoId) {
-        await apiRequest(`/Avaliacoes/${avaliacaoEmEdicaoId}`, {
-          method: "PUT",
-          body: JSON.stringify(dadosEnvio)
-        });
+        await apiRequest(`/Avaliacoes/${avaliacaoEmEdicaoId}`, { method: "PUT", body: JSON.stringify(dadosEnvio) });
       } else {
-        await apiRequest("/Avaliacoes", {
-          method: "POST",
-          body: JSON.stringify(dadosEnvio)
-        });
+        await apiRequest("/Avaliacoes", { method: "POST", body: JSON.stringify(dadosEnvio) });
       }
 
-      setAvaliacaoEmEdicaoId(null);
-      setDadosFormularioAvaliacao(criarEstadoInicialFormularioAvaliacao(turmasDoProfessor, modulosDoProfessor));
-      setIdsAvaliacoesSelecionadas([]);
-      setMensagemFormulario({ tone: "", message: "" });
-      setMensagemTabela({ tone: "success", message: mensagemSucesso });
-      setFormularioAvaliacaoAberto(false);
+      limparFormulario();
+      setFormularioAberto(false);
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -594,48 +353,46 @@ export function SecaoAvaliacoesProfessor({
         return;
       }
 
-      setMensagemFormulario({
-        tone: "error",
-        message: err.message || "Nao foi possivel salvar a avaliacao agora."
-      });
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel salvar a avaliacao agora." });
     } finally {
-      setSalvandoAvaliacao(false);
+      setSalvando(false);
     }
   }
 
-  function alternarSelecaoAvaliacao(avaliacaoId) {
-    setIdsAvaliacoesSelecionadas((current) =>
-      current.includes(avaliacaoId) ? current.filter((id) => id !== avaliacaoId) : [...current, avaliacaoId]
-    );
-  }
-
-  function alternarSelecaoTodasAvaliacoes() {
-    if (salvandoAvaliacao || !linhasAvaliacoes.length) {
+  async function confirmarExclusaoAvaliacao() {
+    if (!avaliacaoParaExcluir) {
       return;
     }
 
-    setIdsAvaliacoesSelecionadas((current) =>
-      linhasAvaliacoes.every((row) => current.includes(row.id)) ? [] : linhasAvaliacoes.map((row) => row.id)
-    );
+    setSalvando(true);
+
+    try {
+      await apiRequest(`/Avaliacoes/${avaliacaoParaExcluir.id}`, { method: "DELETE" });
+
+      if (avaliacaoEmEdicaoId === avaliacaoParaExcluir.id) {
+        limparFormulario();
+      }
+
+      setAvaliacaoParaExcluir(null);
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir a avaliacao agora." });
+      setAvaliacaoParaExcluir(null);
+    } finally {
+      setSalvando(false);
+    }
   }
 
-  function editarAvaliacaoSelecionada() {
-    if (linhasAvaliacoesSelecionadas.length !== 1) {
-      return;
-    }
-
-    abrirEdicaoAvaliacao(linhasAvaliacoesSelecionadas[0]);
-  }
-
-  async function abrirMontagemQuestoesSelecionada() {
-    if (linhasAvaliacoesSelecionadas.length !== 1) {
-      return;
-    }
-
-    const avaliacao = linhasAvaliacoesSelecionadas[0];
+  async function abrirMontagemQuestoes(avaliacao) {
     setAvaliacaoEmMontagem(avaliacao);
     setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
     setMensagemQuestoes({ tone: "", message: "" });
+    setMenuAbertoId(null);
     await carregarQuestoesAvaliacao(avaliacao.id);
   }
 
@@ -662,10 +419,7 @@ export function SecaoAvaliacoesProfessor({
         return;
       }
 
-      setMensagemQuestoes({
-        tone: "error",
-        message: err.message || "Nao foi possivel carregar as questoes agora."
-      });
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel carregar as questoes agora." });
     } finally {
       setCarregandoQuestoes(false);
     }
@@ -683,10 +437,7 @@ export function SecaoAvaliacoesProfessor({
       return;
     }
 
-    setDadosFormularioQuestao((current) => ({
-      ...current,
-      [name]: value
-    }));
+    setDadosFormularioQuestao((current) => ({ ...current, [name]: value }));
   }
 
   function atualizarAlternativaQuestao(index, value) {
@@ -767,10 +518,7 @@ export function SecaoAvaliacoesProfessor({
     setMensagemQuestoes({ tone: "", message: "" });
 
     try {
-      await apiRequest(`/Avaliacoes/${avaliacaoEmMontagem.id}/questoes`, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
+      await apiRequest(`/Avaliacoes/${avaliacaoEmMontagem.id}/questoes`, { method: "POST", body: JSON.stringify(payload) });
 
       setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
       setMensagemQuestoes({ tone: "success", message: "Questao adicionada a avaliacao." });
@@ -782,10 +530,7 @@ export function SecaoAvaliacoesProfessor({
         return;
       }
 
-      setMensagemQuestoes({
-        tone: "error",
-        message: err.message || "Nao foi possivel salvar a questao agora."
-      });
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel salvar a questao agora." });
     } finally {
       setSalvandoQuestao(false);
     }
@@ -815,822 +560,487 @@ export function SecaoAvaliacoesProfessor({
         return;
       }
 
-      setMensagemQuestoes({
-        tone: "error",
-        message: err.message || "Nao foi possivel excluir a questao agora."
-      });
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel excluir a questao agora." });
     } finally {
       setSalvandoQuestao(false);
     }
   }
 
-  async function excluirAvaliacoesSelecionadas(linhasParaExcluir = linhasAvaliacoesSelecionadas) {
-    if (!linhasParaExcluir.length) {
-      return;
-    }
-
-    const exclusaoConfirmada = window.confirm(
-      linhasParaExcluir.length === 1
-        ? `Deseja excluir a avaliacao "${linhasParaExcluir[0].titulo}"?`
-        : `Deseja excluir ${linhasParaExcluir.length} avaliacoes selecionadas?`
-    );
-
-    if (!exclusaoConfirmada) {
-      return;
-    }
-
-    setSalvandoAvaliacao(true);
-    setMensagemFormulario({ tone: "", message: "" });
-    setMensagemTabela({ tone: "", message: "" });
-
-    try {
-      for (const avaliacao of linhasParaExcluir) {
-        await apiRequest(`/Avaliacoes/${avaliacao.id}`, { method: "DELETE" });
-      }
-
-      if (avaliacaoEmEdicaoId && linhasParaExcluir.some((avaliacao) => avaliacao.id === avaliacaoEmEdicaoId)) {
-        limparFormularioAvaliacao();
-      }
-
-      setIdsAvaliacoesSelecionadas((current) =>
-        current.filter((id) => !linhasParaExcluir.some((avaliacao) => avaliacao.id === id))
-      );
-      setMensagemTabela({
-        tone: "success",
-        message:
-          linhasParaExcluir.length === 1
-            ? "Avaliacao excluida com sucesso."
-            : `${linhasParaExcluir.length} avaliacoes foram excluidas com sucesso.`
-      });
-      onRefresh();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired();
-        return;
-      }
-
-      setMensagemTabela({
-        tone: "error",
-        message: err.message || "Nao foi possivel excluir as avaliacoes selecionadas agora."
-      });
-    } finally {
-      setSalvandoAvaliacao(false);
-    }
-  }
-
-  function alterarFiltroCursoAvaliacao(event) {
-    setFiltroCursoAvaliacao(event.target.value);
-    setFiltroTurmaAvaliacao("todos");
-  }
-
-  function limparFiltrosAvaliacoes() {
-    setBuscaAvaliacao("");
-    setFiltroCursoAvaliacao("todos");
-    setFiltroTurmaAvaliacao("todos");
-    setFiltroStatusAvaliacao("todos");
-    setFiltroTipoAvaliacao("todos");
-  }
-
-  function renderBarraFiltrosAvaliacoes() {
-    return (
-      <div className="table-toolbar table-toolbar--filters">
-        <div className="table-filter-group">
-          <label className="table-search-control">
-            <span aria-hidden="true" className="table-search-control__icon">
-              <svg focusable="false" height="18" viewBox="0 0 24 24" width="18">
-                <path
-                  d="M10.8 5.2a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2Zm-7.6 5.6a7.6 7.6 0 1 1 13.5 4.8l3.8 3.8a1 1 0 0 1-1.4 1.4l-3.8-3.8A7.6 7.6 0 0 1 3.2 10.8Z"
-                  fill="currentColor"
-                />
-              </svg>
-            </span>
-            <input
-              aria-label="Buscar avaliacoes"
-              className="table-inline-input table-inline-input--search"
-              onChange={(event) => setBuscaAvaliacao(event.target.value)}
-              placeholder="Pesquisar avaliacoes"
-              type="search"
-              value={buscaAvaliacao}
-            />
-          </label>
-          <select
-            aria-label="Filtrar avaliacoes por curso"
-            className="table-inline-select"
-            onChange={alterarFiltroCursoAvaliacao}
-            value={filtroCursoAvaliacao}
-          >
-            <option value="todos">Todos os cursos</option>
-            {cursosDasAvaliacoes.map((curso) => (
-              <option key={curso.id} value={curso.id}>
-                {curso.titulo}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar avaliacoes por turma"
-            className="table-inline-select"
-            onChange={(event) => setFiltroTurmaAvaliacao(event.target.value)}
-            value={filtroTurmaAvaliacao}
-          >
-            <option value="todos">Todas as turmas</option>
-            {turmasFiltradasPorCurso.map((turma) => (
-              <option key={turma.id} value={turma.id}>
-                {turma.nomeTurma}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar avaliacoes por tipo"
-            className="table-inline-select"
-            onChange={(event) => setFiltroTipoAvaliacao(event.target.value)}
-            value={filtroTipoAvaliacao}
-          >
-            <option value="todos">Todos os tipos</option>
-            {OPCOES_TIPO_AVALIACAO.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label="Filtrar avaliacoes por status"
-            className="table-inline-select"
-            onChange={(event) => setFiltroStatusAvaliacao(event.target.value)}
-            value={filtroStatusAvaliacao}
-          >
-            <option value="todos">Todos os status</option>
-            {OPCOES_STATUS_PUBLICACAO.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button className="table-action" disabled={!temFiltroAvaliacaoAtivo} onClick={limparFiltrosAvaliacoes} type="button">
-            Limpar filtros
-          </button>
-        </div>
-        <p className="table-toolbar__summary">
-          {linhasAvaliacoes.length} de {avaliacoes.length} avaliacao{avaliacoes.length === 1 ? "" : "oes"}
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="content-section">
-      <section className="content-section__intro">
-        <div className="content-section__intro-copy">
-          <span className="eyebrow">Operacao de avaliacoes</span>
-          <h2>Teste avaliativo por turma e modulo</h2>
-          <p>Uma primeira area para o professor preparar provas, quizzes e exercicios dentro da estrutura academica.</p>
+    <div className="tela-avaliacoes">
+      <header className="cabecalho-pagina">
+        <div style={{ flex: 1 }}>
+          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+            <h1 className="cabecalho-pagina__titulo">Avaliacoes</h1>
+            {total > 0 ? (
+              <select
+                aria-label="Navegar para turma"
+                className="campo__entrada barra-filtros__select"
+                onChange={(event) => irPara(Number(event.target.value))}
+                style={{ marginLeft: "auto", maxWidth: "240px" }}
+                value={slide}
+              >
+                {grupos.map(({ turma }, indice) => (
+                  <option key={turma.id} value={indice}>
+                    {turma.nomeTurma}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            {turmasDoProfessor.length ? (
+              <>
+                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
+                <Botao onClick={abrirFormularioNovaAvaliacao} variante="primario">
+                  <TbPlus aria-hidden="true" size={18} /> Nova avaliacao
+                </Botao>
+              </>
+            ) : null}
+          </div>
+          <p className="cabecalho-pagina__subtitulo">{avaliacoes.length} {avaliacoes.length === 1 ? "avaliacao" : "avaliacoes"} cadastrada{avaliacoes.length === 1 ? "" : "s"}</p>
         </div>
-        <div className="content-section__highlights" aria-label="Resumo de avaliacoes">
-          {resumoAvaliacoes.map((item) => (
-            <span className="chip" key={item}>
-              {item}
-            </span>
-          ))}
-        </div>
-      </section>
+      </header>
 
-      {formularioAvaliacaoAberto ? (
-        <div
-          className="content-form-modal"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              fecharFormularioAvaliacao();
-            }
-          }}
-        >
-          <div
-            aria-label={avaliacaoEmEdicaoId ? "Editar avaliacao" : "Nova avaliacao"}
-            aria-modal="true"
-            className="content-form-modal__card"
-            role="dialog"
-          >
-            <button
-              className="content-form-modal__close"
-              disabled={salvandoAvaliacao}
-              onClick={fecharFormularioAvaliacao}
-              type="button"
-            >
-              Fechar
-            </button>
-            <PanelCard
-              description="Cadastre ou ajuste uma avaliacao ligada a uma turma e a um modulo."
-              title={avaliacaoEmEdicaoId ? "Editar avaliacao" : "Nova avaliacao"}
-            >
-              {!turmasDoProfessor.length ? (
-                <InlineMessage tone="info">
-                  Seu usuario ainda nao possui turmas atribuidas. Assim que uma turma for vinculada ao seu perfil, a criacao de avaliacoes fica disponivel aqui.
-                </InlineMessage>
-              ) : !modulosDoProfessor.length ? (
-                <InlineMessage tone="info">
-                  As suas turmas ja existem, mas ainda nao ha modulos cadastrados nos cursos correspondentes.
-                </InlineMessage>
-              ) : (
-                <form className="management-form" onSubmit={salvarAvaliacao}>
-                  <div className="management-form__grid">
-                    <label className="management-field">
-                      <span>Turma</span>
-                      <select
-                        disabled={salvandoAvaliacao || !turmasDoProfessor.length}
-                        name="turmaId"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        value={dadosFormularioAvaliacao.turmaId}
-                      >
-                        {turmasDoProfessor.map((turma) => (
-                          <option key={turma.id} value={turma.id}>
-                            {turma.nomeTurma}
-                          </option>
-                        ))}
-                      </select>
-                      {tituloCursoSelecionado ? <small>Curso vinculado: {tituloCursoSelecionado}</small> : null}
-                    </label>
+      {total === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">
+          Seu usuario ainda nao possui turmas atribuidas.
+        </p>
+      ) : (
+        <div className="carrossel-cursos">
+          {total > 1 ? (
+            <nav aria-label="Navegacao entre turmas" className="carrossel-cursos__nav">
+              <button aria-label="Turma anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <div aria-label="Turmas" className="carrossel-cursos__indicadores" role="tablist">
+                {grupos.map(({ turma }, indice) => (
+                  <button
+                    aria-label={`Turma ${indice + 1}: ${turma.nomeTurma}`}
+                    aria-selected={indice === slide}
+                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
+                    key={turma.id}
+                    onClick={() => irPara(indice)}
+                    role="tab"
+                    type="button"
+                  />
+                ))}
+              </div>
+              <button aria-label="Proxima turma" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
+                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            </nav>
+          ) : null}
 
-                    <label className="management-field">
-                      <span>Modulo</span>
-                      <select
-                        disabled={salvandoAvaliacao || !modulosDisponiveis.length}
-                        key={dadosFormularioAvaliacao.turmaId || "sem-turma"}
-                        name="moduloId"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        value={dadosFormularioAvaliacao.moduloId}
-                      >
-                        {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
-                        {modulosDisponiveis.map((modulo) => (
-                          <option key={modulo.id} value={modulo.id}>
-                            {modulo.titulo}
-                          </option>
-                        ))}
-                      </select>
-                      {tituloCursoSelecionado ? <small>Mostrando modulos do curso: {tituloCursoSelecionado}</small> : null}
-                    </label>
-
-                    <label className="management-field">
-                      <span>Tipo de avaliacao</span>
-                      <select
-                        disabled={salvandoAvaliacao}
-                        name="tipoAvaliacao"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        value={dadosFormularioAvaliacao.tipoAvaliacao}
-                      >
-                        {OPCOES_TIPO_AVALIACAO.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="management-field">
-                      <span>Status</span>
-                      <select
-                        disabled={salvandoAvaliacao}
-                        name="statusPublicacao"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        value={dadosFormularioAvaliacao.statusPublicacao}
-                      >
-                        {OPCOES_STATUS_PUBLICACAO.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="management-field management-field--wide">
-                      <span>Titulo</span>
-                      <input
-                        autoComplete="off"
-                        disabled={salvandoAvaliacao}
-                        maxLength={180}
-                        name="titulo"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        placeholder="Ex.: Avaliacao final do modulo"
-                        type="text"
-                        value={dadosFormularioAvaliacao.titulo}
-                      />
-                    </label>
-
-                    <label className="management-field management-field--wide">
-                      <span>Descricao curta</span>
-                      <textarea
-                        disabled={salvandoAvaliacao}
-                        maxLength={500}
-                        name="descricao"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        placeholder="Explique rapidamente o objetivo da avaliacao."
-                        value={dadosFormularioAvaliacao.descricao}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Abertura</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        name="dataAbertura"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        type="datetime-local"
-                        value={dadosFormularioAvaliacao.dataAbertura}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Fechamento</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        name="dataFechamento"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        type="datetime-local"
-                        value={dadosFormularioAvaliacao.dataFechamento}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Tentativas permitidas</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        min="1"
-                        name="tentativasPermitidas"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        type="number"
-                        value={dadosFormularioAvaliacao.tentativasPermitidas}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Tempo limite</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        min="1"
-                        name="tempoLimiteMinutos"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        placeholder="Sem limite"
-                        type="number"
-                        value={dadosFormularioAvaliacao.tempoLimiteMinutos}
-                      />
-                      <small>Informe em minutos ou deixe vazio.</small>
-                    </label>
-
-                    <label className="management-field">
-                      <span>Nota maxima</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        min="0.01"
-                        name="notaMaxima"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        step="0.01"
-                        type="number"
-                        value={dadosFormularioAvaliacao.notaMaxima}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Peso da nota</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        min="0.01"
-                        name="pesoNota"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        step="0.01"
-                        type="number"
-                        value={dadosFormularioAvaliacao.pesoNota}
-                      />
-                    </label>
-
-                    <label className="management-field">
-                      <span>Peso de progresso</span>
-                      <input
-                        disabled={salvandoAvaliacao}
-                        min="0.01"
-                        name="pesoProgresso"
-                        onChange={atualizarCampoFormularioAvaliacao}
-                        step="0.01"
-                        type="number"
-                        value={dadosFormularioAvaliacao.pesoProgresso}
-                      />
-                    </label>
-                  </div>
-
-                  {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-                  <div className="management-form__actions">
-                    <button
-                      className="solid-button"
-                      disabled={salvandoAvaliacao || !turmasDoProfessor.length || !modulosDisponiveis.length}
-                      type="submit"
-                    >
-                      {salvandoAvaliacao ? "Salvando..." : avaliacaoEmEdicaoId ? "Salvar alteracoes" : "Criar avaliacao"}
-                    </button>
-
-                    <button
-                      className="button button--secondary exit-button"
-                      disabled={salvandoAvaliacao}
-                      onClick={fecharFormularioAvaliacao}
-                      type="button"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              )}
-            </PanelCard>
+          <div className="carrossel-cursos__janela">
+            <SlideAvaliacoes
+              curso={grupos[slide].curso}
+              itens={grupos[slide].itens}
+              menuAbertoId={menuAbertoId}
+              onEditar={abrirEdicaoAvaliacao}
+              onExcluir={(avaliacao) => {
+                setAvaliacaoParaExcluir(avaliacao);
+                setMenuAbertoId(null);
+              }}
+              onMontarQuestoes={abrirMontagemQuestoes}
+              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+              turma={grupos[slide].turma}
+            />
           </div>
         </div>
+      )}
+
+      {avaliacaoParaExcluir ? (
+        <Modal onFechar={() => setAvaliacaoParaExcluir(null)} titulo="Excluir avaliacao">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir a avaliacao <strong>{avaliacaoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          <footer className="modal-rodape">
+            <Botao disabled={salvando} onClick={() => setAvaliacaoParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={salvando} onClick={confirmarExclusaoAvaliacao} variante="primario">
+              {salvando ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
+      {formularioAberto ? (
+        <Modal onFechar={fecharFormulario} titulo={avaliacaoEmEdicaoId ? "Editar avaliacao" : "Nova avaliacao"}>
+          {!turmasDoProfessor.length ? (
+            <InlineMessage tone="info">Seu usuario ainda nao possui turmas atribuidas.</InlineMessage>
+          ) : !modulosDoProfessor.length ? (
+            <InlineMessage tone="info">Suas turmas ainda nao tem modulos cadastrados nos cursos correspondentes.</InlineMessage>
+          ) : (
+            <form className="formulario-modal" onSubmit={salvarAvaliacao}>
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-turma">Turma *</label>
+                  <select className="campo__entrada" disabled={salvando} id="avaliacao-turma" name="turmaId" onChange={atualizarCampoFormulario} value={dadosFormulario.turmaId}>
+                    {turmasDoProfessor.map((turma) => (
+                      <option key={turma.id} value={turma.id}>
+                        {turma.nomeTurma}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-modulo">Modulo *</label>
+                  <select
+                    className="campo__entrada"
+                    disabled={salvando || !modulosDisponiveis.length}
+                    id="avaliacao-modulo"
+                    key={dadosFormulario.turmaId || "sem-turma"}
+                    name="moduloId"
+                    onChange={atualizarCampoFormulario}
+                    value={dadosFormulario.moduloId}
+                  >
+                    {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
+                    {modulosDisponiveis.map((modulo) => (
+                      <option key={modulo.id} value={modulo.id}>
+                        {modulo.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="avaliacao-titulo">Titulo *</label>
+                <input
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="avaliacao-titulo"
+                  maxLength={180}
+                  name="titulo"
+                  onChange={atualizarCampoFormulario}
+                  placeholder="Ex.: Avaliacao final do modulo"
+                  type="text"
+                  value={dadosFormulario.titulo}
+                />
+              </div>
+
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="avaliacao-descricao">Descricao curta</label>
+                <textarea
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="avaliacao-descricao"
+                  maxLength={500}
+                  name="descricao"
+                  onChange={atualizarCampoFormulario}
+                  placeholder="Explique rapidamente o objetivo da avaliacao."
+                  value={dadosFormulario.descricao}
+                />
+              </div>
+
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-tipo">Tipo *</label>
+                  <select className="campo__entrada" disabled={salvando} id="avaliacao-tipo" name="tipoAvaliacao" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoAvaliacao}>
+                    {OPCOES_TIPO_AVALIACAO.map((opcao) => (
+                      <option key={opcao.value} value={opcao.value}>
+                        {opcao.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-status">Status *</label>
+                  <select className="campo__entrada" disabled={salvando} id="avaliacao-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
+                    {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
+                      <option key={opcao.value} value={opcao.value}>
+                        {opcao.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-abertura">Abertura</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-abertura" name="dataAbertura" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataAbertura} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-fechamento">Fechamento</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-fechamento" name="dataFechamento" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataFechamento} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-tentativas">Tentativas permitidas *</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-tentativas" min="1" name="tentativasPermitidas" onChange={atualizarCampoFormulario} type="number" value={dadosFormulario.tentativasPermitidas} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-tempo">Tempo limite (min)</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-tempo" min="1" name="tempoLimiteMinutos" onChange={atualizarCampoFormulario} placeholder="Sem limite" type="number" value={dadosFormulario.tempoLimiteMinutos} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-nota">Nota maxima *</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-nota" min="0.01" name="notaMaxima" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.notaMaxima} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-peso-nota">Peso da nota *</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-nota" min="0.01" name="pesoNota" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoNota} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="avaliacao-peso-progresso">Peso de progresso *</label>
+                  <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-progresso" min="0.01" name="pesoProgresso" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoProgresso} />
+                </div>
+              </div>
+
+              {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
+
+              <footer className="modal-rodape">
+                <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                  <TbX aria-hidden="true" size={15} /> Cancelar
+                </Botao>
+                <Botao disabled={salvando || !modulosDisponiveis.length} type="submit" variante="primario">
+                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : avaliacaoEmEdicaoId ? "Salvar alteracoes" : "Criar avaliacao"}
+                </Botao>
+              </footer>
+            </form>
+          )}
+        </Modal>
       ) : null}
 
       {avaliacaoEmMontagem ? (
-        <div
-          className="content-form-modal"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              fecharMontagemQuestoes();
-            }
-          }}
-        >
-          <div
-            aria-label="Montar questoes da avaliacao"
-            aria-modal="true"
-            className="content-form-modal__card"
-            role="dialog"
-          >
-            <button
-              className="content-form-modal__close"
-              disabled={salvandoQuestao}
-              onClick={fecharMontagemQuestoes}
-              type="button"
-            >
-              Fechar
-            </button>
-            <PanelCard
-              description={`${avaliacaoEmMontagem.turmaNome || "Turma"} - ${avaliacaoEmMontagem.moduloTitulo || "Modulo"}`}
-              title={`Montar questoes: ${avaliacaoEmMontagem.titulo}`}
-            >
-              <form className="management-form" onSubmit={salvarQuestao}>
-                <div className="management-form__grid">
-                  <label className="management-field">
-                    <span>Tipo da questao</span>
-                    <select
-                      disabled={salvandoQuestao}
-                      name="tipoQuestao"
-                      onChange={atualizarCampoFormularioQuestao}
-                      value={dadosFormularioQuestao.tipoQuestao}
-                    >
-                      {OPCOES_TIPO_QUESTAO.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+        <Modal onFechar={fecharMontagemQuestoes} titulo={`Montar questoes: ${avaliacaoEmMontagem.titulo}`}>
+          <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.85rem", marginTop: 0 }}>
+            {avaliacaoEmMontagem.turmaNome || "Turma"} - {avaliacaoEmMontagem.moduloTitulo || "Modulo"}
+          </p>
 
-                  <label className="management-field">
-                    <span>Pontos</span>
-                    <input
-                      disabled={salvandoQuestao}
-                      min="0.01"
-                      name="pontos"
-                      onChange={atualizarCampoFormularioQuestao}
-                      step="0.01"
-                      type="number"
-                      value={dadosFormularioQuestao.pontos}
-                    />
-                  </label>
+          <form className="formulario-modal" onSubmit={salvarQuestao}>
+            <div className="formulario-perfil__grade">
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="questao-tipo">Tipo da questao</label>
+                <select className="campo__entrada" disabled={salvandoQuestao} id="questao-tipo" name="tipoQuestao" onChange={atualizarCampoFormularioQuestao} value={dadosFormularioQuestao.tipoQuestao}>
+                  {OPCOES_TIPO_QUESTAO.map((opcao) => (
+                    <option key={opcao.value} value={opcao.value}>
+                      {opcao.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="questao-pontos">Pontos</label>
+                <input className="campo__entrada" disabled={salvandoQuestao} id="questao-pontos" min="0.01" name="pontos" onChange={atualizarCampoFormularioQuestao} step="0.01" type="number" value={dadosFormularioQuestao.pontos} />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="questao-dificuldade">Dificuldade</label>
+                <select className="campo__entrada" disabled={salvandoQuestao} id="questao-dificuldade" name="dificuldade" onChange={atualizarCampoFormularioQuestao} value={dadosFormularioQuestao.dificuldade}>
+                  {[1, 2, 3, 4, 5].map((nivel) => (
+                    <option key={nivel} value={nivel}>
+                      {nivel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="questao-tema">Tema</label>
+                <input className="campo__entrada" disabled={salvandoQuestao} id="questao-tema" maxLength={120} name="tema" onChange={atualizarCampoFormularioQuestao} placeholder="Ex.: Logica" type="text" value={dadosFormularioQuestao.tema} />
+              </div>
+            </div>
 
-                  <label className="management-field">
-                    <span>Dificuldade</span>
-                    <select
-                      disabled={salvandoQuestao}
-                      name="dificuldade"
-                      onChange={atualizarCampoFormularioQuestao}
-                      value={dadosFormularioQuestao.dificuldade}
-                    >
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <option key={level} value={level}>
-                          {level}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="questao-titulo-interno">Titulo interno *</label>
+              <input
+                className="campo__entrada"
+                disabled={salvandoQuestao}
+                id="questao-titulo-interno"
+                maxLength={180}
+                name="tituloInterno"
+                onChange={atualizarCampoFormularioQuestao}
+                placeholder="Ex.: Questao 01 - conceitos iniciais"
+                type="text"
+                value={dadosFormularioQuestao.tituloInterno}
+              />
+            </div>
 
-                  <label className="management-field">
-                    <span>Tema</span>
-                    <input
-                      autoComplete="off"
-                      disabled={salvandoQuestao}
-                      maxLength={120}
-                      name="tema"
-                      onChange={atualizarCampoFormularioQuestao}
-                      placeholder="Ex.: Logica"
-                      type="text"
-                      value={dadosFormularioQuestao.tema}
-                    />
-                  </label>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="questao-contexto">Contexto</label>
+              <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-contexto" name="contexto" onChange={atualizarCampoFormularioQuestao} placeholder="Texto de apoio opcional." value={dadosFormularioQuestao.contexto} />
+            </div>
 
-                  <label className="management-field management-field--wide">
-                    <span>Titulo interno</span>
-                    <input
-                      autoComplete="off"
-                      disabled={salvandoQuestao}
-                      maxLength={180}
-                      name="tituloInterno"
-                      onChange={atualizarCampoFormularioQuestao}
-                      placeholder="Ex.: Questao 01 - conceitos iniciais"
-                      type="text"
-                      value={dadosFormularioQuestao.tituloInterno}
-                    />
-                  </label>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="questao-enunciado">Enunciado *</label>
+              <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-enunciado" name="enunciado" onChange={atualizarCampoFormularioQuestao} placeholder="Digite a pergunta." value={dadosFormularioQuestao.enunciado} />
+            </div>
 
-                  <label className="management-field management-field--wide">
-                    <span>Contexto</span>
-                    <textarea
-                      disabled={salvandoQuestao}
-                      name="contexto"
-                      onChange={atualizarCampoFormularioQuestao}
-                      placeholder="Texto de apoio opcional para a pergunta."
-                      value={dadosFormularioQuestao.contexto}
-                    />
-                  </label>
-
-                  <label className="management-field management-field--wide">
-                    <span>Enunciado</span>
-                    <textarea
-                      disabled={salvandoQuestao}
-                      name="enunciado"
-                      onChange={atualizarCampoFormularioQuestao}
-                      placeholder="Digite a pergunta que o aluno vai responder."
-                      value={dadosFormularioQuestao.enunciado}
-                    />
-                  </label>
-
-                  {Number(dadosFormularioQuestao.tipoQuestao) !== 3 ? (
-                    <div className="management-field management-field--wide">
-                      <span>Alternativas</span>
-                      <div className="mini-list">
-                        {dadosFormularioQuestao.alternativas.map((alternativa, index) => (
-                          <label className="mini-list__item" key={alternativa.letra}>
-                            <div className="table-cell-stack">
-                              <strong>{alternativa.letra}</strong>
-                              <input
-                                autoComplete="off"
-                                disabled={salvandoQuestao || Number(dadosFormularioQuestao.tipoQuestao) === 2}
-                                onChange={(event) => atualizarAlternativaQuestao(index, event.target.value)}
-                                placeholder={`Alternativa ${alternativa.letra}`}
-                                type="text"
-                                value={alternativa.texto}
-                              />
-                            </div>
-                            <input
-                              aria-label={`Marcar alternativa ${alternativa.letra} como correta`}
-                              checked={alternativa.ehCorreta}
-                              disabled={salvandoQuestao}
-                              name="alternativaCorreta"
-                              onChange={() => selecionarAlternativaCorreta(index)}
-                              type="radio"
-                            />
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <label className="management-field management-field--wide">
-                    <span>Explicacao pos-resposta</span>
-                    <textarea
-                      disabled={salvandoQuestao}
-                      name="explicacaoPosResposta"
-                      onChange={atualizarCampoFormularioQuestao}
-                      placeholder="Opcional: comentario para correcao ou revisao."
-                      value={dadosFormularioQuestao.explicacaoPosResposta}
-                    />
-                  </label>
-                </div>
-
-                {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
-
-                <div className="management-form__actions">
-                  <button className="solid-button" disabled={salvandoQuestao} type="submit">
-                    {salvandoQuestao ? "Salvando..." : "Adicionar questao"}
-                  </button>
-                  <button
-                    className="button button--secondary exit-button"
-                    disabled={salvandoQuestao}
-                    onClick={fecharMontagemQuestoes}
-                    type="button"
-                  >
-                    Concluir montagem
-                  </button>
-                </div>
-              </form>
-
-              <DataTable
-                columns={[
-                  { key: "ordem", label: "Ordem" },
-                  {
-                    key: "enunciado",
-                    label: "Questao",
-                    render: (row) => (
-                      <div className="table-cell-stack">
-                        <strong>{compactText(row.enunciado, 84)}</strong>
-                        <p>{normalizeQuestionType(row.tipoQuestao)}</p>
-                      </div>
-                    )
-                  },
-                  {
-                    key: "alternativas",
-                    label: "Alternativas",
-                    render: (row) =>
-                      row.alternativas?.length ? (
-                        <div className="table-badge-list">
-                          {row.alternativas.map((alternativa) => (
-                            <span className="chip" key={alternativa.id || alternativa.letra}>
-                              {alternativa.letra}{alternativa.ehCorreta ? " correta" : ""}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span>Discursiva</span>
-                      )
-                  },
-                  {
-                    key: "pontos",
-                    label: "Pontos",
-                    render: (row) => formatDecimal(row.pontos)
-                  },
-                  {
-                    key: "acoes",
-                    label: "Acoes",
-                    render: (row) => (
-                      <button
-                        className="table-action table-action--danger"
+            {Number(dadosFormularioQuestao.tipoQuestao) !== 3 ? (
+              <div className="campo">
+                <span className="campo__rotulo">Alternativas</span>
+                <ul className="detalhe-usuario__lista" role="list">
+                  {dadosFormularioQuestao.alternativas.map((alternativa, index) => (
+                    <li className="detalhe-usuario__item" key={alternativa.letra} style={{ fontWeight: 400 }}>
+                      <strong>{alternativa.letra}</strong>
+                      <input
+                        className="campo__entrada"
+                        disabled={salvandoQuestao || Number(dadosFormularioQuestao.tipoQuestao) === 2}
+                        onChange={(event) => atualizarAlternativaQuestao(index, event.target.value)}
+                        placeholder={`Alternativa ${alternativa.letra}`}
+                        style={{ flex: 1 }}
+                        type="text"
+                        value={alternativa.texto}
+                      />
+                      <input
+                        aria-label={`Marcar alternativa ${alternativa.letra} como correta`}
+                        checked={alternativa.ehCorreta}
                         disabled={salvandoQuestao}
-                        onClick={() => excluirQuestao(row)}
-                        type="button"
-                      >
+                        name="alternativaCorreta"
+                        onChange={() => selecionarAlternativaCorreta(index)}
+                        type="radio"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="questao-explicacao">Explicacao pos-resposta</label>
+              <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-explicacao" name="explicacaoPosResposta" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: comentario para correcao." value={dadosFormularioQuestao.explicacaoPosResposta} />
+            </div>
+
+            {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
+
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoQuestao} onClick={fecharMontagemQuestoes} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Concluir montagem
+              </Botao>
+              <Botao disabled={salvandoQuestao} type="submit" variante="primario">
+                {salvandoQuestao ? "Salvando..." : "Adicionar questao"}
+              </Botao>
+            </footer>
+          </form>
+
+          <section style={{ marginTop: "var(--espaco-lg)" }}>
+            <h4 className="detalhe-usuario__secao-titulo">Questoes cadastradas</h4>
+            {carregandoQuestoes ? (
+              <p className="texto-vazio">Carregando questoes...</p>
+            ) : questoesAvaliacao.length === 0 ? (
+              <p className="texto-vazio">Nenhuma questao cadastrada para esta avaliacao.</p>
+            ) : (
+              <ul className="detalhe-usuario__lista" role="list">
+                {questoesAvaliacao.map((questao) => (
+                  <li className="detalhe-usuario__item" key={questao.id} style={{ alignItems: "flex-start", flexDirection: "column", gap: "var(--espaco-xs)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                      <span>
+                        {questao.ordem}. {compactText(questao.enunciado, 84)}
+                      </span>
+                      <button className="menu-item--perigo" onClick={() => excluirQuestao(questao)} style={{ background: "none", border: "none", cursor: "pointer" }} type="button">
                         Excluir
                       </button>
-                    )
-                  }
-                ]}
-                emptyMessage={carregandoQuestoes ? "Carregando questoes..." : "Nenhuma questao cadastrada para esta avaliacao."}
-                rows={questoesAvaliacao}
-              />
-            </PanelCard>
-          </div>
-        </div>
+                    </div>
+                    <span style={{ color: "var(--cor-texto-suave)", fontSize: "0.78rem", fontWeight: 400 }}>
+                      {normalizeQuestionType(questao.tipoQuestao)} - {formatDecimal(questao.pontos)} ponto(s)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </Modal>
       ) : null}
-
-      <div className="content-section__block content-section__block--published">
-        <PanelCard
-          description="Selecione avaliacoes para editar ou excluir e acompanhe o status por turma e modulo."
-          title="Avaliacoes do professor"
-        >
-          {renderBarraFiltrosAvaliacoes()}
-
-          <div className="table-toolbar">
-            <div className="table-actions">
-              <button
-                className="table-action"
-                disabled={salvandoAvaliacao || linhasAvaliacoesSelecionadas.length !== 1}
-                onClick={editarAvaliacaoSelecionada}
-                type="button"
-              >
-                Editar
-              </button>
-              <button
-                className="table-action"
-                disabled={salvandoAvaliacao || linhasAvaliacoesSelecionadas.length !== 1}
-                onClick={abrirMontagemQuestoesSelecionada}
-                type="button"
-              >
-                Montar questoes
-              </button>
-              <button
-                className="table-action table-action--danger"
-                disabled={salvandoAvaliacao || !linhasAvaliacoesSelecionadas.length}
-                onClick={() => excluirAvaliacoesSelecionadas()}
-                type="button"
-              >
-                Excluir
-              </button>
-            </div>
-            <p className="table-toolbar__summary">
-              {linhasAvaliacoesSelecionadas.length
-                ? `${linhasAvaliacoesSelecionadas.length} avaliacao(oes) selecionada(s).`
-                : "Selecione uma ou mais avaliacoes visiveis pela caixa ao lado esquerdo."}
-            </p>
-          </div>
-
-          {mensagemTabela.message ? <InlineMessage tone={mensagemTabela.tone}>{mensagemTabela.message}</InlineMessage> : null}
-
-          <DataTable
-            columns={[
-              {
-                key: "selecionar",
-                label: (
-                  <div className="table-select-cell">
-                    <input
-                      aria-label={todasAvaliacoesSelecionadas ? "Desmarcar todas as avaliacoes" : "Selecionar todas as avaliacoes"}
-                      checked={todasAvaliacoesSelecionadas}
-                      className="table-select-input"
-                      disabled={salvandoAvaliacao || !linhasAvaliacoes.length}
-                      onChange={alternarSelecaoTodasAvaliacoes}
-                      type="checkbox"
-                    />
-                  </div>
-                ),
-                render: (row) => (
-                  <div className="table-select-cell">
-                    <input
-                      aria-label={`Selecionar avaliacao ${row.titulo}`}
-                      checked={idsAvaliacoesSelecionadas.includes(row.id)}
-                      className="table-select-input"
-                      disabled={salvandoAvaliacao}
-                      onChange={() => alternarSelecaoAvaliacao(row.id)}
-                      type="checkbox"
-                    />
-                  </div>
-                )
-              },
-              {
-                key: "titulo",
-                label: "Avaliacao",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.titulo}</strong>
-                    <p>{compactText(row.descricao || "-", 88)}</p>
-                  </div>
-                )
-              },
-              {
-                key: "turmaNome",
-                label: "Turma",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.turmaNome || `Turma #${row.turmaId}`}</strong>
-                    <p>{row.cursoTitulo || `Curso #${row.cursoId}`}</p>
-                  </div>
-                )
-              },
-              { key: "moduloTitulo", label: "Modulo" },
-              {
-                key: "tipoAvaliacao",
-                label: "Tipo",
-                render: (row) => <span className="chip">{normalizeEvaluationType(row.tipoAvaliacao)}</span>
-              },
-              {
-                key: "statusPublicacao",
-                label: "Status",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <StatusPill tone={publicationStatusTone(row.statusPublicacao)}>
-                      {normalizePublicationStatus(row.statusPublicacao)}
-                    </StatusPill>
-                    <p>{row.publicadoEm ? `Publicado em ${formatDate(row.publicadoEm)}` : "Ainda nao publicado"}</p>
-                  </div>
-                )
-              },
-              {
-                key: "periodo",
-                label: "Periodo",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{row.dataAbertura ? formatDate(row.dataAbertura) : "Sem abertura"}</strong>
-                    <p>{row.dataFechamento ? `Fecha em ${formatDate(row.dataFechamento)}` : "Sem fechamento"}</p>
-                  </div>
-                )
-              },
-              {
-                key: "nota",
-                label: "Nota",
-                render: (row) => (
-                  <div className="table-cell-stack">
-                    <strong>{formatDecimal(row.notaMaxima)}</strong>
-                    <p>{row.tentativasPermitidas} tentativa(s)</p>
-                  </div>
-                )
-              },
-              { key: "totalQuestoes", label: "Questoes" }
-            ]}
-            emptyMessage={
-              temFiltroAvaliacaoAtivo
-                ? "Nenhuma avaliacao encontrada com os filtros aplicados."
-                : "Nenhuma avaliacao cadastrada ainda."
-            }
-            rows={linhasAvaliacoes}
-          />
-        </PanelCard>
-      </div>
     </div>
   );
 }
 
-function criarEstadoInicialFormularioAvaliacao(turmas, modulos, overrides = {}) {
+function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onMontarQuestoes, onToggleMenu, turma }) {
+  return (
+    <div className="conteudos-aluno">
+      <header className="conteudos-aluno__cabecalho">
+        <div className="conteudos-aluno__curso-info">
+          <h2 className="conteudos-aluno__curso-titulo">{turma.nomeTurma}</h2>
+          <div className="conteudos-aluno__meta-chips">
+            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
+              {itens.length} {itens.length === 1 ? "avaliacao" : "avaliacoes"}
+            </span>
+            {curso ? <span className="conteudos-aluno__meta-chip">{curso.titulo}</span> : null}
+          </div>
+        </div>
+      </header>
+
+      {itens.length === 0 ? (
+        <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para esta turma.</p>
+      ) : (
+        <ul aria-label={`Avaliacoes de ${turma.nomeTurma}`} className="grade-avaliacoes" role="list">
+          {itens.map((avaliacao) => (
+            <li className="cartao-avaliacao" key={avaliacao.id}>
+              <div className="cartao-avaliacao__topo">
+                <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
+                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                <div className="menu-contexto">
+                  <button
+                    aria-expanded={menuAbertoId === avaliacao.id}
+                    aria-label={`Opcoes para ${avaliacao.titulo}`}
+                    className="menu-contexto__botao"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleMenu(avaliacao.id);
+                    }}
+                    type="button"
+                  >
+                    <TbDotsVertical aria-hidden="true" size={18} />
+                  </button>
+                  {menuAbertoId === avaliacao.id ? (
+                    <ul className="menu-contexto__lista" role="menu">
+                      <li>
+                        <button onClick={() => onEditar(avaliacao)} role="menuitem" type="button">
+                          Editar
+                        </button>
+                      </li>
+                      <li>
+                        <button onClick={() => onMontarQuestoes(avaliacao)} role="menuitem" type="button">
+                          Montar questoes
+                        </button>
+                      </li>
+                      <li>
+                        <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} role="menuitem" type="button">
+                          Excluir
+                        </button>
+                      </li>
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+              <div className="cartao-avaliacao__corpo">
+                <dl className="cartao-avaliacao__meta">
+                  <div className="cartao-avaliacao__meta-item">
+                    <dt>Modulo</dt>
+                    <dd>{avaliacao.moduloTitulo || "-"}</dd>
+                  </div>
+                  <div className="cartao-avaliacao__meta-item">
+                    <dt>Tipo</dt>
+                    <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
+                  </div>
+                  <div className="cartao-avaliacao__meta-item">
+                    <dt>Questoes</dt>
+                    <dd>{avaliacao.totalQuestoes || 0}</dd>
+                  </div>
+                  <div className="cartao-avaliacao__meta-item">
+                    <dt>Nota maxima</dt>
+                    <dd>{formatDecimal(avaliacao.notaMaxima)}</dd>
+                  </div>
+                  <div className="cartao-avaliacao__meta-item">
+                    <dt>Periodo</dt>
+                    <dd>
+                      {avaliacao.dataAbertura ? formatDate(avaliacao.dataAbertura) : "Sem abertura"}
+                      {avaliacao.dataFechamento ? ` - ${formatDate(avaliacao.dataFechamento)}` : ""}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {
   const primeiraTurma = turmas[0] || null;
-  const modulosDaPrimeiraTurma = primeiraTurma
-    ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId)
-    : [];
+  const modulosDaPrimeiraTurma = primeiraTurma ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId) : [];
 
   return {
     turmaId: primeiraTurma ? String(primeiraTurma.id) : "",
