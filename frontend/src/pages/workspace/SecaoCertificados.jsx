@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { TbCertificate, TbDownload, TbX } from "react-icons/tb";
-import { EmptyState, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { TbCertificate, TbDownload, TbTrophy } from "react-icons/tb";
+import { LuEye, LuDownload } from "react-icons/lu";
+import { EmptyState } from "../../components/Primitives.jsx";
 import { formatDate, formatGrade } from "../../lib/format.js";
 
 function estaConcluido(progresso) {
@@ -116,72 +117,130 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], progres
   }
 
   return (
-    <div className="content-section">
-      <PanelCard
-        description={`${certificadosDesbloqueados.length} conquistado(s) de ${certificados.length} curso(s) matriculado(s).`}
-        title="Meus certificados"
-      >
-        {certificados.length === 0 ? (
-          <EmptyState message="Assim que uma matricula for aprovada e o curso concluido, o certificado aparece aqui." />
-        ) : (
-          <ul className="certificate-list" role="list">
-            {certificados.map((certificado) => (
-              <li className={`certificate-card${certificado.desbloqueado ? " certificate-card--unlocked" : ""}`} key={certificado.id}>
-                <div className="certificate-card__icon" aria-hidden="true">
-                  <TbCertificate size={28} />
-                </div>
-                <div className="certificate-card__info">
-                  <strong>{certificado.curso}</strong>
-                  <p>{certificado.turma}</p>
-                </div>
-                <div className="certificate-card__status">
-                  <StatusPill tone={certificado.desbloqueado ? "success" : "info"}>
-                    {certificado.desbloqueado ? "Concluido" : `${Math.round(certificado.percentual)}% concluido`}
-                  </StatusPill>
-                  {certificado.desbloqueado ? (
-                    <button
-                      className="table-action"
-                      onClick={() => setCertificadoAberto(certificado)}
-                      type="button"
-                    >
-                      Ver certificado
-                    </button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </PanelCard>
+    <div className="tela-certificados">
+      <header className="banner-certificados" aria-label="Resumo de certificados">
+        <div className="banner-certificados__conteudo">
+          <div className="banner-certificados__icone-area" aria-hidden="true">
+            <TbCertificate size={44} />
+          </div>
 
-      <PanelCard description="Marcos desbloqueados conforme voce avanca nos conteudos e modulos." title="Conquistas">
-        <ul className="achievement-grid" role="list">
-          {conquistas.map((conquista) => (
-            <li
-              className={`achievement-badge${conquista.desbloqueada ? " achievement-badge--unlocked" : ""}`}
-              key={conquista.id}
-            >
-              <strong>{conquista.titulo}</strong>
-              <p>{conquista.descricao}</p>
-              <span aria-hidden="true">{conquista.desbloqueada ? "✓" : "⊘"}</span>
+          <div className="banner-certificados__texto">
+            <h2 className="banner-certificados__titulo">Meus Certificados</h2>
+            <p className="banner-certificados__subtitulo">Conclua seus cursos e conquiste seus diplomas digitais.</p>
+          </div>
+
+          <div className="banner-certificados__stats" aria-label="Estatisticas de certificados">
+            <div className="banner-certificados__stat">
+              <span className="banner-certificados__stat-valor">{certificadosDesbloqueados.length}</span>
+              <span className="banner-certificados__stat-rotulo">Conquistados</span>
+            </div>
+            <div className="banner-certificados__sep" aria-hidden="true" />
+            <div className="banner-certificados__stat">
+              <span className="banner-certificados__stat-valor">{certificados.length}</span>
+              <span className="banner-certificados__stat-rotulo">Cursos</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {certificados.length === 0 ? (
+        <EmptyState message="Assim que uma matricula for aprovada e o curso concluido, o certificado aparece aqui." />
+      ) : (
+        <ul aria-label="Lista de certificados" className="lista-certificados" role="list">
+          {certificados.map((certificado) => (
+            <li className={`item-certificado${certificado.desbloqueado ? " item-certificado--desbloqueado" : ""}`} key={certificado.id}>
+              <div aria-hidden="true" className="item-certificado__faixa" />
+
+              <div className="item-certificado__curso">
+                <h3 className="item-certificado__titulo">{certificado.curso}</h3>
+                <p className="item-certificado__meta">{certificado.turma}</p>
+              </div>
+
+              {certificado.desbloqueado ? (
+                <div className="item-certificado__status">
+                  <span className="item-certificado__nota">Nota {formatGrade(certificado.nota)} / 10</span>
+                </div>
+              ) : (
+                <div className="item-certificado__status">
+                  <span className="item-certificado__nota" style={{ color: "var(--cor-texto-mudo)" }}>
+                    {Math.round(certificado.percentual)}% concluido
+                  </span>
+                </div>
+              )}
+
+              <div className="item-certificado__acoes">
+                <button
+                  aria-label={`Visualizar certificado de ${certificado.curso}`}
+                  className="cert-btn-visualizar"
+                  disabled={!certificado.desbloqueado}
+                  onClick={() => certificado.desbloqueado && setCertificadoAberto(certificado)}
+                  type="button"
+                >
+                  <LuEye aria-hidden="true" size={22} />
+                </button>
+                <span aria-hidden="true" className="cert-separador" />
+                <button
+                  aria-label={`Baixar certificado de ${certificado.curso}`}
+                  className="cert-btn-baixar"
+                  disabled={!certificado.desbloqueado}
+                  onClick={() => {
+                    if (!certificado.desbloqueado) {
+                      return;
+                    }
+                    setCertificadoAberto(certificado);
+                    setTimeout(imprimirCertificado, 300);
+                  }}
+                  type="button"
+                >
+                  <LuDownload aria-hidden="true" size={22} />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
-      </PanelCard>
+      )}
+
+      <section aria-labelledby="titulo-conquistas">
+        <h3 className="secao-progresso__titulo" id="titulo-conquistas">Conquistas</h3>
+        <ul aria-label="Conquistas" className="grade-conquistas" role="list">
+          {conquistas.map((conquista) => (
+            <li
+              aria-label={`${conquista.titulo} - ${conquista.desbloqueada ? "desbloqueada" : "bloqueada"}`}
+              className={`cartao-conquista${conquista.desbloqueada ? " cartao-conquista--desbloqueada" : ""}`}
+              key={conquista.id}
+            >
+              <span aria-hidden="true" className="cartao-conquista__icone">
+                <TbTrophy size={28} />
+              </span>
+              <strong className="cartao-conquista__titulo">{conquista.titulo}</strong>
+              <p className="cartao-conquista__descricao">{conquista.descricao}</p>
+              {conquista.desbloqueada ? (
+                <span aria-hidden="true" className="cartao-conquista__check">✓</span>
+              ) : (
+                <span aria-hidden="true" className="cartao-conquista__cadeado">⊘</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {certificadoAberto ? (
         <div
-          className="content-form-modal certificate-modal"
+          className="modal-fundo"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setCertificadoAberto(null);
             }
           }}
+          role="presentation"
         >
-          <div aria-label="Certificado de conclusao" aria-modal="true" className="content-form-modal__card certificate-modal__card" role="dialog">
-            <button className="content-form-modal__close" onClick={() => setCertificadoAberto(null)} type="button">
-              <TbX size={16} aria-hidden="true" /> Fechar
-            </button>
+          <article aria-label="Certificado de conclusao" aria-modal="true" className="modal-caixa" role="dialog">
+            <header className="modal-cabecalho">
+              <h2 className="modal-titulo">Certificado de Conclusao</h2>
+              <button className="modal-fechar" onClick={() => setCertificadoAberto(null)} type="button" aria-label="Fechar modal">
+                ✕
+              </button>
+            </header>
 
             <div className="certificate-print-area">
               <figure className="certificate-sheet">
@@ -197,11 +256,11 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], progres
             </div>
 
             <footer className="modal-rodape">
-              <button className="solid-button" onClick={imprimirCertificado} type="button">
-                <TbDownload size={16} aria-hidden="true" /> Baixar / Imprimir
+              <button className="botao botao--primario" onClick={imprimirCertificado} type="button">
+                <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
               </button>
             </footer>
-          </div>
+          </article>
         </div>
       ) : null}
     </div>

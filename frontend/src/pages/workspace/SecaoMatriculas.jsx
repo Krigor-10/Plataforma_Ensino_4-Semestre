@@ -1,13 +1,66 @@
 import { useEffect, useMemo, useState } from "react";
-import { DataTable, InlineMessage, PanelCard, StatusPill } from "../../components/Primitives.jsx";
+import { TbClock } from "react-icons/tb";
+import { InlineMessage } from "../../components/Primitives.jsx";
+import Botao from "../../components/Botao.jsx";
+import Insignia from "../../components/Insignia.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatDate, formatGrade, statusTone } from "../../lib/format.js";
+import { formatDate, formatGrade } from "../../lib/format.js";
 
 export function SecaoMatriculas({ ehAluno, linhasMatriculas, onRefresh, onSessionExpired }) {
+  if (ehAluno) {
+    return <VistaAlunoMatriculas linhasMatriculas={linhasMatriculas} />;
+  }
+
+  return <VistaGestorMatriculas linhasMatriculas={linhasMatriculas} onRefresh={onRefresh} onSessionExpired={onSessionExpired} />;
+}
+
+function VistaAlunoMatriculas({ linhasMatriculas }) {
+  return (
+    <div className="tela-matriculas">
+      <header className="cabecalho-pagina">
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Minhas matriculas</h1>
+          <p className="cabecalho-pagina__subtitulo">
+            {linhasMatriculas.length} matricula{linhasMatriculas.length === 1 ? "" : "s"} registrada{linhasMatriculas.length === 1 ? "" : "s"}
+          </p>
+        </div>
+      </header>
+
+      {linhasMatriculas.length === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">Nenhuma matricula encontrada.</p>
+      ) : (
+        <ul aria-label="Minhas matriculas" className="catalogo-grade" role="list">
+          {linhasMatriculas.map((matricula) => (
+            <li className="catalogo-card" key={matricula.id}>
+              <div className="catalogo-card__corpo">
+                <div className="meus-cursos__titulo-linha">
+                  <h3 className="catalogo-card__titulo">{matricula.curso}</h3>
+                  <Insignia texto={matricula.status} />
+                </div>
+                <p className="catalogo-card__turma">{matricula.turma}</p>
+                <p className="catalogo-card__data">
+                  <TbClock aria-hidden="true" size={13} />
+                  Solicitada em {formatDate(matricula.dataSolicitacao)}
+                </p>
+
+                <footer className="catalogo-card__rodape-aluno">
+                  <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span>
+                  {matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
+                </footer>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }) {
   const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
   const [processandoLote, setProcessandoLote] = useState(false);
   const [matriculasSelecionadas, setMatriculasSelecionadas] = useState(() => new Set());
-  const [visualizacaoGestor, setVisualizacaoGestor] = useState("pendentes");
+  const [abaAtiva, setAbaAtiva] = useState("pendentes");
 
   const matriculasPendentes = useMemo(
     () => linhasMatriculas.filter((matricula) => matricula.status === "Pendente"),
@@ -21,16 +74,6 @@ export function SecaoMatriculas({ ehAluno, linhasMatriculas, onRefresh, onSessio
     () => linhasMatriculas.filter((matricula) => matricula.status === "Rejeitada"),
     [linhasMatriculas]
   );
-  const mostrandoPendentes = ehAluno || visualizacaoGestor === "pendentes";
-  const mostrandoAprovadas = !ehAluno && visualizacaoGestor === "aprovadas";
-  const mostrandoRejeitadas = !ehAluno && visualizacaoGestor === "rejeitadas";
-  const linhasVisiveis = ehAluno
-    ? linhasMatriculas
-    : mostrandoPendentes
-      ? matriculasPendentes
-      : mostrandoAprovadas
-        ? matriculasAprovadas
-        : matriculasRejeitadas;
 
   const idsPendentes = useMemo(() => new Set(matriculasPendentes.map((matricula) => matricula.id)), [matriculasPendentes]);
 
@@ -51,13 +94,11 @@ export function SecaoMatriculas({ ehAluno, linhasMatriculas, onRefresh, onSessio
   }, [idsPendentes]);
 
   useEffect(() => {
-    if (ehAluno || mostrandoPendentes) {
-      return;
+    if (abaAtiva !== "pendentes") {
+      setMatriculasSelecionadas(new Set());
+      setMensagem({ tone: "info", message: "" });
     }
-
-    setMatriculasSelecionadas(new Set());
-    setMensagem({ tone: "info", message: "" });
-  }, [ehAluno, mostrandoPendentes]);
+  }, [abaAtiva]);
 
   async function executarLote(acao, resolverFeedback) {
     try {
@@ -187,187 +228,124 @@ export function SecaoMatriculas({ ehAluno, linhasMatriculas, onRefresh, onSessio
     });
   }
 
-  function renderSelecao(matricula) {
-    const pendente = matricula.status === "Pendente";
+  const abas = [
+    { chave: "pendentes", rotulo: "Pendentes", contagem: matriculasPendentes.length },
+    { chave: "rejeitadas", rotulo: "Rejeitadas", contagem: matriculasRejeitadas.length },
+    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length }
+  ];
 
-    return (
-      <label className="table-select-cell">
-        <input
-          aria-label={`Selecionar matricula de ${matricula.aluno}`}
-          checked={pendente && matriculasSelecionadas.has(matricula.id)}
-          className="table-select-input"
-          disabled={!pendente || processandoLote}
-          onChange={() => alternarMatricula(matricula)}
-          type="checkbox"
-        />
-      </label>
-    );
-  }
+  const linhasDaAba =
+    abaAtiva === "pendentes" ? matriculasPendentes : abaAtiva === "aprovadas" ? matriculasAprovadas : matriculasRejeitadas;
 
-  function renderBarraDeLote() {
-    if (ehAluno) {
-      return null;
-    }
-
-    return (
-      <div className="table-toolbar table-toolbar--matriculas">
-        <div className="table-view-toggle" aria-label="Visualizacao de matriculas">
-          <button
-            className={`table-view-toggle__item${mostrandoPendentes ? " table-view-toggle__item--active" : ""}`}
-            onClick={() => setVisualizacaoGestor("pendentes")}
-            type="button"
-          >
-            Pendentes ({matriculasPendentes.length})
-          </button>
-          <button
-            className={`table-view-toggle__item${mostrandoAprovadas ? " table-view-toggle__item--active" : ""}`}
-            onClick={() => setVisualizacaoGestor("aprovadas")}
-            type="button"
-          >
-            Aprovadas ({matriculasAprovadas.length})
-          </button>
-          <button
-            className={`table-view-toggle__item${mostrandoRejeitadas ? " table-view-toggle__item--active" : ""}`}
-            onClick={() => setVisualizacaoGestor("rejeitadas")}
-            type="button"
-          >
-            Rejeitadas ({matriculasRejeitadas.length})
-          </button>
+  return (
+    <div className="tela-matriculas">
+      <header className="cabecalho-pagina">
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Matriculas</h1>
+          <p className="cabecalho-pagina__subtitulo">
+            {linhasMatriculas.length} no total - {matriculasPendentes.length} pendente{matriculasPendentes.length === 1 ? "" : "s"}
+          </p>
         </div>
-        {mostrandoPendentes ? (
-        <div className="table-actions table-actions--bulk">
+      </header>
+
+      <nav aria-label="Filtrar matriculas por status" className="abas-matriculas" role="tablist">
+        {abas.map((aba) => (
+          <button
+            aria-selected={abaAtiva === aba.chave}
+            className={`abas-matriculas__aba${abaAtiva === aba.chave ? " abas-matriculas__aba--ativa" : ""}`}
+            key={aba.chave}
+            onClick={() => setAbaAtiva(aba.chave)}
+            role="tab"
+            type="button"
+          >
+            {aba.rotulo}
+            {aba.contagem > 0 ? <span className="abas-matriculas__contagem">{aba.contagem}</span> : null}
+          </button>
+        ))}
+      </nav>
+
+      {abaAtiva === "pendentes" ? (
+        <div className="toolbar-massa-matriculas">
           <label className="table-bulk-toggle">
             <input
               checked={todasPendentesSelecionadas}
-              className="table-select-input"
+              className="tabela-checkbox"
               disabled={processandoLote || !matriculasPendentes.length}
               onChange={alternarTodasPendentes}
               type="checkbox"
             />
-            <span>Selecionar alunos pendentes</span>
+            <span>Selecionar todas as pendentes</span>
           </label>
-          <button className="table-action" disabled={processandoLote} onClick={aprovarSelecionadas} type="button">
-            {processandoLote ? "Processando..." : "Aprovar selecionadas"}
-          </button>
-          <button
-            className="table-action table-action--danger"
-            disabled={processandoLote}
-            onClick={rejeitarSelecionadas}
-            type="button"
-          >
-            Rejeitar selecionadas
-          </button>
-        </div>
-        ) : null}
-        <p className="table-toolbar__summary">
-          {mostrandoPendentes
-            ? quantidadeSelecionada
+          <div className="toolbar-massa-matriculas__acoes">
+            <Botao disabled={processandoLote} onClick={aprovarSelecionadas} tamanho="pequeno" variante="sucesso">
+              {processandoLote ? "Processando..." : "Aprovar selecionadas"}
+            </Botao>
+            <Botao disabled={processandoLote} onClick={rejeitarSelecionadas} tamanho="pequeno" variante="perigo">
+              Rejeitar selecionadas
+            </Botao>
+          </div>
+          <span className="toolbar-massa-matriculas__contador">
+            {quantidadeSelecionada
               ? `${quantidadeSelecionada} selecionada${quantidadeSelecionada > 1 ? "s" : ""}`
-              : `${matriculasPendentes.length} pendente${matriculasPendentes.length === 1 ? "" : "s"}`
-            : mostrandoAprovadas
-              ? `${matriculasAprovadas.length} aprovada${matriculasAprovadas.length === 1 ? "" : "s"}`
-              : `${matriculasRejeitadas.length} rejeitada${matriculasRejeitadas.length === 1 ? "" : "s"}`}
-        </p>
+              : `${matriculasPendentes.length} pendente${matriculasPendentes.length === 1 ? "" : "s"}`}
+          </span>
+        </div>
+      ) : null}
+
+      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
+      <div className="tabela-dados-container painel-secao">
+        <table aria-label="Matriculas" className="tabela-dados">
+          <thead>
+            <tr>
+              {abaAtiva === "pendentes" ? <th scope="col" style={{ width: 40 }} /> : null}
+              <th scope="col">Protocolo</th>
+              <th scope="col">Aluno</th>
+              <th scope="col">Curso</th>
+              <th scope="col">Turma</th>
+              <th scope="col">Solicitada em</th>
+            </tr>
+          </thead>
+          <tbody>
+            {linhasDaAba.length === 0 ? (
+              <tr className="tabela-dados--sem-dados">
+                <td colSpan={abaAtiva === "pendentes" ? 6 : 5}>
+                  {abaAtiva === "pendentes"
+                    ? "Nenhum aluno pendente de aprovacao."
+                    : abaAtiva === "aprovadas"
+                      ? "Nenhuma matricula aprovada encontrada."
+                      : "Nenhuma matricula rejeitada encontrada."}
+                </td>
+              </tr>
+            ) : (
+              linhasDaAba.map((matricula) => (
+                <tr
+                  className={matriculasSelecionadas.has(matricula.id) ? "tabela-linha-clicavel--selecionada" : undefined}
+                  key={matricula.id}
+                >
+                  {abaAtiva === "pendentes" ? (
+                    <td>
+                      <input
+                        aria-label={`Selecionar matricula de ${matricula.aluno}`}
+                        checked={matriculasSelecionadas.has(matricula.id)}
+                        className="tabela-checkbox"
+                        disabled={processandoLote}
+                        onChange={() => alternarMatricula(matricula)}
+                        type="checkbox"
+                      />
+                    </td>
+                  ) : null}
+                  <td>{matricula.codigoRegistro || "Sem protocolo"}</td>
+                  <td>{matricula.aluno}</td>
+                  <td>{matricula.curso}</td>
+                  <td>{matricula.turma}</td>
+                  <td>{formatDate(matricula.dataSolicitacao)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    );
-  }
-
-  const colunasPendentesGestor = [
-    { key: "selecionar", label: "Selecionar", render: renderSelecao },
-    {
-      key: "codigoRegistro",
-      label: "PROTOCOLO DA SOLICITACAO",
-      render: (matricula) => matricula.codigoRegistro || "Sem protocolo"
-    },
-    { key: "aluno", label: "Aluno" },
-    { key: "curso", label: "Curso" },
-    { key: "turma", label: "Turma padrao" },
-    {
-      key: "status",
-      label: "Status",
-      render: (matricula) => <StatusPill tone={statusTone(matricula.status)}>{matricula.status}</StatusPill>
-    },
-    { key: "dataSolicitacao", label: "Solicitada em", render: (matricula) => formatDate(matricula.dataSolicitacao) }
-  ];
-
-  const colunasAprovadasGestor = [
-    {
-      key: "codigoRegistro",
-      label: "PROTOCOLO DA SOLICITACAO",
-      render: (matricula) => matricula.codigoRegistro || "Sem protocolo"
-    },
-    { key: "aluno", label: "Aluno" },
-    { key: "curso", label: "Curso" },
-    { key: "turma", label: "Turma padrao" },
-    {
-      key: "status",
-      label: "Status",
-      render: (matricula) => <StatusPill tone={statusTone(matricula.status)}>{matricula.status}</StatusPill>
-    },
-    { key: "dataSolicitacao", label: "Solicitada em", render: (matricula) => formatDate(matricula.dataSolicitacao) }
-  ];
-
-  const colunasRejeitadasGestor = [
-    {
-      key: "codigoRegistro",
-      label: "PROTOCOLO DA SOLICITACAO",
-      render: (matricula) => matricula.codigoRegistro || "Sem protocolo"
-    },
-    { key: "aluno", label: "Aluno" },
-    { key: "curso", label: "Curso" },
-    { key: "turma", label: "Turma padrao" },
-    {
-      key: "status",
-      label: "Status",
-      render: (matricula) => <StatusPill tone={statusTone(matricula.status)}>{matricula.status}</StatusPill>
-    },
-    { key: "dataSolicitacao", label: "Solicitada em", render: (matricula) => formatDate(matricula.dataSolicitacao) }
-  ];
-
-  const colunasGestor = mostrandoPendentes
-    ? colunasPendentesGestor
-    : mostrandoAprovadas
-      ? colunasAprovadasGestor
-      : colunasRejeitadasGestor;
-
-  return (
-    <PanelCard
-      description={
-        ehAluno
-          ? "Suas solicitacoes e vinculacoes atuais."
-          : "Acompanhe a fila de alunos pendentes e consulte as matriculas aprovadas ou rejeitadas."
-      }
-      title={ehAluno ? "Minhas matriculas" : "Fluxo de matriculas"}
-    >
-      {renderBarraDeLote()}
-      {!ehAluno && mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
-      <DataTable
-        columns={
-          ehAluno
-            ? [
-                { key: "curso", label: "Curso" },
-                { key: "turma", label: "Turma padrao" },
-                {
-                  key: "status",
-                  label: "Status",
-                  render: (matricula) => <StatusPill tone={statusTone(matricula.status)}>{matricula.status}</StatusPill>
-                },
-                { key: "notaFinal", label: "Nota", render: (matricula) => formatGrade(matricula.notaFinal) },
-                { key: "dataSolicitacao", label: "Solicitada em", render: (matricula) => formatDate(matricula.dataSolicitacao) }
-              ]
-            : colunasGestor
-        }
-        emptyMessage={
-          ehAluno
-            ? "Nenhuma matricula encontrada."
-            : mostrandoPendentes
-            ? "Nenhum aluno pendente de aprovacao."
-            : mostrandoAprovadas
-              ? "Nenhuma matricula aprovada encontrada."
-              : "Nenhuma matricula rejeitada encontrada."
-        }
-        rows={linhasVisiveis}
-      />
-    </PanelCard>
+    </div>
   );
 }
