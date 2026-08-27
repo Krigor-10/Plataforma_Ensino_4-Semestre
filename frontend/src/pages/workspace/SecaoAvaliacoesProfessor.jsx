@@ -10,7 +10,7 @@ import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { compactText, formatDate, normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
+import { compactText, normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
 
 const OPCOES_TIPO_AVALIACAO = [
   { value: "1", label: "Quiz" },
@@ -31,11 +31,6 @@ const OPCOES_TIPO_QUESTAO = [
 ];
 
 const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D"];
-
-function normalizeEvaluationType(type) {
-  const labels = { 1: "Quiz", 2: "Prova", 3: "Exercicio" };
-  return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
-}
 
 function normalizeQuestionType(type) {
   const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Discursiva" };
@@ -1267,77 +1262,60 @@ function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onMo
       {itens.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para esta turma.</p>
       ) : (
-        <ul aria-label={`Avaliacoes de ${turma.nomeTurma}`} className="grade-avaliacoes" role="list">
+        <ul aria-label={`Avaliacoes de ${turma.nomeTurma}`} className="lista-conteudos-completa" role="list">
           {itens.map((avaliacao) => (
-            <li className="cartao-avaliacao" key={avaliacao.id}>
-              <div className="cartao-avaliacao__topo">
-                <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
-                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
-                <div className="menu-contexto">
-                  <button
-                    aria-expanded={menuAbertoId === avaliacao.id}
-                    aria-label={`Opcoes para ${avaliacao.titulo}`}
-                    className="menu-contexto__botao"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onToggleMenu(avaliacao.id);
-                    }}
-                    type="button"
-                  >
-                    <TbDotsVertical aria-hidden="true" size={18} />
-                  </button>
-                  {menuAbertoId === avaliacao.id ? (
-                    <ul className="menu-contexto__lista" role="menu">
-                      <li>
-                        <button onClick={() => onVerDetalhes(avaliacao)} role="menuitem" type="button">
-                          Ver detalhes
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => onEditar(avaliacao)} role="menuitem" type="button">
-                          Editar
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => onMontarQuestoes(avaliacao)} role="menuitem" type="button">
-                          Montar questoes
-                        </button>
-                      </li>
-                      <li>
-                        <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} role="menuitem" type="button">
-                          Excluir
-                        </button>
-                      </li>
-                    </ul>
-                  ) : null}
-                </div>
+            <li className="cartao-conteudo" key={avaliacao.id}>
+              <span aria-hidden="true" className="cartao-conteudo__icone">◈</span>
+              <div className="cartao-conteudo__info">
+                <strong className="cartao-conteudo__titulo">{avaliacao.titulo}</strong>
+                <p className="cartao-conteudo__modulo">
+                  {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"}
+                  {" - "}
+                  {avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos}min` : "sem tempo limite"}
+                  {" - "}
+                  nota max. {formatDecimal(avaliacao.notaMaxima)}
+                </p>
               </div>
-              <div className="cartao-avaliacao__corpo">
-                <dl className="cartao-avaliacao__meta">
-                  <div className="cartao-avaliacao__meta-item">
-                    <dt>Modulo</dt>
-                    <dd>{avaliacao.moduloTitulo || "-"}</dd>
-                  </div>
-                  <div className="cartao-avaliacao__meta-item">
-                    <dt>Tipo</dt>
-                    <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
-                  </div>
-                  <div className="cartao-avaliacao__meta-item">
-                    <dt>Questoes</dt>
-                    <dd>{avaliacao.totalQuestoes || 0}</dd>
-                  </div>
-                  <div className="cartao-avaliacao__meta-item">
-                    <dt>Nota maxima</dt>
-                    <dd>{formatDecimal(avaliacao.notaMaxima)}</dd>
-                  </div>
-                  <div className="cartao-avaliacao__meta-item">
-                    <dt>Periodo</dt>
-                    <dd>
-                      {avaliacao.dataAbertura ? formatDate(avaliacao.dataAbertura) : "Sem abertura"}
-                      {avaliacao.dataFechamento ? ` - ${formatDate(avaliacao.dataFechamento)}` : ""}
-                    </dd>
-                  </div>
-                </dl>
+              <div className="cartao-conteudo__meta">
+                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+              </div>
+              <div className="cartao-conteudo__acoes menu-contexto">
+                <button
+                  aria-expanded={menuAbertoId === avaliacao.id}
+                  aria-label={`Opcoes para ${avaliacao.titulo}`}
+                  className="menu-contexto__botao"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleMenu(avaliacao.id);
+                  }}
+                  type="button"
+                >
+                  <TbDotsVertical aria-hidden="true" size={18} />
+                </button>
+                {menuAbertoId === avaliacao.id ? (
+                  <ul className="menu-contexto__lista" role="menu">
+                    <li>
+                      <button onClick={() => onVerDetalhes(avaliacao)} role="menuitem" type="button">
+                        Ver detalhes
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => onEditar(avaliacao)} role="menuitem" type="button">
+                        Editar
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => onMontarQuestoes(avaliacao)} role="menuitem" type="button">
+                        Montar questoes
+                      </button>
+                    </li>
+                    <li>
+                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} role="menuitem" type="button">
+                        Excluir
+                      </button>
+                    </li>
+                  </ul>
+                ) : null}
               </div>
             </li>
           ))}
