@@ -5342,6 +5342,10 @@
 /* ------------------------------------------------------------
    PERFIL
    ------------------------------------------------------------ */
+.modal-caixa--perfil {
+  max-width: min(760px, 95vw);
+}
+
 .perfil-grade {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -5456,6 +5460,78 @@
     width: 64px;
     height: 64px;
   }
+}
+
+/* Toggle de tema claro/escuro (tela de Perfil) */
+.switch-tema {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 54px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda-forte);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transicao-normal), border-color var(--transicao-normal), box-shadow var(--transicao-normal);
+}
+
+.switch-tema:hover {
+  border-color: var(--cor-marca);
+  box-shadow: 0 0 10px rgba(123, 47, 247, 0.3);
+}
+
+.switch-tema--claro {
+  background: #f59e0b;
+  border-color: #d97706;
+}
+
+.switch-tema--claro:hover {
+  border-color: #b45309;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.switch-tema__thumb {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 4px;
+  transition: left var(--transicao-normal);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  z-index: 1;
+}
+
+.switch-tema--claro .switch-tema__thumb {
+  left: 30px;
+}
+
+.switch-tema__lua {
+  color: var(--cor-marca-clara);
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+}
+
+.switch-tema--claro .switch-tema__lua {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.switch-tema__sol {
+  color: rgba(255, 255, 255, 0.35);
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+}
+
+.switch-tema--claro .switch-tema__sol {
+  color: #7c2d12;
 }
 
 /* ------------------------------------------------------------
