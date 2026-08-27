@@ -9,6 +9,7 @@ namespace PlataformaEnsino.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class TurmasController : ControllerBase
 {
     private readonly ITurmaService _turmaService;
