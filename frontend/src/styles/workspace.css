@@ -4423,6 +4423,316 @@
 }
 
 /* ------------------------------------------------------------
+   CONTEUDOS DO ALUNO — acordeao por modulo (Etapa 6.2 do reskin,
+   substitui o carrossel simples pelo padrao do prototipo:
+   modulos sequenciais, so abre o proximo quando o anterior fica
+   100% concluido). Sem quiz-por-conteudo (nao existe no modelo
+   real — avaliacoes sao entidades separadas, por turma/modulo).
+   ------------------------------------------------------------ */
+.check-circular {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: border-color 0.15s, background 0.15s;
+  padding: 0;
+}
+
+.check-circular:hover:not(.check-circular--concluido) {
+  border-color: var(--cor-sucesso);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.check-circular--concluido {
+  background: var(--cor-sucesso);
+  border-color: var(--cor-sucesso);
+}
+
+@keyframes desbloquear-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(123, 47, 247, 0);    border-color: var(--cor-borda); }
+  15%  { box-shadow: 0 0 0 6px rgba(123, 47, 247, 0.4); border-color: var(--cor-marca); }
+  60%  { box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.2); border-color: var(--cor-marca); }
+  100% { box-shadow: 0 0 0 0 rgba(123, 47, 247, 0);    border-color: var(--cor-borda); }
+}
+
+.cartao-conteudo--desbloqueado {
+  animation: desbloquear-glow 2.2s ease forwards;
+}
+
+@keyframes icone-foco {
+  0%   { transform: scale(1);    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.15); }
+  15%  { transform: scale(1.3);  box-shadow: 0 0 0 7px rgba(124, 58, 237, 0.35); }
+  30%  { transform: scale(1.05); box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);  }
+  45%  { transform: scale(1.2);  box-shadow: 0 0 0 5px rgba(124, 58, 237, 0.25); }
+  65%  { transform: scale(1.0);  box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);      }
+  100% { transform: scale(1);    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.15); }
+}
+
+.cartao-conteudo--desbloqueado .cartao-conteudo__icone-btn {
+  animation: icone-foco 2.2s ease forwards;
+}
+
+.cartao-conteudo--bloqueado {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cartao-conteudo__icone-btn--bloqueado {
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-mudo);
+  cursor: not-allowed;
+  pointer-events: all;
+}
+
+.cartao-conteudo__icone-btn--bloqueado:hover {
+  transform: none;
+  box-shadow: none;
+  filter: none;
+}
+
+.cartao-conteudo__icone-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.15);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+}
+
+.cartao-conteudo__icone-btn:hover {
+  transform: scale(1.1) translateY(-1px);
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.55);
+  filter: brightness(1.1);
+}
+
+.cartao-conteudo__icone-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.3);
+}
+
+@keyframes icone-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.6), 0 1px 3px rgba(124, 58, 237, 0.15); }
+  55%       { box-shadow: 0 0 0 7px rgba(124, 58, 237, 0), 0 1px 3px rgba(124, 58, 237, 0.15); }
+}
+
+.cartao-conteudo__icone-btn--pulsando {
+  animation: icone-pulso 1.6s ease-in-out infinite;
+}
+
+.cartao-conteudo__badge-check {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--cor-fundo-elevado), 0 2px 6px rgba(22, 163, 74, 0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.conteudos-modulo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  background: var(--cor-cartao);
+  transition: border-color var(--transicao-rapida);
+}
+
+.conteudos-modulo:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-color: var(--cor-borda-forte);
+}
+
+.conteudos-modulo__cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding-right: var(--espaco-md);
+}
+
+.conteudos-modulo__cabecalho-wrapper {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.conteudos-modulo__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  border-radius: var(--raio-lg) var(--raio-lg) 0 0;
+  padding: var(--espaco-md) var(--espaco-lg);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--cor-texto-forte);
+  transition: background var(--transicao-rapida);
+}
+
+.conteudos-modulo__toggle:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.conteudos-modulo__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.conteudos-modulo__titulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.conteudos-modulo__contagem {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.conteudos-modulo__barra {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.conteudos-modulo__chevron {
+  font-size: 1.1rem;
+  color: var(--cor-texto-mudo);
+  transition: transform var(--transicao-rapida);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.conteudos-modulo__chevron--aberto {
+  transform: rotate(180deg);
+}
+
+.conteudos-modulo--bloqueado .conteudos-modulo__info,
+.conteudos-modulo--bloqueado .conteudos-modulo__cadeado,
+.conteudos-modulo--bloqueado .conteudos-modulo__barra {
+  opacity: 0.5;
+}
+
+.conteudos-modulo__toggle--bloqueado {
+  cursor: not-allowed;
+  position: relative;
+}
+
+.conteudos-modulo__toggle--bloqueado:hover {
+  background: none;
+}
+
+.conteudos-modulo__toggle--bloqueado::after {
+  content: "Conclua o modulo anterior para desbloquear";
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda-forte);
+  color: var(--cor-texto-forte);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 500;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--raio-md);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 30;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.conteudos-modulo__toggle--bloqueado:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.conteudos-modulo__aviso-bloqueado {
+  font-size: 0.75rem;
+  color: var(--cor-texto-mudo);
+  font-style: italic;
+}
+
+.conteudos-modulo__cadeado {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cor-texto-mudo);
+}
+
+.conteudos-modulo__cadeado svg {
+  width: 16px;
+  height: 16px;
+}
+
+.conteudos-modulo__lista {
+  padding: var(--espaco-sm) var(--espaco-md) var(--espaco-md);
+  border-top: 1px solid var(--cor-borda);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  list-style: none;
+}
+
+.cartao-conteudo--concluido {
+  border-color: rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.cartao-conteudo--atual {
+  border-color: rgba(124, 58, 237, 0.6);
+  background: rgba(124, 58, 237, 0.06);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+.cartao-conteudo--concluido .cartao-conteudo__titulo {
+  color: var(--cor-texto-suave);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+@media (max-width: 768px) {
+  .conteudos-modulo__barra {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------
    AVALIACOES — lista de cartoes
    ------------------------------------------------------------ */
 .grade-avaliacoes {

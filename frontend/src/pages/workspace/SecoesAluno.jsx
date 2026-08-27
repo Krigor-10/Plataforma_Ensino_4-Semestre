@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   TbArrowLeft,
   TbArrowRight,
@@ -10,11 +10,13 @@ import {
   TbFile,
   TbFileText,
   TbLayoutGrid,
+  TbLock,
   TbPlayerPlay,
   TbExternalLink,
   TbTrophy
 } from "react-icons/tb";
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
+import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -1146,6 +1148,7 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
               conteudoProcessando={conteudoProcessando}
               conteudoSelecionadoId={conteudoSelecionadoId}
               curso={gruposConteudosPorCurso[slide]}
+              key={gruposConteudosPorCurso[slide].id}
               onConcluir={marcarConteudoConcluido}
               onSelecionar={selecionarConteudoAluno}
             />
@@ -1164,7 +1167,25 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
 };
 
 function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onSelecionar }) {
-  const itens = curso.modulos.flatMap((modulo) => modulo.conteudos.map((conteudo) => ({ ...conteudo, moduloTitulo: modulo.titulo })));
+  const modulosComConteudo = curso.modulos.filter((modulo) => modulo.conteudos.length > 0);
+
+  const [modulosAbertos, setModulosAbertos] = useState(() => {
+    const primeiroIncompleto = modulosComConteudo.find((modulo) => modulo.concluidos < modulo.conteudos.length);
+    const alvo = primeiroIncompleto || modulosComConteudo[0];
+    return alvo ? new Set([alvo.id]) : new Set();
+  });
+
+  function alternarModulo(moduloId) {
+    setModulosAbertos((atual) => {
+      const proximo = new Set(atual);
+      if (proximo.has(moduloId)) {
+        proximo.delete(moduloId);
+      } else {
+        proximo.add(moduloId);
+      }
+      return proximo;
+    });
+  }
 
   return (
     <div className="conteudos-aluno">
@@ -1191,61 +1212,156 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
         </div>
       ) : null}
 
-      {itens.length === 0 ? (
+      {modulosComConteudo.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
       ) : (
-        <ul aria-label={`Conteudos de ${curso.titulo}`} className="lista-conteudos-completa" role="list">
-          {itens.map((conteudo) => {
-            const acao = obterAcaoConteudoAluno(conteudo);
-            const processando = conteudoProcessando === conteudo.id;
-            const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-md)" }}>
+          {modulosComConteudo.map((modulo, indiceModulo) => {
+            const moduloAnterior = modulosComConteudo[indiceModulo - 1];
+            const bloqueado = Boolean(moduloAnterior) && moduloAnterior.concluidos < moduloAnterior.conteudos.length;
+            const estaAberto = !bloqueado && modulosAbertos.has(modulo.id);
+            const percentualModulo = modulo.conteudos.length ? Math.round((modulo.concluidos / modulo.conteudos.length) * 100) : 0;
+            const moduloConcluido = !bloqueado && modulo.concluidos === modulo.conteudos.length;
 
             return (
-              <li className="cartao-conteudo" key={conteudo.id} style={{ alignItems: "flex-start", flexDirection: "column" }}>
-                <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
-                  <span aria-hidden="true" className="cartao-conteudo__icone">
-                    {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText size={22} />}
-                  </span>
-                  <button
-                    aria-expanded={conteudoAtivo}
-                    className="cartao-conteudo__info"
-                    onClick={() => onSelecionar(conteudo.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
-                    type="button"
-                  >
-                    <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
-                    <p className="cartao-conteudo__modulo">{conteudo.moduloTitulo}</p>
-                  </button>
-                  <div className="cartao-conteudo__meta">
-                    <Insignia texto={conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)} variante={conteudo.concluido ? "sucesso" : undefined} />
-                  </div>
-                  <div className="cartao-conteudo__acoes">
-                    {acao ? (
-                      <a href={acao.href} rel="noreferrer" style={{ color: "var(--cor-marca-clara)", fontSize: "0.82rem", fontWeight: 600 }} target="_blank">
-                        {acao.label}
-                      </a>
-                    ) : null}
-                    {!conteudo.concluido ? (
-                      <Botao disabled={processando} onClick={() => onConcluir(conteudo.id)} tamanho="pequeno" variante="fantasma">
-                        {processando ? "Salvando..." : "Concluir"}
-                      </Botao>
-                    ) : null}
-                  </div>
-                </div>
+              <section className={`conteudos-modulo${bloqueado ? " conteudos-modulo--bloqueado" : ""}`} key={modulo.id}>
+                <header className="conteudos-modulo__cabecalho">
+                  <h3 className="conteudos-modulo__cabecalho-wrapper">
+                    <button
+                      aria-disabled={bloqueado}
+                      aria-expanded={estaAberto}
+                      className={`conteudos-modulo__toggle${bloqueado ? " conteudos-modulo__toggle--bloqueado" : ""}`}
+                      onClick={() => !bloqueado && alternarModulo(modulo.id)}
+                      type="button"
+                    >
+                      <div className="conteudos-modulo__info">
+                        <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
+                        {bloqueado ? (
+                          <span className="conteudos-modulo__aviso-bloqueado">Conclua o modulo anterior para desbloquear</span>
+                        ) : (
+                          <span className="conteudos-modulo__contagem">{modulo.concluidos}/{modulo.conteudos.length} concluidos</span>
+                        )}
+                      </div>
+                      {!bloqueado ? (
+                        <div aria-hidden="true" className="conteudos-modulo__barra">
+                          <BarraProgresso mostrarTexto={false} percentual={percentualModulo} />
+                        </div>
+                      ) : null}
+                      {bloqueado ? (
+                        <span aria-hidden="true" className="conteudos-modulo__cadeado">
+                          <TbLock size={16} />
+                        </span>
+                      ) : moduloConcluido ? (
+                        <motion.span
+                          animate={{ scale: 1 }}
+                          aria-label="Modulo concluido"
+                          className="check-circular check-circular--concluido"
+                          initial={{ scale: 0 }}
+                          style={{ pointerEvents: "none", width: "18px", height: "18px", fontSize: "0.65rem" }}
+                          transition={{ type: "spring", stiffness: 300, damping: 18 }}
+                        >
+                          <TbCheck aria-hidden="true" size={11} />
+                        </motion.span>
+                      ) : (
+                        <span aria-hidden="true" className={`conteudos-modulo__chevron${estaAberto ? " conteudos-modulo__chevron--aberto" : ""}`}>
+                          ▾
+                        </span>
+                      )}
+                    </button>
+                  </h3>
+                </header>
 
-                {conteudoAtivo ? (
-                  <div style={{ color: "var(--cor-texto-suave)", fontSize: "0.85rem", padding: "var(--espaco-sm) 0 0 calc(1.5rem + var(--espaco-md))" }}>
-                    <p>{obterPreviaConteudoAluno(conteudo)}</p>
-                    {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
-                    <span>
-                      {conteudo.publicadoEm ? `Publicado em ${formatDate(conteudo.publicadoEm)}` : `Atualizado em ${formatDate(conteudo.atualizadoEm || conteudo.criadoEm)}`}
-                    </span>
-                  </div>
-                ) : null}
-              </li>
+                <AnimatePresence initial={false}>
+                  {estaAberto ? (
+                    <motion.div
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      initial={{ height: 0, opacity: 0 }}
+                      key={`lista-${modulo.id}`}
+                      style={{ overflow: "hidden" }}
+                      transition={{ duration: 0.28, ease: "easeInOut" }}
+                    >
+                      <ul aria-label={`Conteudos de ${modulo.titulo}`} className="conteudos-modulo__lista" role="list">
+                        {modulo.conteudos.map((conteudo, indiceConteudo) => {
+                          const itemBloqueado = indiceConteudo > 0 && !modulo.conteudos[indiceConteudo - 1].concluido;
+                          const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
+                          const processando = conteudoProcessando === conteudo.id;
+                          const acao = obterAcaoConteudoAluno(conteudo);
+
+                          return (
+                            <li
+                              className={`cartao-conteudo${conteudo.concluido ? " cartao-conteudo--concluido" : ""}${itemBloqueado ? " cartao-conteudo--bloqueado" : ""}`}
+                              key={conteudo.id}
+                              style={{ alignItems: "flex-start", flexDirection: "column" }}
+                            >
+                              <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
+                                {conteudo.concluido && !itemBloqueado ? (
+                                  <motion.span
+                                    animate={{ scale: 1 }}
+                                    aria-label="Concluido"
+                                    className="cartao-conteudo__badge-check"
+                                    initial={{ scale: 0 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 18 }}
+                                  >
+                                    <TbCheck aria-hidden="true" size={11} />
+                                  </motion.span>
+                                ) : null}
+                                {itemBloqueado ? (
+                                  <span aria-label="Conteudo bloqueado" className="cartao-conteudo__icone-btn cartao-conteudo__icone-btn--bloqueado">
+                                    <TbLock aria-hidden="true" size={18} />
+                                  </span>
+                                ) : (
+                                  <button
+                                    aria-expanded={conteudoAtivo}
+                                    aria-label={`Ver ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
+                                    className="cartao-conteudo__icone-btn"
+                                    onClick={() => onSelecionar(conteudo.id)}
+                                    type="button"
+                                  >
+                                    {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size={18} />}
+                                  </button>
+                                )}
+                                <div className="cartao-conteudo__info">
+                                  <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
+                                  <p className="cartao-conteudo__modulo">{normalizeContentType(conteudo.tipoConteudo)}</p>
+                                </div>
+                                <div className="cartao-conteudo__meta">
+                                  <Insignia texto={conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)} variante={conteudo.concluido ? "sucesso" : undefined} />
+                                </div>
+                                <div className="cartao-conteudo__acoes">
+                                  {acao ? (
+                                    <a href={acao.href} rel="noreferrer" style={{ color: "var(--cor-marca-clara)", fontSize: "0.82rem", fontWeight: 600 }} target="_blank">
+                                      {acao.label}
+                                    </a>
+                                  ) : null}
+                                  {!conteudo.concluido && !itemBloqueado ? (
+                                    <Botao disabled={processando} onClick={() => onConcluir(conteudo.id)} tamanho="pequeno" variante="fantasma">
+                                      {processando ? "Salvando..." : "Concluir"}
+                                    </Botao>
+                                  ) : null}
+                                </div>
+                              </div>
+
+                              {conteudoAtivo ? (
+                                <div style={{ color: "var(--cor-texto-suave)", fontSize: "0.85rem", padding: "var(--espaco-sm) 0 0 calc(38px + var(--espaco-md))" }}>
+                                  <p>{obterPreviaConteudoAluno(conteudo)}</p>
+                                  {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
+                                  <span>
+                                    {conteudo.publicadoEm ? `Publicado em ${formatDate(conteudo.publicadoEm)}` : `Atualizado em ${formatDate(conteudo.atualizadoEm || conteudo.criadoEm)}`}
+                                  </span>
+                                </div>
+                              ) : null}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </section>
             );
           })}
-        </ul>
+        </div>
       )}
     </div>
   );
