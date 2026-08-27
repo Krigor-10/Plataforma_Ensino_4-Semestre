@@ -4726,6 +4726,213 @@
   opacity: 0.75;
 }
 
+/* ------------------------------------------------------------
+   ASSISTENTE DE AVALIACAO — Dados Gerais + Questoes numa tela
+   so (kebab "Editar"/"Nova avaliacao"), fiel ao FormularioCriarAvaliacao
+   do prototipo. La e uma pagina cheia; aqui vira um Modal largo com
+   o mesmo layout de steps lateral + painel.
+   ------------------------------------------------------------ */
+.modal-caixa--avaliacao {
+  max-width: min(960px, 95vw);
+}
+
+.criar-avaliacao__layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--espaco-lg);
+  align-items: start;
+}
+
+.criar-avaliacao__steps {
+  position: sticky;
+  top: 0;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.criar-avaliacao__step {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  width: 100%;
+  padding: var(--espaco-sm) var(--espaco-md);
+  border: none;
+  border-radius: var(--raio-md);
+  background: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transicao-rapida), color var(--transicao-rapida);
+}
+
+.criar-avaliacao__step:hover {
+  background: var(--cor-fundo);
+  color: var(--cor-texto-forte);
+}
+
+.criar-avaliacao__step--ativo {
+  background: rgba(123, 47, 247, 0.1);
+  color: var(--cor-marca);
+  font-weight: 600;
+}
+
+.criar-avaliacao__step-icone {
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}
+
+.criar-avaliacao__step--questao {
+  gap: var(--espaco-md);
+}
+
+.criar-avaliacao__step-num {
+  min-width: 26px;
+  height: 26px;
+  border-radius: var(--raio-sm);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo);
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transicao-rapida), border-color var(--transicao-rapida), color var(--transicao-rapida);
+}
+
+.criar-avaliacao__step--ativo .criar-avaliacao__step-num {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca);
+  color: #fff;
+}
+
+.criar-avaliacao__step-num--mais {
+  font-size: 1rem;
+  font-weight: 400;
+  border-style: dashed;
+}
+
+.criar-avaliacao__step-label {
+  font-size: 0.875rem;
+}
+
+.criar-avaliacao__step-divisor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espaco-sm) var(--espaco-md);
+  margin-top: var(--espaco-xs);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cor-texto-mudo);
+}
+
+.criar-avaliacao__step--adicionar {
+  margin-top: var(--espaco-xs);
+  border-top: 1px solid var(--cor-borda);
+  padding-top: var(--espaco-md);
+  color: var(--cor-texto-mudo);
+  font-size: 0.82rem;
+}
+
+.criar-avaliacao__step--adicionar:hover {
+  color: var(--cor-marca);
+}
+
+.criar-avaliacao__contagem {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 99px;
+  padding: 0.1rem 0.45rem;
+}
+
+.criar-avaliacao__painel {
+  min-width: 0;
+}
+
+.criar-avaliacao__secao {
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-xl);
+}
+
+.criar-avaliacao__secao-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+  margin-bottom: var(--espaco-lg);
+}
+
+.criar-avaliacao__secao-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.criar-avaliacao__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  padding-top: var(--espaco-lg);
+}
+
+.criar-avaliacao__rodape-direita {
+  display: flex;
+  gap: var(--espaco-md);
+}
+
+.grade-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espaco-md);
+}
+
+@media (max-width: 768px) {
+  .criar-avaliacao__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .criar-avaliacao__steps {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--espaco-xs);
+  }
+
+  .criar-avaliacao__step-divisor {
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .grade-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .criar-avaliacao__rodape {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .criar-avaliacao__rodape-direita {
+    flex-direction: column;
+  }
+}
+
 /* Seletor visual de tipo de anexo (modal Novo/Editar conteudo) */
 .novo-cont__preview {
   display: flex;
