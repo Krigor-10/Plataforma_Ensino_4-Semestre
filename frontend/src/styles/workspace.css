@@ -4726,6 +4726,116 @@
   opacity: 0.75;
 }
 
+/* Seletor visual de tipo de anexo (modal Novo/Editar conteudo) */
+.novo-cont__preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-lg) 0 var(--espaco-md);
+}
+
+.novo-cont__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7b2ff7 0%, #a855f7 100%);
+  color: #fff;
+  box-shadow: 0 6px 24px rgba(123, 47, 247, 0.35);
+}
+
+.novo-cont__icone--vazio {
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  box-shadow: none;
+  border: 2px dashed var(--cor-borda);
+}
+
+.novo-cont__preview-label {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  font-weight: 500;
+}
+
+.anexo-selector {
+  display: flex;
+  gap: var(--espaco-sm);
+  margin-top: 4px;
+}
+
+.anexo-clip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--espaco-md) var(--espaco-sm);
+  border-radius: var(--raio-lg);
+  border: 1.5px solid var(--cor-borda);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.anexo-clip:hover {
+  border-color: var(--cor-marca);
+  color: var(--cor-marca);
+  box-shadow: 0 2px 12px rgba(123, 47, 247, 0.15);
+}
+
+.anexo-clip__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cor-fundo);
+  border: 1.5px solid var(--cor-borda);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.anexo-clip:hover .anexo-clip__icone {
+  background: rgba(123, 47, 247, 0.08);
+  border-color: var(--cor-marca);
+}
+
+.anexo-clip__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.anexo-clip__check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--cor-marca);
+}
+
+.anexo-clip--ativo {
+  border-color: var(--cor-marca);
+  background: rgba(123, 47, 247, 0.07);
+  color: var(--cor-marca);
+  box-shadow: 0 2px 12px rgba(123, 47, 247, 0.18);
+}
+
+.anexo-clip--ativo .anexo-clip__icone {
+  background: linear-gradient(135deg, #7b2ff7 0%, #a855f7 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+.anexo-clip--ativo .anexo-clip__label {
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .conteudos-modulo__barra {
     display: none;

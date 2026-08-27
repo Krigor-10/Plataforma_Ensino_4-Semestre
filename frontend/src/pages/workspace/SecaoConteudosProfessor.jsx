@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { TbDotsVertical, TbExternalLink, TbFile, TbFileText, TbPlayerPlay, TbPlus, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
@@ -28,6 +28,13 @@ const ICONE_TIPO_CONTEUDO = {
   2: <TbFile aria-hidden="true" size={22} />,
   3: <TbPlayerPlay aria-hidden="true" size={22} />,
   4: <TbExternalLink aria-hidden="true" size={22} />
+};
+
+const ICONE_TIPO_CONTEUDO_GRANDE = {
+  1: <TbFileText aria-hidden="true" size={32} />,
+  2: <TbFile aria-hidden="true" size={32} />,
+  3: <TbPlayerPlay aria-hidden="true" size={32} />,
+  4: <TbExternalLink aria-hidden="true" size={32} />
 };
 
 export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0, cursos, modulos, onRefresh, onSessionExpired, turmas, usuario }) {
@@ -500,15 +507,45 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
                 </select>
               </div>
 
+              <div className="novo-cont__preview">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    className="novo-cont__icone"
+                    exit={{ scale: 0.5, opacity: 0, rotate: 20 }}
+                    initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
+                    key={dadosFormulario.tipoConteudo}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    {ICONE_TIPO_CONTEUDO_GRANDE[Number(dadosFormulario.tipoConteudo)] || <TbFileText aria-hidden="true" size={32} />}
+                  </motion.span>
+                </AnimatePresence>
+                <p className="novo-cont__preview-label">
+                  {OPCOES_TIPO_CONTEUDO.find((opcao) => opcao.value === dadosFormulario.tipoConteudo)?.label || "Tipo"}
+                </p>
+              </div>
+
               <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-tipo">Tipo de conteudo *</label>
-                <select className="campo__entrada" disabled={salvando} id="conteudo-tipo" name="tipoConteudo" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoConteudo}>
-                  {OPCOES_TIPO_CONTEUDO.map((opcao) => (
-                    <option key={opcao.value} value={opcao.value}>
-                      {opcao.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="campo__rotulo">Tipo de conteudo *</span>
+                <div aria-label="Tipo de conteudo" className="anexo-selector" role="group">
+                  {OPCOES_TIPO_CONTEUDO.map((opcao) => {
+                    const ativo = dadosFormulario.tipoConteudo === opcao.value;
+                    return (
+                      <button
+                        aria-pressed={ativo}
+                        className={`anexo-clip${ativo ? " anexo-clip--ativo" : ""}`}
+                        disabled={salvando}
+                        key={opcao.value}
+                        onClick={() => setDadosFormulario((current) => ({ ...current, tipoConteudo: opcao.value }))}
+                        type="button"
+                      >
+                        <span className="anexo-clip__icone">{ICONE_TIPO_CONTEUDO[Number(opcao.value)]}</span>
+                        <span className="anexo-clip__label">{opcao.label}</span>
+                        {ativo ? <span aria-hidden="true" className="anexo-clip__check">✓</span> : null}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="campo">
