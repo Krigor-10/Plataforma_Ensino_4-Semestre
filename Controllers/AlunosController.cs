@@ -46,16 +46,6 @@ namespace PlataformaEnsino.API.Controllers
             });
         }
 
-        [Authorize]
-        [HttpGet("teste-jwt")]
-        public IActionResult TesteJwt()
-        {
-            return Ok(new
-            {
-                mensagem = "Token válido. Usuário autenticado com sucesso."
-            });
-        }
-
         private static AlunoResponseDto MapResponse(Aluno aluno)
         {
             return new AlunoResponseDto
