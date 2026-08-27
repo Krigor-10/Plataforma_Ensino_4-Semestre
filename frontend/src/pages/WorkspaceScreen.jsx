@@ -733,11 +733,13 @@ export default function WorkspaceScreen({
 
             {activeSection === "matriculas" ? (
               <SecaoMatriculas
+                cursos={snapshot.cursos}
                 ehAluno={isStudent}
                 linhasMatriculas={matriculaRows}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
                 turmas={snapshot.turmas}
+                usuario={usuario}
               />
             ) : null}
 
