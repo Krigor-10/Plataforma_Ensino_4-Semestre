@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbDotsVertical, TbPlus, TbX } from "react-icons/tb";
-import { MdSave } from "react-icons/md";
+import { TbCheck, TbDotsVertical, TbPencil, TbPlus, TbX } from "react-icons/tb";
+import { MdDelete, MdSave } from "react-icons/md";
+
+const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -75,6 +77,10 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [slideAtual, setSlideAtual] = useState(0);
+
+  const [avaliacaoDetalhe, setAvaliacaoDetalhe] = useState(null);
+  const [campoEditando, setCampoEditando] = useState(null);
+  const [valorEditando, setValorEditando] = useState("");
 
   const [avaliacaoEmMontagem, setAvaliacaoEmMontagem] = useState(null);
   const [questoesAvaliacao, setQuestoesAvaliacao] = useState([]);
@@ -389,6 +395,98 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     }
   }
 
+  function abrirDetalheAvaliacao(avaliacao) {
+    setAvaliacaoDetalhe(avaliacao);
+    setCampoEditando(null);
+    setMenuAbertoId(null);
+  }
+
+  function fecharDetalheAvaliacao() {
+    setAvaliacaoDetalhe(null);
+    setCampoEditando(null);
+  }
+
+  function iniciarEdicaoCampoDetalhe(campo, valorAtual) {
+    setCampoEditando(campo);
+    setValorEditando(String(valorAtual));
+  }
+
+  function montarPayloadAtualizacao(avaliacao) {
+    return {
+      titulo: avaliacao.titulo,
+      descricao: avaliacao.descricao || "",
+      turmaId: avaliacao.turmaId,
+      moduloId: avaliacao.moduloId,
+      tipoAvaliacao: avaliacao.tipoAvaliacao,
+      statusPublicacao: avaliacao.statusPublicacao,
+      dataAbertura: avaliacao.dataAbertura || null,
+      dataFechamento: avaliacao.dataFechamento || null,
+      tentativasPermitidas: avaliacao.tentativasPermitidas,
+      tempoLimiteMinutos: avaliacao.tempoLimiteMinutos || null,
+      notaMaxima: avaliacao.notaMaxima,
+      pesoNota: avaliacao.pesoNota,
+      pesoProgresso: avaliacao.pesoProgresso
+    };
+  }
+
+  async function salvarCampoDetalhe(campo, valorBruto) {
+    if (campoEditando !== campo || !avaliacaoDetalhe) {
+      return;
+    }
+
+    const valor = campo === "titulo" ? String(valorBruto).trim() : Number(valorBruto);
+    const valorInvalido = campo === "titulo" ? !valor : !Number.isFinite(valor) || valor <= 0;
+
+    if (valorInvalido) {
+      setCampoEditando(null);
+      return;
+    }
+
+    const avaliacaoAtualizada = { ...avaliacaoDetalhe, [campo]: valor };
+    setCampoEditando(null);
+    setAvaliacaoDetalhe(avaliacaoAtualizada);
+
+    try {
+      await apiRequest(`/Avaliacoes/${avaliacaoDetalhe.id}`, {
+        method: "PUT",
+        body: JSON.stringify(montarPayloadAtualizacao(avaliacaoAtualizada))
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setAvaliacaoDetalhe(avaliacaoDetalhe);
+    }
+  }
+
+  async function alternarStatusDetalhe() {
+    if (!avaliacaoDetalhe) {
+      return;
+    }
+
+    const proximoStatus = avaliacaoDetalhe.statusPublicacao === 2 ? 3 : 2;
+    const avaliacaoAtualizada = { ...avaliacaoDetalhe, statusPublicacao: proximoStatus };
+    setAvaliacaoDetalhe(avaliacaoAtualizada);
+
+    try {
+      await apiRequest(`/Avaliacoes/${avaliacaoDetalhe.id}`, {
+        method: "PUT",
+        body: JSON.stringify(montarPayloadAtualizacao(avaliacaoAtualizada))
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setAvaliacaoDetalhe(avaliacaoDetalhe);
+    }
+  }
+
   async function abrirMontagemQuestoes(avaliacao) {
     setAvaliacaoEmMontagem(avaliacao);
     setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
@@ -650,11 +748,213 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               }}
               onMontarQuestoes={abrirMontagemQuestoes}
               onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+              onVerDetalhes={abrirDetalheAvaliacao}
               turma={grupos[slide].turma}
             />
           </div>
         </div>
       )}
+
+      {avaliacaoDetalhe ? (
+        <Modal onFechar={fecharDetalheAvaliacao} titulo="Detalhes da avaliacao">
+          <dl className="lista-detalhes">
+            <div className="lista-detalhes__item">
+              <dt>Titulo</dt>
+              {campoEditando === "titulo" ? (
+                <input
+                  autoFocus
+                  className="campo__entrada campo__entrada--inline"
+                  defaultValue={valorEditando}
+                  onBlur={(event) => salvarCampoDetalhe("titulo", event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.target.blur();
+                    if (event.key === "Escape") setCampoEditando(null);
+                  }}
+                />
+              ) : (
+                <dd>{avaliacaoDetalhe.titulo}</dd>
+              )}
+              <button
+                className="btn-editar-linha"
+                onClick={() => iniciarEdicaoCampoDetalhe("titulo", avaliacaoDetalhe.titulo)}
+                title="Editar titulo"
+                type="button"
+              >
+                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                  <TbPencil aria-hidden="true" size={18} />
+                </motion.span>
+              </button>
+            </div>
+
+            <div className="lista-detalhes__item">
+              <dt>Turma</dt>
+              <dd>{avaliacaoDetalhe.turmaNome}</dd>
+            </div>
+
+            <div className="lista-detalhes__item">
+              <dt>Modulo</dt>
+              <dd>{avaliacaoDetalhe.moduloTitulo}</dd>
+            </div>
+
+            <div className="lista-detalhes__item lista-detalhes__item--com-acao">
+              <div>
+                <dt>Total de questoes</dt>
+                <dd>{avaliacaoDetalhe.totalQuestoes || 0}</dd>
+              </div>
+              <button
+                aria-label="Editar questoes desta avaliacao"
+                className="btn-editar-questoes"
+                data-tooltip="Editar questoes"
+                onClick={() => {
+                  const alvo = avaliacaoDetalhe;
+                  fecharDetalheAvaliacao();
+                  abrirMontagemQuestoes(alvo);
+                }}
+                type="button"
+              >
+                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                  <TbPencil aria-hidden="true" size={18} />
+                </motion.span>
+              </button>
+            </div>
+
+            <div className="lista-detalhes__item">
+              <dt>Tentativas permitidas</dt>
+              {campoEditando === "tentativasPermitidas" ? (
+                <input
+                  autoFocus
+                  className="campo__entrada campo__entrada--inline"
+                  defaultValue={valorEditando}
+                  max="10"
+                  min="1"
+                  onBlur={(event) => salvarCampoDetalhe("tentativasPermitidas", event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.target.blur();
+                    if (event.key === "Escape") setCampoEditando(null);
+                  }}
+                  type="number"
+                />
+              ) : (
+                <dd>{avaliacaoDetalhe.tentativasPermitidas}</dd>
+              )}
+              <button
+                className="btn-editar-linha"
+                onClick={() => iniciarEdicaoCampoDetalhe("tentativasPermitidas", avaliacaoDetalhe.tentativasPermitidas)}
+                title="Editar tentativas"
+                type="button"
+              >
+                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                  <TbPencil aria-hidden="true" size={18} />
+                </motion.span>
+              </button>
+            </div>
+
+            <div className="lista-detalhes__item">
+              <dt>Tempo limite</dt>
+              {campoEditando === "tempoLimiteMinutos" ? (
+                <input
+                  autoFocus
+                  className="campo__entrada campo__entrada--inline"
+                  defaultValue={valorEditando}
+                  min="5"
+                  onBlur={(event) => salvarCampoDetalhe("tempoLimiteMinutos", event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.target.blur();
+                    if (event.key === "Escape") setCampoEditando(null);
+                  }}
+                  type="number"
+                />
+              ) : (
+                <dd>{avaliacaoDetalhe.tempoLimiteMinutos ? `${avaliacaoDetalhe.tempoLimiteMinutos} minutos` : "Sem limite"}</dd>
+              )}
+              <button
+                className="btn-editar-linha"
+                onClick={() => iniciarEdicaoCampoDetalhe("tempoLimiteMinutos", avaliacaoDetalhe.tempoLimiteMinutos || 30)}
+                title="Editar tempo limite"
+                type="button"
+              >
+                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                  <TbPencil aria-hidden="true" size={18} />
+                </motion.span>
+              </button>
+            </div>
+
+            <div className="lista-detalhes__item">
+              <dt>Nota maxima</dt>
+              {campoEditando === "notaMaxima" ? (
+                <input
+                  autoFocus
+                  className="campo__entrada campo__entrada--inline"
+                  defaultValue={valorEditando}
+                  max="100"
+                  min="1"
+                  onBlur={(event) => salvarCampoDetalhe("notaMaxima", event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") event.target.blur();
+                    if (event.key === "Escape") setCampoEditando(null);
+                  }}
+                  step="0.01"
+                  type="number"
+                />
+              ) : (
+                <dd>{formatDecimal(avaliacaoDetalhe.notaMaxima)}</dd>
+              )}
+              <button
+                className="btn-editar-linha"
+                onClick={() => iniciarEdicaoCampoDetalhe("notaMaxima", avaliacaoDetalhe.notaMaxima)}
+                title="Editar nota maxima"
+                type="button"
+              >
+                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                  <TbPencil aria-hidden="true" size={18} />
+                </motion.span>
+              </button>
+            </div>
+          </dl>
+
+          <div className="detalhe-status">
+            <div>
+              <strong className="detalhe-status__rotulo">Status da avaliacao</strong>
+              <span className="detalhe-status__descricao">
+                {avaliacaoDetalhe.statusPublicacao === 2
+                  ? "Visivel e disponivel para os alunos"
+                  : "Oculta - nao aparece para os alunos"}
+              </span>
+            </div>
+            <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+              <Insignia texto={normalizePublicationStatus(avaliacaoDetalhe.statusPublicacao)} />
+              <button
+                aria-checked={avaliacaoDetalhe.statusPublicacao === 2}
+                aria-label={avaliacaoDetalhe.statusPublicacao === 2 ? "Publicado - clique para arquivar" : "Arquivado - clique para publicar"}
+                className={`switch-ativo${avaliacaoDetalhe.statusPublicacao === 2 ? " switch-ativo--ativo" : ""}`}
+                onClick={alternarStatusDetalhe}
+                role="switch"
+                type="button"
+              >
+                <TbX aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--esq" size={10} />
+                <span aria-hidden="true" className="switch-ativo__thumb" />
+                <TbCheck aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--dir" size={10} />
+              </button>
+            </div>
+          </div>
+
+          <footer className="modal-rodape">
+            <Botao onClick={fecharDetalheAvaliacao} style={{ alignItems: "center", display: "flex", gap: "6px", marginRight: "auto" }} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Fechar
+            </Botao>
+            <Botao
+              onClick={() => {
+                setAvaliacaoParaExcluir(avaliacaoDetalhe);
+                fecharDetalheAvaliacao();
+              }}
+              style={{ alignItems: "center", display: "flex", gap: "6px" }}
+              variante="perigo"
+            >
+              <MdDelete aria-hidden="true" size={19} /> Excluir
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
 
       {avaliacaoParaExcluir ? (
         <Modal onFechar={() => setAvaliacaoParaExcluir(null)} titulo="Excluir avaliacao">
@@ -949,7 +1249,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
   );
 }
 
-function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onMontarQuestoes, onToggleMenu, turma }) {
+function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onMontarQuestoes, onToggleMenu, onVerDetalhes, turma }) {
   return (
     <div className="conteudos-aluno">
       <header className="conteudos-aluno__cabecalho">
@@ -988,6 +1288,11 @@ function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onMo
                   </button>
                   {menuAbertoId === avaliacao.id ? (
                     <ul className="menu-contexto__lista" role="menu">
+                      <li>
+                        <button onClick={() => onVerDetalhes(avaliacao)} role="menuitem" type="button">
+                          Ver detalhes
+                        </button>
+                      </li>
                       <li>
                         <button onClick={() => onEditar(avaliacao)} role="menuitem" type="button">
                           Editar
