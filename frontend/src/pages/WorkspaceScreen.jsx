@@ -585,6 +585,7 @@ export default function WorkspaceScreen({
               ) : role === "Admin" ? (
                 <DashboardAdmin
                   alunos={snapshot.alunos}
+                  coordenadores={snapshot.coordenadores}
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   pendencias={pendingRows}

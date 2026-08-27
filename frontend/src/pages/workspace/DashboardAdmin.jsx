@@ -61,14 +61,14 @@ const ACESSO_RAPIDO = [
   { icone: <MdDescription size={20} />, rotulo: "Professores", secao: "professores" }
 ];
 
-export function DashboardAdmin({ alunos = [], matriculas = [], onMudarSecao, pendencias = [], professores = [] }) {
+export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, pendencias = [], professores = [] }) {
   const alunosAtivos = alunos.filter((aluno) => aluno.ativo).length;
-  const totalUsuarios = alunos.length + professores.length;
+  const totalUsuarios = alunos.length + professores.length + coordenadores.length;
   const aprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada").length;
   const taxaAprovacao = matriculas.length ? Math.round((aprovadas / matriculas.length) * 100) : 0;
 
   const kpis = [
-    { detalhe: `${professores.length} professor(es)`, icone: <MdPeople size={22} />, rotulo: "Usuarios", valor: totalUsuarios },
+    { detalhe: `${professores.length} professor(es), ${coordenadores.length} coordenador(es)`, icone: <MdPeople size={22} />, rotulo: "Usuarios", valor: totalUsuarios },
     { corBorda: "var(--cor-info)", detalhe: `de ${alunos.length} cadastrados`, icone: <MdSchool size={22} />, rotulo: "Alunos ativos", valor: alunosAtivos },
     {
       corBorda: pendencias.length > 0 ? "var(--cor-aviso)" : undefined,
