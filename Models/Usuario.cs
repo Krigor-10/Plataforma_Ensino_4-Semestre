@@ -51,6 +51,7 @@ public abstract class Usuario
     public string TipoUsuario { get; private set; } = string.Empty;
     public DateTime DataCadastro { get; private set; } = DateTime.UtcNow;
 
+    [JsonIgnore]
     public string SenhaHash { get; private set; } = string.Empty;
 
     public bool Ativo { get; private set; } = true;

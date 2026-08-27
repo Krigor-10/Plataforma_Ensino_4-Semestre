@@ -5,7 +5,8 @@
 		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-	</PropertyGroup>
+	  <UserSecretsId>71bbb94e-8d96-47ed-a6a3-53ab0194ff7c</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<Folder Include="Models\NovaPasta\" />
