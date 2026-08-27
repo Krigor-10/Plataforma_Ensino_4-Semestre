@@ -34,12 +34,41 @@ namespace PlataformaEnsino.API.Controllers
         // POST: api/Alunos
         [HttpPost]
         [Authorize(Roles = "Admin,Coordenador")]
-        public async Task<ActionResult<Aluno>> PostAluno(Aluno aluno)
+        public async Task<ActionResult<AlunoResponseDto>> PostAluno([FromBody] CriarAlunoDto dto)
         {
+            var emailNormalizado = dto.Email.Trim().ToLower();
+            var cpfNormalizado = new string(dto.Cpf.Where(char.IsDigit).ToArray());
+
+            if (await _context.Usuarios.AnyAsync(usuario => usuario.Email.ToLower() == emailNormalizado))
+            {
+                return BadRequest(new { erro = "Ja existe um usuario com este e-mail." });
+            }
+
+            if (await _context.Usuarios.AnyAsync(usuario => usuario.Cpf == cpfNormalizado))
+            {
+                return BadRequest(new { erro = "Ja existe um usuario com este CPF." });
+            }
+
+            var aluno = new Aluno
+            {
+                Nome = dto.Nome.Trim(),
+                Email = emailNormalizado,
+                Cpf = cpfNormalizado,
+                Telefone = dto.Telefone.Trim(),
+                Cep = dto.Cep.Trim(),
+                Rua = dto.Rua.Trim(),
+                Numero = dto.Numero.Trim(),
+                Bairro = dto.Bairro.Trim(),
+                Cidade = dto.Cidade.Trim(),
+                Estado = dto.Estado.Trim().ToUpper(),
+                Matricula = await GerarCodigoAlunoAsync()
+            };
+            aluno.ConfigurarAcesso("Aluno", BCrypt.Net.BCrypt.HashPassword(dto.Senha), dto.Ativo);
+
             _context.Alunos.Add(aluno);
             await _context.SaveChangesAsync();
 
-            return Ok(aluno);
+            return Ok(MapResponse(aluno));
         }
 
         // POST: api/Alunos/cadastro-completo
@@ -151,6 +180,29 @@ namespace PlataformaEnsino.API.Controllers
             {
                 mensagem = "Token válido. Usuário autenticado com sucesso."
             });
+        }
+
+        private static AlunoResponseDto MapResponse(Aluno aluno)
+        {
+            return new AlunoResponseDto
+            {
+                Id = aluno.Id,
+                Nome = aluno.Nome,
+                Email = aluno.Email,
+                Cpf = aluno.Cpf,
+                Telefone = aluno.Telefone,
+                Cep = aluno.Cep,
+                Rua = aluno.Rua,
+                Numero = aluno.Numero,
+                Bairro = aluno.Bairro,
+                Cidade = aluno.Cidade,
+                Estado = aluno.Estado,
+                TipoUsuario = aluno.TipoUsuario,
+                DataCadastro = aluno.DataCadastro,
+                Ativo = aluno.Ativo,
+                Matricula = aluno.Matricula,
+                TurmaAtual = aluno.TurmaAtual
+            };
         }
     }
 }

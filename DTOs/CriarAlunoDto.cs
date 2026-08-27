@@ -48,12 +48,5 @@ public class CriarAlunoDto
     [MinLength(6)]
     public string Senha { get; set; } = string.Empty;
 
-    [Required]
-    [StringLength(40)]
-    public string Matricula { get; set; } = string.Empty;
-
-    [StringLength(120)]
-    public string TurmaAtual { get; set; } = "Nao atribuida";
-
     public bool Ativo { get; set; } = true;
 }

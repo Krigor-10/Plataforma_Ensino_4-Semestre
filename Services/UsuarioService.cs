@@ -12,15 +12,6 @@ public class UsuarioService : IUsuarioService
         _usuarioRepository = usuarioRepository;
     }
 
-    public async Task<Usuario> CriarUsuarioAsync(Usuario usuario)
-    {
-        ArgumentNullException.ThrowIfNull(usuario);
-
-        await _usuarioRepository.AdicionarAsync(usuario);
-        await _usuarioRepository.SalvarAlteracoesAsync();
-        return usuario;
-    }
-
     public async Task<Usuario> ObterUsuarioPorIdAsync(int id)
     {
         return await _usuarioRepository.ObterPorIdAsync(id)

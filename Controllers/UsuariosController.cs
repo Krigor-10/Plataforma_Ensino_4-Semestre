@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.Interfaces;
-using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Controllers;
 
@@ -14,13 +13,6 @@ public class UsuariosController : ControllerBase
     public UsuariosController(IUsuarioService usuarioService)
     {
         _usuarioService = usuarioService;
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> CriarUsuario([FromBody] Usuario usuario)
-    {
-        var novoUsuario = await _usuarioService.CriarUsuarioAsync(usuario);
-        return CreatedAtAction(nameof(ObterUsuarioPorId), new { id = novoUsuario.Id }, novoUsuario);
     }
 
     [HttpGet]

@@ -18,6 +18,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Remove="PlataformaEnsino.Tests\**\*.cs" />
+		<Content Remove="PlataformaEnsino.Tests\**\*" />
+		<None Remove="PlataformaEnsino.Tests\**\*" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
