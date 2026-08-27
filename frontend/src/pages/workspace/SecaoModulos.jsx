@@ -16,6 +16,8 @@ export function SecaoModulos({
   alunos = [],
   cursos,
   cursoEmFoco,
+  ehAdmin = false,
+  ehCoordenador = false,
   matriculas = [],
   modulos,
   onCursoEmFocoAplicado,
@@ -24,6 +26,7 @@ export function SecaoModulos({
   professores = [],
   turmas = []
 }) {
+  const podeGerenciar = ehAdmin || ehCoordenador;
   const [slideAtual, setSlideAtual] = useState(0);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
   const [moduloEmEdicaoId, setModuloEmEdicaoId] = useState(null);
@@ -292,7 +295,7 @@ export function SecaoModulos({
                 </select>
               </>
             ) : null}
-            {cursosOrdenados.length ? (
+            {cursosOrdenados.length && podeGerenciar ? (
               <>
                 <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
                 <Botao onClick={abrirFormularioNovoModulo} variante="primario">
@@ -367,6 +370,7 @@ export function SecaoModulos({
               onExcluir={setModuloParaExcluir}
               onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
               onVerDetalhes={setModuloDetalheId}
+              podeGerenciar={podeGerenciar}
             />
           </div>
         </div>
@@ -400,18 +404,20 @@ export function SecaoModulos({
             </div>
           </dl>
           <footer className="modal-rodape">
-            <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: "auto" }} variante="perigo">
+            <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: podeGerenciar ? "auto" : 0 }} variante="perigo">
               <TbX aria-hidden="true" size={15} /> Fechar
             </Botao>
-            <Botao
-              onClick={() => {
-                setModuloDetalheId(null);
-                abrirEdicaoModulo(moduloDetalhe);
-              }}
-              variante="primario"
-            >
-              Editar titulo
-            </Botao>
+            {podeGerenciar ? (
+              <Botao
+                onClick={() => {
+                  setModuloDetalheId(null);
+                  abrirEdicaoModulo(moduloDetalhe);
+                }}
+                variante="primario"
+              >
+                Editar titulo
+              </Botao>
+            ) : null}
           </footer>
         </Modal>
       ) : null}
@@ -479,7 +485,7 @@ export function SecaoModulos({
   );
 }
 
-function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onToggleMenu, onVerDetalhes }) {
+function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onToggleMenu, onVerDetalhes, podeGerenciar }) {
   return (
     <div className="conteudos-aluno">
       <header className="conteudos-aluno__cabecalho">
@@ -546,11 +552,13 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onTog
                         Ver detalhes
                       </button>
                     </li>
-                    <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} role="menuitem" type="button">
-                        Excluir
-                      </button>
-                    </li>
+                    {podeGerenciar ? (
+                      <li>
+                        <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} role="menuitem" type="button">
+                          Excluir
+                        </button>
+                      </li>
+                    ) : null}
                   </ul>
                 ) : null}
               </div>

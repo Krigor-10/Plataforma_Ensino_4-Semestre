@@ -646,6 +646,9 @@ export default function WorkspaceScreen({
                 alunos={snapshot.alunos}
                 cursos={snapshot.cursos}
                 cursoEmFoco={cursoEmFocoPorSecao.modulos}
+                ehAdmin={role === "Admin"}
+                ehCoordenador={role === "Coordenador"}
+                ehProfessor={role === "Professor"}
                 matriculas={snapshot.matriculas}
                 modulos={snapshot.modulos}
                 onCursoEmFocoAplicado={() => limparCursoEmFoco("modulos")}
