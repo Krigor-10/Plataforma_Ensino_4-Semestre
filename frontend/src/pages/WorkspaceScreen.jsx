@@ -188,7 +188,31 @@ export default function WorkspaceScreen({
 
   const visibleCursos = isProfessor ? professorCursos : snapshot.cursos;
   const cursosDaSecaoCursos = role === "Coordenador" ? coordenadorCursos : visibleCursos;
-  const visibleTurmas = isProfessor ? professorTurmas : snapshot.turmas;
+
+  const coordenadorTurmas = useMemo(() => {
+    if (role !== "Coordenador") {
+      return snapshot.turmas;
+    }
+
+    const idsCursosCoordenador = new Set(coordenadorCursos.map((curso) => curso.id));
+    return snapshot.turmas.filter((turma) => idsCursosCoordenador.has(turma.cursoId));
+  }, [coordenadorCursos, role, snapshot.turmas]);
+
+  const visibleTurmas = isProfessor ? professorTurmas : role === "Coordenador" ? coordenadorTurmas : snapshot.turmas;
+
+  const cursoByIdParaTurmas = useMemo(
+    () => (role === "Coordenador" ? mapById(coordenadorCursos) : cursoById),
+    [coordenadorCursos, cursoById, role]
+  );
+
+  const modulosDaSecaoModulos = useMemo(() => {
+    if (role !== "Coordenador" && !isProfessor) {
+      return snapshot.modulos;
+    }
+
+    const idsCursosAcademicos = new Set(cursosDaSecaoCursos.map((curso) => curso.id));
+    return snapshot.modulos.filter((modulo) => idsCursosAcademicos.has(modulo.cursoId));
+  }, [cursosDaSecaoCursos, isProfessor, role, snapshot.modulos]);
 
   const matriculaRows = useMemo(
     () =>
@@ -568,11 +592,11 @@ export default function WorkspaceScreen({
                 />
               ) : role === "Coordenador" ? (
                 <DashboardCoordenador
-                  cursos={snapshot.cursos}
+                  cursos={coordenadorCursos}
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   professores={snapshot.professores}
-                  turmas={snapshot.turmas}
+                  turmas={coordenadorTurmas}
                   usuario={usuario}
                 />
               ) : (
@@ -644,13 +668,13 @@ export default function WorkspaceScreen({
             {activeSection === "modulos" ? (
               <SecaoModulos
                 alunos={snapshot.alunos}
-                cursos={snapshot.cursos}
+                cursos={cursosDaSecaoCursos}
                 cursoEmFoco={cursoEmFocoPorSecao.modulos}
                 ehAdmin={role === "Admin"}
                 ehCoordenador={role === "Coordenador"}
                 ehProfessor={role === "Professor"}
                 matriculas={snapshot.matriculas}
-                modulos={snapshot.modulos}
+                modulos={modulosDaSecaoModulos}
                 onCursoEmFocoAplicado={() => limparCursoEmFoco("modulos")}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
@@ -728,7 +752,7 @@ export default function WorkspaceScreen({
             {activeSection === "turmas" ? (
               <SecaoTurmas
                 alunos={snapshot.alunos}
-                cursoPorId={cursoById}
+                cursoPorId={cursoByIdParaTurmas}
                 cursoEmFoco={cursoEmFocoPorSecao.turmas}
                 ehGestor={isManager}
                 ehProfessor={isProfessor}

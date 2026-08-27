@@ -27,10 +27,13 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
   const professorPorId = new Map(professores.map((professor) => [Number(professor.id), professor]));
   const meusCursos = cursos.filter((curso) => Number(curso.coordenadorId) === Number(usuario.id));
   const idsMeusCursos = new Set(meusCursos.map((curso) => Number(curso.id)));
-  const turmasDosMeusCursos = turmas.filter((turma) => idsMeusCursos.has(Number(turma.cursoId))).slice(0, 4);
+  const turmasVinculadas = turmas.filter((turma) => idsMeusCursos.has(Number(turma.cursoId)));
+  const turmasDosMeusCursos = turmasVinculadas.slice(0, 4);
 
   const totalAlunosMatriculados = new Set(
-    matriculas.filter((matricula) => matricula.status === "Aprovada").map((matricula) => matricula.alunoId)
+    matriculas
+      .filter((matricula) => idsMeusCursos.has(Number(matricula.cursoId)) && matricula.status === "Aprovada")
+      .map((matricula) => matricula.alunoId)
   ).size;
 
   const dadosGrafico = meusCursos.map((curso) => {
@@ -59,7 +62,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
             corBorda="var(--cor-sucesso)"
             icone={<MdGroups size={22} />}
             rotulo="Turmas vinculadas"
-            valor={turmasDosMeusCursos.length}
+            valor={turmasVinculadas.length}
           />
           <CartaoEstatistica
             corBorda="var(--cor-info)"
@@ -103,14 +106,22 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
         <div className="painel-secao__conteudo">
           {turmasDosMeusCursos.length > 0 ? (
             <ul className="lista-turmas" role="list">
-              {turmasDosMeusCursos.map((turma) => (
-                <li className="item-turma" key={turma.id}>
-                  <div className="item-turma__info">
-                    <strong className="item-turma__nome">{turma.nomeTurma}</strong>
-                    <span className="item-turma__curso">{professorPorId.get(Number(turma.professorId))?.nome || "Sem professor atribuido"}</span>
-                  </div>
-                </li>
-              ))}
+              {turmasDosMeusCursos.map((turma) => {
+                const alunosDaTurma = matriculas.filter(
+                  (matricula) => Number(matricula.turmaId) === Number(turma.id) && matricula.status === "Aprovada"
+                ).length;
+                return (
+                  <li className="item-turma" key={turma.id}>
+                    <div className="item-turma__info">
+                      <strong className="item-turma__nome">{turma.nomeTurma}</strong>
+                      <span className="item-turma__curso">{professorPorId.get(Number(turma.professorId))?.nome || "Sem professor atribuido"}</span>
+                    </div>
+                    <div className="item-turma__meta">
+                      <span>{alunosDaTurma} alunos</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <EmptyState message="Nenhuma turma encontrada para os cursos sob sua coordenacao." />
