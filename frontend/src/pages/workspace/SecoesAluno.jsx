@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   TbArrowLeft,
   TbArrowRight,
@@ -679,14 +680,21 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
                   </dl>
                   <div className="cartao-avaliacao__rodape">
                     {disponibilidade.podeRealizar ? (
-                      <Botao
-                        disabled={carregandoQuestoes || enviandoRespostas}
-                        onClick={() => abrirExecucaoAvaliacao(avaliacao)}
-                        tamanho="pequeno"
-                        variante="primario"
+                      <motion.div
+                        style={{ display: "inline-block" }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        whileHover={{ scale: 1.06 }}
+                        whileTap={{ scale: 0.96 }}
                       >
-                        Realizar avaliacao
-                      </Botao>
+                        <Botao
+                          disabled={carregandoQuestoes || enviandoRespostas}
+                          onClick={() => abrirExecucaoAvaliacao(avaliacao)}
+                          tamanho="pequeno"
+                          variante="primario"
+                        >
+                          Realizar avaliacao
+                        </Botao>
+                      </motion.div>
                     ) : (
                       <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
                     )}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
 import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
@@ -274,7 +275,10 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           Limpar filtros
         </Botao>
         <Botao onClick={abrirFormulario} style={{ marginLeft: "auto" }} variante="primario">
-          <TbPlus aria-hidden="true" size={18} /> Cadastrar coordenacao
+          <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+            <TbPlus aria-hidden="true" size={18} />
+          </motion.span>{" "}
+          Cadastrar coordenacao
         </Botao>
       </div>
 

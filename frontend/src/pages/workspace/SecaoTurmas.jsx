@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { TbChalkboard, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
 import { MdGroups, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
@@ -323,7 +324,10 @@ export function SecaoTurmas({
             </div>
             {podeGerenciarTurmas ? (
               <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} title={motivoCriacaoBloqueada || undefined} variante="primario">
-                <TbPlus aria-hidden="true" size={18} /> Nova turma
+                <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                  <TbPlus aria-hidden="true" size={18} />
+                </motion.span>{" "}
+                Nova turma
               </Botao>
             ) : null}
           </div>

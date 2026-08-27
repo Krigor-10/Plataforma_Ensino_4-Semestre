@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { TbCertificate, TbDownload, TbTrophy } from "react-icons/tb";
 import { LuEye, LuDownload } from "react-icons/lu";
 import { EmptyState } from "../../components/Primitives.jsx";
@@ -169,17 +170,20 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], progres
               )}
 
               <div className="item-certificado__acoes">
-                <button
+                <motion.button
                   aria-label={`Visualizar certificado de ${certificado.curso}`}
                   className="cert-btn-visualizar"
                   disabled={!certificado.desbloqueado}
                   onClick={() => certificado.desbloqueado && setCertificadoAberto(certificado)}
                   type="button"
+                  whileHover={certificado.desbloqueado ? { scale: 1.18 } : {}}
+                  whileTap={certificado.desbloqueado ? { scale: 0.9 } : {}}
+                  transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 >
                   <LuEye aria-hidden="true" size={22} />
-                </button>
+                </motion.button>
                 <span aria-hidden="true" className="cert-separador" />
-                <button
+                <motion.button
                   aria-label={`Baixar certificado de ${certificado.curso}`}
                   className="cert-btn-baixar"
                   disabled={!certificado.desbloqueado}
@@ -191,9 +195,12 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], progres
                     setTimeout(imprimirCertificado, 300);
                   }}
                   type="button"
+                  whileHover={certificado.desbloqueado ? { scale: 1.18 } : {}}
+                  whileTap={certificado.desbloqueado ? { scale: 0.9 } : {}}
+                  transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 >
                   <LuDownload aria-hidden="true" size={22} />
-                </button>
+                </motion.button>
               </div>
             </li>
           ))}

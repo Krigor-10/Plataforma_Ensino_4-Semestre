@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { RouteGate } from "./components/Primitives.jsx";
+import TooltipGlobal from "./components/TooltipGlobal.jsx";
 import CadastroScreen from "./pages/CadastroScreen.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import NotFoundScreen from "./pages/NotFoundScreen.jsx";
@@ -65,16 +66,14 @@ export default function App() {
     handleNavigate(nextPath, { replace: true });
   }
 
+  let content;
+
   if (route.kind === "app" && !session.user) {
-    return <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da EdTech." />;
-  }
-
-  if (session.user && (route.kind === "login" || route.kind === "cadastro")) {
-    return <RouteGate title="Voltando ao painel" text="Sua sessao ja esta ativa no ambiente React." />;
-  }
-
-  if (route.kind === "login") {
-    return (
+    content = <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da EdTech." />;
+  } else if (session.user && (route.kind === "login" || route.kind === "cadastro")) {
+    content = <RouteGate title="Voltando ao painel" text="Sua sessao ja esta ativa no ambiente React." />;
+  } else if (route.kind === "login") {
+    content = (
       <LoginScreen
         canDisableDemoMode={canDisableDemoMode}
         isDemoMode={isDemoMode}
@@ -84,14 +83,10 @@ export default function App() {
         onSessionStart={handleSessionStart}
       />
     );
-  }
-
-  if (route.kind === "cadastro") {
-    return <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
-  }
-
-  if (route.kind === "app" && session.user) {
-    return (
+  } else if (route.kind === "cadastro") {
+    content = <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
+  } else if (route.kind === "app" && session.user) {
+    content = (
       <WorkspaceScreen
         canDisableDemoMode={canDisableDemoMode}
         isDemoMode={isDemoMode}
@@ -103,11 +98,16 @@ export default function App() {
         onSessionExpired={() => handleLogout("/login")}
       />
     );
+  } else if (route.kind === "notfound") {
+    content = <NotFoundScreen onNavigate={handleNavigate} />;
+  } else {
+    content = <PublicHome hasSession={Boolean(session.user)} isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
   }
 
-  if (route.kind === "notfound") {
-    return <NotFoundScreen onNavigate={handleNavigate} />;
-  }
-
-  return <PublicHome hasSession={Boolean(session.user)} isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
+  return (
+    <>
+      {content}
+      <TooltipGlobal />
+    </>
+  );
 }

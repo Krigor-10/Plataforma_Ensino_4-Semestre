@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { TbDotsVertical, TbFileText, TbPlus, TbStack, TbX } from "react-icons/tb";
 import { MdLayers, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
@@ -295,7 +296,10 @@ export function SecaoModulos({
               <>
                 <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
                 <Botao onClick={abrirFormularioNovoModulo} variante="primario">
-                  <TbPlus aria-hidden="true" size={18} /> Novo modulo
+                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                    <TbPlus aria-hidden="true" size={18} />
+                  </motion.span>{" "}
+                  Novo modulo
                 </Botao>
               </>
             ) : null}

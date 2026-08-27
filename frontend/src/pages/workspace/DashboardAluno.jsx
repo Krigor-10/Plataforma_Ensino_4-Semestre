@@ -6,6 +6,7 @@
    campo de favorito no modelo de dados real, entao o espaco vira
    uma lista de cursos ativos (matriculas aprovadas).
    ============================================================ */
+import { motion } from "framer-motion";
 import { MdSchool } from "react-icons/md";
 import { TbPlayerPlay, TbBooks, TbCheck, TbStack, TbChartBar, TbRocket } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
@@ -106,9 +107,24 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
             </div>
           </div>
           <div className="cartao-retomar__acao">
-            <Botao onClick={() => onMudarSecao("conteudos")} variante="primario">
-              <TbPlayerPlay aria-hidden="true" size={16} /> Continuar agora
-            </Botao>
+            <motion.div
+              animate={{
+                scale: [1, 1.07, 1],
+                boxShadow: [
+                  "0 0 0px rgba(123, 47, 247, 0)",
+                  "0 6px 28px rgba(123, 47, 247, 0.65)",
+                  "0 0 0px rgba(123, 47, 247, 0)"
+                ]
+              }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              whileHover={{ scale: 1.1, boxShadow: "0 8px 32px rgba(123, 47, 247, 0.8)" }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: "inline-block", borderRadius: "var(--raio-md)" }}
+            >
+              <Botao onClick={() => onMudarSecao("conteudos")} variante="primario">
+                <TbPlayerPlay aria-hidden="true" size={16} /> Continuar agora
+              </Botao>
+            </motion.div>
           </div>
         </section>
       ) : cursoParaComecar ? (
@@ -119,9 +135,24 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
             <p className="cartao-retomar__proximo">Acesse o primeiro modulo e de o primeiro passo na sua jornada.</p>
           </div>
           <div className="cartao-retomar__acao">
-            <Botao onClick={() => onMudarSecao("conteudos")} variante="primario">
-              <TbRocket aria-hidden="true" size={16} /> Iniciar jornada
-            </Botao>
+            <motion.div
+              animate={{
+                scale: [1, 1.07, 1],
+                boxShadow: [
+                  "0 0 0px rgba(123, 47, 247, 0)",
+                  "0 6px 28px rgba(123, 47, 247, 0.65)",
+                  "0 0 0px rgba(123, 47, 247, 0)"
+                ]
+              }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              whileHover={{ scale: 1.1, boxShadow: "0 8px 32px rgba(123, 47, 247, 0.8)" }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: "inline-block", borderRadius: "var(--raio-md)" }}
+            >
+              <Botao onClick={() => onMudarSecao("conteudos")} variante="primario">
+                <TbRocket aria-hidden="true" size={16} /> Iniciar jornada
+              </Botao>
+            </motion.div>
           </div>
         </section>
       ) : null}

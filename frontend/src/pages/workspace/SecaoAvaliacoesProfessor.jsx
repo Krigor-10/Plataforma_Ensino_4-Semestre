@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import { TbDotsVertical, TbPlus, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
@@ -591,7 +592,10 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               <>
                 <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
                 <Botao onClick={abrirFormularioNovaAvaliacao} variante="primario">
-                  <TbPlus aria-hidden="true" size={18} /> Nova avaliacao
+                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                    <TbPlus aria-hidden="true" size={18} />
+                  </motion.span>{" "}
+                  Nova avaliacao
                 </Botao>
               </>
             ) : null}
