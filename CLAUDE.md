@@ -53,6 +53,22 @@ npm start          # listens on :4000, forwards to DOTNET_API_URL (default http:
 
 Run order for local dev: `dotnet run` (backend, `:5000`) → `gateway` (`npm start`, `:4000`) → `frontend` (`npm run dev`, `:5173`, proxies through the gateway).
 
+### Mobile (Expo / React Native)
+
+`mobile/` is a React Native app (Expo, bare "blank" template, no Expo Router) that talks directly to the gateway — same JWT flow as the web frontend, minimal UI (Login + a Cursos list) proving the integration works end to end.
+
+```powershell
+cd mobile
+npm install       # first time only
+npm run web        # runs in the browser via react-native-web, http://localhost:8081
+npm run android     # requires an Android emulator/device
+npm run ios         # requires macOS
+```
+
+`src/lib/config.js` resolves the gateway URL per platform: `10.0.2.2:4000` on the Android emulator (it can't see the host's `localhost`), `127.0.0.1:4000` everywhere else (iOS simulator, web). For a physical device, change it to the host machine's LAN IP. The gateway's `CORS_ORIGINS` (`gateway/.env`) must include whatever origin the mobile web target runs on (`http://localhost:8081` by default).
+
+Run order: same as web, but start `mobile` (`npm run web`) instead of `frontend`.
+
 ### Development seeding
 
 On startup in the `Development` environment, `DevelopmentDataSeeder` auto-seeds the database with:
