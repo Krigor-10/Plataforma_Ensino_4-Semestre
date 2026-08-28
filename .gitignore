@@ -8,6 +8,9 @@
 .env.local
 *.env
 
+# Arquivos enviados por usuarios (fotos/PDF/video de Conteudos e Cursos)
+Storage/Uploads/
+
 # User-specific files
 *.rsuser
 *.suo

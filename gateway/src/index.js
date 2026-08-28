@@ -24,11 +24,11 @@ app.use(
   createProxyMiddleware({
     target: DOTNET_API_URL,
     changeOrigin: true,
-    pathFilter: "/api"
+    pathFilter: ["/api", "/uploads"]
   })
 );
 
 app.listen(PORT, () => {
   console.log(`Gateway ouvindo em http://localhost:${PORT}`);
-  console.log(`Repassando /api para ${DOTNET_API_URL}/api`);
+  console.log(`Repassando /api e /uploads para ${DOTNET_API_URL}`);
 });

@@ -11,6 +11,7 @@ import {
   TbFileText,
   TbLayoutGrid,
   TbLock,
+  TbPhoto,
   TbPlayerPlay,
   TbExternalLink,
   TbTrophy
@@ -1163,7 +1164,8 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   1: <TbFileText aria-hidden="true" size={22} />,
   2: <TbFile aria-hidden="true" size={22} />,
   3: <TbPlayerPlay aria-hidden="true" size={22} />,
-  4: <TbExternalLink aria-hidden="true" size={22} />
+  4: <TbExternalLink aria-hidden="true" size={22} />,
+  5: <TbPhoto aria-hidden="true" size={22} />
 };
 
 function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onSelecionar }) {
@@ -1628,6 +1630,14 @@ function obterPreviaConteudoAluno(conteudo) {
     return compactText(conteudo.descricao || conteudo.arquivoUrl || "PDF publicado para consulta ou download.", 220);
   }
 
+  if (tipo === 3) {
+    return compactText(conteudo.descricao || conteudo.arquivoUrl || "Video publicado para esta turma.", 220);
+  }
+
+  if (tipo === 5) {
+    return compactText(conteudo.descricao || conteudo.arquivoUrl || "Imagem publicada para esta turma.", 220);
+  }
+
   return compactText(
     conteudo.descricao || conteudo.linkUrl || conteudo.arquivoUrl || "Recurso externo liberado para complementar o modulo.",
     220
@@ -1641,12 +1651,16 @@ function obterAcaoConteudoAluno(conteudo) {
     return { href: conteudo.arquivoUrl, label: "Abrir PDF" };
   }
 
-  if (tipo === 3 && conteudo.linkUrl) {
-    return { href: conteudo.linkUrl, label: "Abrir video" };
+  if (tipo === 3 && conteudo.arquivoUrl) {
+    return { href: conteudo.arquivoUrl, label: "Abrir video" };
   }
 
   if (tipo === 4 && conteudo.linkUrl) {
     return { href: conteudo.linkUrl, label: "Abrir recurso" };
+  }
+
+  if (tipo === 5 && conteudo.arquivoUrl) {
+    return { href: conteudo.arquivoUrl, label: "Ver imagem" };
   }
 
   return null;

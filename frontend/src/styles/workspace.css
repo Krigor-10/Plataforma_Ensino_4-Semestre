@@ -4967,6 +4967,24 @@
   font-weight: 500;
 }
 
+.campo__ajuda {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+  margin-top: var(--espaco-sm);
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+.novo-cont__miniatura {
+  max-width: 160px;
+  max-height: 120px;
+  border-radius: var(--raio-md, 8px);
+  border: 1px solid var(--cor-borda);
+  object-fit: cover;
+}
+
 .anexo-selector {
   display: flex;
   gap: var(--espaco-sm);

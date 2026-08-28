@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbDotsVertical, TbSearch } from "react-icons/tb";
+import { TbDotsVertical, TbSearch, TbX } from "react-icons/tb";
 import { MdGroups, MdLayers, MdMenuBook, MdSchool } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import Modal from "../../components/Modal.jsx";
 import { mapById } from "../../lib/dashboard.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { siglas } from "../../lib/format.js";
@@ -38,6 +39,11 @@ export function SecaoCursos({
   const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [menuAberto, setMenuAberto] = useState(null);
+  const [cursoParaImagem, setCursoParaImagem] = useState(null);
+  const [arquivoImagemSelecionado, setArquivoImagemSelecionado] = useState(null);
+  const [previewImagem, setPreviewImagem] = useState("");
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
+  const [mensagemImagem, setMensagemImagem] = useState({ tone: "", message: "" });
 
   useEffect(() => {
     if (menuAberto === null) {
@@ -237,6 +243,62 @@ export function SecaoCursos({
   function abrirSecaoRelacionada(section, curso) {
     setMenuAberto(null);
     onAbrirSecaoCurso?.(section, curso);
+  }
+
+  function abrirModalImagem(curso) {
+    setMenuAberto(null);
+    setCursoParaImagem(curso);
+    setArquivoImagemSelecionado(null);
+    setPreviewImagem(curso.imagemUrl || "");
+    setMensagemImagem({ tone: "", message: "" });
+  }
+
+  function fecharModalImagem() {
+    if (enviandoImagem) {
+      return;
+    }
+
+    setCursoParaImagem(null);
+    setArquivoImagemSelecionado(null);
+    setPreviewImagem("");
+  }
+
+  function selecionarArquivoImagem(event) {
+    const arquivo = event.target.files?.[0];
+    if (!arquivo) {
+      return;
+    }
+
+    setArquivoImagemSelecionado(arquivo);
+    setPreviewImagem(URL.createObjectURL(arquivo));
+  }
+
+  async function enviarImagemCurso() {
+    if (!cursoParaImagem || !arquivoImagemSelecionado) {
+      setMensagemImagem({ tone: "error", message: "Selecione uma imagem antes de salvar." });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("imagem", arquivoImagemSelecionado);
+
+    setEnviandoImagem(true);
+    setMensagemImagem({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Cursos/${cursoParaImagem.id}/imagem`, { method: "POST", body: formData });
+      fecharModalImagem();
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemImagem({ tone: "error", message: err.message || "Nao foi possivel enviar a imagem agora." });
+    } finally {
+      setEnviandoImagem(false);
+    }
   }
 
   const totalMatriculas = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.matriculas || 0), 0);
@@ -457,6 +519,13 @@ export function SecaoCursos({
                             Ver turma padrao
                           </button>
                         </li>
+                        {ehAdmin || ehCoordenador ? (
+                          <li>
+                            <button onClick={() => abrirModalImagem(curso)} role="menuitem" type="button">
+                              Alterar foto de capa
+                            </button>
+                          </li>
+                        ) : null}
                       </ul>
                     ) : null}
                   </div>
@@ -466,6 +535,37 @@ export function SecaoCursos({
           </ul>
         </>
       )}
+
+      {cursoParaImagem ? (
+        <Modal onFechar={fecharModalImagem} titulo={`Foto de capa - ${cursoParaImagem.titulo}`}>
+          <div className="campo">
+            <label className="campo__rotulo" htmlFor="curso-imagem">Imagem *</label>
+            <input
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="campo__entrada"
+              disabled={enviandoImagem}
+              id="curso-imagem"
+              onChange={selecionarArquivoImagem}
+              type="file"
+            />
+          </div>
+
+          {previewImagem ? (
+            <img alt="" className="novo-cont__miniatura" src={previewImagem} style={{ marginTop: "var(--espaco-md)" }} />
+          ) : null}
+
+          {mensagemImagem.message ? <InlineMessage tone={mensagemImagem.tone}>{mensagemImagem.message}</InlineMessage> : null}
+
+          <footer className="modal-rodape">
+            <Botao disabled={enviandoImagem} onClick={fecharModalImagem} type="button" variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={enviandoImagem || !arquivoImagemSelecionado} onClick={enviarImagemCurso} type="button" variante="primario">
+              {enviandoImagem ? "Enviando..." : "Salvar"}
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
     </div>
   );
 }

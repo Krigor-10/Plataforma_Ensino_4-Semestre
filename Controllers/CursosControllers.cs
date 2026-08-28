@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -11,10 +12,12 @@ namespace PlataformaEnsino.API.Controllers;
 public class CursosController : ControllerBase
 {
     private readonly ICursoService _cursoService;
+    private readonly IArmazenamentoArquivoService _armazenamentoService;
 
-    public CursosController(ICursoService cursoService)
+    public CursosController(ICursoService cursoService, IArmazenamentoArquivoService armazenamentoService)
     {
         _cursoService = cursoService;
+        _armazenamentoService = armazenamentoService;
     }
 
     [HttpPost]
@@ -64,6 +67,21 @@ public class CursosController : ControllerBase
                 ? "Curso marcado como aguardando coordenador."
                 : "Coordenador atribuido ao curso com sucesso."
         });
+    }
+
+    [HttpPost("{id:int}/imagem")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    [RequestSizeLimit(6_000_000)]
+    public async Task<IActionResult> EnviarImagemCurso(int id, [FromForm] IFormFile imagem)
+    {
+        var imagemUrl = await _armazenamentoService.SalvarArquivoAsync(
+            imagem,
+            "cursos",
+            new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" },
+            5_000_000L);
+
+        var cursoAtualizado = await _cursoService.DefinirImagemAsync(id, imagemUrl);
+        return Ok(cursoAtualizado);
     }
 
     private int? ObterProfessorId()

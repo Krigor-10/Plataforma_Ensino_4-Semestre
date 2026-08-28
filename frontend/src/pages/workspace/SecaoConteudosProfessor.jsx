@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbDotsVertical, TbExternalLink, TbFile, TbFileText, TbPlayerPlay, TbPlus, TbX } from "react-icons/tb";
+import { TbDotsVertical, TbExternalLink, TbFile, TbFileText, TbPhoto, TbPlayerPlay, TbPlus, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -14,7 +14,8 @@ const OPCOES_TIPO_CONTEUDO = [
   { value: "1", label: "Texto" },
   { value: "2", label: "PDF" },
   { value: "3", label: "Video" },
-  { value: "4", label: "Link externo" }
+  { value: "4", label: "Link externo" },
+  { value: "5", label: "Imagem" }
 ];
 
 const OPCOES_STATUS_PUBLICACAO = [
@@ -27,14 +28,22 @@ const ICONE_TIPO_CONTEUDO = {
   1: <TbFileText aria-hidden="true" size={22} />,
   2: <TbFile aria-hidden="true" size={22} />,
   3: <TbPlayerPlay aria-hidden="true" size={22} />,
-  4: <TbExternalLink aria-hidden="true" size={22} />
+  4: <TbExternalLink aria-hidden="true" size={22} />,
+  5: <TbPhoto aria-hidden="true" size={22} />
 };
 
 const ICONE_TIPO_CONTEUDO_GRANDE = {
   1: <TbFileText aria-hidden="true" size={32} />,
   2: <TbFile aria-hidden="true" size={32} />,
   3: <TbPlayerPlay aria-hidden="true" size={32} />,
-  4: <TbExternalLink aria-hidden="true" size={32} />
+  4: <TbExternalLink aria-hidden="true" size={32} />,
+  5: <TbPhoto aria-hidden="true" size={32} />
+};
+
+const ACEITA_ARQUIVO_POR_TIPO = {
+  2: ".pdf,application/pdf",
+  3: ".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime",
+  5: ".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
 };
 
 export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0, cursos, modulos, onRefresh, onSessionExpired, turmas, usuario }) {
@@ -46,6 +55,8 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
   const [conteudoParaExcluir, setConteudoParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [slideAtual, setSlideAtual] = useState(0);
+  const [enviandoArquivo, setEnviandoArquivo] = useState(false);
+  const [nomeArquivoSelecionado, setNomeArquivoSelecionado] = useState("");
 
   useEffect(() => {
     if (menuAbertoId === null) {
@@ -170,13 +181,14 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
 
   const tipoConteudoSelecionado = Number(dadosFormulario.tipoConteudo || OPCOES_TIPO_CONTEUDO[0].value);
   const exigeTexto = tipoConteudoSelecionado === 1;
-  const exigeUrlPdf = tipoConteudoSelecionado === 2;
-  const exigeUrlRecurso = tipoConteudoSelecionado === 3 || tipoConteudoSelecionado === 4;
+  const exigeUpload = tipoConteudoSelecionado === 2 || tipoConteudoSelecionado === 3 || tipoConteudoSelecionado === 5;
+  const exigeUrlRecurso = tipoConteudoSelecionado === 4;
 
   function limparFormulario() {
     setConteudoEmEdicaoId(null);
     setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
     setMensagemFormulario({ tone: "", message: "" });
+    setNomeArquivoSelecionado("");
   }
 
   function abrirFormularioNovoConteudo() {
@@ -231,8 +243,39 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       pesoProgresso: String(conteudo.pesoProgresso ?? 1)
     });
     setMensagemFormulario({ tone: "", message: "" });
+    setNomeArquivoSelecionado(conteudo.arquivoUrl ? nomeArquivoDaUrl(conteudo.arquivoUrl) : "");
     setFormularioAberto(true);
     setMenuAbertoId(null);
+  }
+
+  async function enviarArquivoConteudo(event) {
+    const arquivo = event.target.files?.[0];
+    if (!arquivo) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    formData.append("tipoConteudo", String(tipoConteudoSelecionado));
+
+    setEnviandoArquivo(true);
+    setMensagemFormulario({ tone: "", message: "" });
+
+    try {
+      const resposta = await apiRequest("/ConteudosDidaticos/arquivo", { method: "POST", body: formData });
+      setDadosFormulario((current) => ({ ...current, arquivoUrl: resposta.arquivoUrl }));
+      setNomeArquivoSelecionado(arquivo.name);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel enviar o arquivo agora." });
+    } finally {
+      setEnviandoArquivo(false);
+      event.target.value = "";
+    }
   }
 
   async function salvarConteudoDidatico(event) {
@@ -244,7 +287,7 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       descricao: dadosFormulario.descricao.trim(),
       tipoConteudo: Number(dadosFormulario.tipoConteudo),
       corpoTexto: exigeTexto ? dadosFormulario.corpoTexto.trim() : "",
-      arquivoUrl: exigeUrlPdf ? dadosFormulario.arquivoUrl.trim() : "",
+      arquivoUrl: exigeUpload ? dadosFormulario.arquivoUrl.trim() : "",
       linkUrl: exigeUrlRecurso ? dadosFormulario.linkUrl.trim() : "",
       turmaId: Number(dadosFormulario.turmaId),
       moduloId: Number(dadosFormulario.moduloId),
@@ -293,8 +336,13 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       return;
     }
 
-    if (exigeUrlPdf && !dadosEnvio.arquivoUrl) {
-      setMensagemFormulario({ tone: "error", message: "Informe a URL do PDF antes de publicar." });
+    if (exigeUpload && !dadosEnvio.arquivoUrl) {
+      setMensagemFormulario({ tone: "error", message: "Envie um arquivo antes de publicar." });
+      return;
+    }
+
+    if (enviandoArquivo) {
+      setMensagemFormulario({ tone: "error", message: "Aguarde o envio do arquivo terminar." });
       return;
     }
 
@@ -603,25 +651,35 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
                 </div>
               ) : null}
 
-              {exigeUrlPdf ? (
+              {exigeUpload ? (
                 <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-arquivo">URL do PDF *</label>
+                  <label className="campo__rotulo" htmlFor="conteudo-arquivo">
+                    {tipoConteudoSelecionado === 5 ? "Imagem *" : tipoConteudoSelecionado === 3 ? "Arquivo de video *" : "Arquivo PDF *"}
+                  </label>
                   <input
+                    accept={ACEITA_ARQUIVO_POR_TIPO[tipoConteudoSelecionado]}
                     className="campo__entrada"
-                    disabled={salvando}
+                    disabled={salvando || enviandoArquivo}
                     id="conteudo-arquivo"
-                    name="arquivoUrl"
-                    onChange={atualizarCampoFormulario}
-                    placeholder="https://..."
-                    type="url"
-                    value={dadosFormulario.arquivoUrl}
+                    onChange={enviarArquivoConteudo}
+                    type="file"
                   />
+                  {enviandoArquivo ? (
+                    <p className="campo__ajuda">Enviando arquivo...</p>
+                  ) : dadosFormulario.arquivoUrl ? (
+                    <p className="campo__ajuda">
+                      Arquivo atual: {nomeArquivoSelecionado || nomeArquivoDaUrl(dadosFormulario.arquivoUrl)}
+                      {tipoConteudoSelecionado === 5 ? (
+                        <img alt="" className="novo-cont__miniatura" src={dadosFormulario.arquivoUrl} />
+                      ) : null}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
               {exigeUrlRecurso ? (
                 <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-link">{tipoConteudoSelecionado === 3 ? "URL do video *" : "URL do recurso *"}</label>
+                  <label className="campo__rotulo" htmlFor="conteudo-link">URL do recurso *</label>
                   <input
                     className="campo__entrada"
                     disabled={salvando}
@@ -671,7 +729,7 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
                 <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
                   <TbX aria-hidden="true" size={15} /> Cancelar
                 </Botao>
-                <Botao disabled={salvando || !modulosDisponiveis.length} type="submit" variante="primario">
+                <Botao disabled={salvando || enviandoArquivo || !modulosDisponiveis.length} type="submit" variante="primario">
                   <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
                 </Botao>
               </footer>
@@ -754,6 +812,15 @@ function SlideConteudos({ curso, itens, menuAbertoId, onEditar, onExcluir, onTog
       )}
     </div>
   );
+}
+
+function nomeArquivoDaUrl(url) {
+  if (!url) {
+    return "";
+  }
+
+  const partes = String(url).split("/");
+  return partes[partes.length - 1] || url;
 }
 
 function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {

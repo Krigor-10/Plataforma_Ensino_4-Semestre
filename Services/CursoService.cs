@@ -89,6 +89,18 @@ public class CursoService : ICursoService
         await _cursoRepository.SalvarAlteracoesAsync();
     }
 
+    public async Task<Curso> DefinirImagemAsync(int cursoId, string imagemUrl)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        curso.ImagemUrl = imagemUrl;
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+
+        return curso;
+    }
+
     private static void ValidarCurso(Curso curso)
     {
         ArgumentNullException.ThrowIfNull(curso);

@@ -32,6 +32,8 @@ export async function demoRequest(endpoint, options = {}) {
       return listTeacherCourses();
     case /^\/Cursos\/\d+\/coordenador$/.test(path) && method === "PUT":
       return assignCourseCoordinator(getCourseCoordinatorActionId(path), payload);
+    case /^\/Cursos\/\d+\/imagem$/.test(path) && method === "POST":
+      return uploadCourseImage(getCourseImageActionId(path), payload);
     case path === "/Alunos/cadastro-completo" && method === "POST":
       return registerStudent(payload);
     case path === "/Alunos" && method === "GET":
@@ -80,6 +82,8 @@ export async function demoRequest(endpoint, options = {}) {
       return listTeacherContents();
     case path === "/ConteudosDidaticos" && method === "POST":
       return createContent(payload);
+    case path === "/ConteudosDidaticos/arquivo" && method === "POST":
+      return uploadContentFile(payload);
     case /^\/ConteudosDidaticos\/\d+$/.test(path) && method === "PUT":
       return updateContent(getNumericId(path), payload);
     case /^\/ConteudosDidaticos\/\d+$/.test(path) && method === "DELETE":
@@ -194,6 +198,25 @@ function assignCourseCoordinator(courseId, coordinatorIdPayload) {
   curso.coordenadorId = coordenador.id;
   saveDemoDb(db);
   return { mensagem: "Coordenador demo atribuido ao curso com sucesso." };
+}
+
+function uploadCourseImage(courseId, payload) {
+  requireManager();
+
+  const imagem = payload.imagem;
+  if (!(imagem instanceof File) || imagem.size === 0) {
+    throw new DemoApiError("Nenhuma imagem foi enviada.", 400);
+  }
+
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  curso.imagemUrl = URL.createObjectURL(imagem);
+  saveDemoDb(db);
+  return clone(curso);
 }
 
 function registerStudent(payload) {
@@ -1094,6 +1117,17 @@ function completeStudentContent(contentId) {
   return buildStudentProgressSnapshot(db, user.id);
 }
 
+function uploadContentFile(payload) {
+  requireProfessor();
+
+  const arquivo = payload.arquivo;
+  if (!(arquivo instanceof File) || arquivo.size === 0) {
+    throw new DemoApiError("Nenhum arquivo foi enviado.", 400);
+  }
+
+  return { arquivoUrl: URL.createObjectURL(arquivo) };
+}
+
 function createContent(payload) {
   const user = requireProfessor();
   const db = readDemoDb();
@@ -1369,7 +1403,7 @@ function validateContentPayload(db, user, payload) {
     throw new DemoApiError("Selecione um modulo demo.", 400);
   }
 
-  if (![1, 2, 3, 4].includes(tipoConteudo)) {
+  if (![1, 2, 3, 4, 5].includes(tipoConteudo)) {
     throw new DemoApiError("Tipo de conteudo demo invalido.", 400);
   }
 
@@ -2639,6 +2673,14 @@ function parseBody(body) {
     return {};
   }
 
+  if (body instanceof FormData) {
+    const objeto = {};
+    for (const [chave, valor] of body.entries()) {
+      objeto[chave] = valor;
+    }
+    return objeto;
+  }
+
   if (typeof body === "string") {
     try {
       return JSON.parse(body);
@@ -2667,6 +2709,17 @@ function getNumericId(path) {
 
 function getEnrollmentActionId(path) {
   const match = String(path).match(/^\/Matriculas\/(\d+)\/(?:aprovar|rejeitar)$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getCourseImageActionId(path) {
+  const match = String(path).match(/^\/Cursos\/(\d+)\/imagem$/);
   const id = Number(match?.[1]);
 
   if (!Number.isInteger(id)) {

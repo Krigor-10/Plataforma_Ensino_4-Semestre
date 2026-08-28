@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
@@ -13,10 +14,12 @@ namespace PlataformaEnsino.API.Controllers;
 public class ConteudosDidaticosController : ControllerBase
 {
     private readonly IConteudoDidaticoService _conteudoService;
+    private readonly IArmazenamentoArquivoService _armazenamentoService;
 
-    public ConteudosDidaticosController(IConteudoDidaticoService conteudoService)
+    public ConteudosDidaticosController(IConteudoDidaticoService conteudoService, IArmazenamentoArquivoService armazenamentoService)
     {
         _conteudoService = conteudoService;
+        _armazenamentoService = armazenamentoService;
     }
 
     [HttpGet]
@@ -58,6 +61,23 @@ public class ConteudosDidaticosController : ControllerBase
 
         var conteudo = await _conteudoService.ObterConteudoPorProfessorAsync(id, professorId.Value);
         return Ok(MapResponse(conteudo));
+    }
+
+    [HttpPost("arquivo")]
+    [Authorize(Roles = "Professor")]
+    [RequestSizeLimit(105_000_000)]
+    public async Task<IActionResult> EnviarArquivo([FromForm] IFormFile arquivo, [FromForm] TipoConteudoDidatico tipoConteudo)
+    {
+        var (extensoesPermitidas, tamanhoMaximoBytes) = tipoConteudo switch
+        {
+            TipoConteudoDidatico.Imagem => (new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }, 5_000_000L),
+            TipoConteudoDidatico.Pdf => (new[] { ".pdf" }, 20_000_000L),
+            TipoConteudoDidatico.Video => (new[] { ".mp4", ".webm", ".mov" }, 100_000_000L),
+            _ => throw new ArgumentException("Tipo de conteudo nao aceita upload de arquivo.")
+        };
+
+        var arquivoUrl = await _armazenamentoService.SalvarArquivoAsync(arquivo, "conteudos", extensoesPermitidas, tamanhoMaximoBytes);
+        return Ok(new { arquivoUrl });
     }
 
     [HttpPost]

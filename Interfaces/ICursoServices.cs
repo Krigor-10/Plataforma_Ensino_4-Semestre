@@ -10,4 +10,5 @@ public interface ICursoService
     Task<IEnumerable<Curso>> ListarCursosPorProfessorAsync(int professorId);
     Task AdicionarModuloAsync(int cursoId, Modulo novoModulo);
     Task AtribuirCoordenadorAsync(int cursoId, int coordenadorId);
+    Task<Curso> DefinirImagemAsync(int cursoId, string imagemUrl);
 }

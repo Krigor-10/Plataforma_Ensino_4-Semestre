@@ -5,7 +5,8 @@ public enum TipoConteudoDidatico
     Texto = 1,
     Pdf = 2,
     Video = 3,
-    Link = 4
+    Link = 4,
+    Imagem = 5
 }
 
 public enum StatusPublicacao

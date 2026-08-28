@@ -65,7 +65,8 @@ export function normalizeContentType(type) {
     1: "Texto",
     2: "PDF",
     3: "Video",
-    4: "Link"
+    4: "Link",
+    5: "Imagem"
   };
 
   if (typeof type === "number") {

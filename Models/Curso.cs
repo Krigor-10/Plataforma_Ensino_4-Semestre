@@ -22,6 +22,9 @@ public class Curso
     [Range(0, double.MaxValue)]
     public decimal Preco { get; set; }
 
+    [StringLength(500)]
+    public string? ImagemUrl { get; set; }
+
     public int? CoordenadorId { get; set; }
     public int CriadoPor { get; set; }
 

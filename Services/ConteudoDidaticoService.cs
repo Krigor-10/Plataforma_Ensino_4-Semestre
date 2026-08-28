@@ -214,16 +214,17 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
                 break;
 
             case TipoConteudoDidatico.Pdf:
+            case TipoConteudoDidatico.Video:
+            case TipoConteudoDidatico.Imagem:
                 if (string.IsNullOrWhiteSpace(arquivoUrlNormalizado))
                 {
-                    throw new ArgumentException("Informe a URL do PDF para esse tipo de conteudo.");
+                    throw new ArgumentException("Envie um arquivo para esse tipo de conteudo.");
                 }
 
                 corpoTextoNormalizado = string.Empty;
                 linkUrlNormalizado = string.Empty;
                 break;
 
-            case TipoConteudoDidatico.Video:
             case TipoConteudoDidatico.Link:
                 if (string.IsNullOrWhiteSpace(linkUrlNormalizado))
                 {

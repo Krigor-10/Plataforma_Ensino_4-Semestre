@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using PlataformaEnsino.API.Common;
@@ -67,6 +68,7 @@ builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
+builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -122,8 +124,17 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
+var pastaUploads = Path.Combine(app.Environment.ContentRootPath, "Storage", "Uploads");
+Directory.CreateDirectory(Path.Combine(pastaUploads, "conteudos"));
+Directory.CreateDirectory(Path.Combine(pastaUploads, "cursos"));
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(pastaUploads),
+    RequestPath = "/uploads"
+});
 app.UseApiExceptionMiddleware();
 
 
