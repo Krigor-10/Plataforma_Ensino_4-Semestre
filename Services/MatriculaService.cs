@@ -57,6 +57,22 @@ public class MatriculaService : IMatriculaService
         return await _matriculaRepository.ObterMatriculaCompletaAsync(novaMatricula.Id) ?? novaMatricula;
     }
 
+    public async Task<Matricula> SolicitarMatriculaAsync(int alunoId, int cursoId)
+    {
+        var novaMatricula = new Matricula
+        {
+            AlunoId = alunoId,
+            CursoId = cursoId,
+            CodigoRegistro = await GerarCodigoMatriculaAsync()
+        };
+        novaMatricula.RegistrarSolicitacao(DateTime.UtcNow);
+
+        await _matriculaRepository.AdicionarAsync(novaMatricula);
+        await _matriculaRepository.SalvarAlteracoesAsync();
+
+        return novaMatricula;
+    }
+
     public async Task<Matricula> ObterMatriculaPorIdAsync(int id)
     {
         return await _matriculaRepository.ObterMatriculaCompletaAsync(id)
@@ -97,6 +113,11 @@ public class MatriculaService : IMatriculaService
         var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
             ?? throw new KeyNotFoundException("Matrícula não encontrada.");
 
+        if (matricula.Status != StatusMatricula.Pendente)
+        {
+            throw new InvalidOperationException("Apenas matriculas pendentes podem ser aprovadas.");
+        }
+
         var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
             ?? throw new KeyNotFoundException("Turma não encontrada.");
 
@@ -108,25 +129,7 @@ public class MatriculaService : IMatriculaService
         var aluno = await _alunoRepository.ObterPorIdAsync(matricula.AlunoId)
             ?? throw new KeyNotFoundException("Aluno não encontrado.");
 
-        if (string.IsNullOrWhiteSpace(matricula.CodigoRegistro))
-        {
-            matricula.CodigoRegistro = await GerarCodigoMatriculaAsync();
-        }
-
-        var matriculaAtiva = await ObterMatriculaAprovadaNaTurmaAsync(matricula, turma);
-        if (matriculaAtiva is not null)
-        {
-            await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, turma, aluno);
-            await SalvarComProtecaoDeConcorrenciaAsync();
-            return;
-        }
-
-        await GarantirAlunoSemOutraMatriculaPendenteNaTurmaAsync(matricula, turma);
-
-        matricula.AprovarComTurma(turmaId, matricula.CursoId);
-        await GarantirCodigoAlunoAsync(aluno);
-
-        _matriculaRepository.Atualizar(matricula);
+        await AprovarNaTurmaResolvidaAsync(matricula, turma, aluno);
         await SalvarComProtecaoDeConcorrenciaAsync();
     }
 
@@ -206,20 +209,11 @@ public class MatriculaService : IMatriculaService
         return $"***.***.***-{numeros[^2]}{numeros[^1]}";
     }
 
-    private async Task<string> GerarCodigoMatriculaAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarMatricula();
-
-            if (!await _context.Matriculas.AnyAsync(matricula => matricula.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para a matricula.");
-    }
+    private Task<string> GerarCodigoMatriculaAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarMatricula,
+            codigo => _context.Matriculas.AnyAsync(matricula => matricula.CodigoRegistro == codigo),
+            "a matricula");
 
     private async Task GarantirCodigoAlunoAsync(Aluno aluno)
     {
@@ -234,20 +228,11 @@ public class MatriculaService : IMatriculaService
         aluno.Matricula = await GerarCodigoAlunoAsync(aluno.Id);
     }
 
-    private async Task<string> GerarCodigoAlunoAsync(int alunoId)
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarAluno();
-
-            if (!await _context.Alunos.AnyAsync(aluno => aluno.Id != alunoId && aluno.Matricula == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para o aluno.");
-    }
+    private Task<string> GerarCodigoAlunoAsync(int alunoId) =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarAluno,
+            codigo => _context.Alunos.AnyAsync(aluno => aluno.Id != alunoId && aluno.Matricula == codigo),
+            "o aluno");
 
     private async Task<AprovacaoMatriculaItemDto> AprovarMatriculaAutomaticamenteCoreAsync(int matriculaId)
     {
@@ -266,11 +251,34 @@ public class MatriculaService : IMatriculaService
             ?? throw new KeyNotFoundException("Aluno nao encontrado.");
 
         var turma = await ResolverTurmaAutomaticaAsync(matricula);
+        var matriculaResultante = await AprovarNaTurmaResolvidaAsync(matricula, turma, aluno);
 
+        return new AprovacaoMatriculaItemDto
+        {
+            MatriculaId = matriculaResultante.Id,
+            CodigoRegistro = matriculaResultante.CodigoRegistro,
+            CursoId = matriculaResultante.CursoId,
+            TurmaId = turma.Id,
+            NomeTurma = turma.NomeTurma
+        };
+    }
+
+    /// <summary>
+    /// Aprova uma matricula pendente numa turma ja resolvida — usado tanto pela
+    /// aprovacao manual com turma explicita (<see cref="AprovarMatriculaAsync"/>)
+    /// quanto pela aprovacao automatica em lote
+    /// (<see cref="AprovarMatriculaAutomaticamenteCoreAsync"/>), que só diferem em
+    /// como a turma é obtida. Retorna a matricula que ficou como a aprovada na
+    /// turma: a própria <paramref name="matricula"/>, ou a matricula já aprovada
+    /// anteriormente caso a pendência seja consolidada nela.
+    /// </summary>
+    private async Task<Matricula> AprovarNaTurmaResolvidaAsync(Matricula matricula, Turma turma, Aluno aluno)
+    {
         var matriculaAtiva = await ObterMatriculaAprovadaNaTurmaAsync(matricula, turma);
         if (matriculaAtiva is not null)
         {
-            return await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, turma, aluno);
+            await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, turma, aluno);
+            return matriculaAtiva;
         }
 
         await GarantirAlunoSemOutraMatriculaPendenteNaTurmaAsync(matricula, turma);
@@ -283,14 +291,7 @@ public class MatriculaService : IMatriculaService
         matricula.AprovarComTurma(turma.Id, turma.CursoId);
         await GarantirCodigoAlunoAsync(aluno);
 
-        return new AprovacaoMatriculaItemDto
-        {
-            MatriculaId = matricula.Id,
-            CodigoRegistro = matricula.CodigoRegistro,
-            CursoId = matricula.CursoId,
-            TurmaId = turma.Id,
-            NomeTurma = turma.NomeTurma
-        };
+        return matricula;
     }
 
     private async Task<Turma> ResolverTurmaAutomaticaAsync(Matricula matricula)

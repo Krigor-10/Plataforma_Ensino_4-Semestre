@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -146,9 +146,5 @@ public class TurmasController : ControllerBase
         return Ok(new { mensagem = "Professor atribuido a turma com sucesso." });
     }
 
-    private int? ObterProfessorId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var professorId) ? professorId : null;
-    }
+    private int? ObterProfessorId() => User.ObterUsuarioId();
 }

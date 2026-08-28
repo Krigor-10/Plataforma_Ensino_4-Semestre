@@ -10,10 +10,12 @@ namespace PlataformaEnsino.API.Services;
 public class AlunoService : IAlunoService
 {
     private readonly PlataformaContext _context;
+    private readonly IMatriculaService _matriculaService;
 
-    public AlunoService(PlataformaContext context)
+    public AlunoService(PlataformaContext context, IMatriculaService matriculaService)
     {
         _context = context;
+        _matriculaService = matriculaService;
     }
 
     public async Task<IEnumerable<AlunoResponseDto>> ListarAlunosAsync()
@@ -37,23 +39,9 @@ public class AlunoService : IAlunoService
 
         return new AlunoResponseDto
         {
-            Id = aluno.Id,
-            Nome = aluno.Nome,
-            Email = aluno.Email,
-            Cpf = aluno.Cpf,
-            Telefone = aluno.Telefone,
-            Cep = aluno.Cep,
-            Rua = aluno.Rua,
-            Numero = aluno.Numero,
-            Bairro = aluno.Bairro,
-            Cidade = aluno.Cidade,
-            Estado = aluno.Estado,
-            TipoUsuario = aluno.TipoUsuario,
-            DataCadastro = aluno.DataCadastro,
-            Ativo = aluno.Ativo,
             Matricula = aluno.Matricula,
             TurmaAtual = turmasAtivas.Count > 0 ? string.Join(", ", turmasAtivas) : string.Empty
-        };
+        }.PreencherCamposBase(aluno);
     }
 
     public async Task<Aluno> CriarAlunoAsync(CriarAlunoDto dto)
@@ -134,46 +122,13 @@ public class AlunoService : IAlunoService
         _context.Alunos.Add(aluno);
         await _context.SaveChangesAsync();
 
-        var matricula = new Matricula
-        {
-            AlunoId = aluno.Id,
-            CursoId = dto.CursoId,
-            CodigoRegistro = await GerarCodigoMatriculaAsync()
-        };
-        matricula.RegistrarSolicitacao(DateTime.UtcNow);
-
-        _context.Matriculas.Add(matricula);
-        await _context.SaveChangesAsync();
+        await _matriculaService.SolicitarMatriculaAsync(aluno.Id, dto.CursoId);
         await transaction.CommitAsync();
     }
 
-    private async Task<string> GerarCodigoMatriculaAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarMatricula();
-
-            if (!await _context.Matriculas.AnyAsync(matricula => matricula.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para a matricula.");
-    }
-
-    private async Task<string> GerarCodigoAlunoAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarAluno();
-
-            if (!await _context.Alunos.AnyAsync(aluno => aluno.Matricula == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para o aluno.");
-    }
+    private Task<string> GerarCodigoAlunoAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarAluno,
+            codigo => _context.Alunos.AnyAsync(aluno => aluno.Matricula == codigo),
+            "o aluno");
 }

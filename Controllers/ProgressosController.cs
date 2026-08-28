@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Controllers;
@@ -42,15 +42,7 @@ public class ProgressosController : ControllerBase
         return Ok(snapshot);
     }
 
-    private int? ObterAlunoId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var alunoId) ? alunoId : null;
-    }
+    private int? ObterAlunoId() => User.ObterUsuarioId();
 
-    private bool UsuarioAtualPodeAcessarAluno(int alunoId)
-    {
-        var usuarioId = ObterAlunoId();
-        return usuarioId.HasValue && usuarioId.Value == alunoId;
-    }
+    private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
 }

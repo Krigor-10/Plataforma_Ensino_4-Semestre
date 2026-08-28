@@ -127,18 +127,9 @@ public class ModuloService : IModuloService
         }
     }
 
-    private async Task<string> GerarCodigoModuloAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarModulo();
-
-            if (!await _context.Modulos.AnyAsync(modulo => modulo.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para o modulo.");
-    }
+    private Task<string> GerarCodigoModuloAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarModulo,
+            codigo => _context.Modulos.AnyAsync(modulo => modulo.CodigoRegistro == codigo),
+            "o modulo");
 }

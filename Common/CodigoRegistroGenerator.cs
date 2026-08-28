@@ -32,4 +32,26 @@ public static class CodigoRegistroGenerator
 
         return $"{prefixo}-{new string(token)}";
     }
+
+    /// <summary>
+    /// Gera um código com <paramref name="gerarCodigo"/> e tenta até 10 vezes até encontrar
+    /// um que não esteja em uso segundo <paramref name="codigoEmUsoAsync"/>.
+    /// </summary>
+    public static async Task<string> GerarCodigoUnicoAsync(
+        Func<string> gerarCodigo,
+        Func<string, Task<bool>> codigoEmUsoAsync,
+        string descricaoEntidade)
+    {
+        for (var tentativa = 0; tentativa < 10; tentativa++)
+        {
+            var codigo = gerarCodigo();
+
+            if (!await codigoEmUsoAsync(codigo))
+            {
+                return codigo;
+            }
+        }
+
+        throw new InvalidOperationException($"Nao foi possivel gerar um codigo de registro unico para {descricaoEntidade}.");
+    }
 }

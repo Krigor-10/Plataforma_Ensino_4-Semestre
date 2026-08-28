@@ -5,6 +5,7 @@ namespace PlataformaEnsino.API.DTOs;
 public class MatriculaResponseDto
 {
     public int Id { get; set; }
+    public string CodigoRegistro { get; set; } = string.Empty;
     public int AlunoId { get; set; }
     public int CursoId { get; set; }
     public int? TurmaId { get; set; }

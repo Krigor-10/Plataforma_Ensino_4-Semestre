@@ -61,18 +61,9 @@ public class CoordenadorService : ICoordenadorService
         return coordenador;
     }
 
-    private async Task<string> GerarCodigoCoordenadorAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarCoordenador();
-
-            if (!await _context.Coordenadores.AnyAsync(coordenador => coordenador.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para o coordenador.");
-    }
+    private Task<string> GerarCodigoCoordenadorAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarCoordenador,
+            codigo => _context.Coordenadores.AnyAsync(coordenador => coordenador.CodigoRegistro == codigo),
+            "o coordenador");
 }

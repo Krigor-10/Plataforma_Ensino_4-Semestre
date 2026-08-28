@@ -62,18 +62,9 @@ public class ProfessorService : IProfessorService
         return professor;
     }
 
-    private async Task<string> GerarCodigoProfessorAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarProfessor();
-
-            if (!await _context.Professores.AnyAsync(professor => professor.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para o professor.");
-    }
+    private Task<string> GerarCodigoProfessorAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarProfessor,
+            codigo => _context.Professores.AnyAsync(professor => professor.CodigoRegistro == codigo),
+            "o professor");
 }

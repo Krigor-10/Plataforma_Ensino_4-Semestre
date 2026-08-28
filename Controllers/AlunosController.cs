@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -20,7 +21,7 @@ namespace PlataformaEnsino.API.Controllers
         // GET: api/Alunos
         [HttpGet]
         [Authorize(Roles = "Admin,Coordenador")]
-        public async Task<ActionResult<IEnumerable<Aluno>>> GetAlunos()
+        public async Task<ActionResult<IEnumerable<AlunoResponseDto>>> GetAlunos()
         {
             return Ok(await _alunoService.ListarAlunosAsync());
         }
@@ -46,27 +47,11 @@ namespace PlataformaEnsino.API.Controllers
             });
         }
 
-        private static AlunoResponseDto MapResponse(Aluno aluno)
-        {
-            return new AlunoResponseDto
+        private static AlunoResponseDto MapResponse(Aluno aluno) =>
+            new AlunoResponseDto
             {
-                Id = aluno.Id,
-                Nome = aluno.Nome,
-                Email = aluno.Email,
-                Cpf = aluno.Cpf,
-                Telefone = aluno.Telefone,
-                Cep = aluno.Cep,
-                Rua = aluno.Rua,
-                Numero = aluno.Numero,
-                Bairro = aluno.Bairro,
-                Cidade = aluno.Cidade,
-                Estado = aluno.Estado,
-                TipoUsuario = aluno.TipoUsuario,
-                DataCadastro = aluno.DataCadastro,
-                Ativo = aluno.Ativo,
                 Matricula = aluno.Matricula,
                 TurmaAtual = string.Empty
-            };
-        }
+            }.PreencherCamposBase(aluno);
     }
 }

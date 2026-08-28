@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -33,26 +34,10 @@ namespace PlataformaEnsino.API.Controllers
             return Ok(MapResponse(coordenador));
         }
 
-        private static CoordenadorResponseDto MapResponse(Coordenador coordenador)
-        {
-            return new CoordenadorResponseDto
+        private static CoordenadorResponseDto MapResponse(Coordenador coordenador) =>
+            new CoordenadorResponseDto
             {
-                Id = coordenador.Id,
-                CodigoRegistro = coordenador.CodigoRegistro,
-                Nome = coordenador.Nome,
-                Email = coordenador.Email,
-                Cpf = coordenador.Cpf,
-                Telefone = coordenador.Telefone,
-                Cep = coordenador.Cep,
-                Rua = coordenador.Rua,
-                Numero = coordenador.Numero,
-                Bairro = coordenador.Bairro,
-                Cidade = coordenador.Cidade,
-                Estado = coordenador.Estado,
-                TipoUsuario = coordenador.TipoUsuario,
-                DataCadastro = coordenador.DataCadastro,
-                Ativo = coordenador.Ativo
-            };
-        }
+                CodigoRegistro = coordenador.CodigoRegistro
+            }.PreencherCamposBase(coordenador);
     }
 }

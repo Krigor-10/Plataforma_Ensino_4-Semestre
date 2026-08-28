@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -54,11 +54,7 @@ public class CertificadosController : ControllerBase
         return Ok(MapResponse(matricula));
     }
 
-    private int? ObterAlunoId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var alunoId) ? alunoId : null;
-    }
+    private int? ObterAlunoId() => User.ObterUsuarioId();
 
     private static CertificadoResponseDto MapResponse(Matricula matricula)
     {

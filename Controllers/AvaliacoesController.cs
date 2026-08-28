@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -192,23 +192,11 @@ public class AvaliacoesController : ControllerBase
         return Ok(tentativa);
     }
 
-    private int? ObterProfessorId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var professorId) ? professorId : null;
-    }
+    private int? ObterProfessorId() => User.ObterUsuarioId();
 
-    private int? ObterAlunoId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var alunoId) ? alunoId : null;
-    }
+    private int? ObterAlunoId() => User.ObterUsuarioId();
 
-    private bool UsuarioAtualPodeAcessarAluno(int alunoId)
-    {
-        var usuarioId = ObterAlunoId();
-        return usuarioId.HasValue && usuarioId.Value == alunoId;
-    }
+    private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
 
     private static AvaliacaoResponseDto MapResponse(Avaliacao avaliacao)
     {

@@ -100,20 +100,11 @@ public class TurmaService : ITurmaService
         await _turmaRepository.SalvarAlteracoesAsync();
     }
 
-    private async Task<string> GerarCodigoTurmaAsync()
-    {
-        for (var tentativa = 0; tentativa < 10; tentativa++)
-        {
-            var codigo = CodigoRegistroGenerator.GerarTurma();
-
-            if (!await _context.Turmas.AnyAsync(turma => turma.CodigoRegistro == codigo))
-            {
-                return codigo;
-            }
-        }
-
-        throw new InvalidOperationException("Nao foi possivel gerar um codigo de registro unico para a turma.");
-    }
+    private Task<string> GerarCodigoTurmaAsync() =>
+        CodigoRegistroGenerator.GerarCodigoUnicoAsync(
+            CodigoRegistroGenerator.GerarTurma,
+            codigo => _context.Turmas.AnyAsync(turma => turma.CodigoRegistro == codigo),
+            "a turma");
 
     private static string MontarNomeTurmaPadrao(string tituloCurso)
     {

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
+using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Controllers;
 
@@ -19,10 +21,10 @@ public class MatriculasController : ControllerBase
 
     [HttpGet]
     [Authorize(Roles = "Admin,Coordenador")]
-    public async Task<IActionResult> GetMatriculas()
+    public async Task<ActionResult<IEnumerable<MatriculaResponseDto>>> GetMatriculas()
     {
         var matriculas = await _matriculaService.ListarMatriculasAsync();
-        return Ok(matriculas);
+        return Ok(matriculas.Select(MapResponse));
     }
 
     [HttpGet("pendentes")]
@@ -34,7 +36,7 @@ public class MatriculasController : ControllerBase
     }
 
     [HttpGet("aluno/{alunoId:int}")]
-    public async Task<IActionResult> GetMatriculasPorAluno(int alunoId)
+    public async Task<ActionResult<IEnumerable<MatriculaResponseDto>>> GetMatriculasPorAluno(int alunoId)
     {
         if (!UsuarioAtualPodeAcessarAluno(alunoId))
         {
@@ -42,11 +44,11 @@ public class MatriculasController : ControllerBase
         }
 
         var matriculas = await _matriculaService.ListarMatriculasPorAlunoAsync(alunoId);
-        return Ok(matriculas);
+        return Ok(matriculas.Select(MapResponse));
     }
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetMatriculaPorId(int id)
+    public async Task<ActionResult<MatriculaResponseDto>> GetMatriculaPorId(int id)
     {
         var matricula = await _matriculaService.ObterMatriculaPorIdAsync(id);
 
@@ -55,11 +57,11 @@ public class MatriculasController : ControllerBase
             return Forbid();
         }
 
-        return Ok(matricula);
+        return Ok(MapResponse(matricula));
     }
 
     [HttpPost]
-    public async Task<IActionResult> PostMatricula([FromBody] MatriculaCriacaoDto request)
+    public async Task<ActionResult<MatriculaResponseDto>> PostMatricula([FromBody] MatriculaCriacaoDto request)
     {
         if (!UsuarioAtualPodeAcessarAluno(request.AlunoId))
         {
@@ -67,7 +69,7 @@ public class MatriculasController : ControllerBase
         }
 
         var matricula = await _matriculaService.MatricularAlunoAsync(request.AlunoId, request.TurmaId);
-        return CreatedAtAction(nameof(GetMatriculaPorId), new { id = matricula.Id }, matricula);
+        return CreatedAtAction(nameof(GetMatriculaPorId), new { id = matricula.Id }, MapResponse(matricula));
     }
 
     [HttpPut("{id:int}/aprovar")]
@@ -94,14 +96,18 @@ public class MatriculasController : ControllerBase
         return Ok(new { mensagem = "Matrícula rejeitada com sucesso." });
     }
 
-    private bool UsuarioAtualPodeAcessarAluno(int alunoId)
-    {
-        if (User.IsInRole("Admin") || User.IsInRole("Coordenador"))
-        {
-            return true;
-        }
+    private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
 
-        var usuarioId = User.FindFirst("usuarioId")?.Value;
-        return int.TryParse(usuarioId, out var id) && id == alunoId;
-    }
+    private static MatriculaResponseDto MapResponse(Matricula matricula) =>
+        new MatriculaResponseDto
+        {
+            Id = matricula.Id,
+            CodigoRegistro = matricula.CodigoRegistro,
+            AlunoId = matricula.AlunoId,
+            CursoId = matricula.CursoId,
+            TurmaId = matricula.TurmaId,
+            DataSolicitacao = matricula.DataSolicitacao,
+            NotaFinal = matricula.NotaFinal,
+            Status = matricula.Status
+        };
 }

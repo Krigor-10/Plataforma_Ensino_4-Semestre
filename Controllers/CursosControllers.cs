@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
 
@@ -84,9 +84,5 @@ public class CursosController : ControllerBase
         return Ok(cursoAtualizado);
     }
 
-    private int? ObterProfessorId()
-    {
-        var rawId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("usuarioId");
-        return int.TryParse(rawId, out var professorId) ? professorId : null;
-    }
+    private int? ObterProfessorId() => User.ObterUsuarioId();
 }

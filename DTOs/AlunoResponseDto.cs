@@ -1,6 +1,6 @@
 namespace PlataformaEnsino.API.DTOs;
 
-public class AlunoResponseDto
+public class AlunoResponseDto : IUsuarioResponseDto
 {
     public int Id { get; set; }
     public string Nome { get; set; } = string.Empty;

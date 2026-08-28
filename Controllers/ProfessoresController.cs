@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -33,27 +34,11 @@ namespace PlataformaEnsino.API.Controllers
             return Ok(MapResponse(professor));
         }
 
-        private static ProfessorResponseDto MapResponse(Professor professor)
-        {
-            return new ProfessorResponseDto
+        private static ProfessorResponseDto MapResponse(Professor professor) =>
+            new ProfessorResponseDto
             {
-                Id = professor.Id,
                 CodigoRegistro = professor.CodigoRegistro,
-                Nome = professor.Nome,
-                Email = professor.Email,
-                Cpf = professor.Cpf,
-                Telefone = professor.Telefone,
-                Cep = professor.Cep,
-                Rua = professor.Rua,
-                Numero = professor.Numero,
-                Bairro = professor.Bairro,
-                Cidade = professor.Cidade,
-                Estado = professor.Estado,
-                TipoUsuario = professor.TipoUsuario,
-                DataCadastro = professor.DataCadastro,
-                Ativo = professor.Ativo,
                 Especialidade = professor.Especialidade
-            };
-        }
+            }.PreencherCamposBase(professor);
     }
 }
