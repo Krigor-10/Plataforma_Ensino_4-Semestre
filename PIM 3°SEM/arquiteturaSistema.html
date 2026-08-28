@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitetura do Sistema — PlataformaEnsino</title>
+    <style>
+
+        /* ═══════════════════════════════════════════
+           CONFIGURAÇÃO DE PÁGINA — ABNT NBR 14724
+           A4: 210×297 mm
+           Margens: Superior 3cm | Esquerda 3cm
+                    Inferior 2cm | Direita  2cm
+           Sem cabeçalho nem rodapé
+        ═══════════════════════════════════════════ */
+        @page {
+            size: 210mm 297mm;
+            margin: 3cm 2cm 2cm 3cm;
+        }
+
+        /* ═══════════════════════════════════════════
+           RESET E BASE
+        ═══════════════════════════════════════════ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           TIPOGRAFIA ABNT
+           Fonte: Arial 12pt
+           Espaçamento: 1,5
+           Alinhamento: Justificado
+        ═══════════════════════════════════════════ */
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000;
+            background: #fff;
+            text-align: justify;
+        }
+
+        /* Simulação de página A4 na tela */
+        @media screen {
+            html { background: #d0d0d0; }
+            body {
+                max-width: 210mm;
+                min-height: 297mm;
+                margin: 20px auto;
+                padding: 3cm 2cm 2cm 3cm;
+                background: #fff;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           TÍTULOS — ABNT
+        ═══════════════════════════════════════════ */
+        h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 18pt;
+            margin-bottom: 6pt;
+            line-height: 1.5;
+        }
+
+        h2 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 14pt;
+            margin-bottom: 4pt;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════
+           PARÁGRAFOS
+        ═══════════════════════════════════════════ */
+        p {
+            font-size: 12pt;
+            line-height: 1.5;
+            text-indent: 1.5cm;
+            text-align: justify;
+            margin-bottom: 0;
+        }
+
+        p.no-indent {
+            text-indent: 0;
+        }
+
+        ul, ol {
+            margin: 6pt 0 10pt 2cm;
+            font-size: 12pt;
+            line-height: 1.5;
+        }
+
+        li {
+            margin-bottom: 4pt;
+            text-align: justify;
+        }
+
+        /* ═══════════════════════════════════════════
+           TABELAS — ABNT
+        ═══════════════════════════════════════════ */
+        .tbl-caption {
+            font-size: 12pt;
+            font-weight: normal;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 12pt;
+            margin-bottom: 3pt;
+            line-height: 1.5;
+        }
+
+        .tbl-wrap {
+            margin-bottom: 6pt;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+
+        thead th {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            background: #e8e8e8;
+            font-weight: bold;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        tbody td {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) td {
+            background: #f5f5f5;
+        }
+
+        .td-code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            white-space: nowrap;
+        }
+
+        .tbl-source {
+            font-size: 10pt;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 2pt;
+            margin-bottom: 12pt;
+            color: #333;
+        }
+
+        /* ═══════════════════════════════════════════
+           CÓDIGO INLINE
+        ═══════════════════════════════════════════ */
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+        }
+
+        /* ═══════════════════════════════════════════
+           NOTA / AVISO
+        ═══════════════════════════════════════════ */
+        .nota {
+            border-left: 3pt solid #555;
+            padding: 6pt 10pt;
+            margin: 10pt 0 10pt 0;
+            font-size: 11pt;
+            line-height: 1.5;
+            text-align: justify;
+            text-indent: 0;
+            background: #f9f9f9;
+        }
+
+        /* ═══════════════════════════════════════════
+           CABEÇALHO DO DOCUMENTO (não é capa)
+        ═══════════════════════════════════════════ */
+        .doc-header {
+            text-align: center;
+            margin-bottom: 18pt;
+            padding-bottom: 8pt;
+            border-bottom: 1px solid #000;
+        }
+
+        .doc-header .doc-titulo {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-indent: 0;
+            line-height: 1.5;
+        }
+
+        .doc-header .doc-sub {
+            font-size: 12pt;
+            text-indent: 0;
+            line-height: 1.5;
+        }
+
+        .doc-header .doc-meta {
+            font-size: 10pt;
+            color: #555;
+            text-indent: 0;
+            margin-top: 4pt;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════
+           FIGURAS (DIAGRAMAS)
+        ═══════════════════════════════════════════ */
+        figure {
+            margin: 12pt 0 4pt 0;
+            text-align: center;
+        }
+
+        figure svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        figcaption {
+            font-size: 10pt;
+            text-align: center;
+            text-indent: 0;
+            margin-top: 6pt;
+            margin-bottom: 12pt;
+            color: #333;
+        }
+
+        /* ═══════════════════════════════════════════
+           CONTROLE DE QUEBRA DE PÁGINA
+        ═══════════════════════════════════════════ */
+        @media print {
+            h1 { page-break-after: avoid; break-after: avoid; }
+            h2 { page-break-after: avoid; break-after: avoid; }
+            .tbl-caption { page-break-after: avoid; break-after: avoid; }
+            .tbl-wrap { page-break-inside: avoid; break-inside: avoid; }
+            tbody tr { page-break-inside: avoid; break-inside: avoid; }
+            thead { display: table-header-group; }
+            figure { page-break-inside: avoid; break-inside: avoid; }
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     CABEÇALHO DO DOCUMENTO
+══════════════════════════════════════ -->
+<div class="doc-header">
+    <p class="doc-titulo">Arquitetura do Sistema</p>
+    <p class="doc-sub">EdTech Academy — PlataformaEnsino (Sistema Acadêmico Integrado)</p>
+    <p class="doc-meta">Projeto Integrado Multidisciplinar — 4º Semestre · Análise e Desenvolvimento de Sistemas · Universidade Paulista — UNIP</p>
+    <p class="doc-meta">Krigor de Sousa Nasare · Heitor Henrique Pereira Nadir · Maria Isabel Branco Iterce da Silva · Nicolas Pimentel dos Santos</p>
+</div>
+
+<!-- ══════════════════════════════════════
+     1 VISÃO GERAL
+══════════════════════════════════════ -->
+<h1>1 Visão Geral</h1>
+
+<p>A PlataformaEnsino (marca comercial <strong>EdTech Academy</strong>) é um sistema acadêmico integrado
+que atende quatro perfis de usuário — Aluno, Professor, Coordenador e Admin — cobrindo o ciclo completo de
+uma matrícula: catálogo público de cursos, solicitação e aprovação de matrícula, publicação de conteúdo
+didático, aplicação e correção de avaliações, acompanhamento de progresso e emissão de certificado com
+verificação pública.</p>
+
+<p>O projeto nasceu como uma aplicação web única e evoluiu, ao longo do curso, para uma arquitetura
+multiplataforma: o mesmo backend passou a atender também um aplicativo mobile e, futuramente, uma versão
+desktop, sem duplicar regra de negócio. Essa evolução — e as decisões técnicas por trás dela — é o assunto
+deste documento.</p>
+
+<!-- ══════════════════════════════════════
+     2 ARQUITETURA EM CAMADAS DO BACKEND
+══════════════════════════════════════ -->
+<h1>2 Arquitetura em Camadas do Backend</h1>
+
+<p>O backend segue uma separação clássica em camadas, implementada em C# com ASP.NET Core e Entity
+Framework Core. Cada camada tem uma única responsabilidade e só conhece a camada imediatamente abaixo
+dela, o que mantém a regra de negócio isolada da forma como os dados chegam (HTTP) ou são persistidos
+(SQL Server).</p>
+
+<figure>
+<svg viewBox="0 0 620 400" role="img" aria-label="Diagrama de camadas do backend: Controllers recebem a requisição HTTP e delegam para Services, que aplicam a regra de negócio e chamam Repositories, que usam o Entity Framework Core para acessar o SQL Server; um middleware global de erros envolve as Controllers.">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g fill="none" stroke="currentColor" stroke-width="1.5">
+    <!-- Middleware envolvendo tudo -->
+    <rect x="20" y="20" width="580" height="330" rx="6" stroke-dasharray="4 3"/>
+    <text x="40" y="42" font-family="Arial, Helvetica, sans-serif" font-size="11" fill="currentColor" text-anchor="start">ApiExceptionMiddleware — traduz exceções em respostas HTTP (404 / 400 / 401 / 422)</text>
+
+    <!-- Controllers -->
+    <rect x="60" y="60" width="500" height="52"/>
+    <!-- Services -->
+    <rect x="60" y="150" width="500" height="52"/>
+    <!-- Repositories -->
+    <rect x="60" y="240" width="500" height="52"/>
+
+    <line x1="310" y1="112" x2="310" y2="150" marker-end="url(#seta)"/>
+    <line x1="310" y1="202" x2="310" y2="240" marker-end="url(#seta)"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="13" text-anchor="middle" fill="currentColor">
+    <text x="310" y="82">Controllers</text>
+    <text x="310" y="98" font-size="10">Camada HTTP — recebe a requisição, valida entrada, devolve DTO</text>
+    <text x="310" y="172">Services</text>
+    <text x="310" y="188" font-size="10">Regra de negócio — um service por domínio (Matrícula, Avaliação, Certificado...)</text>
+    <text x="310" y="262">Repositories</text>
+    <text x="310" y="278" font-size="10">Acesso a dados via EF Core — GenericRepository&lt;T&gt; como base</text>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="11" text-anchor="middle" fill="currentColor">
+    <text x="310" y="330">↓ Entity Framework Core (PlataformaContext)</text>
+    <text x="310" y="348">SQL Server — banco relacional normalizado (LocalDB em desenvolvimento)</text>
+  </g>
+</svg>
+<figcaption>Figura 1 — Fluxo de uma requisição pelas camadas do backend, do HTTP até o banco de dados.</figcaption>
+</figure>
+
+<p>Duas camadas adicionais dão suporte às quatro principais: <code>DTOs/</code>, que define os contratos de
+entrada e saída da API — nenhum endpoint devolve uma entidade do Entity Framework diretamente, evitando
+expor campos internos ou navegações inteiras sem controle — e <code>Common/</code>, que reúne lógica
+transversal reutilizada por várias camadas, como geração de código de matrícula único, extração do usuário
+autenticado a partir do token e mapeamento dos campos comuns de <code>Usuario</code>.</p>
+
+<!-- ══════════════════════════════════════
+     3 MODELO MULTIPLATAFORMA
+══════════════════════════════════════ -->
+<h1>3 Modelo Multiplataforma</h1>
+
+<p>A decisão de arquitetura mais relevante do projeto foi como estender uma aplicação web já pronta para
+mobile e, futuramente, desktop, sem reescrever a regra de negócio nem duplicá-la em cada cliente. A
+alternativa descartada foi reescrever o backend em outra stack pensada para múltiplos clientes — o que
+jogaria fora a entrega acadêmica em C#/.NET já validada. A solução adotada foi introduzir um
+<strong>gateway</strong>: um serviço Node.js/Express que fica na frente da API .NET e funciona como ponto
+único de entrada para qualquer cliente.</p>
+
+<figure>
+<svg viewBox="0 0 620 300" role="img" aria-label="Diagrama do modelo multiplataforma: aplicativos Web, Mobile e Desktop enviam requisições HTTP para o Gateway Express, que repassa tudo para a API .NET, a única que acessa o SQL Server.">
+  <defs>
+    <marker id="seta2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif" fill="currentColor">
+    <!-- Clientes -->
+    <g stroke="currentColor" stroke-width="1.5" fill="none">
+      <rect x="20" y="30" width="120" height="46"/>
+      <rect x="20" y="97" width="120" height="46"/>
+      <rect x="20" y="164" width="120" height="46" stroke-dasharray="4 3"/>
+    </g>
+    <text x="80" y="58" font-size="12" text-anchor="middle">Web (React)</text>
+    <text x="80" y="125" font-size="12" text-anchor="middle">Mobile (Expo)</text>
+    <text x="80" y="188" font-size="12" text-anchor="middle">Desktop (Electron)</text>
+    <text x="80" y="200" font-size="9" text-anchor="middle">— planejado —</text>
+
+    <!-- Setas pro gateway -->
+    <g stroke="currentColor" stroke-width="1.5">
+      <line x1="140" y1="53" x2="220" y2="150" marker-end="url(#seta2)"/>
+      <line x1="140" y1="120" x2="220" y2="150" marker-end="url(#seta2)"/>
+      <line x1="140" y1="187" x2="220" y2="150" marker-end="url(#seta2)"/>
+    </g>
+
+    <!-- Gateway -->
+    <rect x="220" y="127" width="140" height="46" stroke="currentColor" stroke-width="1.5" fill="none"/>
+    <text x="290" y="146" font-size="12" text-anchor="middle">Gateway</text>
+    <text x="290" y="160" font-size="9" text-anchor="middle">Express — proxy puro</text>
+
+    <!-- Seta pra API -->
+    <line x1="360" y1="150" x2="440" y2="150" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta2)"/>
+    <text x="400" y="140" font-size="9" text-anchor="middle">/api/*</text>
+
+    <!-- API .NET -->
+    <rect x="440" y="127" width="140" height="46" stroke="currentColor" stroke-width="1.5" fill="none"/>
+    <text x="510" y="146" font-size="12" text-anchor="middle">API .NET</text>
+    <text x="510" y="160" font-size="9" text-anchor="middle">regra de negócio</text>
+
+    <!-- Seta pro banco -->
+    <line x1="510" y1="173" x2="510" y2="240" stroke="currentColor" stroke-width="1.5" marker-end="url(#seta2)"/>
+
+    <rect x="440" y="240" width="140" height="40" stroke="currentColor" stroke-width="1.5" fill="none"/>
+    <text x="510" y="264" font-size="12" text-anchor="middle">SQL Server</text>
+  </g>
+</svg>
+<figcaption>Figura 2 — Web, mobile e o futuro desktop conversam com o mesmo gateway, que repassa tudo para a única API que acessa o banco.</figcaption>
+</figure>
+
+<p>O gateway não tem lógica de negócio própria: ele apenas repassa as rotas <code>/api/*</code> (e
+<code>/uploads/*</code>, usada pelos arquivos enviados) para a API .NET, incluindo o cabeçalho
+<code>Authorization</code>. Essa simplicidade é intencional — se o gateway algum dia precisar agregar ou
+simplificar respostas para o mobile, é ali que essa lógica entraria, mas hoje ela não existe porque não é
+necessária. O desktop, quando implementado, vai embalar com Electron o mesmo código do frontend web, e por
+isso herda a integração com o gateway automaticamente, sem nenhum código novo.</p>
+
+<p>O aplicativo mobile (Expo / React Native) foi construído com as mesmas convenções do frontend web —
+tanto que, ao identificar que a lógica de autenticação estava sendo mantida em duas cópias divergentes (uma
+por cliente), o núcleo de comunicação com a API e de gerenciamento de sessão foi extraído para um módulo
+único, <code>shared/</code>, reaproveitado pelos dois projetos. A única diferença entre eles é o adaptador
+de armazenamento local — <code>localStorage</code> no navegador, <code>AsyncStorage</code> no React Native
+— parametrizado como argumento das funções compartilhadas.</p>
+
+<!-- ══════════════════════════════════════
+     4 AUTENTICAÇÃO E SESSÃO
+══════════════════════════════════════ -->
+<h1>4 Autenticação e Sessão</h1>
+
+<p>A autenticação usa <strong>JWT</strong> (JSON Web Token) assinado com HS256. No login, o
+<code>AuthController</code> delega a validação de credenciais ao <code>AuthService</code>, que devolve um
+token de acesso — válido por 120 minutos, contendo claims de identidade e papel do usuário — e um
+<strong>refresh token</strong> opaco, persistido no banco (tabela <code>RefreshTokens</code>).</p>
+
+<p>Quando o token de acesso expira, os clientes (web e mobile, via o módulo <code>shared/</code>) detectam a
+resposta <code>401</code> e chamam automaticamente <code>POST /api/auth/refresh</code> antes de repetir a
+requisição original — o usuário não percebe a renovação. Cada uso do refresh token o invalida e emite um
+par novo (<strong>rotação</strong>): um token de renovação vazado ou reutilizado indevidamente só funciona
+uma única vez, e a tentativa seguinte é recusada. O logout explícito revoga o refresh token no servidor,
+não apenas localmente.</p>
+
+<div class="nota">
+<strong>Nota:</strong> a rotação de refresh token e a renovação automática compartilhada entre clientes
+foram adicionadas depois de uma revisão de arquitetura que identificou que a sessão de 120 minutos, sem
+renovação, era tolerável numa aba de navegador mas prejudicial num aplicativo instalado (mobile), que fica
+aberto por muito mais tempo.
+</div>
+
+<!-- ══════════════════════════════════════
+     5 MODELO DE DADOS
+══════════════════════════════════════ -->
+<h1>5 Modelo de Dados</h1>
+
+<p>O domínio é modelado em torno de uma hierarquia de usuários (<code>Usuario</code> abstrato, com
+<code>Aluno</code>, <code>Professor</code>, <code>Coordenador</code> e <code>Admin</code> como perfis
+concretos, mapeados por Table Per Type no Entity Framework Core) e de uma cadeia acadêmica principal:</p>
+
+<p class="no-indent" style="text-indent:0; text-align:center; font-family:'Courier New', monospace; font-size:11pt; margin: 6pt 0;">
+Curso → Módulo → Conteúdo Didático<br>
+Curso → Turma → Matrícula (Aluno + Curso + Turma)
+</p>
+
+<p>O progresso do aluno é rastreado em granularidade de conteúdo, módulo e curso
+(<code>ProgressoConteudoAluno</code>, <code>ProgressoModuloAluno</code>, <code>ProgressoCursoAluno</code>),
+e o sistema de avaliação segue um fluxo de publicação em duas etapas — um banco de questões reutilizável
+(<code>QuestaoBanco</code>) é selecionado e publicado numa avaliação específica
+(<code>QuestaoPublicada</code>), da qual o aluno faz tentativas (<code>TentativaAvaliacao</code> →
+<code>RespostaAluno</code>). A modelagem completa de tabelas, tipos e relacionamentos está detalhada no
+dicionário de dados do projeto (<code>dicionarioDados.html</code>), que acompanha este documento.</p>
+
+<!-- ══════════════════════════════════════
+     6 STACK TECNOLÓGICA
+══════════════════════════════════════ -->
+<h1>6 Stack Tecnológica</h1>
+
+<p class="tbl-caption">Tabela 1 – Tecnologias por camada do sistema</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Camada</th>
+                <th>Tecnologia</th>
+                <th>Responsabilidade</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>API</td><td class="td-code">.NET 10 / ASP.NET Core / C#</td><td>Regra de negócio, autenticação, única camada que acessa o banco</td></tr>
+            <tr><td>Persistência</td><td class="td-code">Entity Framework Core / SQL Server</td><td>Mapeamento objeto-relacional e banco relacional normalizado</td></tr>
+            <tr><td>Gateway</td><td class="td-code">Node.js / Express</td><td>Proxy reverso único para web, mobile e desktop</td></tr>
+            <tr><td>Web</td><td class="td-code">React / Vite</td><td>SPA com roteador próprio, servida como arquivo estático pelo ASP.NET em produção</td></tr>
+            <tr><td>Mobile</td><td class="td-code">Expo / React Native</td><td>Aplicativo nativo (iOS/Android) e web, compartilhando a mesma API</td></tr>
+            <tr><td>Desktop</td><td class="td-code">Electron (planejado)</td><td>Empacota o mesmo frontend web numa janela nativa</td></tr>
+            <tr><td>Código compartilhado</td><td class="td-code">shared/ (JavaScript puro)</td><td>Cliente HTTP e gerenciamento de sessão reaproveitados por web e mobile</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir da configuração atual do repositório.</p>
+
+<!-- ══════════════════════════════════════
+     7 BOAS PRÁTICAS DE ENGENHARIA
+══════════════════════════════════════ -->
+<h1>7 Boas Práticas de Engenharia Aplicadas</h1>
+
+<p>Ao longo do desenvolvimento, o projeto passou por rodadas de revisão técnica voltadas a nomenclatura
+semântica, eliminação de código duplicado, organização de camadas, responsividade, acessibilidade e SEO.
+Como resultado, lógica que antes se repetia em vários pontos do backend — geração de código de registro
+único, validação de e-mail e CPF, extração do usuário autenticado a partir do token, mapeamento dos campos
+comuns de usuário — hoje vive em um único lugar (pasta <code>Common/</code>) e é reutilizada, reduzindo a
+chance de um mesmo bug precisar ser corrigido duas vezes de forma independente.</p>
+
+<p>O mesmo princípio orientou a extração do módulo <code>shared/</code> entre web e mobile: a duplicação de
+código entre clientes é tratada como um risco técnico, não apenas uma questão de estilo, porque duas cópias
+da mesma lógica tendem a divergir silenciosamente com o tempo — o que de fato ocorreu antes dessa extração.</p>
+
+</body>
+</html>
