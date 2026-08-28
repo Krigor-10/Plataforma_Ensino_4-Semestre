@@ -70,6 +70,7 @@ builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoService>();
 builder.Services.AddScoped<ICertificadoService, CertificadoService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];

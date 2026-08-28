@@ -108,6 +108,7 @@ export function createDemoSessionFromUser(user) {
 
   return {
     token: `demo-token-${safeUser.id}`,
+    refreshToken: "",
     user: safeUser
   };
 }

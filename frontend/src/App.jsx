@@ -8,6 +8,7 @@ import PublicHome from "./pages/PublicHome.jsx";
 import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
 import WorkspaceScreen from "./pages/WorkspaceScreen.jsx";
 import { createDemoSession, disableDemoMode, enableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
+import { apiRequest } from "./lib/api.js";
 import { navigate, readRoute } from "./lib/router.js";
 import { clearSession, persistSession, readSession } from "./lib/session.js";
 
@@ -62,6 +63,13 @@ export default function App() {
   }
 
   function handleLogout(nextPath = "/") {
+    if (!isDemoMode && session.refreshToken) {
+      apiRequest("/Auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken: session.refreshToken })
+      }).catch(() => {});
+    }
+
     clearSession();
     setSession({ token: "", user: null });
     handleNavigate(nextPath, { replace: true });

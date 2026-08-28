@@ -24,6 +24,10 @@ public class ApiExceptionMiddleware
         {
             await WriteErrorAsync(context, HttpStatusCode.NotFound, ex.Message);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            await WriteErrorAsync(context, HttpStatusCode.Unauthorized, ex.Message);
+        }
         catch (ArgumentException ex)
         {
             await WriteErrorAsync(context, HttpStatusCode.BadRequest, ex.Message);

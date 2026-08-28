@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import LoginScreen from "./src/screens/LoginScreen.jsx";
 import HomeScreen from "./src/screens/HomeScreen.jsx";
+import { apiRequest } from "./src/lib/api.js";
 import { clearSession, persistSession, readSession } from "./src/lib/session.js";
 
 export default function App() {
@@ -23,6 +24,13 @@ export default function App() {
   }
 
   async function handleLogout() {
+    if (session.refreshToken) {
+      apiRequest("/Auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken: session.refreshToken })
+      }).catch(() => {});
+    }
+
     await clearSession();
     setSession({ token: "", user: null });
   }

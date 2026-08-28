@@ -4,6 +4,7 @@ import { InlineMessage } from "../components/Primitives.jsx";
 import Botao from "../components/Botao.jsx";
 import { apiRequest } from "../lib/api.js";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../lib/demoMode.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function LoginScreen({
   canDisableDemoMode,
@@ -13,6 +14,8 @@ export default function LoginScreen({
   onNavigate,
   onSessionStart
 }) {
+  useDocumentTitle("Entrar | EdTech Academy");
+
   const [form, setForm] = useState({ email: "", senha: "" });
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
@@ -37,6 +40,7 @@ export default function LoginScreen({
       setMessage("Login concluido. Abrindo o painel...");
       onSessionStart({
         token: response.token,
+        refreshToken: response.refreshToken,
         user: response.usuario
       });
     } catch (err) {

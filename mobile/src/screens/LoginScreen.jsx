@@ -18,7 +18,7 @@ export default function LoginScreen({ onLogin }) {
         body: JSON.stringify({ email: email.trim(), senha })
       });
 
-      await onLogin({ token: resposta.token, user: resposta.usuario });
+      await onLogin({ token: resposta.token, refreshToken: resposta.refreshToken, user: resposta.usuario });
     } catch (err) {
       setErro(err.message || "Nao foi possivel entrar agora.");
     } finally {
