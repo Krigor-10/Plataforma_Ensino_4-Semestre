@@ -242,7 +242,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     <div className="tela-coordenadores">
       <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
         <div>
-          <h1 className="cabecalho-pagina__titulo">Coordenadores</h1>
+          <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
           <p className="cabecalho-pagina__subtitulo">{coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"}</p>
         </div>
         <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>

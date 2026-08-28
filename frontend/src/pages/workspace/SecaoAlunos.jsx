@@ -130,7 +130,7 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
     <div className="tela-alunos">
       <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
         <div>
-          <h1 className="cabecalho-pagina__titulo">Alunos</h1>
+          <h2 className="cabecalho-pagina__titulo">Alunos</h2>
           <p className="cabecalho-pagina__subtitulo">
             {alunos.length} cadastrado{alunos.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
           </p>

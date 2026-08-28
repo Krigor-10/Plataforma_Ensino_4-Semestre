@@ -308,7 +308,7 @@ export function SecaoCursos({
     <div className="tela-cursos">
       <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
         <div>
-          <h1 className="cabecalho-pagina__titulo">Cursos</h1>
+          <h2 className="cabecalho-pagina__titulo">Cursos</h2>
           <p className="cabecalho-pagina__subtitulo">
             {ehCoordenador
               ? "Cursos ativos vinculados a sua coordenacao."

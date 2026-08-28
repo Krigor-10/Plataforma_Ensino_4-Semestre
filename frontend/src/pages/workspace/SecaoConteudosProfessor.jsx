@@ -410,7 +410,7 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       <header className="cabecalho-pagina">
         <div style={{ flex: 1 }}>
           <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h1 className="cabecalho-pagina__titulo">Conteudos</h1>
+            <h2 className="cabecalho-pagina__titulo">Conteudos</h2>
             {total > 0 ? (
               <select
                 aria-label="Navegar para turma"

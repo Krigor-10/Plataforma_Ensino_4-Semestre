@@ -93,7 +93,7 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Meus Cursos</h1>
+          <h2 className="cabecalho-pagina__titulo">Meus Cursos</h2>
           <p className="cabecalho-pagina__subtitulo">{cursosMatriculados.length} matricula(s) registrada(s).</p>
         </div>
       </header>
@@ -169,7 +169,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Catalogo de Cursos</h1>
+          <h2 className="cabecalho-pagina__titulo">Catalogo de Cursos</h2>
           <p className="cabecalho-pagina__subtitulo">Explore o catalogo e acompanhe suas solicitacoes de matricula.</p>
         </div>
         <label className="visualmente-oculto" htmlFor="busca-catalogo-aluno">Buscar curso</label>
@@ -398,7 +398,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Matriculas</h1>
+          <h2 className="cabecalho-pagina__titulo">Matriculas</h2>
           <p className="cabecalho-pagina__subtitulo">
             {linhasMatriculas.length} no total - {matriculasPendentes.length} pendente{matriculasPendentes.length === 1 ? "" : "s"}
           </p>

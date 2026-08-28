@@ -10,8 +10,11 @@ import { getCourseCover } from "../data/courseCovers.js";
 import { formatMoney } from "../lib/format.js";
 import homeBannerImage from "../assets/home-publica-banner.png";
 import { apiRequest } from "../lib/api.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
+  useDocumentTitle("EdTech Academy | Cursos digitais");
+
   const [courses, setCourses] = useState(() => filterPublicCourses(CURATED_COURSES));
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");

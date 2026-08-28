@@ -18,7 +18,17 @@ export function RouteLink({ children, className, onNavigate, to }) {
 }
 
 export function InlineMessage({ children, tone }) {
-  return <p className={`inline-message inline-message--${tone}`}>{children}</p>;
+  const isError = tone === "error";
+
+  return (
+    <p
+      className={`inline-message inline-message--${tone}`}
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+    >
+      {children}
+    </p>
+  );
 }
 
 export function StatusPill({ children, tone }) {

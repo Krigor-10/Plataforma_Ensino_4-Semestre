@@ -1057,6 +1057,9 @@
 /* ── Abas de navegação — segmented control ───────────────────── */
 .abas-matriculas {
   display: inline-flex;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   background: var(--cor-fundo-elevado);
   border: 1px solid var(--cor-borda);
   border-radius: 12px;

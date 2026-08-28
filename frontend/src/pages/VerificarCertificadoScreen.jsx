@@ -3,10 +3,22 @@ import { TbCircleCheck, TbCircleX } from "react-icons/tb";
 import Botao from "../components/Botao.jsx";
 import { apiRequest } from "../lib/api.js";
 import { formatDate, formatGrade } from "../lib/format.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+
+const TITULOS_POR_STATUS = {
+  loading: "Verificando certificado | EdTech Academy",
+  invalido: "Codigo nao encontrado | EdTech Academy"
+};
 
 export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
   const [status, setStatus] = useState("loading");
   const [certificado, setCertificado] = useState(null);
+
+  useDocumentTitle(
+    status === "valido" && certificado
+      ? `Certificado autentico — ${certificado.cursoTitulo} | EdTech Academy`
+      : TITULOS_POR_STATUS[status] || TITULOS_POR_STATUS.loading
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -37,7 +49,7 @@ export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
   }, [codigo]);
 
   return (
-    <div className="route-gate">
+    <main className="route-gate">
       <div className="marketing-backdrop" />
       <section className="route-gate__card verificar-certificado">
         <span className="eyebrow">Verificação de certificado</span>
@@ -92,6 +104,6 @@ export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
           Voltar para o início
         </Botao>
       </section>
-    </div>
+    </main>
   );
 }

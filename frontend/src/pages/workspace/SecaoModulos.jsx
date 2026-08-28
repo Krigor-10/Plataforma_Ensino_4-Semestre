@@ -275,7 +275,7 @@ export function SecaoModulos({
       <header className="cabecalho-pagina">
         <div style={{ flex: 1 }}>
           <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h1 className="cabecalho-pagina__titulo">Modulos</h1>
+            <h2 className="cabecalho-pagina__titulo">Modulos</h2>
             {total > 0 ? (
               <>
                 <label className="visualmente-oculto" htmlFor="filtro-modulo-curso">Selecionar curso</label>

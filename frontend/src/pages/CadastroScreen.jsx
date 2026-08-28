@@ -4,11 +4,14 @@ import Botao from "../components/Botao.jsx";
 import { SIGNUP_INITIAL_STATE } from "../data/appConfig.js";
 import { formatCep, onlyDigits } from "../lib/format.js";
 import { apiRequest } from "../lib/api.js";
+import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 const ABAS = ["Dados Pessoais e Senha", "Endereco"];
 const CAMPOS_ABA_0 = ["nome", "email", "cpf", "telefone", "cursoId", "senha", "confirmarSenha"];
 
 export default function CadastroScreen({ isDemoMode, onNavigate }) {
+  useDocumentTitle("Solicitar matricula | EdTech Academy");
+
   const [form, setForm] = useState(SIGNUP_INITIAL_STATE);
   const [cursos, setCursos] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");

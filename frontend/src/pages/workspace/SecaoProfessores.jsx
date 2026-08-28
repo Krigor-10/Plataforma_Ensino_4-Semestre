@@ -243,7 +243,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
     <div className="tela-professores">
       <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
         <div>
-          <h1 className="cabecalho-pagina__titulo">Professores</h1>
+          <h2 className="cabecalho-pagina__titulo">Professores</h2>
           <p className="cabecalho-pagina__subtitulo">{professores.length} cadastrado{professores.length === 1 ? "" : "s"}</p>
         </div>
         <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
