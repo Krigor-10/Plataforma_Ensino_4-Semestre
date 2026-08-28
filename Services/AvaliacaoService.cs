@@ -9,10 +9,12 @@ namespace PlataformaEnsino.API.Services;
 public class AvaliacaoService : IAvaliacaoService
 {
     private readonly PlataformaContext _context;
+    private readonly IProgressoAlunoService _progressoAlunoService;
 
-    public AvaliacaoService(PlataformaContext context)
+    public AvaliacaoService(PlataformaContext context, IProgressoAlunoService progressoAlunoService)
     {
         _context = context;
+        _progressoAlunoService = progressoAlunoService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -342,6 +344,11 @@ public class AvaliacaoService : IAvaliacaoService
 
         await _context.TentativasAvaliacao.AddAsync(tentativa);
         await _context.SaveChangesAsync();
+
+        if (!possuiDiscursiva)
+        {
+            await _progressoAlunoService.RecalcularNotaAvaliacaoAsync(matricula.Id, avaliacao.Id);
+        }
 
         return MapTentativaAluno(tentativa, avaliacao);
     }

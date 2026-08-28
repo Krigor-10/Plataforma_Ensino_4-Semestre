@@ -106,6 +106,176 @@ public class ProgressoAlunoService : IProgressoAlunoService
         return await ObterSnapshotAsync(alunoId);
     }
 
+    public async Task RecalcularNotaAvaliacaoAsync(int matriculaId, int avaliacaoId)
+    {
+        var avaliacao = await _context.Avaliacoes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == avaliacaoId)
+            ?? throw new KeyNotFoundException("Avaliacao nao encontrada.");
+
+        var matricula = await _context.Matriculas
+            .FirstOrDefaultAsync(item => item.Id == matriculaId)
+            ?? throw new KeyNotFoundException("Matricula nao encontrada.");
+
+        var tentativa = await _context.TentativasAvaliacao
+            .AsNoTracking()
+            .Where(item =>
+                item.AvaliacaoId == avaliacaoId &&
+                item.MatriculaId == matriculaId &&
+                item.StatusTentativa == StatusTentativaAvaliacao.Corrigida)
+            .OrderByDescending(item => item.NumeroTentativa)
+            .FirstOrDefaultAsync();
+
+        if (tentativa is null)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var lancamento = await _context.LancamentosNotasAlunos
+            .FirstOrDefaultAsync(item => item.MatriculaId == matriculaId && item.AvaliacaoId == avaliacaoId);
+
+        if (lancamento is null)
+        {
+            lancamento = new LancamentoNotaAluno
+            {
+                MatriculaId = matriculaId,
+                AvaliacaoId = avaliacaoId,
+                ModuloId = avaliacao.ModuloId,
+                TentativaAvaliacaoId = tentativa.Id
+            };
+
+            _context.LancamentosNotasAlunos.Add(lancamento);
+        }
+        else
+        {
+            lancamento.TentativaAvaliacaoId = tentativa.Id;
+        }
+
+        lancamento.RegistrarCorrecao(tentativa.NotaBruta, avaliacao.PesoNota, OrigemCorrecaoNota.Automatica);
+        lancamento.LiberarAoAluno(now);
+
+        await _context.SaveChangesAsync();
+
+        await RecalcularMediaModuloAsync(matricula, avaliacao.ModuloId, now);
+        await RecalcularMediaCursoAsync(matricula, now);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task RecalcularMediaModuloAsync(Matricula matricula, int moduloId, DateTime now)
+    {
+        var avaliacoesModulo = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TurmaId == matricula.TurmaId &&
+                avaliacao.ModuloId == moduloId)
+            .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
+            .ToListAsync();
+
+        var lancamentos = await ObterLancamentosAsync(matricula.Id, avaliacoesModulo);
+        var media = CalcularMediaPonderada(avaliacoesModulo, lancamentos);
+
+        var progressoModulo = await _context.ProgressosModulosAlunos
+            .FirstOrDefaultAsync(progresso => progresso.MatriculaId == matricula.Id && progresso.ModuloId == moduloId);
+
+        if (progressoModulo is null)
+        {
+            progressoModulo = new ProgressoModuloAluno
+            {
+                MatriculaId = matricula.Id,
+                ModuloId = moduloId
+            };
+
+            _context.ProgressosModulosAlunos.Add(progressoModulo);
+        }
+
+        progressoModulo.AvaliacoesConcluidas = lancamentos.Count;
+        progressoModulo.TotalAvaliacoes = avaliacoesModulo.Count;
+        progressoModulo.MediaModulo = media;
+        progressoModulo.AtualizadoEm = now;
+    }
+
+    private async Task RecalcularMediaCursoAsync(Matricula matricula, DateTime now)
+    {
+        var avaliacoesCurso = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TurmaId == matricula.TurmaId &&
+                avaliacao.Modulo != null &&
+                avaliacao.Modulo.CursoId == matricula.CursoId)
+            .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
+            .ToListAsync();
+
+        var lancamentos = await ObterLancamentosAsync(matricula.Id, avaliacoesCurso);
+        var media = CalcularMediaPonderada(avaliacoesCurso, lancamentos);
+
+        var progressoCurso = await _context.ProgressosCursosAlunos
+            .FirstOrDefaultAsync(progresso => progresso.MatriculaId == matricula.Id && progresso.CursoId == matricula.CursoId);
+
+        if (progressoCurso is null)
+        {
+            progressoCurso = new ProgressoCursoAluno
+            {
+                MatriculaId = matricula.Id,
+                CursoId = matricula.CursoId
+            };
+
+            _context.ProgressosCursosAlunos.Add(progressoCurso);
+        }
+
+        progressoCurso.MediaCurso = media;
+        progressoCurso.AtualizadoEm = now;
+
+        if (matricula.Status == StatusMatricula.Aprovada)
+        {
+            matricula.LancarNotaFinal(media);
+        }
+    }
+
+    private async Task<List<LancamentoNotaAluno>> ObterLancamentosAsync(int matriculaId, IReadOnlyList<AvaliacaoNotaInfo> avaliacoes)
+    {
+        if (avaliacoes.Count == 0)
+        {
+            return new List<LancamentoNotaAluno>();
+        }
+
+        var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
+        return await _context.LancamentosNotasAlunos
+            .AsNoTracking()
+            .Where(lancamento => lancamento.MatriculaId == matriculaId && avaliacaoIds.Contains(lancamento.AvaliacaoId))
+            .ToListAsync();
+    }
+
+    private static decimal CalcularMediaPonderada(IReadOnlyList<AvaliacaoNotaInfo> avaliacoes, IReadOnlyList<LancamentoNotaAluno> lancamentos)
+    {
+        var lancamentoPorAvaliacaoId = lancamentos.ToDictionary(lancamento => lancamento.AvaliacaoId);
+        var somaPonderada = 0m;
+        var somaPesos = 0m;
+
+        foreach (var avaliacao in avaliacoes)
+        {
+            if (avaliacao.NotaMaxima <= 0 || !lancamentoPorAvaliacaoId.TryGetValue(avaliacao.Id, out var lancamento))
+            {
+                continue;
+            }
+
+            var proporcao = lancamento.NotaOficial / avaliacao.NotaMaxima;
+            somaPonderada += proporcao * avaliacao.PesoNota;
+            somaPesos += avaliacao.PesoNota;
+        }
+
+        if (somaPesos <= 0)
+        {
+            return 0;
+        }
+
+        return decimal.Round(somaPonderada / somaPesos * 10, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private sealed record AvaliacaoNotaInfo(int Id, decimal NotaMaxima, decimal PesoNota);
+
     private async Task ValidarAlunoAsync(int alunoId)
     {
         var existe = await _context.Alunos
