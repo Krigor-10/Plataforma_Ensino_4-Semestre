@@ -5416,6 +5416,14 @@
   border-color: var(--cor-borda-forte);
 }
 
+.catalogo-card__imagem {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: var(--cor-borda);
+}
+
 .badge-matriculado,
 .badge-pendente {
   display: inline-flex;

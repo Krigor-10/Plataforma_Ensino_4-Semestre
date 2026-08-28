@@ -35,6 +35,15 @@ export const PUBLIC_NAV_LINKS = [
   { href: "#catalogo", label: "Cursos" }
 ];
 
+const HIDDEN_PUBLIC_COURSE_TITLES = new Set(["product analytics para edtech"]);
+
+/* Mesma regra de visibilidade usada pela Home Publica: um curso so conta como
+   "disponivel no catalogo publico" se nao estiver na lista de titulos ocultos. */
+export function isCursoVisivelNoCatalogoPublico(curso) {
+  const titulo = String(curso?.titulo || "").trim().toLowerCase();
+  return !HIDDEN_PUBLIC_COURSE_TITLES.has(titulo);
+}
+
 export const CURATED_COURSES = [
   {
     id: "programacao",
@@ -139,8 +148,11 @@ export function getSectionMeta(section, role) {
           : "Area do professor para preparar provas, quizzes e exercicios por turma e modulo."
     },
     matriculas: {
-      title: "Fluxo de matriculas",
-      description: "Acompanhamento das solicitacoes e do status academico."
+      title: role === "Aluno" ? "Catalogo de Cursos" : "Fluxo de matriculas",
+      description:
+        role === "Aluno"
+          ? "Cursos disponiveis para matricula, ainda nao cursados por voce."
+          : "Acompanhamento das solicitacoes e do status academico."
     },
     turmas: {
       title: "Mapa de turmas",

@@ -52,12 +52,15 @@ export default function WorkspaceScreen({
   const isStudent = role === "Aluno";
 
   const sections = useMemo(
-    () => APP_SECTIONS.filter((section) => section.roles.includes(role)),
+    () =>
+      APP_SECTIONS.filter((section) => section.roles.includes(role)).map((section) =>
+        section.key === "matriculas" && role === "Aluno" ? { ...section, label: "Catalogo de Cursos" } : section
+      ),
     [role]
   );
   const navSections = useMemo(
-    () => sections.filter((section) => section.showInSidebar !== false),
-    [sections]
+    () => sections.filter((section) => section.showInSidebar !== false && !(isStudent && section.key === "matriculas")),
+    [isStudent, sections]
   );
 
   const activeSection = sections.some((section) => section.key === route.section)

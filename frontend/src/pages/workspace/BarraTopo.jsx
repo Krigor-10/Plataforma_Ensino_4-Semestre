@@ -249,16 +249,16 @@ export default function BarraTopo({
               </motion.button>
               <span className="topbar__separador" aria-hidden="true" />
               <motion.button
-                className={`topbar__atalho-certificados${secaoAtual === "avaliacoes" ? " topbar__atalho-certificados--ativo" : ""}`}
-                onClick={() => onNavigate("/app/avaliacoes")}
-                aria-label="Ir para Avaliações"
+                className={`topbar__atalho-certificados${secaoAtual === "matriculas" ? " topbar__atalho-certificados--ativo" : ""}`}
+                onClick={() => onNavigate("/app/matriculas")}
+                aria-label="Ir para Catálogo de Cursos"
                 type="button"
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.96 }}
                 transition={{ type: "spring", stiffness: 400, damping: 18 }}
               >
-                <TbFileCheck size={18} aria-hidden="true" />
-                <span className="topbar__atalho-certificados-label">Realizar Avaliação</span>
+                <TbClipboardList size={18} aria-hidden="true" />
+                <span className="topbar__atalho-certificados-label">Catálogo de Cursos</span>
               </motion.button>
               <span className="topbar__separador" aria-hidden="true" />
               <motion.button

@@ -5,7 +5,7 @@ import GlobalHeader from "../components/GlobalHeader.jsx";
 import Botao from "../components/Botao.jsx";
 import Modal from "../components/Modal.jsx";
 import { InlineMessage } from "../components/Primitives.jsx";
-import { CURATED_COURSES, PUBLIC_PILLARS } from "../data/appConfig.js";
+import { CURATED_COURSES, PUBLIC_PILLARS, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
 import { formatMoney } from "../lib/format.js";
 import homeBannerImage from "../assets/home-publica-banner.png";
 import courseArchitectureCover from "../assets/course-arquitetura-soft.jpg";
@@ -20,8 +20,6 @@ import courseTestCover from "../assets/course-test-cover.svg";
 import courseUxDigitalCover from "../assets/course-ux-digitais.jpg";
 import courseWebFullstackCover from "../assets/course-web-fullstack.png";
 import { apiRequest } from "../lib/api.js";
-
-const HIDDEN_PUBLIC_COURSE_TITLES = new Set(["product analytics para edtech"]);
 
 const COURSE_COVERS_BY_TITLE = {
   "arquitetura de software moderna": courseArchitectureCover,
@@ -272,8 +270,5 @@ function filterPublicCourses(courses) {
     return [];
   }
 
-  return courses.filter((course) => {
-    const title = String(course.titulo || "").trim().toLowerCase();
-    return !HIDDEN_PUBLIC_COURSE_TITLES.has(title);
-  });
+  return courses.filter(isCursoVisivelNoCatalogoPublico);
 }

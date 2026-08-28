@@ -5,6 +5,7 @@ import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDate, formatGrade } from "../../lib/format.js";
+import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 
 export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onRefresh, onSessionExpired, turmas, usuario }) {
   if (ehAluno) {
@@ -36,10 +37,15 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
   return mapa;
 }
 
-/* Card de curso reaproveitado pelo catalogo (Matriculas) e por Meus Cursos */
+/* Card de curso reaproveitado pelo catalogo (Matriculas) e por Meus Cursos.
+   O bloco de imagem so aparece quando curso.imagemUrl existir - hoje o backend
+   nao expoe esse campo, entao fica inerte ate essa fonte de dados ser criada. */
 function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temTurmaDisponivel = false }) {
   return (
     <li className="catalogo-card">
+      {curso.imagemUrl ? (
+        <img alt="" className="catalogo-card__imagem" src={curso.imagemUrl} />
+      ) : null}
       <div className="catalogo-card__corpo">
         <div className="meus-cursos__titulo-linha">
           <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
@@ -122,8 +128,12 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
 
   const cursosFiltrados = useMemo(
-    () => cursos.filter((curso) => curso.titulo.toLowerCase().includes(busca.toLowerCase())),
-    [busca, cursos]
+    () =>
+      cursos
+        .filter(isCursoVisivelNoCatalogoPublico)
+        .filter((curso) => !matriculaPorCursoId.has(curso.id))
+        .filter((curso) => curso.titulo.toLowerCase().includes(busca.toLowerCase())),
+    [busca, cursos, matriculaPorCursoId]
   );
 
   async function solicitarMatricula(curso) {
@@ -158,7 +168,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Matriculas</h1>
+          <h1 className="cabecalho-pagina__titulo">Catalogo de Cursos</h1>
           <p className="cabecalho-pagina__subtitulo">Explore o catalogo e acompanhe suas solicitacoes de matricula.</p>
         </div>
         <label className="visualmente-oculto" htmlFor="busca-catalogo-aluno">Buscar curso</label>
