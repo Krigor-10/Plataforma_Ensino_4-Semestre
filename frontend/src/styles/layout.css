@@ -443,7 +443,6 @@
   border-radius: var(--raio-lg);
   overflow: hidden;
   transition: transform var(--transicao-normal), box-shadow var(--transicao-normal);
-  cursor: pointer;
 }
 
 .cartao-curso:hover {

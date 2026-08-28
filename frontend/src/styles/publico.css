@@ -348,17 +348,26 @@
   border-radius: var(--raio-md);
 }
 
-.cartao-curso--clicavel {
+.cartao-curso__acionador {
+  display: block;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.cartao-curso--clicavel:hover {
+.cartao-curso__acionador:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 24px rgba(123, 47, 247, 0.22);
 }
 
-.cartao-curso--clicavel:focus-visible {
+.cartao-curso__acionador:focus-visible {
   outline: 2px solid var(--cor-marca-clara);
   outline-offset: 3px;
 }

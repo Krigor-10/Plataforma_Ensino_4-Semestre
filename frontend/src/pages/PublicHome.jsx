@@ -133,37 +133,37 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
             <ul className="grade-cursos" role="list" aria-label="Cursos disponiveis">
               {courses.map((curso) => (
                 <li key={curso.id}>
-                  <article
-                    className="cartao-curso cartao-curso--clicavel"
-                    aria-labelledby={`curso-titulo-${curso.id}`}
-                    onClick={() => setCursoModal(curso)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(event) => event.key === "Enter" && setCursoModal(curso)}
-                  >
-                    <div className="cartao-curso__topo" aria-hidden="true">
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="cartao-curso__imagem"
-                        loading="lazy"
-                        src={getCourseCover(curso)}
-                      />
-                    </div>
+                  <article className="cartao-curso">
+                    <button
+                      type="button"
+                      className="cartao-curso__acionador"
+                      aria-labelledby={`curso-titulo-${curso.id}`}
+                      onClick={() => setCursoModal(curso)}
+                    >
+                      <div className="cartao-curso__topo" aria-hidden="true">
+                        <img
+                          alt=""
+                          aria-hidden="true"
+                          className="cartao-curso__imagem"
+                          loading="lazy"
+                          src={getCourseCover(curso)}
+                        />
+                      </div>
 
-                    <div className="cartao-curso__corpo">
-                      <h3 className="cartao-curso__titulo" id={`curso-titulo-${curso.id}`}>
-                        {curso.titulo}
-                      </h3>
-                      <p className="cartao-curso__descricao">{curso.descricao}</p>
-                    </div>
+                      <div className="cartao-curso__corpo">
+                        <h3 className="cartao-curso__titulo" id={`curso-titulo-${curso.id}`}>
+                          {curso.titulo}
+                        </h3>
+                        <p className="cartao-curso__descricao">{curso.descricao}</p>
+                      </div>
+                    </button>
 
                     <footer className="cartao-curso__rodape">
                       <strong className="cartao-curso__preco">{formatMoney(curso.preco)}</strong>
                       <Botao
                         variante="primario"
                         tamanho="pequeno"
-                        onClick={(event) => { event.stopPropagation(); onNavigate("/cadastro"); }}
+                        onClick={() => onNavigate("/cadastro")}
                         aria-label={`Cadastrar-se em ${curso.titulo}`}
                         style={{ display: "flex", alignItems: "center", gap: "6px" }}
                       >
