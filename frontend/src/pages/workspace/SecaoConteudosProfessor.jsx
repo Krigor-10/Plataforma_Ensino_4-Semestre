@@ -63,12 +63,20 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       return undefined;
     }
 
-    function fechar() {
+    function fechar(event) {
+      if (event.type === "keydown" && event.key !== "Escape") {
+        return;
+      }
+
       setMenuAbertoId(null);
     }
 
     document.addEventListener("click", fechar);
-    return () => document.removeEventListener("click", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
   }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
@@ -781,6 +789,7 @@ function SlideConteudos({ curso, itens, menuAbertoId, onEditar, onExcluir, onTog
               <div className="cartao-conteudo__acoes menu-contexto">
                 <button
                   aria-expanded={menuAbertoId === conteudo.id}
+                  aria-haspopup="true"
                   aria-label={`Opcoes para ${conteudo.titulo}`}
                   className="menu-contexto__botao"
                   onClick={(event) => {
@@ -792,14 +801,14 @@ function SlideConteudos({ curso, itens, menuAbertoId, onEditar, onExcluir, onTog
                   <TbDotsVertical aria-hidden="true" size={18} />
                 </button>
                 {menuAbertoId === conteudo.id ? (
-                  <ul className="menu-contexto__lista" role="menu">
+                  <ul className="menu-contexto__lista">
                     <li>
-                      <button onClick={() => onEditar(conteudo)} role="menuitem" type="button">
+                      <button onClick={() => onEditar(conteudo)} type="button">
                         Editar
                       </button>
                     </li>
                     <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(conteudo)} role="menuitem" type="button">
+                      <button className="menu-item--perigo" onClick={() => onExcluir(conteudo)} type="button">
                         Excluir
                       </button>
                     </li>

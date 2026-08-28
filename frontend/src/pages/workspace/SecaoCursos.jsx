@@ -50,12 +50,20 @@ export function SecaoCursos({
       return undefined;
     }
 
-    function fechar() {
+    function fechar(event) {
+      if (event.type === "keydown" && event.key !== "Escape") {
+        return;
+      }
+
       setMenuAberto(null);
     }
 
     document.addEventListener("click", fechar);
-    return () => document.removeEventListener("click", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
   }, [menuAberto]);
 
   const coordenadoresOrdenados = useMemo(
@@ -495,6 +503,7 @@ export function SecaoCursos({
                   <div className="menu-contexto">
                     <button
                       aria-expanded={menuAberto === curso.id}
+                      aria-haspopup="true"
                       aria-label={`Opcoes para ${curso.titulo}`}
                       className="menu-contexto__botao"
                       onClick={(event) => {
@@ -506,22 +515,22 @@ export function SecaoCursos({
                       <TbDotsVertical aria-hidden="true" size={18} />
                     </button>
                     {menuAberto === curso.id ? (
-                      <ul className="menu-contexto__lista" role="menu">
+                      <ul className="menu-contexto__lista">
                         {!ehProfessor ? (
                           <li>
-                            <button onClick={() => abrirSecaoRelacionada("modulos", curso)} role="menuitem" type="button">
+                            <button onClick={() => abrirSecaoRelacionada("modulos", curso)} type="button">
                               Ver modulos
                             </button>
                           </li>
                         ) : null}
                         <li>
-                          <button onClick={() => abrirSecaoRelacionada("turmas", curso)} role="menuitem" type="button">
+                          <button onClick={() => abrirSecaoRelacionada("turmas", curso)} type="button">
                             Ver turma padrao
                           </button>
                         </li>
                         {ehAdmin || ehCoordenador ? (
                           <li>
-                            <button onClick={() => abrirModalImagem(curso)} role="menuitem" type="button">
+                            <button onClick={() => abrirModalImagem(curso)} type="button">
                               Alterar foto de capa
                             </button>
                           </li>

@@ -91,12 +91,20 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       return undefined;
     }
 
-    function fechar() {
+    function fechar(event) {
+      if (event.type === "keydown" && event.key !== "Escape") {
+        return;
+      }
+
       setMenuAbertoId(null);
     }
 
     document.addEventListener("click", fechar);
-    return () => document.removeEventListener("click", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
   }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
@@ -1342,6 +1350,7 @@ function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onTo
               <div className="cartao-conteudo__acoes menu-contexto">
                 <button
                   aria-expanded={menuAbertoId === avaliacao.id}
+                  aria-haspopup="true"
                   aria-label={`Opcoes para ${avaliacao.titulo}`}
                   className="menu-contexto__botao"
                   onClick={(event) => {
@@ -1353,19 +1362,19 @@ function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onTo
                   <TbDotsVertical aria-hidden="true" size={18} />
                 </button>
                 {menuAbertoId === avaliacao.id ? (
-                  <ul className="menu-contexto__lista" role="menu">
+                  <ul className="menu-contexto__lista">
                     <li>
-                      <button onClick={() => onVerDetalhes(avaliacao)} role="menuitem" type="button">
+                      <button onClick={() => onVerDetalhes(avaliacao)} type="button">
                         Ver detalhes
                       </button>
                     </li>
                     <li>
-                      <button onClick={() => onEditar(avaliacao)} role="menuitem" type="button">
+                      <button onClick={() => onEditar(avaliacao)} type="button">
                         Editar
                       </button>
                     </li>
                     <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} role="menuitem" type="button">
+                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
                         Excluir
                       </button>
                     </li>

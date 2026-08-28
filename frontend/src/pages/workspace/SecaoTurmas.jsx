@@ -45,6 +45,27 @@ export function SecaoTurmas({
   const [salvandoAtribuicao, setSalvandoAtribuicao] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
 
+  useEffect(() => {
+    if (!menuAberto) {
+      return undefined;
+    }
+
+    function fechar(event) {
+      if (event.type === "keydown" && event.key !== "Escape") {
+        return;
+      }
+
+      setMenuAberto(false);
+    }
+
+    document.addEventListener("click", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
+  }, [menuAberto]);
+
   const podeGerenciarTurmas = Boolean(ehGestor && !ehProfessor);
   const podeAtribuirProfessor = podeGerenciarTurmas;
 
@@ -531,6 +552,7 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
             <div className="menu-contexto">
               <button
                 aria-expanded={menuAberto}
+                aria-haspopup="true"
                 aria-label="Opcoes da turma"
                 className="menu-contexto__botao"
                 onClick={(event) => {
@@ -542,9 +564,9 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
                 <TbDotsVertical aria-hidden="true" size={18} />
               </button>
               {menuAberto ? (
-                <ul className="menu-contexto__lista" role="menu">
+                <ul className="menu-contexto__lista">
                   <li>
-                    <button onClick={onAtribuirProfessor} role="menuitem" type="button">
+                    <button onClick={onAtribuirProfessor} type="button">
                       Atribuir professor
                     </button>
                   </li>

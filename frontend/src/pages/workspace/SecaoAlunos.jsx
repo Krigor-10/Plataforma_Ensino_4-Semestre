@@ -41,13 +41,24 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
     }
 
     function fechar(event) {
+      if (event.type === "keydown") {
+        if (event.key === "Escape") {
+          setKebabAbertoId(null);
+        }
+        return;
+      }
+
       if (kebabRef.current && !kebabRef.current.contains(event.target)) {
         setKebabAbertoId(null);
       }
     }
 
     document.addEventListener("mousedown", fechar);
-    return () => document.removeEventListener("mousedown", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("mousedown", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
   }, [kebabAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
@@ -274,14 +285,13 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
 
       {kebabAbertoId && alunoKebab
         ? createPortal(
-            <div className="kebab-menu" ref={kebabRef} role="menu" style={{ left: kebabPos.left, top: kebabPos.top }}>
+            <div className="kebab-menu" ref={kebabRef} style={{ left: kebabPos.left, top: kebabPos.top }}>
               <button
                 className="kebab-menu__item"
                 onClick={() => {
                   setAlunoDetalhe(alunoKebab);
                   setKebabAbertoId(null);
                 }}
-                role="menuitem"
                 type="button"
               >
                 Ver detalhes

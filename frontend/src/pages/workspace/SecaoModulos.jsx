@@ -42,12 +42,20 @@ export function SecaoModulos({
       return undefined;
     }
 
-    function fechar() {
+    function fechar(event) {
+      if (event.type === "keydown" && event.key !== "Escape") {
+        return;
+      }
+
       setMenuAbertoId(null);
     }
 
     document.addEventListener("click", fechar);
-    return () => document.removeEventListener("click", fechar);
+    document.addEventListener("keydown", fechar);
+    return () => {
+      document.removeEventListener("click", fechar);
+      document.removeEventListener("keydown", fechar);
+    };
   }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
@@ -535,6 +543,7 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onTog
               <div className="menu-contexto">
                 <button
                   aria-expanded={menuAbertoId === modulo.id}
+                  aria-haspopup="true"
                   aria-label={`Opcoes para ${modulo.titulo}`}
                   className="menu-contexto__botao"
                   onClick={(event) => {
@@ -546,15 +555,15 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onTog
                   <TbDotsVertical aria-hidden="true" size={16} />
                 </button>
                 {menuAbertoId === modulo.id ? (
-                  <ul className="menu-contexto__lista" role="menu">
+                  <ul className="menu-contexto__lista">
                     <li>
-                      <button onClick={() => onVerDetalhes(modulo.id)} role="menuitem" type="button">
+                      <button onClick={() => onVerDetalhes(modulo.id)} type="button">
                         Ver detalhes
                       </button>
                     </li>
                     {podeGerenciar ? (
                       <li>
-                        <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} role="menuitem" type="button">
+                        <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} type="button">
                           Excluir
                         </button>
                       </li>
