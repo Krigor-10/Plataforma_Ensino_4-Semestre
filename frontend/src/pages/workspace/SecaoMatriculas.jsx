@@ -23,6 +23,87 @@ export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onRefresh, 
   return <VistaGestorMatriculas linhasMatriculas={linhasMatriculas} onRefresh={onRefresh} onSessionExpired={onSessionExpired} />;
 }
 
+/* Mapa cursoId -> matricula mais relevante do aluno (prioriza Aprovada > Pendente > Rejeitada/Cancelada) */
+function criarMatriculaPorCursoId(linhasMatriculas) {
+  const prioridade = { Aprovada: 3, Pendente: 2, Rejeitada: 1, Cancelada: 1 };
+  const mapa = new Map();
+  linhasMatriculas.forEach((matricula) => {
+    const atual = mapa.get(matricula.cursoId);
+    if (!atual || (prioridade[matricula.status] || 0) > (prioridade[atual.status] || 0)) {
+      mapa.set(matricula.cursoId, matricula);
+    }
+  });
+  return mapa;
+}
+
+/* Card de curso reaproveitado pelo catalogo (Matriculas) e por Meus Cursos */
+function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temTurmaDisponivel = false }) {
+  return (
+    <li className="catalogo-card">
+      <div className="catalogo-card__corpo">
+        <div className="meus-cursos__titulo-linha">
+          <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
+          {matricula ? <Insignia texto={matricula.status} /> : null}
+        </div>
+        <p className="catalogo-card__turma">{curso.descricao}</p>
+
+        {matricula ? (
+          <>
+            <p className="catalogo-card__data">
+              <TbClock aria-hidden="true" size={13} />
+              Solicitada em {formatDate(matricula.dataSolicitacao)}
+            </p>
+            <footer className="catalogo-card__rodape-aluno">
+              <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span>
+              {matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
+            </footer>
+          </>
+        ) : (
+          <footer className="catalogo-card__rodape-aluno">
+            {temTurmaDisponivel ? (
+              <Botao disabled={solicitando} onClick={onSolicitar} tamanho="pequeno" variante="primario">
+                <TbSend aria-hidden="true" size={14} /> {solicitando ? "Enviando..." : "Solicitar matricula"}
+              </Botao>
+            ) : (
+              <span className="catalogo-card__codigo">Sem turma disponivel</span>
+            )}
+          </footer>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
+export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [] }) {
+  const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
+  const cursosMatriculados = useMemo(
+    () => cursos.filter((curso) => matriculaPorCursoId.has(curso.id)),
+    [cursos, matriculaPorCursoId]
+  );
+
+  return (
+    <div className="tela-matriculas">
+      <header className="cabecalho-pagina">
+        <div>
+          <h1 className="cabecalho-pagina__titulo">Meus Cursos</h1>
+          <p className="cabecalho-pagina__subtitulo">{cursosMatriculados.length} matricula(s) registrada(s).</p>
+        </div>
+      </header>
+
+      {cursosMatriculados.length === 0 ? (
+        <EmptyState message="Voce ainda nao esta matriculado em nenhum curso. Explore o catalogo em Matriculas." />
+      ) : (
+        <ul aria-label="Meus cursos matriculados" className="catalogo-grade" role="list">
+          {cursosMatriculados.map((curso) => (
+            <CartaoCursoMatricula curso={curso} key={curso.id} matricula={matriculaPorCursoId.get(curso.id)} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSessionExpired, turmas = [], usuario }) {
   const [busca, setBusca] = useState("");
   const [cursoSolicitando, setCursoSolicitando] = useState(null);
@@ -38,17 +119,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
     return grupos;
   }, [turmas]);
 
-  const matriculaPorCursoId = useMemo(() => {
-    const prioridade = { Aprovada: 3, Pendente: 2, Rejeitada: 1, Cancelada: 1 };
-    const mapa = new Map();
-    linhasMatriculas.forEach((matricula) => {
-      const atual = mapa.get(matricula.cursoId);
-      if (!atual || (prioridade[matricula.status] || 0) > (prioridade[atual.status] || 0)) {
-        mapa.set(matricula.cursoId, matricula);
-      }
-    });
-    return mapa;
-  }, [linhasMatriculas]);
+  const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
 
   const cursosFiltrados = useMemo(
     () => cursos.filter((curso) => curso.titulo.toLowerCase().includes(busca.toLowerCase())),
@@ -115,50 +186,16 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
         <EmptyState message="Nenhum curso encontrado." />
       ) : (
         <ul aria-label="Catalogo de cursos" className="catalogo-grade" role="list">
-          {cursosFiltrados.map((curso) => {
-            const matricula = matriculaPorCursoId.get(curso.id);
-            const temTurmaDisponivel = (turmasPorCursoId.get(curso.id) || []).length > 0;
-
-            return (
-              <li className="catalogo-card" key={curso.id}>
-                <div className="catalogo-card__corpo">
-                  <div className="meus-cursos__titulo-linha">
-                    <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
-                    {matricula ? <Insignia texto={matricula.status} /> : null}
-                  </div>
-                  <p className="catalogo-card__turma">{curso.descricao}</p>
-
-                  {matricula ? (
-                    <>
-                      <p className="catalogo-card__data">
-                        <TbClock aria-hidden="true" size={13} />
-                        Solicitada em {formatDate(matricula.dataSolicitacao)}
-                      </p>
-                      <footer className="catalogo-card__rodape-aluno">
-                        <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span>
-                        {matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
-                      </footer>
-                    </>
-                  ) : (
-                    <footer className="catalogo-card__rodape-aluno">
-                      {temTurmaDisponivel ? (
-                        <Botao
-                          disabled={cursoSolicitando === curso.id}
-                          onClick={() => solicitarMatricula(curso)}
-                          tamanho="pequeno"
-                          variante="primario"
-                        >
-                          <TbSend aria-hidden="true" size={14} /> {cursoSolicitando === curso.id ? "Enviando..." : "Solicitar matricula"}
-                        </Botao>
-                      ) : (
-                        <span className="catalogo-card__codigo">Sem turma disponivel</span>
-                      )}
-                    </footer>
-                  )}
-                </div>
-              </li>
-            );
-          })}
+          {cursosFiltrados.map((curso) => (
+            <CartaoCursoMatricula
+              curso={curso}
+              key={curso.id}
+              matricula={matriculaPorCursoId.get(curso.id)}
+              onSolicitar={() => solicitarMatricula(curso)}
+              solicitando={cursoSolicitando === curso.id}
+              temTurmaDisponivel={(turmasPorCursoId.get(curso.id) || []).length > 0}
+            />
+          ))}
         </ul>
       )}
     </div>

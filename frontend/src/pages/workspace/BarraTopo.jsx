@@ -31,6 +31,7 @@ const iconesPorSecao = {
   conteudos: TbFileText,
   certificados: TbTrophy,
   "meus-cursos": TbBooks,
+  "cursos-matriculados": TbBooks,
 };
 
 const variantePorTipo = { Aluno: "marca", Professor: "info", Coordenador: "aviso", Admin: "erro" };
@@ -235,8 +236,8 @@ export default function BarraTopo({
           {ehAluno && (
             <>
               <motion.button
-                className={`topbar__atalho-certificados${secaoAtual === "meus-cursos" ? " topbar__atalho-certificados--ativo" : ""}`}
-                onClick={() => onNavigate("/app/meus-cursos")}
+                className={`topbar__atalho-certificados${secaoAtual === "cursos-matriculados" ? " topbar__atalho-certificados--ativo" : ""}`}
+                onClick={() => onNavigate("/app/cursos-matriculados")}
                 aria-label="Ir para Meus Cursos"
                 type="button"
                 whileHover={{ scale: 1.08 }}

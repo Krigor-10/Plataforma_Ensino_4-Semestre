@@ -1,8 +1,7 @@
 export const MANAGER_ROLES = new Set(["Admin", "Coordenador"]);
 
 export const APP_SECTIONS = [
-  { key: "dashboard", label: "Panorama", roles: ["Admin", "Coordenador", "Professor", "Aluno"] },
-  { key: "meus-cursos", label: "Meus cursos", roles: ["Aluno"], showInSidebar: false },
+  { key: "dashboard", label: "Dashboard", roles: ["Admin", "Coordenador", "Professor", "Aluno"] },
   { key: "alunos", label: "Alunos", roles: ["Admin", "Coordenador"] },
   { key: "professores", label: "Professores", roles: ["Admin", "Coordenador"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
@@ -12,7 +11,9 @@ export const APP_SECTIONS = [
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Coordenador", "Aluno"] },
   { key: "turmas", label: "Turmas", roles: ["Admin", "Coordenador", "Professor"] },
-  { key: "certificados", label: "Certificados", roles: ["Aluno"] }
+  { key: "meus-cursos", label: "Progresso", roles: ["Aluno"] },
+  { key: "cursos-matriculados", label: "Meus Cursos", roles: ["Aluno"], showInSidebar: false },
+  { key: "certificados", label: "Certificados", roles: ["Aluno"], showInSidebar: false }
 ];
 
 export const PUBLIC_PILLARS = [
@@ -98,6 +99,10 @@ export function getSectionMeta(section, role) {
     "meus-cursos": {
       title: "Meus cursos",
       description: "Atalho para as turmas e os cursos que ja fazem parte da sua jornada ativa."
+    },
+    "cursos-matriculados": {
+      title: "Meus Cursos",
+      description: "Cursos em que voce esta efetivamente matriculado."
     },
     alunos: {
       title: "Gestao de alunos",

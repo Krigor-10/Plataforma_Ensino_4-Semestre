@@ -18,6 +18,7 @@ import {
   MdAssignment,
   MdAssignmentTurnedIn,
   MdDescription,
+  MdTrendingUp,
   MdKeyboardDoubleArrowLeft,
   MdKeyboardDoubleArrowRight,
   MdChevronRight,
@@ -44,6 +45,7 @@ const ICONES_SECAO = {
   avaliacoes: <MdAssignmentTurnedIn size={18} />,
   conteudos: <MdDescription size={18} />,
   certificados: <TbTrophy size={18} />,
+  "meus-cursos": <MdTrendingUp size={18} />,
 };
 
 /* Definição dos grupos accordion — adaptada às seções que existem hoje no app real */

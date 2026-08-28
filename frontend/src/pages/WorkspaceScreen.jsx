@@ -8,7 +8,7 @@ import { SecaoCoordenadores } from "./workspace/SecaoCoordenadores.jsx";
 import { SecaoCursos } from "./workspace/SecaoCursos.jsx";
 import { SecaoModulos } from "./workspace/SecaoModulos.jsx";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./workspace/SecoesAluno.jsx";
-import { SecaoMatriculas } from "./workspace/SecaoMatriculas.jsx";
+import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./workspace/SecaoMatriculas.jsx";
 import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
 import { SecaoTurmas } from "./workspace/SecaoTurmas.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
@@ -56,8 +56,8 @@ export default function WorkspaceScreen({
     [role]
   );
   const navSections = useMemo(
-    () => sections.filter((section) => section.showInSidebar !== false && !(isStudent && section.key === "avaliacoes")),
-    [isStudent, sections]
+    () => sections.filter((section) => section.showInSidebar !== false),
+    [sections]
   );
 
   const activeSection = sections.some((section) => section.key === route.section)
@@ -68,7 +68,7 @@ export default function WorkspaceScreen({
     !isDashboard &&
     (isManager
       ? false
-      : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "certificados"].includes(activeSection)));
+      : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "cursos-matriculados", "certificados"].includes(activeSection)));
   const mostrarAcaoCriarConteudo = isProfessor && activeSection === "conteudos";
   const mostrarAcaoCriarAvaliacao = isProfessor && activeSection === "avaliacoes";
 
@@ -741,6 +741,10 @@ export default function WorkspaceScreen({
                 turmas={snapshot.turmas}
                 usuario={usuario}
               />
+            ) : null}
+
+            {activeSection === "cursos-matriculados" ? (
+              <SecaoMeusCursosMatriculados cursos={snapshot.cursos} linhasMatriculas={matriculaRows} />
             ) : null}
 
             {activeSection === "certificados" ? (

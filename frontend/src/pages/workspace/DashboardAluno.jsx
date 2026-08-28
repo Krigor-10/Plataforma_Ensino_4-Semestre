@@ -165,7 +165,7 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
         {cursosAtivos.length === 0 ? (
           <p className="cursos-ativos-vazio">
             Nenhuma matricula aprovada ainda. Explore o{" "}
-            <button className="cursos-ativos-vazio__link" onClick={() => onMudarSecao("meus-cursos")} type="button">
+            <button className="cursos-ativos-vazio__link" onClick={() => onMudarSecao("matriculas")} type="button">
               catalogo
             </button>{" "}
             e solicite sua matricula.
