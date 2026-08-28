@@ -9,6 +9,22 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 const ABAS = ["Dados Pessoais e Senha", "Endereco"];
 const CAMPOS_ABA_0 = ["nome", "email", "cpf", "telefone", "cursoId", "senha", "confirmarSenha"];
 
+const ID_DO_CAMPO = {
+  nome: "cad-nome",
+  email: "cad-email",
+  cpf: "cad-cpf",
+  telefone: "cad-telefone",
+  cursoId: "cad-curso",
+  senha: "cad-senha",
+  confirmarSenha: "cad-confirmar-senha",
+  cep: "cad-cep",
+  rua: "cad-rua",
+  numero: "cad-numero",
+  bairro: "cad-bairro",
+  cidade: "cad-cidade",
+  estado: "cad-estado"
+};
+
 export default function CadastroScreen({ isDemoMode, onNavigate }) {
   useDocumentTitle("Solicitar matricula | EdTech Academy");
 
@@ -19,6 +35,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState("info");
   const [abaAtual, setAbaAtual] = useState(0);
+  const [campoComErro, setCampoComErro] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -51,6 +68,10 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
   }, []);
 
   function updateField(name, value) {
+    if (campoComErro === name) {
+      setCampoComErro("");
+    }
+
     setForm((current) => ({
       ...current,
       [name]: value
@@ -58,16 +79,18 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
   }
 
   function avancarAba() {
-    const faltando = CAMPOS_ABA_0.some((campo) => !String(form[campo] || "").trim());
+    const campoFaltando = CAMPOS_ABA_0.find((campo) => !String(form[campo] || "").trim());
 
-    if (faltando) {
+    if (campoFaltando) {
       setTone("error");
       setMessage("Preencha todos os campos desta etapa antes de continuar.");
+      setCampoComErro(campoFaltando);
       return;
     }
 
     setTone("info");
     setMessage("");
+    setCampoComErro("");
     setAbaAtual(1);
   }
 
@@ -78,10 +101,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
 
     if (validationError) {
       setTone("error");
-      setMessage(validationError);
+      setMessage(validationError.mensagem);
+      setCampoComErro(validationError.campo);
       return;
     }
 
+    setCampoComErro("");
     setStatus("pending");
     setTone("info");
     setMessage("Enviando sua solicitacao de matricula...");
@@ -120,6 +145,30 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       setTone("error");
       setMessage(err.message || "Nao foi possivel concluir o cadastro.");
     }
+  }
+
+  function classeCampo(nomeCampo) {
+    return campoComErro === nomeCampo ? "campo campo--erro" : "campo";
+  }
+
+  function propsInvalido(nomeCampo) {
+    if (campoComErro !== nomeCampo) {
+      return {};
+    }
+
+    return { "aria-invalid": "true", "aria-describedby": `${ID_DO_CAMPO[nomeCampo]}-erro` };
+  }
+
+  function ErroCampo({ nomeCampo }) {
+    if (campoComErro !== nomeCampo) {
+      return null;
+    }
+
+    return (
+      <span className="campo__erro" id={`${ID_DO_CAMPO[nomeCampo]}-erro`} role="alert">
+        {message}
+      </span>
+    );
   }
 
   if (status === "success") {
@@ -193,7 +242,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
               <div className="formulario-cadastro__grupo">
                 <span className="formulario-cadastro__legenda">Dados pessoais</span>
 
-                <div className="campo">
+                <div className={classeCampo("nome")}>
                   <label className="campo__rotulo" htmlFor="cad-nome">Nome completo</label>
                   <input
                     className="campo__entrada"
@@ -203,10 +252,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.nome}
                     onChange={(event) => updateField("nome", event.target.value)}
                     required
+                    {...propsInvalido("nome")}
                   />
+                  <ErroCampo nomeCampo="nome" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("email")}>
                   <label className="campo__rotulo" htmlFor="cad-email">E-mail</label>
                   <input
                     autoComplete="email"
@@ -217,10 +268,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.email}
                     onChange={(event) => updateField("email", event.target.value)}
                     required
+                    {...propsInvalido("email")}
                   />
+                  <ErroCampo nomeCampo="email" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("cpf")}>
                   <label className="campo__rotulo" htmlFor="cad-cpf">CPF</label>
                   <input
                     className="campo__entrada"
@@ -231,10 +284,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.cpf}
                     onChange={(event) => updateField("cpf", event.target.value)}
                     required
+                    {...propsInvalido("cpf")}
                   />
+                  <ErroCampo nomeCampo="cpf" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("telefone")}>
                   <label className="campo__rotulo" htmlFor="cad-telefone">Telefone</label>
                   <input
                     className="campo__entrada"
@@ -245,10 +300,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.telefone}
                     onChange={(event) => updateField("telefone", event.target.value)}
                     required
+                    {...propsInvalido("telefone")}
                   />
+                  <ErroCampo nomeCampo="telefone" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("cursoId")}>
                   <label className="campo__rotulo" htmlFor="cad-curso">Curso desejado</label>
                   <select
                     className="campo__entrada"
@@ -257,6 +314,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.cursoId}
                     onChange={(event) => updateField("cursoId", event.target.value)}
                     required
+                    {...propsInvalido("cursoId")}
                   >
                     <option value="">
                       {catalogStatus === "loading" ? "Carregando cursos..." : "Selecione um curso"}
@@ -267,9 +325,10 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                       </option>
                     ))}
                   </select>
+                  <ErroCampo nomeCampo="cursoId" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("senha")}>
                   <label className="campo__rotulo" htmlFor="cad-senha">Senha</label>
                   <input
                     autoComplete="new-password"
@@ -281,10 +340,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.senha}
                     onChange={(event) => updateField("senha", event.target.value)}
                     required
+                    {...propsInvalido("senha")}
                   />
+                  <ErroCampo nomeCampo="senha" />
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("confirmarSenha")}>
                   <label className="campo__rotulo" htmlFor="cad-confirmar-senha">Confirmar senha</label>
                   <input
                     autoComplete="new-password"
@@ -296,14 +357,16 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.confirmarSenha}
                     onChange={(event) => updateField("confirmarSenha", event.target.value)}
                     required
+                    {...propsInvalido("confirmarSenha")}
                   />
+                  <ErroCampo nomeCampo="confirmarSenha" />
                 </div>
               </div>
             ) : (
               <div className="formulario-cadastro__grupo">
                 <span className="formulario-cadastro__legenda">Endereco</span>
 
-                <div className="campo">
+                <div className={classeCampo("cep")}>
                   <label className="campo__rotulo" htmlFor="cad-cep">CEP</label>
                   <input
                     className="campo__entrada"
@@ -314,11 +377,13 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.cep}
                     onChange={(event) => updateField("cep", event.target.value)}
                     required
+                    {...propsInvalido("cep")}
                   />
+                  <ErroCampo nomeCampo="cep" />
                 </div>
 
                 <div className="grade-endereco">
-                  <div className="campo">
+                  <div className={classeCampo("rua")}>
                     <label className="campo__rotulo" htmlFor="cad-rua">Rua</label>
                     <input
                       className="campo__entrada"
@@ -328,10 +393,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                       value={form.rua}
                       onChange={(event) => updateField("rua", event.target.value)}
                       required
+                      {...propsInvalido("rua")}
                     />
+                    <ErroCampo nomeCampo="rua" />
                   </div>
 
-                  <div className="campo">
+                  <div className={classeCampo("numero")}>
                     <label className="campo__rotulo" htmlFor="cad-numero">Numero</label>
                     <input
                       className="campo__entrada"
@@ -341,11 +408,13 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                       value={form.numero}
                       onChange={(event) => updateField("numero", event.target.value)}
                       required
+                      {...propsInvalido("numero")}
                     />
+                    <ErroCampo nomeCampo="numero" />
                   </div>
                 </div>
 
-                <div className="campo">
+                <div className={classeCampo("bairro")}>
                   <label className="campo__rotulo" htmlFor="cad-bairro">Bairro</label>
                   <input
                     className="campo__entrada"
@@ -355,11 +424,13 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.bairro}
                     onChange={(event) => updateField("bairro", event.target.value)}
                     required
+                    {...propsInvalido("bairro")}
                   />
+                  <ErroCampo nomeCampo="bairro" />
                 </div>
 
                 <div className="grade-endereco">
-                  <div className="campo">
+                  <div className={classeCampo("cidade")}>
                     <label className="campo__rotulo" htmlFor="cad-cidade">Cidade</label>
                     <input
                       className="campo__entrada"
@@ -369,10 +440,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                       value={form.cidade}
                       onChange={(event) => updateField("cidade", event.target.value)}
                       required
+                      {...propsInvalido("cidade")}
                     />
+                    <ErroCampo nomeCampo="cidade" />
                   </div>
 
-                  <div className="campo">
+                  <div className={classeCampo("estado")}>
                     <label className="campo__rotulo" htmlFor="cad-estado">Estado</label>
                     <input
                       className="campo__entrada"
@@ -383,7 +456,9 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                       value={form.estado}
                       onChange={(event) => updateField("estado", event.target.value.toUpperCase())}
                       required
+                      {...propsInvalido("estado")}
                     />
+                    <ErroCampo nomeCampo="estado" />
                   </div>
                 </div>
               </div>
@@ -436,31 +511,31 @@ function validateSignup(form) {
     "confirmarSenha"
   ];
 
-  const hasMissingField = requiredFields.some((field) => !String(form[field] || "").trim());
+  const campoFaltando = requiredFields.find((field) => !String(form[field] || "").trim());
 
-  if (hasMissingField) {
-    return "Preencha todos os campos do cadastro.";
+  if (campoFaltando) {
+    return { campo: campoFaltando, mensagem: "Preencha todos os campos do cadastro." };
   }
 
   if (onlyDigits(form.cpf).length !== 11) {
-    return "Informe um CPF com 11 digitos.";
+    return { campo: "cpf", mensagem: "Informe um CPF com 11 digitos." };
   }
 
   if (onlyDigits(form.cep).length !== 8) {
-    return "Informe um CEP com 8 digitos.";
+    return { campo: "cep", mensagem: "Informe um CEP com 8 digitos." };
   }
 
   if (form.estado.trim().length !== 2) {
-    return "Use a sigla do estado com 2 letras.";
+    return { campo: "estado", mensagem: "Use a sigla do estado com 2 letras." };
   }
 
   if (form.senha.length < 6) {
-    return "A senha precisa ter pelo menos 6 caracteres.";
+    return { campo: "senha", mensagem: "A senha precisa ter pelo menos 6 caracteres." };
   }
 
   if (form.senha !== form.confirmarSenha) {
-    return "As senhas nao coincidem.";
+    return { campo: "confirmarSenha", mensagem: "As senhas nao coincidem." };
   }
 
-  return "";
+  return null;
 }
