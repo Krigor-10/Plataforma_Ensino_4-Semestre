@@ -125,5 +125,16 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
         builder
             .HasIndex(m => m.CodigoRegistro)
             .IsUnique();
+
+        // Impede, no nivel do banco, que o mesmo aluno fique com duas
+        // matriculas Aprovada (Status = 1) na mesma turma ao mesmo tempo —
+        // a checagem em memoria em MatriculaService (ObterMatriculaAprovadaNaTurmaAsync)
+        // sozinha nao protege contra duas aprovacoes simultaneas da mesma
+        // pendencia (ex: duplo clique, dois admins aprovando ao mesmo tempo).
+        builder
+            .HasIndex(m => new { m.AlunoId, m.TurmaId })
+            .IsUnique()
+            .HasFilter("[Status] = 1")
+            .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada");
     }
 }

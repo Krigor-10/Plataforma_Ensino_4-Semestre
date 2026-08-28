@@ -117,7 +117,7 @@ public class MatriculaService : IMatriculaService
         if (matriculaAtiva is not null)
         {
             await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, turma, aluno);
-            await _matriculaRepository.SalvarAlteracoesAsync();
+            await SalvarComProtecaoDeConcorrenciaAsync();
             return;
         }
 
@@ -127,7 +127,26 @@ public class MatriculaService : IMatriculaService
         await GarantirCodigoAlunoAsync(aluno);
 
         _matriculaRepository.Atualizar(matricula);
-        await _matriculaRepository.SalvarAlteracoesAsync();
+        await SalvarComProtecaoDeConcorrenciaAsync();
+    }
+
+    /// <summary>
+    /// Salva as alteracoes traduzindo uma violacao do indice unico
+    /// IX_Matriculas_AlunoId_TurmaId_Aprovada (duas aprovacoes simultaneas da
+    /// mesma pendencia) num erro de negocio claro, em vez do 500 generico que
+    /// o middleware daria pra uma DbUpdateException nao mapeada.
+    /// </summary>
+    private async Task SalvarComProtecaoDeConcorrenciaAsync()
+    {
+        try
+        {
+            await _matriculaRepository.SalvarAlteracoesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException(
+                "Esta matricula ja foi aprovada em outra requisicao simultanea.");
+        }
     }
 
     public async Task<AprovacaoMatriculasLoteResultadoDto> AprovarMatriculasAutomaticamenteAsync(IEnumerable<int> matriculaIds)
@@ -152,7 +171,7 @@ public class MatriculaService : IMatriculaService
             try
             {
                 var aprovada = await AprovarMatriculaAutomaticamenteCoreAsync(id);
-                await _matriculaRepository.SalvarAlteracoesAsync();
+                await SalvarComProtecaoDeConcorrenciaAsync();
                 resultado.Aprovadas.Add(aprovada);
             }
             catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or ArgumentException)
