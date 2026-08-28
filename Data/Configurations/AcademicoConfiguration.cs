@@ -40,6 +40,12 @@ public sealed class ModuloConfiguration : IEntityTypeConfiguration<Modulo>
     public void Configure(EntityTypeBuilder<Modulo> builder)
     {
         builder
+            .HasOne(m => m.Curso)
+            .WithMany(c => c.Modulos)
+            .HasForeignKey(m => m.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
             .HasIndex(m => new { m.CursoId, m.Titulo })
             .IsUnique();
 
@@ -58,6 +64,18 @@ public sealed class TurmaConfiguration : IEntityTypeConfiguration<Turma>
 {
     public void Configure(EntityTypeBuilder<Turma> builder)
     {
+        builder
+            .HasOne(t => t.Curso)
+            .WithMany(c => c.Turmas)
+            .HasForeignKey(t => t.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasOne(t => t.ProfessorResponsavel)
+            .WithMany()
+            .HasForeignKey(t => t.ProfessorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder
             .Property(t => t.CodigoRegistro)
             .HasMaxLength(16)
@@ -88,6 +106,12 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .WithMany(a => a.Matriculas)
             .HasForeignKey(m => m.AlunoId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(m => m.Curso)
+            .WithMany()
+            .HasForeignKey(m => m.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder
             .Property(m => m.NotaFinal)

@@ -15,6 +15,19 @@ public sealed class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
             .Property(u => u.TipoUsuario)
             .HasMaxLength(40)
             .IsRequired();
+
+        builder
+            .Property(u => u.Email)
+            .HasMaxLength(180)
+            .IsRequired();
+
+        builder
+            .HasIndex(u => u.Email)
+            .IsUnique();
+
+        builder
+            .HasIndex(u => u.Cpf)
+            .IsUnique();
     }
 }
 

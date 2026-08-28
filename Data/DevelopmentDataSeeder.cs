@@ -220,8 +220,7 @@ public static class DevelopmentDataSeeder
             name: "Coordenacao Academica",
             email: CoordinatorEmail,
             cpf: "22222222222",
-            phone: "11999990002",
-            responsibleCourse: "Trilhas EdTech");
+            phone: "11999990002");
     }
 
     private static async Task<List<Coordenador>> EnsureAdditionalCoordinatorsAsync(PlataformaContext context)
@@ -235,8 +234,7 @@ public static class DevelopmentDataSeeder
                 name: $"Coordenador Teste {index:00}",
                 email: $"coordenador.teste{index:00}@edtech.local",
                 cpf: $"{22300000000L + index:00000000000}",
-                phone: $"1177777{index:0000}",
-                responsibleCourse: $"Trilha Teste {index:00}"));
+                phone: $"1177777{index:0000}"));
         }
 
         return coordinators;
@@ -247,8 +245,7 @@ public static class DevelopmentDataSeeder
         string name,
         string email,
         string cpf,
-        string phone,
-        string responsibleCourse)
+        string phone)
     {
         var coordinator = await context.Coordenadores.FirstOrDefaultAsync(user => user.Email == email);
 
@@ -269,7 +266,6 @@ public static class DevelopmentDataSeeder
         coordinator.Cidade = "Sao Paulo";
         coordinator.Estado = "SP";
         coordinator.ConfigurarAcesso("Coordenador", BCrypt.Net.BCrypt.HashPassword(DefaultPassword));
-        coordinator.CursoResponsavel = responsibleCourse;
         await EnsureCoordinatorRegistrationCodeAsync(context, coordinator);
 
         return coordinator;
@@ -357,8 +353,7 @@ public static class DevelopmentDataSeeder
             email: StudentEmail,
             cpf: "44444444444",
             phone: "11999990004",
-            enrollment: "MAT-DEMO-2026",
-            currentClass: "Nao atribuida");
+            enrollment: "MAT-DEMO-2026");
     }
 
     private static async Task<Aluno> EnsureKrigorStudentAsync(PlataformaContext context)
@@ -373,17 +368,11 @@ public static class DevelopmentDataSeeder
                 email: KrigorStudentEmail,
                 cpf: "44599999999",
                 phone: "11999990099",
-                enrollment: "ALU-KRIGOR",
-                currentClass: "Nao atribuida");
+                enrollment: "ALU-KRIGOR");
         }
 
         student.Nome = "Krigor Sousa";
         student.Matricula = "ALU-KRIGOR";
-
-        if (string.IsNullOrWhiteSpace(student.TurmaAtual))
-        {
-            student.TurmaAtual = "Nao atribuida";
-        }
 
         return student;
     }
@@ -400,8 +389,7 @@ public static class DevelopmentDataSeeder
                 email: $"aluno.teste{index:00}@edtech.local",
                 cpf: $"{44500000000L + index:00000000000}",
                 phone: $"1188888{index:0000}",
-                enrollment: $"MAT-TESTE-2026-{index:00}",
-                currentClass: "Nao atribuida"));
+                enrollment: $"MAT-TESTE-2026-{index:00}"));
         }
 
         return students;
@@ -413,8 +401,7 @@ public static class DevelopmentDataSeeder
         string email,
         string cpf,
         string phone,
-        string enrollment,
-        string currentClass)
+        string enrollment)
     {
         var student = await context.Alunos.FirstOrDefaultAsync(user => user.Email == email);
 
@@ -436,7 +423,6 @@ public static class DevelopmentDataSeeder
         student.Estado = "SP";
         student.ConfigurarAcesso("Aluno", BCrypt.Net.BCrypt.HashPassword(DefaultPassword));
         student.Matricula = enrollment;
-        student.TurmaAtual = currentClass;
 
         return student;
     }
@@ -489,7 +475,6 @@ public static class DevelopmentDataSeeder
                 createdBy: createdBy,
                 coordinatorId: coordinator.Id);
 
-            coordinator.CursoResponsavel = course.Titulo;
             seededCourses.Add((course, courseSeed.ModuleTitle));
         }
 
@@ -819,7 +804,6 @@ public static class DevelopmentDataSeeder
         }
 
         await EnsureEnrollmentRegistrationCodeAsync(context, enrollment);
-        student.TurmaAtual = turma.NomeTurma;
     }
 
     private static async Task EnsurePendingEnrollmentAsync(PlataformaContext context, Aluno student, Curso course)

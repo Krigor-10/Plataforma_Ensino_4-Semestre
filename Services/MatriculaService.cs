@@ -125,7 +125,6 @@ public class MatriculaService : IMatriculaService
 
         matricula.AprovarComTurma(turmaId, matricula.CursoId);
         await GarantirCodigoAlunoAsync(aluno);
-        aluno.TurmaAtual = turma.NomeTurma;
 
         _matriculaRepository.Atualizar(matricula);
         await _matriculaRepository.SalvarAlteracoesAsync();
@@ -264,7 +263,6 @@ public class MatriculaService : IMatriculaService
 
         matricula.AprovarComTurma(turma.Id, turma.CursoId);
         await GarantirCodigoAlunoAsync(aluno);
-        aluno.TurmaAtual = turma.NomeTurma;
 
         return new AprovacaoMatriculaItemDto
         {
@@ -343,7 +341,6 @@ public class MatriculaService : IMatriculaService
 
         matriculaDuplicada.Cancelar();
         await GarantirCodigoAlunoAsync(aluno);
-        aluno.TurmaAtual = turma.NomeTurma;
 
         return new AprovacaoMatriculaItemDto
         {

@@ -65,7 +65,7 @@ namespace PlataformaEnsino.API.Controllers
                 DataCadastro = aluno.DataCadastro,
                 Ativo = aluno.Ativo,
                 Matricula = aluno.Matricula,
-                TurmaAtual = aluno.TurmaAtual
+                TurmaAtual = string.Empty
             };
         }
     }

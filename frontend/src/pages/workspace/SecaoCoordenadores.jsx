@@ -23,7 +23,6 @@ const ESTADO_INICIAL_FORMULARIO = {
   bairro: "",
   cidade: "",
   estado: "",
-  cursoResponsavel: "",
   senha: "",
   confirmarSenha: ""
 };
@@ -105,7 +104,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           coordenador.nome,
           coordenador.email,
           coordenador.codigoRegistro,
-          coordenador.cursoResponsavel,
           ...cursosSupervisionados.map((curso) => curso.titulo)
         ];
 
@@ -218,7 +216,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           bairro: dadosFormulario.bairro.trim(),
           cidade: dadosFormulario.cidade.trim(),
           estado: dadosFormulario.estado.trim().toUpperCase(),
-          cursoResponsavel: dadosFormulario.cursoResponsavel.trim() || null,
           senha: dadosFormulario.senha,
           ativo: true
         })
@@ -304,7 +301,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
             ) : (
               itensPagina.map((coordenador) => {
                 const cursosDoCoordenador = obterCursosDoCoordenador(coordenador);
-                const cursoPrincipal = cursosDoCoordenador[0]?.titulo || String(coordenador.cursoResponsavel || "").trim();
+                const cursoPrincipal = cursosDoCoordenador[0]?.titulo || "";
 
                 return (
                   <tr className="tabela-linha-clicavel" key={coordenador.id} onClick={() => setCoordenadorDetalhe(coordenador)}>
@@ -493,10 +490,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="coordenador-estado">UF *</label>
                 <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="coordenador-curso">Curso sob supervisao</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-curso" maxLength={150} name="cursoResponsavel" onChange={atualizarCampo} placeholder="Ex.: Trilhas EdTech" value={dadosFormulario.cursoResponsavel} />
               </div>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>

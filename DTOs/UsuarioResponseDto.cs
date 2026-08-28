@@ -17,7 +17,5 @@ public class UsuarioResponseDto
     public DateTime DataCadastro { get; set; }
     public bool Ativo { get; set; }
     public string? Especialidade { get; set; }
-    public string? CursoResponsavel { get; set; }
     public string? Matricula { get; set; }
-    public string? TurmaAtual { get; set; }
 }

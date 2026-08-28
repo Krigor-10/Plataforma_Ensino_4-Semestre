@@ -51,8 +51,7 @@ namespace PlataformaEnsino.API.Controllers
                 Estado = coordenador.Estado,
                 TipoUsuario = coordenador.TipoUsuario,
                 DataCadastro = coordenador.DataCadastro,
-                Ativo = coordenador.Ativo,
-                CursoResponsavel = coordenador.CursoResponsavel
+                Ativo = coordenador.Ativo
             };
         }
     }

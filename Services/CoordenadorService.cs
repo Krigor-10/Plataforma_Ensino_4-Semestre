@@ -51,8 +51,7 @@ public class CoordenadorService : ICoordenadorService
             Numero = dto.Numero.Trim(),
             Bairro = dto.Bairro.Trim(),
             Cidade = dto.Cidade.Trim(),
-            Estado = dto.Estado.Trim().ToUpper(),
-            CursoResponsavel = dto.CursoResponsavel?.Trim()
+            Estado = dto.Estado.Trim().ToUpper()
         };
         coordenador.ConfigurarAcesso("Coordenador", BCrypt.Net.BCrypt.HashPassword(dto.Senha), dto.Ativo);
 

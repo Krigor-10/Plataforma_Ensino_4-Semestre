@@ -115,7 +115,6 @@ public class MatriculaServiceTests
         Assert.Equal(turma.Id, matriculaAtualizada.TurmaId);
 
         var alunoAtualizado = context.Alunos.Single(a => a.Id == aluno.Id);
-        Assert.Equal(turma.NomeTurma, alunoAtualizado.TurmaAtual);
         Assert.NotEqual("Pendente", alunoAtualizado.Matricula);
     }
 

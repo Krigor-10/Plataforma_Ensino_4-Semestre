@@ -48,8 +48,5 @@ public class CriarCoordenadorDto
     [MinLength(6)]
     public string Senha { get; set; } = string.Empty;
 
-    [StringLength(150)]
-    public string? CursoResponsavel { get; set; }
-
     public bool Ativo { get; set; } = true;
 }

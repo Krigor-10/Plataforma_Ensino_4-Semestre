@@ -16,9 +16,44 @@ public class AlunoService : IAlunoService
         _context = context;
     }
 
-    public async Task<IEnumerable<Aluno>> ListarAlunosAsync()
+    public async Task<IEnumerable<AlunoResponseDto>> ListarAlunosAsync()
     {
-        return await _context.Alunos.ToListAsync();
+        var alunos = await _context.Alunos
+            .AsNoTracking()
+            .Include(aluno => aluno.Matriculas)
+                .ThenInclude(matricula => matricula.Turma)
+            .ToListAsync();
+
+        return alunos.Select(MapResponse);
+    }
+
+    private static AlunoResponseDto MapResponse(Aluno aluno)
+    {
+        var turmasAtivas = aluno.Matriculas
+            .Where(matricula => matricula.Status == StatusMatricula.Aprovada && matricula.Turma is not null)
+            .Select(matricula => matricula.Turma!.NomeTurma)
+            .Distinct()
+            .ToList();
+
+        return new AlunoResponseDto
+        {
+            Id = aluno.Id,
+            Nome = aluno.Nome,
+            Email = aluno.Email,
+            Cpf = aluno.Cpf,
+            Telefone = aluno.Telefone,
+            Cep = aluno.Cep,
+            Rua = aluno.Rua,
+            Numero = aluno.Numero,
+            Bairro = aluno.Bairro,
+            Cidade = aluno.Cidade,
+            Estado = aluno.Estado,
+            TipoUsuario = aluno.TipoUsuario,
+            DataCadastro = aluno.DataCadastro,
+            Ativo = aluno.Ativo,
+            Matricula = aluno.Matricula,
+            TurmaAtual = turmasAtivas.Count > 0 ? string.Join(", ", turmasAtivas) : string.Empty
+        };
     }
 
     public async Task<Aluno> CriarAlunoAsync(CriarAlunoDto dto)

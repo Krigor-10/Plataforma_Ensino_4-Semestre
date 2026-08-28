@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PlataformaEnsino.API.Data;
 
@@ -11,9 +12,11 @@ using PlataformaEnsino.API.Data;
 namespace Sistema_Academico_Integrado.Migrations
 {
     [DbContext(typeof(PlataformaContext))]
-    partial class PlataformaContextModelSnapshot : ModelSnapshot
+    [Migration("20260828023735_RemoverTurmaAtualDoAluno")]
+    partial class RemoverTurmaAtualDoAluno
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1065,6 +1068,9 @@ namespace Sistema_Academico_Integrado.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("CursoResponsavel")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasIndex("CodigoRegistro")
                         .IsUnique()
