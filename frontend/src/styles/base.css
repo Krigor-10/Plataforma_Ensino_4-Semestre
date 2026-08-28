@@ -610,6 +610,49 @@ h4 { letter-spacing: -0.01em; }
   line-height: 1.7;
 }
 
+.verificar-certificado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.verificar-certificado__icone--ok {
+  color: var(--brand-mint);
+}
+
+.verificar-certificado__icone--erro {
+  color: #ef4444;
+}
+
+.verificar-certificado__dados {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.verificar-certificado__dados div {
+  border-bottom: 1px solid var(--border-strong);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.verificar-certificado__dados dt {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.verificar-certificado__dados dd {
+  color: var(--ink-strong);
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
+}
+
 .marketing-backdrop {
   background: none;
   inset: 0;

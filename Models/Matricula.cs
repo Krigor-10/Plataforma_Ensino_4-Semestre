@@ -19,6 +19,8 @@ public class Matricula
 
     public StatusMatricula Status { get; private set; } = StatusMatricula.Pendente;
 
+    public DateTime? CertificadoEmitidoEm { get; private set; }
+
     public int AlunoId { get; set; }
     public Aluno? Aluno { get; set; }
 
@@ -101,5 +103,10 @@ public class Matricula
     public void ZerarNotaFinal()
     {
         NotaFinal = 0;
+    }
+
+    public void EmitirCertificado(DateTime? emitidoEm = null)
+    {
+        CertificadoEmitidoEm ??= emitidoEm ?? DateTime.UtcNow;
     }
 }

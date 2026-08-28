@@ -78,6 +78,12 @@ export async function demoRequest(endpoint, options = {}) {
       return approveEnrollment(getEnrollmentActionId(path), payload);
     case /^\/Matriculas\/\d+\/rejeitar$/.test(path) && method === "PUT":
       return rejectEnrollment(getEnrollmentActionId(path));
+    case /^\/Certificados\/matricula\/\d+\/emitir$/.test(path) && method === "POST":
+      return emitirCertificadoDemo(getCertificadoMatriculaId(path));
+    case path === "/Certificados/meus" && method === "GET":
+      return listarCertificadosDemo();
+    case /^\/Certificados\/verificar\/.+$/.test(path) && method === "GET":
+      return verificarCertificadoDemo(getCertificadoVerificarCodigo(path));
     case path === "/ConteudosDidaticos" && method === "GET":
       return listTeacherContents();
     case path === "/ConteudosDidaticos" && method === "POST":
@@ -842,6 +848,69 @@ function rejectEnrollment(enrollmentId) {
   matricula.status = 2;
   saveDemoDb(db);
   return { mensagem: "Matricula demo rejeitada com sucesso." };
+}
+
+function emitirCertificadoDemo(matriculaId) {
+  const user = requireRole("Aluno");
+  const db = readDemoDb();
+  ensureProgressCollections(db);
+
+  const matricula = db.matriculas.find((item) => item.id === matriculaId);
+  if (!matricula || matricula.alunoId !== user.id) {
+    throw new DemoApiError("Matricula demo nao encontrada.", 404);
+  }
+
+  if (Number(matricula.status) !== 1) {
+    throw new DemoApiError("A matricula ainda nao foi aprovada.", 400);
+  }
+
+  const progresso = db.progressos.cursos.find((item) => item.matriculaId === matriculaId);
+  if (!progresso || Number(progresso.percentualConclusao) < 100) {
+    throw new DemoApiError("O curso ainda nao foi concluido.", 400);
+  }
+
+  if (!matricula.certificadoEmitidoEm) {
+    matricula.certificadoEmitidoEm = new Date().toISOString();
+    saveDemoDb(db);
+  }
+
+  return buildCertificadoDemoResponse(db, matricula);
+}
+
+function listarCertificadosDemo() {
+  const user = requireRole("Aluno");
+  const db = readDemoDb();
+
+  return db.matriculas
+    .filter((matricula) => matricula.alunoId === user.id && matricula.certificadoEmitidoEm)
+    .sort((left, right) => new Date(right.certificadoEmitidoEm) - new Date(left.certificadoEmitidoEm))
+    .map((matricula) => buildCertificadoDemoResponse(db, matricula));
+}
+
+function verificarCertificadoDemo(codigo) {
+  const db = readDemoDb();
+  const matricula = db.matriculas.find((item) => item.codigoRegistro === codigo);
+
+  if (!matricula || !matricula.certificadoEmitidoEm) {
+    throw new DemoApiError("Certificado demo nao encontrado.", 404);
+  }
+
+  return buildCertificadoDemoResponse(db, matricula);
+}
+
+function buildCertificadoDemoResponse(db, matricula) {
+  const aluno = db.alunos.find((item) => item.id === matricula.alunoId);
+  const curso = db.cursos.find((item) => item.id === matricula.cursoId);
+  const turma = matricula.turmaId ? db.turmas.find((item) => item.id === matricula.turmaId) : null;
+
+  return {
+    codigoVerificacao: matricula.codigoRegistro,
+    alunoNome: aluno?.nome || "",
+    cursoTitulo: curso?.titulo || "",
+    turmaNome: turma?.nomeTurma || null,
+    notaFinal: Number(matricula.notaFinal || 0),
+    emitidoEm: matricula.certificadoEmitidoEm
+  };
 }
 
 function listTeacherContents() {
@@ -2705,6 +2774,22 @@ function getNumericId(path) {
   }
 
   return id;
+}
+
+function getCertificadoMatriculaId(path) {
+  const match = String(path).match(/^\/Certificados\/matricula\/(\d+)\/emitir$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getCertificadoVerificarCodigo(path) {
+  const match = String(path).match(/^\/Certificados\/verificar\/(.+)$/);
+  return decodeURIComponent(match?.[1] || "");
 }
 
 function getEnrollmentActionId(path) {

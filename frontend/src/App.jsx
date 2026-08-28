@@ -5,6 +5,7 @@ import CadastroScreen from "./pages/CadastroScreen.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
 import NotFoundScreen from "./pages/NotFoundScreen.jsx";
 import PublicHome from "./pages/PublicHome.jsx";
+import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
 import WorkspaceScreen from "./pages/WorkspaceScreen.jsx";
 import { createDemoSession, disableDemoMode, enableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
 import { navigate, readRoute } from "./lib/router.js";
@@ -85,6 +86,8 @@ export default function App() {
     );
   } else if (route.kind === "cadastro") {
     content = <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
+  } else if (route.kind === "verificar") {
+    content = <VerificarCertificadoScreen codigo={route.codigo} onNavigate={handleNavigate} />;
   } else if (route.kind === "app" && session.user) {
     content = (
       <WorkspaceScreen

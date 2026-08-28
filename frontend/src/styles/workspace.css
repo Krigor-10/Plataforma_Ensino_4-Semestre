@@ -2657,57 +2657,227 @@
 }
 
 .certificate-sheet {
-  align-items: center;
-  background: linear-gradient(180deg, rgba(123, 47, 247, 0.06), transparent 60%), var(--card-strong);
-  border: 2px solid rgba(123, 47, 247, 0.3);
-  border-radius: var(--radius-lg);
+  background: #fdfdfb;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-md);
   display: grid;
-  gap: 10px;
-  justify-items: center;
+  grid-template-columns: 110px 1fr;
   margin: 0;
-  padding: 48px 32px;
-  text-align: center;
+  min-height: 420px;
+  overflow: hidden;
+  text-align: left;
 }
 
-.certificate-sheet__eyebrow {
-  color: var(--brand-mint);
-  font-size: 0.8rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.certificate-sheet__faixa {
+  align-items: flex-start;
+  background: linear-gradient(160deg, #1b3a4b 0%, #14303f 60%, #0d222d 100%);
+  clip-path: polygon(0 0, 100% 0, 60% 100%, 0 100%);
+  display: flex;
+  justify-content: center;
+  padding-top: var(--espaco-xl);
 }
 
-.certificate-sheet__intro,
-.certificate-sheet__body {
-  color: var(--ink-soft);
-  margin: 0;
+.certificate-sheet__selo {
+  align-items: center;
+  background: linear-gradient(135deg, #f3d27a, #c9a227);
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  color: #4a3a00;
+  display: flex;
+  height: 56px;
+  justify-content: center;
+  width: 56px;
+}
+
+.certificate-sheet__conteudo {
+  color: #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--espaco-xl) var(--espaco-xl) var(--espaco-lg);
+}
+
+.certificate-sheet__titulo {
+  color: #1b1b1b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  margin: 0 0 var(--espaco-sm);
+}
+
+.certificate-sheet__titulo span {
+  color: #c9a227;
+  display: block;
+  font-family: var(--fonte-principal);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.certificate-sheet__intro {
+  color: #6b6b6b;
+  font-size: 0.82rem;
+  margin: var(--espaco-sm) 0 0;
 }
 
 .certificate-sheet__name {
-  color: var(--ink-strong);
-  font-family: var(--font-display);
+  color: #1b1b1b;
+  font-family: "Segoe Script", "Brush Script MT", cursive;
   font-size: 2rem;
+  margin-bottom: var(--espaco-sm);
 }
 
-.certificate-sheet__course {
-  color: var(--brand-mint);
-  font-size: 1.3rem;
+.certificate-sheet__body {
+  color: #3a3a3a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
-.certificate-sheet__meta {
-  color: var(--ink-soft);
+.certificate-sheet__data,
+.certificate-sheet__escola {
+  color: #3a3a3a;
   font-size: 0.86rem;
-  margin-top: 12px;
+  margin: var(--espaco-xs) 0 0;
+}
+
+.certificate-sheet__assinaturas {
+  align-items: end;
+  display: grid;
+  gap: var(--espaco-md);
+  grid-template-columns: 1fr auto 1fr;
+  margin-top: var(--espaco-lg);
+}
+
+.certificate-sheet__assinatura {
+  color: #3a3a3a;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  gap: 4px;
+  text-align: center;
+}
+
+.certificate-sheet__linha {
+  border-top: 1px solid #c9a227;
+  display: block;
+  width: 100%;
+}
+
+.certificate-sheet__laurel {
+  color: #c9a227;
+  margin-bottom: 4px;
+}
+
+.certificate-sheet__verificacao {
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+  color: #6b6b6b;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  margin-top: var(--espaco-md);
+  padding-top: var(--espaco-sm);
+  word-break: break-word;
+}
+
+@media (max-width: 560px) {
+  .certificate-sheet {
+    grid-template-columns: 1fr;
+  }
+
+  .certificate-sheet__faixa {
+    clip-path: none;
+    padding: var(--espaco-md);
+  }
 }
 
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    margin: 12mm;
+    size: landscape;
   }
 
-  .certificate-print-area,
-  .certificate-print-area * {
-    visibility: visible;
+  /* IMPORTANTE: já existe um reset de impressão genérico em layout.css
+     ("IMPRESSÃO", pensado pra imprimir a página de dashboard/relatório atual)
+     que aplica `* { visibility:visible !important; background-color:transparent
+     !important; color:#111 !important; ... }` em TUDO. Sem !important aqui,
+     essas regras vencem e o certificado sai sem cor nenhuma e com a tela
+     inteira visível por trás — por isso todo mundo abaixo usa !important e
+     seletores de classe (mais específicos que o `*` genérico) pra vencer
+     esse reset só dentro do certificado, sem tocar no sistema de impressão
+     genérico usado pelas outras páginas.
+
+     A regra de esconder tudo só entra em ação quando .certificate-print-area
+     existe (:has), ou seja, só quando o certificado está de fato aberto —
+     sem isso, imprimir QUALQUER outra tela do sistema (ou a própria tela de
+     Certificados sem nenhum certificado aberto) saía em branco, porque não
+     havia nada pra marcar como visible de novo. */
+  body:has(.certificate-print-area) * {
+    visibility: hidden !important;
+  }
+
+  /* O reset genérico de layout.css só esconde sidebar/topbar (display:none).
+     A lista de certificados, o grid de conquistas (irmãos do modal dentro de
+     .tela-certificados) e o cabeçalho compartilhado da página (.workspace-hero,
+     renderizado por WorkspaceScreen.jsx fora do componente do certificado)
+     continuam no fluxo normal — só invisíveis, mas ainda ocupando altura.
+     Como .modal-fundo é position:fixed, ele se repete em TODA página que a
+     impressão gerar; se esse conteúdo invisível for mais alto que uma página,
+     uma 2ª página (com o certificado duplicado) aparece. Removendo esses
+     elementos do fluxo (display:none) o documento por trás encolhe e a
+     paginação para de gerar essa 2ª página fantasma.
+     Só quando o modal do certificado está aberto (:has(.modal-fundo)) — assim
+     a impressão genérica da tela de Certificados (lista + conquistas, sem
+     nenhum certificado aberto) continua funcionando normalmente. */
+  .tela-certificados:has(.modal-fundo) > *:not(.modal-fundo) {
+    display: none !important;
+  }
+
+  body:has(.modal-fundo) .workspace-hero {
+    display: none !important;
+  }
+
+  /* Mesmo prefixo "body:has(.certificate-print-area)" da regra que esconde
+     tudo acima — precisa da MESMA especificidade extra do :has(), senão essa
+     regra de "mostrar de novo" perde pra regra de "esconder tudo" e o
+     certificado fica invisível junto com o resto (foi exatamente o que
+     aconteceu numa primeira tentativa: :has() aumentou a especificidade só
+     do lado de esconder, e o certificado sumiu). */
+  body:has(.certificate-print-area) .certificate-print-area,
+  body:has(.certificate-print-area) .certificate-print-area * {
+    visibility: visible !important;
+  }
+
+  /* .modal-fundo mantém position:fixed (não vira static) — é o que ancora
+     .certificate-print-area no topo da página impressa, escapando do fluxo
+     normal do documento (que continua ocupando espaço, só invisível). */
+  .modal-fundo {
+    background: none !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+  }
+
+  .modal-caixa {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-height: none !important;
+    max-width: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .certificado-modal {
+    overflow: visible !important;
+  }
+
+  .modal-cabecalho,
+  .modal-rodape {
+    display: none !important;
   }
 
   .certificate-print-area {
@@ -2715,6 +2885,66 @@
     position: absolute;
     top: 0;
     width: 100%;
+  }
+
+  /* Restaura as cores da identidade visual (o reset genérico forçaria tudo
+     pra preto/transparente) e garante que o navegador realmente as imprima. */
+  .certificate-sheet,
+  .certificate-sheet * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+
+  .certificate-sheet {
+    background: #fdfdfb !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    color: #2a2a2a !important;
+    min-height: 0 !important;
+    page-break-inside: avoid;
+    width: 100%;
+  }
+
+  .certificate-sheet__faixa {
+    background: linear-gradient(160deg, #1b3a4b 0%, #14303f 60%, #0d222d 100%) !important;
+  }
+
+  .certificate-sheet__selo {
+    background: linear-gradient(135deg, #f3d27a, #c9a227) !important;
+    color: #4a3a00 !important;
+    -webkit-text-fill-color: #4a3a00 !important;
+  }
+
+  .certificate-sheet__titulo,
+  .certificate-sheet__name {
+    color: #1b1b1b !important;
+    -webkit-text-fill-color: #1b1b1b !important;
+  }
+
+  .certificate-sheet__titulo span {
+    color: #c9a227 !important;
+    -webkit-text-fill-color: #c9a227 !important;
+  }
+
+  .certificate-sheet__intro,
+  .certificate-sheet__verificacao {
+    color: #6b6b6b !important;
+    -webkit-text-fill-color: #6b6b6b !important;
+  }
+
+  .certificate-sheet__body,
+  .certificate-sheet__data,
+  .certificate-sheet__escola,
+  .certificate-sheet__assinatura {
+    color: #3a3a3a !important;
+    -webkit-text-fill-color: #3a3a3a !important;
+  }
+
+  .certificate-sheet__laurel {
+    color: #c9a227 !important;
+    -webkit-text-fill-color: #c9a227 !important;
   }
 }
 

@@ -16,6 +16,10 @@ export function readRoute(pathname = window.location.pathname) {
     return { kind: "cadastro" };
   }
 
+  if (segments[0] === "verificar") {
+    return { kind: "verificar", codigo: segments[1] || "" };
+  }
+
   if (segments[0] === "app") {
     return {
       kind: "app",

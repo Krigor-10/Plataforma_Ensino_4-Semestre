@@ -754,6 +754,7 @@ export default function WorkspaceScreen({
               <SecaoCertificados
                 avaliacoes={snapshot.avaliacoes}
                 matriculaRows={matriculaRows}
+                onSessionExpired={onSessionExpired}
                 progressos={snapshot.progressos}
                 usuario={usuario}
               />
