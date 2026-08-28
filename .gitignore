@@ -11,6 +11,9 @@
 # Arquivos enviados por usuarios (fotos/PDF/video de Conteudos e Cursos)
 Storage/Uploads/
 
+# Sobra de ferramenta externa (Codex CLI) rodando build/validate localmente
+.codex-tmp/
+
 # User-specific files
 *.rsuser
 *.suo
