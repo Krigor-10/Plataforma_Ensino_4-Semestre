@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ER — PlataformaEnsinoDB</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         *, *::before, *::after {
             box-sizing: border-box;
@@ -12,78 +12,50 @@
             padding: 0;
         }
 
-        :root {
-            --bg: #0d0f14;
-            --surface: #13161e;
-            --border: #1f2330;
-            --accent: #4f8ef7;
-            --accent2: #7c5cfc;
-            --accent3: #2ec4b6;
-            --accent4: #f76f4f;
-            --accent5: #f7c948;
-            --text: #e2e6f0;
-            --muted: #5a6280;
-            --pk: #f7c948;
-            --fk: #4f8ef7;
-            --col: #8a94b8;
-        }
-
         body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'JetBrains Mono', monospace;
-            min-height: 100vh;
-            overflow-x: hidden;
+            font-family: 'Outfit', sans-serif;
+            background: #fffef5;
+            color: #1c1c1c;
+            overflow-x: auto;
         }
 
         header {
-            padding: 28px 40px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            position: sticky;
-            top: 0;
-            background: var(--bg);
-            z-index: 100;
+            background: #1c1c1c;
+            color: #fffef5;
+            padding: 24px 40px;
         }
 
-            header h1 {
-                font-family: 'Syne', sans-serif;
-                font-size: 18px;
-                font-weight: 700;
-                letter-spacing: -0.5px;
-                color: var(--text);
-            }
-
-            header span {
-                font-size: 11px;
-                color: var(--muted);
-                background: var(--surface);
-                border: 1px solid var(--border);
-                padding: 3px 10px;
-                border-radius: 20px;
-            }
-
-        .legend {
-            display: flex;
-            gap: 20px;
-            margin-left: auto;
-            align-items: center;
+        .badge {
+            background: #f4a261;
+            color: #1c1c1c;
             font-size: 11px;
-            color: var(--muted);
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 8px;
         }
 
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        header h1 {
+            font-size: 24px;
+            font-weight: 800;
         }
 
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
+        header p {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 4px;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #f4a261;
+            font-weight: 600;
+            margin-top: 6px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
         .canvas-wrap {
@@ -92,9 +64,9 @@
             cursor: grab;
         }
 
-            .canvas-wrap:active {
-                cursor: grabbing;
-            }
+        .canvas-wrap:active {
+            cursor: grabbing;
+        }
 
         #er-canvas {
             display: block;
@@ -106,7 +78,7 @@
         }
 
         .table-header {
-            font-family: 'Syne', sans-serif;
+            font-family: 'Outfit', sans-serif;
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 0.3px;
@@ -114,66 +86,94 @@
 
         .col-name {
             font-size: 11px;
-            fill: var(--col);
-            font-family: 'JetBrains Mono', monospace;
+            fill: #333;
+            font-family: 'Courier Prime', monospace;
         }
 
         .col-type {
             font-size: 10px;
-            fill: var(--muted);
-            font-family: 'JetBrains Mono', monospace;
+            fill: #888;
+            font-family: 'Courier Prime', monospace;
         }
 
         .badge-pk {
             font-size: 9px;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-            fill: #0d0f14;
+            font-family: 'Courier Prime', monospace;
+            font-weight: 700;
+            fill: #1c1c1c;
         }
 
         .badge-fk {
             font-size: 9px;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-            fill: #0d0f14;
+            font-family: 'Courier Prime', monospace;
+            font-weight: 700;
+            fill: #fff;
         }
 
         .rel-line {
             fill: none;
             stroke-width: 1.5;
-            opacity: 0.45;
+            opacity: 0.55;
         }
 
-        .table-group:hover .rel-line {
-            opacity: 1;
+        .legend-box {
+            margin: 0 40px 40px;
+            background: #1c1c1c;
+            color: #fffef5;
+            border-radius: 12px;
+            padding: 28px 32px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 13px;
+        }
+
+        .legend-box h3 {
+            width: 100%;
+            font-size: 14px;
+            font-weight: 700;
+            color: #f4a261;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .leg {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .leg-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            flex-shrink: 0;
         }
 
         .tooltip {
             position: fixed;
-            background: var(--surface);
-            border: 1px solid var(--border);
+            background: #fff;
+            border: 1px solid #e0dbd0;
             padding: 10px 14px;
             border-radius: 8px;
             font-size: 11px;
-            color: var(--text);
+            color: #1c1c1c;
             pointer-events: none;
             display: none;
             z-index: 999;
             max-width: 240px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
     </style>
 </head>
 <body>
 
     <header>
-        <h1>PlataformaEnsinoDB — Diagrama ER</h1>
-        <span>25 tabelas · 42 relacionamentos</span>
-        <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#f7c948"></div> PK</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#4f8ef7"></div> FK</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#8a94b8"></div> Coluna</div>
-            <div class="legend-item" style="margin-left:8px; font-size:10px">Scroll para navegar</div>
-        </div>
+        <span class="badge">ER</span>
+        <h1>Diagrama Entidade-Relacionamento</h1>
+        <p>Tabelas, colunas, tipos e chaves estrangeiras — mapeamento físico do banco</p>
+        <div class="subtitle">PlataformaEnsinoDB · 25 tabelas · SQL Server</div>
     </header>
 
     <div class="canvas-wrap" id="canvas-wrap">
@@ -188,15 +188,12 @@
                 <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                     <path d="M1 1L9 5L1 9" fill="none" stroke="#2ec4b6" stroke-width="1.5" stroke-linecap="round" />
                 </marker>
-                <filter id="glow">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
             </defs>
 
-            <!-- Background grid -->
+            <!-- Fundo -->
+            <rect width="2400" height="1900" fill="#fffef5" />
             <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1a1d28" stroke-width="0.5" />
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e8e3d5" stroke-width="0.5" />
             </pattern>
             <rect width="2400" height="1900" fill="url(#grid)" />
 
@@ -258,9 +255,9 @@
             <!-- AlternativasPublicadas → RespostasAlunos -->
             <line x1="1960" y1="1000" x2="1840" y2="1180" class="rel-line" stroke="#4f8ef7" marker-end="url(#arr)" />
             <!-- Avaliacoes → LancamentosNotas -->
-            <line x1="1380" y1="1050" x2="1100" y2="1200" class="rel-line" stroke="#f7c948" marker-end="url(#arr)" />
+            <line x1="1380" y1="1050" x2="1100" y2="1200" class="rel-line" stroke="#c9950a" marker-end="url(#arr)" />
             <!-- Matriculas → LancamentosNotas -->
-            <line x1="800" y1="1040" x2="1060" y2="1200" class="rel-line" stroke="#f7c948" marker-end="url(#arr)" />
+            <line x1="800" y1="1040" x2="1060" y2="1200" class="rel-line" stroke="#c9950a" marker-end="url(#arr)" />
             <!-- Matriculas → Progressos -->
             <line x1="760" y1="1040" x2="300" y2="1200" class="rel-line" stroke="#2ec4b6" marker-end="url(#arr3)" />
             <line x1="760" y1="1040" x2="560" y2="1200" class="rel-line" stroke="#2ec4b6" marker-end="url(#arr3)" />
@@ -269,24 +266,23 @@
             <line x1="280" y1="300" x2="100" y2="1200" class="rel-line" stroke="#7c5cfc" marker-end="url(#arr2)" />
 
             <!-- ===================== TABELAS ===================== -->
+
             <!-- USUARIOS -->
             <g class="table-group" id="tbl-usuarios">
-                <rect x="100" y="60" width="400" height="290" rx="10" fill="#13161e" stroke="#4f8ef7" stroke-width="1.5" />
-                <rect x="100" y="60" width="400" height="42" rx="10" fill="#1a2035" />
-                <rect x="100" y="90" width="400" height="12" rx="0" fill="#1a2035" />
-                <text x="120" y="87" class="table-header" fill="#4f8ef7">Usuarios</text>
-                <!-- cols -->
+                <rect x="100" y="60" width="400" height="290" rx="10" fill="#fff" stroke="#4f8ef7" stroke-width="1.5" />
+                <rect x="100" y="60" width="400" height="42" rx="10" fill="#4f8ef7" />
+                <rect x="100" y="90" width="400" height="12" rx="0" fill="#4f8ef7" />
+                <text x="120" y="87" class="table-header" fill="#fff">Usuarios</text>
                 <rect x="116" y="112" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="121" y="122" class="badge-pk">PK</text>
                 <text x="150" y="122" class="col-name">Id</text>
                 <text x="360" y="122" class="col-type">int</text>
-
                 <text x="120" y="144" class="col-name">Nome</text>
                 <text x="360" y="144" class="col-type">nvarchar(150)</text>
-                <text x="120" y="164" class="col-name">Email</text>
-                <text x="360" y="164" class="col-type">nvarchar</text>
-                <text x="120" y="184" class="col-name">Cpf</text>
-                <text x="360" y="184" class="col-type">nvarchar</text>
+                <text x="120" y="164" class="col-name">Email (único)</text>
+                <text x="360" y="164" class="col-type">nvarchar(180)</text>
+                <text x="120" y="184" class="col-name">Cpf (único)</text>
+                <text x="360" y="184" class="col-type">nvarchar(11)</text>
                 <text x="120" y="204" class="col-name">Telefone</text>
                 <text x="360" y="204" class="col-type">nvarchar(20)</text>
                 <text x="120" y="224" class="col-name">Cidade / Estado</text>
@@ -299,79 +295,75 @@
                 <text x="360" y="284" class="col-type">bit</text>
                 <text x="120" y="304" class="col-name">SenhaHash</text>
                 <text x="360" y="304" class="col-type">nvarchar</text>
-                <line x1="100" y1="106" x2="500" y2="106" stroke="#1f2330" stroke-width="1" />
+                <line x1="100" y1="106" x2="500" y2="106" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- ADMINS -->
             <g class="table-group" id="tbl-admins">
-                <rect x="40" y="560" width="200" height="90" rx="10" fill="#13161e" stroke="#7c5cfc" stroke-width="1.5" />
-                <rect x="40" y="560" width="200" height="42" rx="10" fill="#1e1630" />
-                <rect x="40" y="590" width="200" height="12" rx="0" fill="#1e1630" />
-                <text x="60" y="587" class="table-header" fill="#7c5cfc">Admins</text>
-                <rect x="56" y="612" width="26" height="14" rx="3" fill="#7c5cfc" />
-                <text x="61" y="622" class="badge-pk" fill="#fff">PK</text>
+                <rect x="40" y="560" width="200" height="90" rx="10" fill="#fff" stroke="#7c5cfc" stroke-width="1.5" />
+                <rect x="40" y="560" width="200" height="42" rx="10" fill="#7c5cfc" />
+                <rect x="40" y="590" width="200" height="12" rx="0" fill="#7c5cfc" />
+                <text x="60" y="587" class="table-header" fill="#fff">Admins</text>
+                <rect x="56" y="612" width="26" height="14" rx="3" fill="#f7c948" />
+                <text x="61" y="622" class="badge-pk">PK</text>
                 <text x="90" y="622" class="col-name">Id</text>
                 <text x="180" y="622" class="col-type">int</text>
-                <line x1="40" y1="606" x2="240" y2="606" stroke="#1f2330" stroke-width="1" />
+                <line x1="40" y1="606" x2="240" y2="606" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- COORDENADORES -->
             <g class="table-group" id="tbl-coord">
-                <rect x="280" y="560" width="220" height="110" rx="10" fill="#13161e" stroke="#7c5cfc" stroke-width="1.5" />
-                <rect x="280" y="560" width="220" height="42" rx="10" fill="#1e1630" />
-                <rect x="280" y="590" width="220" height="12" rx="0" fill="#1e1630" />
-                <text x="300" y="587" class="table-header" fill="#7c5cfc">Coordenadores</text>
-                <rect x="296" y="612" width="26" height="14" rx="3" fill="#7c5cfc" />
-                <text x="301" y="622" class="badge-pk" fill="#fff">PK</text>
+                <rect x="280" y="560" width="220" height="90" rx="10" fill="#fff" stroke="#7c5cfc" stroke-width="1.5" />
+                <rect x="280" y="560" width="220" height="42" rx="10" fill="#7c5cfc" />
+                <rect x="280" y="590" width="220" height="12" rx="0" fill="#7c5cfc" />
+                <text x="300" y="587" class="table-header" fill="#fff">Coordenadores</text>
+                <rect x="296" y="612" width="26" height="14" rx="3" fill="#f7c948" />
+                <text x="301" y="622" class="badge-pk">PK</text>
                 <text x="330" y="622" class="col-name">Id</text>
                 <text x="440" y="622" class="col-type">int</text>
                 <text x="300" y="642" class="col-name">CodigoRegistro</text>
                 <text x="440" y="642" class="col-type">nvarchar(16)</text>
-                <text x="300" y="662" class="col-name">CursoResponsavel</text>
-                <text x="440" y="662" class="col-type">nvarchar</text>
-                <line x1="280" y1="606" x2="500" y2="606" stroke="#1f2330" stroke-width="1" />
+                <line x1="280" y1="606" x2="500" y2="606" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- PROFESSORES -->
             <g class="table-group" id="tbl-prof">
-                <rect x="900" y="560" width="240" height="130" rx="10" fill="#13161e" stroke="#7c5cfc" stroke-width="1.5" />
-                <rect x="900" y="560" width="240" height="42" rx="10" fill="#1e1630" />
-                <rect x="900" y="590" width="240" height="12" rx="0" fill="#1e1630" />
-                <text x="920" y="587" class="table-header" fill="#7c5cfc">Professores</text>
-                <rect x="916" y="612" width="26" height="14" rx="3" fill="#7c5cfc" />
-                <text x="921" y="622" class="badge-pk" fill="#fff">PK</text>
+                <rect x="900" y="560" width="240" height="130" rx="10" fill="#fff" stroke="#7c5cfc" stroke-width="1.5" />
+                <rect x="900" y="560" width="240" height="42" rx="10" fill="#7c5cfc" />
+                <rect x="900" y="590" width="240" height="12" rx="0" fill="#7c5cfc" />
+                <text x="920" y="587" class="table-header" fill="#fff">Professores</text>
+                <rect x="916" y="612" width="26" height="14" rx="3" fill="#f7c948" />
+                <text x="921" y="622" class="badge-pk">PK</text>
                 <text x="950" y="622" class="col-name">Id</text>
                 <text x="1080" y="622" class="col-type">int</text>
                 <text x="920" y="642" class="col-name">CodigoRegistro</text>
                 <text x="1080" y="642" class="col-type">nvarchar(16)</text>
                 <text x="920" y="662" class="col-name">Especialidade</text>
                 <text x="1080" y="662" class="col-type">nvarchar(120)</text>
-                <line x1="900" y1="606" x2="1140" y2="606" stroke="#1f2330" stroke-width="1" />
+                <line x1="900" y1="606" x2="1140" y2="606" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- ALUNOS -->
             <g class="table-group" id="tbl-alunos">
-                <rect x="860" y="560" width="220" height="110" rx="10" fill="#13161e" stroke="#7c5cfc" stroke-width="1.5" />
-                <rect x="860" y="560" width="220" height="42" rx="10" fill="#1e1630" />
-                <rect x="860" y="590" width="220" height="12" rx="0" fill="#1e1630" />
-                <text x="880" y="587" class="table-header" fill="#7c5cfc">Alunos</text>
-                <rect x="876" y="612" width="26" height="14" rx="3" fill="#7c5cfc" />
-                <text x="881" y="622" class="badge-pk" fill="#fff">PK</text>
-                <text x="910" y="622" class="col-name">Id</text>
-                <text x="1020" y="622" class="col-type">int</text>
-                <text x="880" y="642" class="col-name">Matricula</text>
-                <text x="1020" y="642" class="col-type">nvarchar</text>
-                <text x="880" y="662" class="col-name">TurmaAtual</text>
-                <text x="1020" y="662" class="col-type">nvarchar</text>
-                <line x1="860" y1="606" x2="1080" y2="606" stroke="#1f2330" stroke-width="1" />
+                <rect x="620" y="760" width="220" height="90" rx="10" fill="#fff" stroke="#7c5cfc" stroke-width="1.5" />
+                <rect x="620" y="760" width="220" height="42" rx="10" fill="#7c5cfc" />
+                <rect x="620" y="790" width="220" height="12" rx="0" fill="#7c5cfc" />
+                <text x="640" y="787" class="table-header" fill="#fff">Alunos</text>
+                <rect x="636" y="812" width="26" height="14" rx="3" fill="#f7c948" />
+                <text x="641" y="822" class="badge-pk">PK</text>
+                <text x="670" y="822" class="col-name">Id</text>
+                <text x="780" y="822" class="col-type">int</text>
+                <text x="640" y="842" class="col-name">Matricula</text>
+                <text x="780" y="842" class="col-type">nvarchar</text>
+                <line x1="620" y1="806" x2="840" y2="806" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- CURSOS -->
             <g class="table-group" id="tbl-cursos">
-                <rect x="560" y="160" width="300" height="170" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="560" y="160" width="300" height="42" rx="10" fill="#0e2420" />
-                <rect x="560" y="190" width="300" height="12" rx="0" fill="#0e2420" />
-                <text x="580" y="187" class="table-header" fill="#2ec4b6">Cursos</text>
+                <rect x="560" y="160" width="300" height="170" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="560" y="160" width="300" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="560" y="190" width="300" height="12" rx="0" fill="#2ec4b6" />
+                <text x="580" y="187" class="table-header" fill="#fff">Cursos</text>
                 <rect x="576" y="212" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="581" y="222" class="badge-pk">PK</text>
                 <text x="610" y="222" class="col-name">Id</text>
@@ -390,15 +382,15 @@
                 <text x="790" y="302" class="col-type">nvarchar(1000)</text>
                 <text x="580" y="322" class="col-name">Preco</text>
                 <text x="790" y="322" class="col-type">decimal(10,2)</text>
-                <line x1="560" y1="206" x2="860" y2="206" stroke="#1f2330" stroke-width="1" />
+                <line x1="560" y1="206" x2="860" y2="206" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- TURMAS -->
             <g class="table-group" id="tbl-turmas">
-                <rect x="600" y="560" width="260" height="170" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="600" y="560" width="260" height="42" rx="10" fill="#0e2420" />
-                <rect x="600" y="590" width="260" height="12" rx="0" fill="#0e2420" />
-                <text x="620" y="587" class="table-header" fill="#2ec4b6">Turmas</text>
+                <rect x="600" y="560" width="260" height="170" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="600" y="560" width="260" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="600" y="590" width="260" height="12" rx="0" fill="#2ec4b6" />
+                <text x="620" y="587" class="table-header" fill="#fff">Turmas</text>
                 <rect x="616" y="612" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="621" y="622" class="badge-pk">PK</text>
                 <text x="650" y="622" class="col-name">Id</text>
@@ -417,15 +409,15 @@
                 <text x="800" y="702" class="col-type">datetime2</text>
                 <text x="620" y="722" class="col-name">CodigoRegistro</text>
                 <text x="800" y="722" class="col-type">nvarchar(16)</text>
-                <line x1="600" y1="606" x2="860" y2="606" stroke="#1f2330" stroke-width="1" />
+                <line x1="600" y1="606" x2="860" y2="606" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- MODULOS -->
             <g class="table-group" id="tbl-modulos">
-                <rect x="1060" y="560" width="240" height="150" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="1060" y="560" width="240" height="42" rx="10" fill="#0e2420" />
-                <rect x="1060" y="590" width="240" height="12" rx="0" fill="#0e2420" />
-                <text x="1080" y="587" class="table-header" fill="#2ec4b6">Modulos</text>
+                <rect x="1060" y="560" width="240" height="150" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="1060" y="560" width="240" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="1060" y="590" width="240" height="12" rx="0" fill="#2ec4b6" />
+                <text x="1080" y="587" class="table-header" fill="#fff">Modulos</text>
                 <rect x="1076" y="612" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1081" y="622" class="badge-pk">PK</text>
                 <text x="1110" y="622" class="col-name">Id</text>
@@ -440,15 +432,15 @@
                 <text x="1240" y="682" class="col-type">datetime2</text>
                 <text x="1080" y="702" class="col-name">CodigoRegistro</text>
                 <text x="1240" y="702" class="col-type">nvarchar(16)</text>
-                <line x1="1060" y1="606" x2="1300" y2="606" stroke="#1f2330" stroke-width="1" />
+                <line x1="1060" y1="606" x2="1300" y2="606" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- MATRICULAS -->
             <g class="table-group" id="tbl-matriculas">
-                <rect x="600" y="920" width="280" height="190" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="600" y="920" width="280" height="42" rx="10" fill="#201310" />
-                <rect x="600" y="950" width="280" height="12" rx="0" fill="#201310" />
-                <text x="620" y="947" class="table-header" fill="#f76f4f">Matriculas</text>
+                <rect x="600" y="920" width="280" height="190" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="600" y="920" width="280" height="42" rx="10" fill="#f76f4f" />
+                <rect x="600" y="950" width="280" height="12" rx="0" fill="#f76f4f" />
+                <text x="620" y="947" class="table-header" fill="#fff">Matriculas</text>
                 <rect x="616" y="972" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="621" y="982" class="badge-pk">PK</text>
                 <text x="650" y="982" class="col-name">Id</text>
@@ -471,15 +463,15 @@
                 <text x="820" y="1082" class="col-type">decimal(4,2)</text>
                 <text x="620" y="1102" class="col-name">CodigoRegistro</text>
                 <text x="820" y="1102" class="col-type">nvarchar(16)</text>
-                <line x1="600" y1="966" x2="880" y2="966" stroke="#1f2330" stroke-width="1" />
+                <line x1="600" y1="966" x2="880" y2="966" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- CONTEUDOS DIDATICOS -->
             <g class="table-group" id="tbl-conteudos">
-                <rect x="1340" y="460" width="280" height="230" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="1340" y="460" width="280" height="42" rx="10" fill="#0e2420" />
-                <rect x="1340" y="490" width="280" height="12" rx="0" fill="#0e2420" />
-                <text x="1360" y="487" class="table-header" fill="#2ec4b6">ConteudosDidaticos</text>
+                <rect x="1340" y="460" width="280" height="230" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="1340" y="460" width="280" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="1340" y="490" width="280" height="12" rx="0" fill="#2ec4b6" />
+                <text x="1360" y="487" class="table-header" fill="#fff">ConteudosDidaticos</text>
                 <rect x="1356" y="512" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1361" y="522" class="badge-pk">PK</text>
                 <text x="1390" y="522" class="col-name">Id</text>
@@ -506,15 +498,15 @@
                 <text x="1560" y="662" class="col-type">int</text>
                 <text x="1360" y="682" class="col-name">PesoProgresso</text>
                 <text x="1560" y="682" class="col-type">decimal(6,2)</text>
-                <line x1="1340" y1="506" x2="1620" y2="506" stroke="#1f2330" stroke-width="1" />
+                <line x1="1340" y1="506" x2="1620" y2="506" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- AVALIACOES -->
             <g class="table-group" id="tbl-aval">
-                <rect x="1340" y="920" width="280" height="270" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="1340" y="920" width="280" height="42" rx="10" fill="#201310" />
-                <rect x="1340" y="950" width="280" height="12" rx="0" fill="#201310" />
-                <text x="1360" y="947" class="table-header" fill="#f76f4f">Avaliacoes</text>
+                <rect x="1340" y="920" width="280" height="270" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="1340" y="920" width="280" height="42" rx="10" fill="#f76f4f" />
+                <rect x="1340" y="950" width="280" height="12" rx="0" fill="#f76f4f" />
+                <text x="1360" y="947" class="table-header" fill="#fff">Avaliacoes</text>
                 <rect x="1356" y="972" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1361" y="982" class="badge-pk">PK</text>
                 <text x="1390" y="982" class="col-name">Id</text>
@@ -545,15 +537,15 @@
                 <text x="1560" y="1162" class="col-type">decimal(6,2)</text>
                 <text x="1360" y="1182" class="col-name">DataAbertura</text>
                 <text x="1560" y="1182" class="col-type">datetime2</text>
-                <line x1="1340" y1="966" x2="1620" y2="966" stroke="#1f2330" stroke-width="1" />
+                <line x1="1340" y1="966" x2="1620" y2="966" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- QUESTOES BANCO -->
             <g class="table-group" id="tbl-qbanco">
-                <rect x="1540" y="460" width="260" height="230" rx="10" fill="#13161e" stroke="#f7c948" stroke-width="1.5" />
-                <rect x="1540" y="460" width="260" height="42" rx="10" fill="#201c08" />
-                <rect x="1540" y="490" width="260" height="12" rx="0" fill="#201c08" />
-                <text x="1560" y="487" class="table-header" fill="#f7c948">QuestoesBanco</text>
+                <rect x="1540" y="460" width="260" height="230" rx="10" fill="#fff" stroke="#c9950a" stroke-width="1.5" />
+                <rect x="1540" y="460" width="260" height="42" rx="10" fill="#c9950a" />
+                <rect x="1540" y="490" width="260" height="12" rx="0" fill="#c9950a" />
+                <text x="1560" y="487" class="table-header" fill="#fff">QuestoesBanco</text>
                 <rect x="1556" y="512" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1561" y="522" class="badge-pk">PK</text>
                 <text x="1590" y="522" class="col-name">Id</text>
@@ -574,15 +566,15 @@
                 <text x="1740" y="642" class="col-type">tinyint</text>
                 <text x="1560" y="662" class="col-name">Ativa</text>
                 <text x="1740" y="662" class="col-type">bit</text>
-                <line x1="1540" y1="506" x2="1800" y2="506" stroke="#1f2330" stroke-width="1" />
+                <line x1="1540" y1="506" x2="1800" y2="506" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- ALTERNATIVAS BANCO -->
             <g class="table-group" id="tbl-altbanco">
-                <rect x="1540" y="900" width="260" height="150" rx="10" fill="#13161e" stroke="#f7c948" stroke-width="1.5" />
-                <rect x="1540" y="900" width="260" height="42" rx="10" fill="#201c08" />
-                <rect x="1540" y="930" width="260" height="12" rx="0" fill="#201c08" />
-                <text x="1560" y="927" class="table-header" fill="#f7c948">AltQuestoesBanco</text>
+                <rect x="1540" y="900" width="260" height="150" rx="10" fill="#fff" stroke="#c9950a" stroke-width="1.5" />
+                <rect x="1540" y="900" width="260" height="42" rx="10" fill="#c9950a" />
+                <rect x="1540" y="930" width="260" height="12" rx="0" fill="#c9950a" />
+                <text x="1560" y="927" class="table-header" fill="#fff">AltQuestoesBanco</text>
                 <rect x="1556" y="952" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1561" y="962" class="badge-pk">PK</text>
                 <text x="1590" y="962" class="col-name">Id</text>
@@ -597,15 +589,15 @@
                 <text x="1740" y="1022" class="col-type">nvarchar(max)</text>
                 <text x="1560" y="1042" class="col-name">EhCorreta</text>
                 <text x="1740" y="1042" class="col-type">bit</text>
-                <line x1="1540" y1="946" x2="1800" y2="946" stroke="#1f2330" stroke-width="1" />
+                <line x1="1540" y1="946" x2="1800" y2="946" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- ANEXOS BANCO -->
             <g class="table-group" id="tbl-anexos">
-                <rect x="1840" y="900" width="240" height="130" rx="10" fill="#13161e" stroke="#f7c948" stroke-width="1.5" />
-                <rect x="1840" y="900" width="240" height="42" rx="10" fill="#201c08" />
-                <rect x="1840" y="930" width="240" height="12" rx="0" fill="#201c08" />
-                <text x="1860" y="927" class="table-header" fill="#f7c948">AnexosQuestoesBanco</text>
+                <rect x="1840" y="900" width="240" height="130" rx="10" fill="#fff" stroke="#c9950a" stroke-width="1.5" />
+                <rect x="1840" y="900" width="240" height="42" rx="10" fill="#c9950a" />
+                <rect x="1840" y="930" width="240" height="12" rx="0" fill="#c9950a" />
+                <text x="1860" y="927" class="table-header" fill="#fff">AnexosQuestoesBanco</text>
                 <rect x="1856" y="952" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1861" y="962" class="badge-pk">PK</text>
                 <text x="1890" y="962" class="col-name">Id</text>
@@ -618,15 +610,15 @@
                 <text x="2020" y="1002" class="col-type">nvarchar(160)</text>
                 <text x="1860" y="1022" class="col-name">ArquivoUrl</text>
                 <text x="2020" y="1022" class="col-type">nvarchar(500)</text>
-                <line x1="1840" y1="946" x2="2080" y2="946" stroke="#1f2330" stroke-width="1" />
+                <line x1="1840" y1="946" x2="2080" y2="946" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- QUESTOES PUBLICADAS -->
             <g class="table-group" id="tbl-qpub">
-                <rect x="1840" y="460" width="260" height="190" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="1840" y="460" width="260" height="42" rx="10" fill="#201310" />
-                <rect x="1840" y="490" width="260" height="12" rx="0" fill="#201310" />
-                <text x="1860" y="487" class="table-header" fill="#f76f4f">QuestoesPublicadas</text>
+                <rect x="1840" y="460" width="260" height="190" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="1840" y="460" width="260" height="42" rx="10" fill="#f76f4f" />
+                <rect x="1840" y="490" width="260" height="12" rx="0" fill="#f76f4f" />
+                <text x="1860" y="487" class="table-header" fill="#fff">QuestoesPublicadas</text>
                 <rect x="1856" y="512" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1861" y="522" class="badge-pk">PK</text>
                 <text x="1890" y="522" class="col-name">Id</text>
@@ -647,15 +639,15 @@
                 <text x="2040" y="622" class="col-type">decimal(6,2)</text>
                 <text x="1860" y="642" class="col-name">EnunciadoSnapshot</text>
                 <text x="2040" y="642" class="col-type">nvarchar</text>
-                <line x1="1840" y1="506" x2="2100" y2="506" stroke="#1f2330" stroke-width="1" />
+                <line x1="1840" y1="506" x2="2100" y2="506" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- ALTERNATIVAS PUBLICADAS -->
             <g class="table-group" id="tbl-altpub">
-                <rect x="1840" y="700" width="260" height="160" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="1840" y="700" width="260" height="42" rx="10" fill="#201310" />
-                <rect x="1840" y="730" width="260" height="12" rx="0" fill="#201310" />
-                <text x="1860" y="727" class="table-header" fill="#f76f4f">AltQuestoesPublicadas</text>
+                <rect x="1840" y="700" width="260" height="160" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="1840" y="700" width="260" height="42" rx="10" fill="#f76f4f" />
+                <rect x="1840" y="730" width="260" height="12" rx="0" fill="#f76f4f" />
+                <text x="1860" y="727" class="table-header" fill="#fff">AltQuestoesPublicadas</text>
                 <rect x="1856" y="752" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1861" y="762" class="badge-pk">PK</text>
                 <text x="1890" y="762" class="col-name">Id</text>
@@ -670,15 +662,15 @@
                 <text x="2040" y="822" class="col-type">nvarchar(max)</text>
                 <text x="1860" y="842" class="col-name">EhCorreta</text>
                 <text x="2040" y="842" class="col-type">bit</text>
-                <line x1="1840" y1="746" x2="2100" y2="746" stroke="#1f2330" stroke-width="1" />
+                <line x1="1840" y1="746" x2="2100" y2="746" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- TENTATIVAS AVALIACAO -->
             <g class="table-group" id="tbl-tent">
-                <rect x="1340" y="1200" width="280" height="200" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="1340" y="1200" width="280" height="42" rx="10" fill="#201310" />
-                <rect x="1340" y="1230" width="280" height="12" rx="0" fill="#201310" />
-                <text x="1360" y="1227" class="table-header" fill="#f76f4f">TentativasAvaliacao</text>
+                <rect x="1340" y="1200" width="280" height="200" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="1340" y="1200" width="280" height="42" rx="10" fill="#f76f4f" />
+                <rect x="1340" y="1230" width="280" height="12" rx="0" fill="#f76f4f" />
+                <text x="1360" y="1227" class="table-header" fill="#fff">TentativasAvaliacao</text>
                 <rect x="1356" y="1252" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1361" y="1262" class="badge-pk">PK</text>
                 <text x="1390" y="1262" class="col-name">Id</text>
@@ -699,15 +691,15 @@
                 <text x="1560" y="1362" class="col-type">decimal(6,2)</text>
                 <text x="1360" y="1382" class="col-name">IniciadaEm</text>
                 <text x="1560" y="1382" class="col-type">datetime2</text>
-                <line x1="1340" y1="1246" x2="1620" y2="1246" stroke="#1f2330" stroke-width="1" />
+                <line x1="1340" y1="1246" x2="1620" y2="1246" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- RESPOSTAS ALUNOS -->
             <g class="table-group" id="tbl-resp">
-                <rect x="1660" y="1180" width="260" height="190" rx="10" fill="#13161e" stroke="#f76f4f" stroke-width="1.5" />
-                <rect x="1660" y="1180" width="260" height="42" rx="10" fill="#201310" />
-                <rect x="1660" y="1210" width="260" height="12" rx="0" fill="#201310" />
-                <text x="1680" y="1207" class="table-header" fill="#f76f4f">RespostasAlunos</text>
+                <rect x="1660" y="1180" width="260" height="190" rx="10" fill="#fff" stroke="#f76f4f" stroke-width="1.5" />
+                <rect x="1660" y="1180" width="260" height="42" rx="10" fill="#f76f4f" />
+                <rect x="1660" y="1210" width="260" height="12" rx="0" fill="#f76f4f" />
+                <text x="1680" y="1207" class="table-header" fill="#fff">RespostasAlunos</text>
                 <rect x="1676" y="1232" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="1681" y="1242" class="badge-pk">PK</text>
                 <text x="1710" y="1242" class="col-name">Id</text>
@@ -730,15 +722,15 @@
                 <text x="1860" y="1342" class="col-type">bit</text>
                 <text x="1680" y="1362" class="col-name">PontosObtidos</text>
                 <text x="1860" y="1362" class="col-type">decimal(6,2)</text>
-                <line x1="1660" y1="1226" x2="1920" y2="1226" stroke="#1f2330" stroke-width="1" />
+                <line x1="1660" y1="1226" x2="1920" y2="1226" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- LANCAMENTOS NOTAS -->
             <g class="table-group" id="tbl-notas">
-                <rect x="960" y="1200" width="280" height="230" rx="10" fill="#13161e" stroke="#f7c948" stroke-width="1.5" />
-                <rect x="960" y="1200" width="280" height="42" rx="10" fill="#201c08" />
-                <rect x="960" y="1230" width="280" height="12" rx="0" fill="#201c08" />
-                <text x="980" y="1227" class="table-header" fill="#f7c948">LancamentosNotasAlunos</text>
+                <rect x="960" y="1200" width="280" height="230" rx="10" fill="#fff" stroke="#c9950a" stroke-width="1.5" />
+                <rect x="960" y="1200" width="280" height="42" rx="10" fill="#c9950a" />
+                <rect x="960" y="1230" width="280" height="12" rx="0" fill="#c9950a" />
+                <text x="980" y="1227" class="table-header" fill="#fff">LancamentosNotasAlunos</text>
                 <rect x="976" y="1252" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="981" y="1262" class="badge-pk">PK</text>
                 <text x="1010" y="1262" class="col-name">Id</text>
@@ -765,15 +757,15 @@
                 <text x="1180" y="1382" class="col-type">int</text>
                 <text x="980" y="1402" class="col-name">FeedbackProfessor</text>
                 <text x="1180" y="1402" class="col-type">nvarchar</text>
-                <line x1="960" y1="1246" x2="1240" y2="1246" stroke="#1f2330" stroke-width="1" />
+                <line x1="960" y1="1246" x2="1240" y2="1246" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- FEEDBACKS ACADEMICOS -->
             <g class="table-group" id="tbl-feed">
-                <rect x="40" y="1200" width="260" height="190" rx="10" fill="#13161e" stroke="#7c5cfc" stroke-width="1.5" />
-                <rect x="40" y="1200" width="260" height="42" rx="10" fill="#1e1630" />
-                <rect x="40" y="1230" width="260" height="12" rx="0" fill="#1e1630" />
-                <text x="60" y="1227" class="table-header" fill="#7c5cfc">FeedbacksAcademicos</text>
+                <rect x="40" y="1200" width="260" height="190" rx="10" fill="#fff" stroke="#7c5cfc" stroke-width="1.5" />
+                <rect x="40" y="1200" width="260" height="42" rx="10" fill="#7c5cfc" />
+                <rect x="40" y="1230" width="260" height="12" rx="0" fill="#7c5cfc" />
+                <text x="60" y="1227" class="table-header" fill="#fff">FeedbacksAcademicos</text>
                 <rect x="56" y="1252" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="61" y="1262" class="badge-pk">PK</text>
                 <text x="90" y="1262" class="col-name">Id</text>
@@ -794,15 +786,15 @@
                 <text x="240" y="1362" class="col-type">bit</text>
                 <text x="60" y="1382" class="col-name">CriadoEm</text>
                 <text x="240" y="1382" class="col-type">datetime2</text>
-                <line x1="40" y1="1246" x2="300" y2="1246" stroke="#1f2330" stroke-width="1" />
+                <line x1="40" y1="1246" x2="300" y2="1246" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- PROGRESSOS CONTEUDOS -->
             <g class="table-group" id="tbl-progc">
-                <rect x="340" y="1200" width="260" height="190" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="340" y="1200" width="260" height="42" rx="10" fill="#0e2420" />
-                <rect x="340" y="1230" width="260" height="12" rx="0" fill="#0e2420" />
-                <text x="360" y="1227" class="table-header" fill="#2ec4b6">ProgressosConteudos</text>
+                <rect x="340" y="1200" width="260" height="190" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="340" y="1200" width="260" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="340" y="1230" width="260" height="12" rx="0" fill="#2ec4b6" />
+                <text x="360" y="1227" class="table-header" fill="#fff">ProgressosConteudos</text>
                 <rect x="356" y="1252" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="361" y="1262" class="badge-pk">PK</text>
                 <text x="390" y="1262" class="col-name">Id</text>
@@ -823,15 +815,15 @@
                 <text x="540" y="1362" class="col-type">datetime2</text>
                 <text x="360" y="1382" class="col-name">ConcluidoEm</text>
                 <text x="540" y="1382" class="col-type">datetime2</text>
-                <line x1="340" y1="1246" x2="600" y2="1246" stroke="#1f2330" stroke-width="1" />
+                <line x1="340" y1="1246" x2="600" y2="1246" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- PROGRESSOS MODULOS -->
             <g class="table-group" id="tbl-progm">
-                <rect x="620" y="1200" width="260" height="170" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="620" y="1200" width="260" height="42" rx="10" fill="#0e2420" />
-                <rect x="620" y="1230" width="260" height="12" rx="0" fill="#0e2420" />
-                <text x="640" y="1227" class="table-header" fill="#2ec4b6">ProgressosModulos</text>
+                <rect x="620" y="1200" width="260" height="170" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="620" y="1200" width="260" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="620" y="1230" width="260" height="12" rx="0" fill="#2ec4b6" />
+                <text x="640" y="1227" class="table-header" fill="#fff">ProgressosModulos</text>
                 <rect x="636" y="1252" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="641" y="1262" class="badge-pk">PK</text>
                 <text x="670" y="1262" class="col-name">Id</text>
@@ -850,15 +842,15 @@
                 <text x="820" y="1342" class="col-type">decimal</text>
                 <text x="640" y="1362" class="col-name">MediaModulo</text>
                 <text x="820" y="1362" class="col-type">decimal(6,2)</text>
-                <line x1="620" y1="1246" x2="880" y2="1246" stroke="#1f2330" stroke-width="1" />
+                <line x1="620" y1="1246" x2="880" y2="1246" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- PROGRESSOS CURSOS -->
             <g class="table-group" id="tbl-progcu">
-                <rect x="40" y="1460" width="260" height="190" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="40" y="1460" width="260" height="42" rx="10" fill="#0e2420" />
-                <rect x="40" y="1490" width="260" height="12" rx="0" fill="#0e2420" />
-                <text x="60" y="1487" class="table-header" fill="#2ec4b6">ProgressosCursos</text>
+                <rect x="40" y="1460" width="260" height="190" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="40" y="1460" width="260" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="40" y="1490" width="260" height="12" rx="0" fill="#2ec4b6" />
+                <text x="60" y="1487" class="table-header" fill="#fff">ProgressosCursos</text>
                 <rect x="56" y="1512" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="61" y="1522" class="badge-pk">PK</text>
                 <text x="90" y="1522" class="col-name">Id</text>
@@ -877,15 +869,15 @@
                 <text x="240" y="1602" class="col-type">int</text>
                 <text x="60" y="1622" class="col-name">MediaCurso</text>
                 <text x="240" y="1622" class="col-type">decimal(6,2)</text>
-                <line x1="40" y1="1506" x2="300" y2="1506" stroke="#1f2330" stroke-width="1" />
+                <line x1="40" y1="1506" x2="300" y2="1506" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
             <!-- MARCOS PROGRESSOS -->
             <g class="table-group" id="tbl-marcos">
-                <rect x="340" y="1460" width="260" height="190" rx="10" fill="#13161e" stroke="#2ec4b6" stroke-width="1.5" />
-                <rect x="340" y="1460" width="260" height="42" rx="10" fill="#0e2420" />
-                <rect x="340" y="1490" width="260" height="12" rx="0" fill="#0e2420" />
-                <text x="360" y="1487" class="table-header" fill="#2ec4b6">MarcosProgressos</text>
+                <rect x="340" y="1460" width="260" height="190" rx="10" fill="#fff" stroke="#2ec4b6" stroke-width="1.5" />
+                <rect x="340" y="1460" width="260" height="42" rx="10" fill="#2ec4b6" />
+                <rect x="340" y="1490" width="260" height="12" rx="0" fill="#2ec4b6" />
+                <text x="360" y="1487" class="table-header" fill="#fff">MarcosProgressos</text>
                 <rect x="356" y="1512" width="26" height="14" rx="3" fill="#f7c948" />
                 <text x="361" y="1522" class="badge-pk">PK</text>
                 <text x="390" y="1522" class="col-name">Id</text>
@@ -908,24 +900,56 @@
                 <text x="540" y="1622" class="col-type">decimal(5,2)</text>
                 <text x="360" y="1642" class="col-name">GeradoEm</text>
                 <text x="540" y="1642" class="col-type">datetime2</text>
-                <line x1="340" y1="1506" x2="600" y2="1506" stroke="#1f2330" stroke-width="1" />
+                <line x1="340" y1="1506" x2="600" y2="1506" stroke="#e0dbd0" stroke-width="1" />
             </g>
 
-            <!-- Group labels -->
-            <text x="240" y="46" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">AUTENTICAÇÃO</text>
-            <text x="710" y="146" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">ESTRUTURA ACADÊMICA</text>
-            <text x="1100" y="900" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">MATRÍCULAS</text>
-            <text x="1700" y="446" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">BANCO DE QUESTÕES</text>
-            <text x="1700" y="1160" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">AVALIAÇÕES E RESPOSTAS</text>
-            <text x="400" y="1180" font-family="Syne, sans-serif" font-size="10" fill="#5a6280" letter-spacing="2" text-anchor="middle">PROGRESSO E FEEDBACKS</text>
+            <!-- Rótulos de grupo -->
+            <text x="240" y="46" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">AUTENTICAÇÃO</text>
+            <text x="710" y="146" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">ESTRUTURA ACADÊMICA</text>
+            <text x="730" y="900" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">MATRÍCULAS</text>
+            <text x="1700" y="446" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">BANCO DE QUESTÕES</text>
+            <text x="1700" y="1160" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">AVALIAÇÕES E RESPOSTAS</text>
+            <text x="400" y="1180" font-family="Outfit, sans-serif" font-size="10" fill="#aaa" letter-spacing="2" text-anchor="middle">PROGRESSO E FEEDBACKS</text>
 
         </svg>
     </div>
 
-    <div class="tooltip" id="tooltip"></div>
+    <!-- Legenda -->
+    <div class="legend-box">
+        <h3>Legenda — Código de Cores</h3>
+        <div class="leg">
+            <div class="leg-dot" style="background:#4f8ef7"></div>
+            <span>Autenticação — Usuarios</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#7c5cfc"></div>
+            <span>Perfis — Admins, Coordenadores, Professores, Alunos, FeedbacksAcademicos</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#2ec4b6"></div>
+            <span>Estrutura acadêmica — Cursos, Turmas, Módulos, Conteúdos, Progressos</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#f76f4f"></div>
+            <span>Avaliações — Matrículas, Avaliações, Tentativas, Questões Publicadas, Respostas</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#c9950a"></div>
+            <span>Banco de questões e notas — QuestoesBanco, Alternativas, Anexos, LancamentosNotas</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#f7c948; outline: 1px solid #ccc"></div>
+            <span>PK — Chave primária</span>
+        </div>
+        <div class="leg">
+            <div class="leg-dot" style="background:#4f8ef7"></div>
+            <span>FK — Chave estrangeira</span>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
 
     <script>
-        // drag to pan
         const wrap = document.getElementById('canvas-wrap');
         let dragging = false, startX, startY, scrollLeft, scrollTop;
         wrap.addEventListener('mousedown', e => {
@@ -941,7 +965,7 @@
             wrap.scrollLeft = scrollLeft - (e.pageX - wrap.offsetLeft - startX);
             wrap.scrollTop = scrollTop - (e.pageY - wrap.offsetTop - startY);
         });
-        ['mouseup','mouseleave'].forEach(ev => wrap.addEventListener(ev, () => dragging = false));
+        ['mouseup', 'mouseleave'].forEach(ev => wrap.addEventListener(ev, () => dragging = false));
     </script>
 </body>
 </html>

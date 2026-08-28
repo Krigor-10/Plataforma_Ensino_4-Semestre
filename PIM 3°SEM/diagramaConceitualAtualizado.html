@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Modelo Conceitual – PlataformaEnsinoDB</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+        :root {
+            --bg: #0c0e14; --surface: #13161f; --border: #1e2130;
+            --users: #22c55e; --courses: #3b82f6; --evals: #f97316;
+            --progress: #a855f7; --text: #e2e8f0; --muted: #64748b;
+        }
+        body { font-family: 'Lexend', sans-serif; background: var(--bg); color: var(--text); overflow-x: auto; min-height: 100vh }
+        header {
+            padding: 22px 40px;
+            background: linear-gradient(135deg, #0f1219 0%, #13161f 100%);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+        }
+        .hd-left h1 { font-size: 20px; font-weight: 800; letter-spacing: -.5px }
+        .hd-left p { font-size: 12px; color: var(--muted); margin-top: 3px }
+        .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase }
+        .chip-c { background: #1e40af22; color: #60a5fa; border: 1px solid #1e40af55 }
+        .stats { display: flex; gap: 24px }
+        .stat { text-align: center }
+        .stat-n { font-size: 22px; font-weight: 800; font-family: 'Fira Code', monospace }
+        .stat-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px }
+        .legend {
+            display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+            padding: 12px 40px; background: #0f1219; border-bottom: 1px solid var(--border); font-size: 12px;
+        }
+        .legend span { font-size: 11px; color: var(--muted); font-weight: 500; margin-right: 4px }
+        .leg { display: flex; align-items: center; gap: 7px; color: var(--muted) }
+        .ldot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0 }
+        .lline { width: 28px; height: 2px; border-radius: 2px }
+        .lline.dashed { background: repeating-linear-gradient(90deg, #64748b 0, #64748b 4px, transparent 4px, transparent 8px) }
+        .card-row { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid }
+        .svg-wrap { padding: 30px 20px; overflow-x: auto; min-width: 1460px }
+        svg { display: block; margin: 0 auto; overflow: visible }
+        .bottom {
+            padding: 24px 40px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+        }
+        .rel-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px }
+        .rel-card h4 { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px }
+        .rel-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-family: 'Fira Code', monospace }
+        .rel-row .badge { padding: 1px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; flex-shrink: 0 }
+        .arr { flex: 1; border-top: 1px dashed #334155 }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="hd-left">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+            <span class="chip chip-c">Modelo Conceitual</span>
+        </div>
+        <h1>PlataformaEnsinoDB</h1>
+        <p>Entidades agrupadas por domínio · ligações com cardinalidades · EF Core TPT · .NET 10</p>
+    </div>
+    <div class="stats">
+        <div class="stat"><div class="stat-n" style="color:#22c55e">5</div><div class="stat-l">Classes Usuários</div></div>
+        <div class="stat"><div class="stat-n" style="color:#3b82f6">5</div><div class="stat-l">Domínio Cursos</div></div>
+        <div class="stat"><div class="stat-n" style="color:#f97316">9</div><div class="stat-l">Domínio Avaliações</div></div>
+        <div class="stat"><div class="stat-n" style="color:#a855f7">4</div><div class="stat-l">Domínio Progresso</div></div>
+        <div class="stat"><div class="stat-n" style="color:#e2e8f0">26</div><div class="stat-l">Relacionamentos</div></div>
+    </div>
+</header>
+
+<div class="legend">
+    <span>Domínios:</span>
+    <div class="leg"><div class="ldot" style="background:#22c55e"></div>Usuários / TPT</div>
+    <div class="leg"><div class="ldot" style="background:#3b82f6"></div>Cursos / Conteúdo</div>
+    <div class="leg"><div class="ldot" style="background:#f97316"></div>Avaliações</div>
+    <div class="leg"><div class="ldot" style="background:#a855f7"></div>Progresso</div>
+    <span style="margin-left:16px">Cardinalidades:</span>
+    <div class="leg"><div class="lline" style="background:#64748b"></div>Obrigatório</div>
+    <div class="leg"><div class="lline dashed"></div>Opcional</div>
+    <div class="leg" style="gap:4px">
+        <span class="card-row" style="color:#22c55e;border-color:#22c55e44;background:#22c55e11">1</span>
+        <span style="color:#64748b">→</span>
+        <span class="card-row" style="color:#22c55e;border-color:#22c55e44;background:#22c55e11">N</span>
+        <span style="color:#64748b;font-size:11px">nos extremos das linhas</span>
+    </div>
+</div>
+
+<div class="svg-wrap">
+<!-- viewBox: 1460 × 1010 | 5 colunas + faixa de progresso -->
+<svg id="diagram" viewBox="0 0 1460 1010" width="1460" height="1010" xmlns="http://www.w3.org/2000/svg">
+<defs>
+    <marker id="arr-g"    markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L0,8 L10,4 z" fill="#22c55e"/></marker>
+    <marker id="arr-b"    markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L0,8 L10,4 z" fill="#3b82f6"/></marker>
+    <marker id="arr-o"    markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L0,8 L10,4 z" fill="#f97316"/></marker>
+    <marker id="arr-p"    markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L0,8 L10,4 z" fill="#a855f7"/></marker>
+    <marker id="arr-muted" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L0,8 L10,4 z" fill="#64748b"/></marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+</defs>
+
+<!-- ═══════════════════════════════════════════════════════
+     ZONAS DE DOMÍNIO (backgrounds sutis)
+     Layout: C1=Usuários(x10) | C2=Cursos(x375) | C3=Hub(x635)
+             C4=Avaliações(x905) | C5=Detalhes(x1175)
+             Bottom=Progresso(y820)
+     ═══════════════════════════════════════════════════════ -->
+<rect x="5"    y="5"   width="355" height="795" rx="14" fill="#22c55e07" stroke="#22c55e22" stroke-width="1"/>
+<rect x="368"  y="5"   width="255" height="580" rx="14" fill="#3b82f607" stroke="#3b82f622" stroke-width="1"/>
+<rect x="631"  y="5"   width="260" height="795" rx="14" fill="#ffffff04"/>
+<rect x="899"  y="5"   width="262" height="795" rx="14" fill="#f9731607" stroke="#f9731622" stroke-width="1"/>
+<rect x="1169" y="5"   width="278" height="660" rx="14" fill="#f9731604"/>
+<rect x="5"    y="820" width="1135" height="182" rx="14" fill="#a855f708" stroke="#a855f722" stroke-width="1"/>
+
+<!-- Labels de zona -->
+<text x="187"  y="796" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#22c55e44" letter-spacing="2">USUÁRIOS</text>
+<text x="495"  y="590" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#3b82f644" letter-spacing="2">CURSOS</text>
+<text x="761"  y="796" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#64748b44" letter-spacing="2">HUB</text>
+<text x="1030" y="796" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#f9731644" letter-spacing="2">AVALIAÇÕES</text>
+<text x="570"  y="996" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#a855f744" letter-spacing="2">PROGRESSO DO ALUNO</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     LINHAS DE RELACIONAMENTO
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- TPT → USUARIOS (base) -->
+<line x1="187" y1="298" x2="112" y2="312" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-g)"/>
+<text x="145" y="307" font-family="Lexend" font-size="9" fill="#22c55e77" font-style="italic">instâncias</text>
+
+<!-- USUARIOS → FEEDBACK (1:N, vertical) -->
+<line x1="112" y1="517" x2="112" y2="533" stroke="#22c55e" stroke-width="1.8" marker-end="url(#arr-g)"/>
+<text x="120" y="527" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">1</text>
+<text x="120" y="543" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">N</text>
+
+<!-- USUARIOS → TURMA (leciona, 1:N) -->
+<path d="M215,360 C340,360 490,100 631,100" stroke="#22c55e" stroke-width="1.6" fill="none" marker-end="url(#arr-g)"/>
+<text x="350" y="295" font-family="Lexend" font-size="10" fill="#64748b" font-style="italic">LECIONA</text>
+<text x="220" y="356" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">1</text>
+<text x="620" y="97" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">N</text>
+
+<!-- USUARIOS → MATRICULA (realiza, 1:N) -->
+<path d="M215,415 C420,415 530,310 631,310" stroke="#22c55e" stroke-width="1.8" fill="none" marker-end="url(#arr-g)"/>
+<text x="400" y="404" font-family="Lexend" font-size="10" fill="#64748b" font-style="italic">REALIZA</text>
+<text x="220" y="412" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">1</text>
+<text x="620" y="307" font-family="Lexend" font-size="10" fill="#22c55e" font-weight="600">N</text>
+
+<!-- USUARIOS → CONTEUDO (cria, 1:N, opt) -->
+<path d="M215,460 C290,460 340,462 368,462" stroke="#22c55e" stroke-width="1.4" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-g)"/>
+<text x="270" y="455" font-family="Lexend" font-size="9" fill="#64748b" font-style="italic">CRIA (OPT)</text>
+
+<!-- USUARIOS → QUESTAO_BANCO (elabora, 1:N, opt) -->
+<path d="M215,385 C600,320 740,320 899,320" stroke="#22c55e" stroke-width="1.3" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-g)"/>
+<text x="560" y="314" font-family="Lexend" font-size="9" fill="#64748b" font-style="italic">ELABORA</text>
+
+<!-- USUARIOS → AVALIACAO (propõe, 1:N, opt) -->
+<path d="M215,340 C550,200 730,120 899,120" stroke="#22c55e" stroke-width="1.3" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-g)"/>
+
+<!-- USUARIOS → LANCAMENTO (lança, 1:N, opt) -->
+<path d="M215,470 C600,500 740,680 899,680" stroke="#22c55e" stroke-width="1.3" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-g)"/>
+
+<!-- CURSO → TURMA (contém, 1:N, horizontal) -->
+<line x1="576" y1="98" x2="631" y2="98" stroke="#3b82f6" stroke-width="2" marker-end="url(#arr-b)"/>
+<text x="582" y="91" font-family="Lexend" font-size="10" fill="#3b82f6" font-style="italic">CONTÉM</text>
+<text x="577" y="109" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">N</text>
+<text x="568" y="95" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">1</text>
+
+<!-- CURSO → MODULO (organiza, 1:N, vertical) -->
+<line x1="470" y1="183" x2="470" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arr-b)"/>
+<text x="476" y="194" font-family="Lexend" font-size="10" fill="#3b82f6" font-style="italic">ORGANIZA</text>
+<text x="457" y="187" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">1</text>
+<text x="457" y="200" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">N</text>
+
+<!-- CURSO → MATRICULA (em, 1:N) -->
+<path d="M576,130 C604,130 618,215 631,260" stroke="#3b82f6" stroke-width="1.8" fill="none" marker-end="url(#arr-b)"/>
+<text x="596" y="195" font-family="Lexend" font-size="10" fill="#3b82f6" font-style="italic">EM</text>
+<text x="579" y="128" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">1</text>
+<text x="622" y="262" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">N</text>
+
+<!-- TURMA → MATRICULA (agrupa, 1:N, vertical) -->
+<line x1="741" y1="183" x2="741" y2="200" stroke="#3b82f6" stroke-width="2" marker-end="url(#arr-b)"/>
+<text x="748" y="194" font-family="Lexend" font-size="10" fill="#64748b" font-style="italic">AGRUPA</text>
+<text x="728" y="187" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">1</text>
+<text x="728" y="200" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">N</text>
+
+<!-- MODULO → CONTEUDO (compõe, 1:N, vertical) -->
+<line x1="470" y1="358" x2="470" y2="375" stroke="#3b82f6" stroke-width="2" marker-end="url(#arr-b)"/>
+<text x="476" y="369" font-family="Lexend" font-size="10" fill="#3b82f6" font-style="italic">COMPÕE</text>
+<text x="457" y="362" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">1</text>
+<text x="457" y="376" font-family="Lexend" font-size="10" fill="#3b82f6" font-weight="600">N</text>
+
+<!-- MODULO → AVALIACAO (avaliado, 1:N, opt) -->
+<path d="M576,270 C740,270 820,140 899,140" stroke="#f97316" stroke-width="1.4" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-o)"/>
+<text x="710" y="192" font-family="Lexend" font-size="9" fill="#f97316" font-style="italic">AVALIADO</text>
+
+<!-- AVALIACAO → QUESTAO_PUBLICADA (publica, 1:N, vertical) -->
+<line x1="1012" y1="225" x2="1012" y2="248" stroke="#f97316" stroke-width="2" marker-end="url(#arr-o)"/>
+<text x="1019" y="240" font-family="Lexend" font-size="10" fill="#f97316" font-style="italic">PUBLICA</text>
+<text x="999"  y="229" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">1</text>
+<text x="999"  y="248" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+
+<!-- AVALIACAO → TENTATIVA (gera, 1:N, cross-col C4→C3) -->
+<path d="M899,148 C875,148 858,458 857,458" stroke="#f97316" stroke-width="1.8" fill="none" marker-end="url(#arr-o)"/>
+<text x="864" y="302" font-family="Lexend" font-size="10" fill="#f97316" font-style="italic">GERA</text>
+<text x="889" y="145" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">1</text>
+<text x="846" y="460" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+
+<!-- MATRICULA → TENTATIVA (tenta, 1:N, vertical C3) -->
+<line x1="741" y1="422" x2="741" y2="440" stroke="#f97316" stroke-width="2" marker-end="url(#arr-o)"/>
+<text x="748" y="434" font-family="Lexend" font-size="10" fill="#f97316" font-style="italic">TENTA</text>
+<text x="728" y="426" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">1</text>
+<text x="728" y="441" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+
+<!-- TENTATIVA → RESPOSTA (contém, 1:N, vertical C3) -->
+<line x1="741" y1="618" x2="741" y2="636" stroke="#f97316" stroke-width="2" marker-end="url(#arr-o)"/>
+<text x="748" y="630" font-family="Lexend" font-size="10" fill="#f97316" font-style="italic">CONTÉM</text>
+<text x="728" y="622" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">1</text>
+<text x="728" y="637" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+
+<!-- QUESTAO_PUBLICADA → RESPOSTA (1:N, cross C4→C3) -->
+<path d="M899,498 C875,498 860,700 857,700" stroke="#f97316" stroke-width="1.6" fill="none" stroke-dasharray="5,3" marker-end="url(#arr-o)"/>
+
+<!-- QUESTAO_BANCO → QUESTAO_PUBLICADA (snapshot, vertical) -->
+<line x1="1012" y1="407" x2="1012" y2="425" stroke="#64748b" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-muted)"/>
+<text x="1019" y="419" font-family="Lexend" font-size="9" fill="#64748b" font-style="italic">SNAPSHOT</text>
+
+<!-- QUESTAO_BANCO → ALT_BANCO (possui, 1:N) -->
+<line x1="1117" y1="312" x2="1169" y2="312" stroke="#f97316" stroke-width="1.8" marker-end="url(#arr-o)"/>
+<text x="1127" y="305" font-family="Lexend" font-size="10" fill="#f97316" font-style="italic">ALT.</text>
+<text x="1119" y="321" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+<text x="1111" y="309" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">1</text>
+
+<!-- QUESTAO_BANCO → ANEXO (possui, 1:N) -->
+<line x1="1117" y1="360" x2="1169" y2="430" stroke="#f97316" stroke-width="1.8" marker-end="url(#arr-o)"/>
+<text x="1135" y="405" font-family="Lexend" font-size="9" fill="#f97316" font-style="italic">ANEXO</text>
+
+<!-- QUESTAO_PUBLICADA → ALT_PUBLICADA (possui, 1:N) -->
+<line x1="1117" y1="498" x2="1169" y2="548" stroke="#f97316" stroke-width="1.8" marker-end="url(#arr-o)"/>
+<text x="1127" y="524" font-family="Lexend" font-size="9" fill="#f97316" font-style="italic">ALT.</text>
+<text x="1157" y="545" font-family="Lexend" font-size="10" fill="#f97316" font-weight="600">N</text>
+
+<!-- MATRICULA → LANCAMENTO (recebe, 1:N, cross C3→C4) -->
+<path d="M846,340 C873,340 889,610 899,610" stroke="#f97316" stroke-width="1.5" stroke-dasharray="6,3" fill="none" marker-end="url(#arr-o)"/>
+<text x="878" y="480" font-family="Lexend" font-size="9" fill="#64748b" font-style="italic">RECEBE</text>
+
+<!-- MATRICULA → ProgConteudo (1:N) -->
+<path d="M680,422 C650,650 200,690 117,820" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arr-p)"/>
+<text x="390" y="680" font-family="Lexend" font-size="9" fill="#a855f7" font-style="italic">PROGRIDE</text>
+
+<!-- MATRICULA → ProgModulo (1:N) -->
+<path d="M710,422 C690,700 440,740 349,820" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arr-p)"/>
+
+<!-- MATRICULA → ProgCurso (1:N) -->
+<path d="M750,422 C740,740 620,780 581,820" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arr-p)"/>
+
+<!-- MATRICULA → MarcoProgresso (1:N) -->
+<path d="M790,422 C800,740 820,780 813,820" stroke="#a855f7" stroke-width="1.5" fill="none" marker-end="url(#arr-p)"/>
+
+<!-- ═══════════════════════════════════════════════════════
+     C1 — COLUNA USUÁRIOS
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- TPT Group background -->
+<rect x="8" y="10" width="348" height="295" rx="12" fill="#0c0e14" stroke="#1e2130" stroke-width="1.5"/>
+<rect x="16" y="17" width="200" height="20" rx="10" fill="#14532d55"/>
+<text x="116" y="30" text-anchor="middle" font-family="Lexend" font-size="10" font-weight="700" fill="#22c55e" letter-spacing="1">⚡ HERANÇA · Table Per Type (TPT)</text>
+
+<!-- Usuario abstract -->
+<g filter="url(#shadow)">
+    <rect x="80" y="40" width="196" height="108" rx="8" fill="#13161f" stroke="#22c55e" stroke-width="2" stroke-dasharray="7,3"/>
+    <rect x="80" y="40" width="196" height="34" rx="8" fill="#14532d"/>
+    <rect x="80" y="58"  width="196" height="16"  fill="#14532d"/>
+</g>
+<text x="178" y="60" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#86efac">«abstrato» USUÁRIO</text>
+<text x="178" y="73" text-anchor="middle" font-family="Fira Code" font-size="9" fill="#4ade8066">TipoUsuario (informativo)</text>
+<text x="95"  y="96"  font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 Id : INT PK</text>
+<text x="95"  y="110" font-family="Fira Code" font-size="10" fill="#f59e0b">   TipoUsuario</text>
+<text x="95"  y="124" font-family="Fira Code" font-size="10" fill="#94a3b8">   Nome, Email, Cpf</text>
+<text x="95"  y="138" font-family="Fira Code" font-size="10" fill="#94a3b8">   SenhaHash, Ativo, Endereço</text>
+
+<!-- Fork lines (heranca) -->
+<line x1="178" y1="148" x2="178" y2="167" stroke="#22c55e" stroke-width="2"/>
+<line x1="22"  y1="167" x2="334" y2="167" stroke="#22c55e" stroke-width="2"/>
+<line x1="22"  y1="167" x2="22"  y2="181" stroke="#22c55e" stroke-width="2"/>
+<line x1="113" y1="167" x2="113" y2="181" stroke="#22c55e" stroke-width="2"/>
+<line x1="221" y1="167" x2="221" y2="181" stroke="#22c55e" stroke-width="2"/>
+<line x1="334" y1="167" x2="334" y2="181" stroke="#22c55e" stroke-width="2"/>
+
+<!-- Admin -->
+<g filter="url(#shadow)">
+    <rect x="8"  y="181" width="68" height="74" rx="7" fill="#13161f" stroke="#22c55e" stroke-width="1.8"/>
+    <rect x="8"  y="181" width="68" height="27" rx="7" fill="#166534"/>
+    <rect x="8"  y="198" width="68" height="10"         fill="#166534"/>
+</g>
+<text x="42"  y="197" text-anchor="middle" font-family="Lexend" font-size="10.5" font-weight="700" fill="#86efac">👑 Admin</text>
+<text x="14"  y="221" font-family="Fira Code" font-size="9" fill="#64748b">   (sem campos</text>
+<text x="14"  y="234" font-family="Fira Code" font-size="9" fill="#64748b">   extras)</text>
+
+<!-- Coordenador -->
+<g filter="url(#shadow)">
+    <rect x="83" y="181" width="84" height="88" rx="7" fill="#13161f" stroke="#22c55e" stroke-width="1.8"/>
+    <rect x="83" y="181" width="84" height="27" rx="7" fill="#166534"/>
+    <rect x="83" y="198" width="84" height="10"         fill="#166534"/>
+</g>
+<text x="125" y="197" text-anchor="middle" font-family="Lexend" font-size="9.5" font-weight="700" fill="#86efac">🎓 Coordenador</text>
+<text x="89"  y="222" font-family="Fira Code" font-size="9" fill="#94a3b8">   CodigoReg.</text>
+<text x="89"  y="235" font-family="Fira Code" font-size="9" fill="#64748b">   (sem FK própria)</text>
+<text x="89"  y="248" font-family="Fira Code" font-size="9" fill="#60a5fa">   Cursos.CoordId</text>
+<text x="89"  y="261" font-family="Fira Code" font-size="9" fill="#64748b">   → aqui (1:N)</text>
+
+<!-- Professor -->
+<g filter="url(#shadow)">
+    <rect x="174" y="181" width="84" height="88" rx="7" fill="#13161f" stroke="#22c55e" stroke-width="1.8"/>
+    <rect x="174" y="181" width="84" height="27" rx="7" fill="#166534"/>
+    <rect x="174" y="198" width="84" height="10"         fill="#166534"/>
+</g>
+<text x="216" y="197" text-anchor="middle" font-family="Lexend" font-size="9.5" font-weight="700" fill="#86efac">👨‍🏫 Professor</text>
+<text x="180" y="222" font-family="Fira Code" font-size="9" fill="#94a3b8">   CodigoReg.</text>
+<text x="180" y="235" font-family="Fira Code" font-size="9" fill="#94a3b8">   Especialidade</text>
+
+<!-- Aluno -->
+<g filter="url(#shadow)">
+    <rect x="265" y="181" width="78" height="88" rx="7" fill="#13161f" stroke="#22c55e" stroke-width="1.8"/>
+    <rect x="265" y="181" width="78" height="27" rx="7" fill="#166534"/>
+    <rect x="265" y="198" width="78" height="10"         fill="#166534"/>
+</g>
+<text x="304" y="197" text-anchor="middle" font-family="Lexend" font-size="10.5" font-weight="700" fill="#86efac">🎒 Aluno</text>
+<text x="271" y="222" font-family="Fira Code" font-size="9" fill="#94a3b8">   Matricula</text>
+<text x="271" y="235" font-family="Fira Code" font-size="9" fill="#64748b">   turma atual = via</text>
+<text x="271" y="248" font-family="Fira Code" font-size="9" fill="#64748b">   Matricula aprovada</text>
+
+<!-- USUARIOS -->
+<g filter="url(#shadow)">
+    <rect x="10" y="312" width="205" height="205" rx="10" fill="#13161f" stroke="#22c55e" stroke-width="2"/>
+    <rect x="10" y="312" width="205" height="38"  rx="10" fill="#22c55e"/>
+    <rect x="10" y="332" width="205" height="18"         fill="#22c55e"/>
+</g>
+<text x="112" y="335" text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#000">👤 USUÁRIOS (base)</text>
+<text x="25"  y="371" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="25"  y="387" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   NOME, EMAIL (UQ)</text>
+<text x="25"  y="403" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   SENHAHASH</text>
+<text x="25"  y="419" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   TIPOUSUARIO (info.)</text>
+<text x="25"  y="435" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CPF (UQ), TELEFONE</text>
+<text x="25"  y="451" font-family="Fira Code" font-size="10.5" fill="#64748b">   ENDEREÇO COMPLETO</text>
+<text x="25"  y="467" font-family="Fira Code" font-size="10.5" fill="#64748b">   DATACADASTRO, ATIVO</text>
+<text x="25"  y="483" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 ALUNOS/PROF./COORD./</text>
+<text x="25"  y="499" font-family="Fira Code" font-size="10.5" fill="#60a5fa">   ADMINS.ID → AQUI (TPT)</text>
+
+<!-- FEEDBACK ACADEMICO -->
+<g filter="url(#shadow)">
+    <rect x="10" y="533" width="205" height="168" rx="10" fill="#13161f" stroke="#22c55e" stroke-width="2"/>
+    <rect x="10" y="533" width="205" height="38"  rx="10" fill="#1e3a5f"/>
+    <rect x="10" y="553" width="205" height="18"         fill="#1e3a5f"/>
+</g>
+<text x="112" y="556" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">💬 FEEDBACKACADÊMICO</text>
+<text x="25"  y="592" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="25"  y="608" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 DESTINATARIOID → USUARIOS</text>
+<text x="25"  y="624" font-family="Fira Code" font-size="10.5" fill="#64748b">🔗 AUTORID → USUARIOS (OPT)</text>
+<text x="25"  y="640" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   ORIGEM, MENSAGEM</text>
+<text x="25"  y="656" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   LIDO, CRIADOEM</text>
+<text x="25"  y="672" font-family="Fira Code" font-size="10.5" fill="#64748b">   MarcarComoLido()</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     C2 — COLUNA CURSOS
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- CURSO -->
+<g filter="url(#shadow)">
+    <rect x="370" y="12"  width="206" height="171" rx="10" fill="#13161f" stroke="#3b82f6" stroke-width="2"/>
+    <rect x="370" y="12"  width="206" height="38"  rx="10" fill="#3b82f6"/>
+    <rect x="370" y="32"  width="206" height="18"         fill="#3b82f6"/>
+</g>
+<text x="473" y="35"  text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#fff">📚 CURSOS</text>
+<text x="385" y="72"  font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="385" y="88"  font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 COORDENADORID (OPT)</text>
+<text x="385" y="104" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CODIGOREGISTRO</text>
+<text x="385" y="120" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TITULO, DESCRICAO</text>
+<text x="385" y="136" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   PRECO</text>
+<text x="385" y="152" font-family="Fira Code" font-size="10.5" fill="#64748b">   CRIADOPOR (Admin)</text>
+
+<!-- MODULO -->
+<g filter="url(#shadow)">
+    <rect x="370" y="200" width="206" height="158" rx="10" fill="#13161f" stroke="#3b82f6" stroke-width="2"/>
+    <rect x="370" y="200" width="206" height="38"  rx="10" fill="#3b82f6"/>
+    <rect x="370" y="220" width="206" height="18"         fill="#3b82f6"/>
+</g>
+<text x="473" y="223" text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#fff">📦 MÓDULOS</text>
+<text x="385" y="260" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="385" y="276" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 CURSOID → CURSOS</text>
+<text x="385" y="292" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CODIGOREGISTRO</text>
+<text x="385" y="308" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TITULO, DATACRIACAO</text>
+<text x="385" y="324" font-family="Fira Code" font-size="10.5" fill="#64748b">   AlterarTitulo()</text>
+
+<!-- CONTEUDO DIDATICO -->
+<g filter="url(#shadow)">
+    <rect x="370" y="375" width="206" height="198" rx="10" fill="#13161f" stroke="#1e40af" stroke-width="2"/>
+    <rect x="370" y="375" width="206" height="38"  rx="10" fill="#1e40af"/>
+    <rect x="370" y="395" width="206" height="18"         fill="#1e40af"/>
+</g>
+<text x="473" y="398" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">🎬 CONTEÚDOS DIDÁTICOS</text>
+<text x="385" y="435" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="385" y="451" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 MODULOID → MÓDULOS</text>
+<text x="385" y="467" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 TURMAID (OPT)</text>
+<text x="385" y="483" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 PROFESSORAUTORID</text>
+<text x="385" y="499" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TITULO, TIPOCONTEUDO</text>
+<text x="385" y="515" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   ARQUIVOURL, LINKURL</text>
+<text x="385" y="531" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   STATUS, ORDEMEXIBICAO</text>
+<text x="385" y="547" font-family="Fira Code" font-size="10.5" fill="#64748b">   PESOPROGRESSO</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     C3 — COLUNA HUB (TURMA / MATRICULA / TENTATIVA / RESPOSTA)
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- TURMA -->
+<g filter="url(#shadow)">
+    <rect x="633" y="12"  width="214" height="171" rx="10" fill="#13161f" stroke="#3b82f6" stroke-width="2"/>
+    <rect x="633" y="12"  width="214" height="38"  rx="10" fill="#3b82f6"/>
+    <rect x="633" y="32"  width="214" height="18"         fill="#3b82f6"/>
+</g>
+<text x="740" y="35"  text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#fff">🏫 TURMAS</text>
+<text x="648" y="72"  font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="648" y="88"  font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 CURSOID → CURSOS</text>
+<text x="648" y="104" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 PROFESSORID → USUARIOS</text>
+<text x="648" y="120" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   NOMETURMA</text>
+<text x="648" y="136" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CODIGOREGISTRO</text>
+<text x="648" y="152" font-family="Fira Code" font-size="10.5" fill="#64748b">   DATACRIACAO</text>
+
+<!-- MATRICULA -->
+<g filter="url(#shadow)">
+    <rect x="633" y="200" width="214" height="222" rx="10" fill="#0a1a12" stroke="#22c55e" stroke-width="2.5"/>
+    <rect x="633" y="200" width="214" height="38"  rx="10" fill="#16a34a"/>
+    <rect x="633" y="220" width="214" height="18"         fill="#16a34a"/>
+</g>
+<text x="740" y="223" text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#fff">📝 MATRÍCULAS</text>
+<text x="648" y="260" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="648" y="276" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 ALUNOID → USUARIOS</text>
+<text x="648" y="292" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 CURSOID → CURSOS</text>
+<text x="648" y="308" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 TURMAID → TURMAS (OPT)</text>
+<text x="648" y="324" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CODIGOREGISTRO</text>
+<text x="648" y="340" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   DATASOLICITACAO</text>
+<text x="648" y="356" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   NOTAFINAL</text>
+<text x="648" y="372" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   STATUS: PEND|APROV|REJ|CANC</text>
+<text x="648" y="388" font-family="Fira Code" font-size="10.5" fill="#64748b">   Aprovar/Rejeitar/Cancelar()</text>
+<text x="648" y="404" font-family="Fira Code" font-size="10.5" fill="#64748b">   LancarNotaFinal()</text>
+
+<!-- TENTATIVA AVALIACAO -->
+<g filter="url(#shadow)">
+    <rect x="633" y="440" width="214" height="178" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="633" y="440" width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="633" y="460" width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="740" y="463" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">⏱️ TENTATIVAS AVALIAÇÃO</text>
+<text x="648" y="500" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="648" y="516" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 AVALIACAOID</text>
+<text x="648" y="532" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 MATRICULAID</text>
+<text x="648" y="548" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   NUMEROTENTATIVA</text>
+<text x="648" y="564" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   STATUS: EMAND|ENV|CORR|EXP</text>
+<text x="648" y="580" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   INICIADAEM, NOTABRUTA</text>
+<text x="648" y="596" font-family="Fira Code" font-size="10.5" fill="#64748b">   Iniciar/MarcarCorrecao()</text>
+
+<!-- RESPOSTA ALUNO -->
+<g filter="url(#shadow)">
+    <rect x="633" y="636" width="214" height="158" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="633" y="636" width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="633" y="656" width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="740" y="659" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">✏️ RESPOSTAS ALUNOS</text>
+<text x="648" y="696" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="648" y="712" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 TENTATIVAAVALIACAOID</text>
+<text x="648" y="728" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 QUESTAOPUBLICADAID</text>
+<text x="648" y="744" font-family="Fira Code" font-size="10.5" fill="#64748b">🔗 ALTERNATIVAID (OPT)</text>
+<text x="648" y="760" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   CORRETA, PONTOSOBTIDOS</text>
+<text x="648" y="776" font-family="Fira Code" font-size="10.5" fill="#64748b">   Corrigir()</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     C4 — COLUNA AVALIAÇÕES
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- AVALIACAO -->
+<g filter="url(#shadow)">
+    <rect x="901" y="12"  width="214" height="213" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="901" y="12"  width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="901" y="32"  width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="1008" y="35"  text-anchor="middle" font-family="Lexend" font-size="14" font-weight="700" fill="#fff">📋 AVALIAÇÕES</text>
+<text x="916"  y="72"  font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="916"  y="88"  font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 MODULOID (OPT)</text>
+<text x="916"  y="104" font-family="Fira Code" font-size="10.5" fill="#60a5fa">🔗 TURMAID (OPT)</text>
+<text x="916"  y="120" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 PROFESSORAUTORID</text>
+<text x="916"  y="136" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TITULO, TIPOAVALIACAO</text>
+<text x="916"  y="152" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   NOTAMAXIMA, PESONOTA</text>
+<text x="916"  y="168" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   TENTATIVASPERMITIDAS</text>
+<text x="916"  y="184" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   STATUS (Rascunho/Pub/Arq)</text>
+<text x="916"  y="200" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TEMPOLIMITEMINUTOS</text>
+<text x="916"  y="216" font-family="Fira Code" font-size="10.5" fill="#64748b">   Publicar/Arquivar()</text>
+
+<!-- QUESTAO BANCO -->
+<g filter="url(#shadow)">
+    <rect x="901" y="248" width="214" height="159" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="901" y="248" width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="901" y="268" width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="1008" y="271" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">❓ QUESTÕES BANCO</text>
+<text x="916"  y="308" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="916"  y="324" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 PROFESSORAUTORID</text>
+<text x="916"  y="340" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   ENUNCIADO, TIPOQUESTAO</text>
+<text x="916"  y="356" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TEMA, SUBTEMA</text>
+<text x="916"  y="372" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   DIFICULDADE (1–5), ATIVA</text>
+<text x="916"  y="388" font-family="Fira Code" font-size="10.5" fill="#64748b">   EXPLICACAOPOSRESPOSTA</text>
+
+<!-- QUESTAO PUBLICADA -->
+<g filter="url(#shadow)">
+    <rect x="901" y="425" width="214" height="158" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="901" y="425" width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="901" y="445" width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="1008" y="448" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">📄 QUESTÕES PUBLICADAS</text>
+<text x="916"  y="485" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="916"  y="501" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 AVALIACAOID</text>
+<text x="916"  y="517" font-family="Fira Code" font-size="10.5" fill="#64748b">🔗 QUESTAOBANCOID (snapshot)</text>
+<text x="916"  y="533" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   ENUNCIADOSNAPSHOT</text>
+<text x="916"  y="549" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   TIPOQUESTAO, PONTOS</text>
+<text x="916"  y="565" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   CONTEXTO/EXPL.SNAPSHOT</text>
+
+<!-- LANCAMENTO NOTA -->
+<g filter="url(#shadow)">
+    <rect x="901" y="601" width="214" height="192" rx="10" fill="#13161f" stroke="#f97316" stroke-width="2"/>
+    <rect x="901" y="601" width="214" height="38"  rx="10" fill="#c2410c"/>
+    <rect x="901" y="621" width="214" height="18"         fill="#c2410c"/>
+</g>
+<text x="1008" y="624" text-anchor="middle" font-family="Lexend" font-size="13" font-weight="700" fill="#fff">🏅 LANÇAMENTOS NOTAS</text>
+<text x="916"  y="661" font-family="Fira Code" font-size="10.5" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="916"  y="677" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 MATRICULAID</text>
+<text x="916"  y="693" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 AVALIACAOID, MODULOID</text>
+<text x="916"  y="709" font-family="Fira Code" font-size="10.5" fill="#fdba74">🔗 TENTATIVAAVALIACAOID (OPT)</text>
+<text x="916"  y="725" font-family="Fira Code" font-size="10.5" fill="#86efac">🔗 PROFESSORRESPONSAVELID</text>
+<text x="916"  y="741" font-family="Fira Code" font-size="10.5" fill="#f59e0b">   NOTAOFICIAL, PESONOTA</text>
+<text x="916"  y="757" font-family="Fira Code" font-size="10.5" fill="#94a3b8">   FEEDBACKPROFESSOR</text>
+<text x="916"  y="773" font-family="Fira Code" font-size="10.5" fill="#64748b">   RegistrarCorrecao()</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     C5 — COLUNA DETALHES (alternativas e anexos)
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- ALT QUESTAO BANCO -->
+<g filter="url(#shadow)">
+    <rect x="1171" y="248" width="200" height="138" rx="10" fill="#13161f" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="1171" y="248" width="200" height="34"  rx="10" fill="#7c2d12"/>
+    <rect x="1171" y="268" width="200" height="14"         fill="#7c2d12"/>
+</g>
+<text x="1271" y="268" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">🔘 ALT. QUESTÕES BANCO</text>
+<text x="1184" y="300" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="1184" y="315" font-family="Fira Code" font-size="10" fill="#fdba74">🔗 QUESTAOBANCOID</text>
+<text x="1184" y="330" font-family="Fira Code" font-size="10" fill="#94a3b8">   LETRA, TEXTO</text>
+<text x="1184" y="345" font-family="Fira Code" font-size="10" fill="#94a3b8">   EHCORRETA, ORDEM</text>
+<text x="1184" y="360" font-family="Fira Code" font-size="10" fill="#64748b">   JUSTIFICATIVA</text>
+<text x="1184" y="375" font-family="Fira Code" font-size="10" fill="#64748b">   </text>
+
+<!-- ANEXO QUESTAO BANCO -->
+<g filter="url(#shadow)">
+    <rect x="1171" y="400" width="200" height="125" rx="10" fill="#13161f" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="1171" y="400" width="200" height="34"  rx="10" fill="#7c2d12"/>
+    <rect x="1171" y="420" width="200" height="14"         fill="#7c2d12"/>
+</g>
+<text x="1271" y="420" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">📎 ANEXOS QUESTÕES</text>
+<text x="1184" y="452" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="1184" y="467" font-family="Fira Code" font-size="10" fill="#fdba74">🔗 QUESTAOBANCOID</text>
+<text x="1184" y="482" font-family="Fira Code" font-size="10" fill="#94a3b8">   TITULO, TIPOANEXO</text>
+<text x="1184" y="497" font-family="Fira Code" font-size="10" fill="#94a3b8">   ARQUIVOURL, ORDEM</text>
+
+<!-- ALT QUESTAO PUBLICADA -->
+<g filter="url(#shadow)">
+    <rect x="1171" y="540" width="200" height="120" rx="10" fill="#13161f" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="1171" y="540" width="200" height="34"  rx="10" fill="#7c2d12"/>
+    <rect x="1171" y="560" width="200" height="14"         fill="#7c2d12"/>
+</g>
+<text x="1271" y="560" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">🔵 ALT. Q. PUBLICADAS</text>
+<text x="1184" y="592" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="1184" y="607" font-family="Fira Code" font-size="10" fill="#fdba74">🔗 QUESTAOPUBLICADAID</text>
+<text x="1184" y="622" font-family="Fira Code" font-size="10" fill="#94a3b8">   LETRA, TEXTOSNAPSHOT</text>
+<text x="1184" y="637" font-family="Fira Code" font-size="10" fill="#94a3b8">   EHCORRETA, ORDEM</text>
+
+<!-- ═══════════════════════════════════════════════════════
+     FAIXA PROGRESSO (bottom row)
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- ProgConteudo -->
+<g filter="url(#shadow)">
+    <rect x="10"  y="830" width="215" height="150" rx="10" fill="#13161f" stroke="#a855f7" stroke-width="2"/>
+    <rect x="10"  y="830" width="215" height="34"  rx="10" fill="#7e22ce"/>
+    <rect x="10"  y="851" width="215" height="13"         fill="#7e22ce"/>
+</g>
+<text x="117"  y="851" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">▶️ PROG. CONTEÚDOS</text>
+<text x="25"   y="883" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="25"   y="898" font-family="Fira Code" font-size="10" fill="#c084fc">🔗 MATRICULAID</text>
+<text x="25"   y="913" font-family="Fira Code" font-size="10" fill="#60a5fa">🔗 CONTEUDODIDATICOID</text>
+<text x="25"   y="928" font-family="Fira Code" font-size="10" fill="#94a3b8">   STATUSPROGRESSO</text>
+<text x="25"   y="943" font-family="Fira Code" font-size="10" fill="#94a3b8">   PERCENTUALCONCLUSAO</text>
+<text x="25"   y="958" font-family="Fira Code" font-size="10" fill="#64748b">   PRIMEIROACESSO, CONCLUIDO</text>
+
+<!-- ProgModulo -->
+<g filter="url(#shadow)">
+    <rect x="242" y="830" width="215" height="160" rx="10" fill="#13161f" stroke="#a855f7" stroke-width="2"/>
+    <rect x="242" y="830" width="215" height="34"  rx="10" fill="#7e22ce"/>
+    <rect x="242" y="851" width="215" height="13"         fill="#7e22ce"/>
+</g>
+<text x="349"  y="851" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">📊 PROG. MÓDULOS</text>
+<text x="257"  y="883" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="257"  y="898" font-family="Fira Code" font-size="10" fill="#c084fc">🔗 MATRICULAID</text>
+<text x="257"  y="913" font-family="Fira Code" font-size="10" fill="#60a5fa">🔗 MODULOID</text>
+<text x="257"  y="928" font-family="Fira Code" font-size="10" fill="#94a3b8">   STATUSPROGRESSO</text>
+<text x="257"  y="943" font-family="Fira Code" font-size="10" fill="#94a3b8">   PERCENTUALCONCLUSAO</text>
+<text x="257"  y="958" font-family="Fira Code" font-size="10" fill="#94a3b8">   MEDIAMODULO</text>
+<text x="257"  y="973" font-family="Fira Code" font-size="10" fill="#64748b">   CONTEUDOS/AVAL.CONCLUIDAS</text>
+
+<!-- ProgCurso -->
+<g filter="url(#shadow)">
+    <rect x="474" y="830" width="215" height="155" rx="10" fill="#13161f" stroke="#a855f7" stroke-width="2"/>
+    <rect x="474" y="830" width="215" height="34"  rx="10" fill="#7e22ce"/>
+    <rect x="474" y="851" width="215" height="13"         fill="#7e22ce"/>
+</g>
+<text x="581"  y="851" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">🏁 PROG. CURSOS</text>
+<text x="489"  y="883" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="489"  y="898" font-family="Fira Code" font-size="10" fill="#c084fc">🔗 MATRICULAID</text>
+<text x="489"  y="913" font-family="Fira Code" font-size="10" fill="#60a5fa">🔗 CURSOID</text>
+<text x="489"  y="928" font-family="Fira Code" font-size="10" fill="#94a3b8">   STATUSPROGRESSO</text>
+<text x="489"  y="943" font-family="Fira Code" font-size="10" fill="#94a3b8">   PERCENTUALCONCLUSAO</text>
+<text x="489"  y="958" font-family="Fira Code" font-size="10" fill="#94a3b8">   MEDIACURSO, MODULOSCONCL.</text>
+
+<!-- MarcoProgresso -->
+<g filter="url(#shadow)">
+    <rect x="706" y="830" width="215" height="155" rx="10" fill="#13161f" stroke="#a855f7" stroke-width="2"/>
+    <rect x="706" y="830" width="215" height="34"  rx="10" fill="#7e22ce"/>
+    <rect x="706" y="851" width="215" height="13"         fill="#7e22ce"/>
+</g>
+<text x="813"  y="851" text-anchor="middle" font-family="Lexend" font-size="12" font-weight="700" fill="#fff">🚩 MARCOS PROGRESSOS</text>
+<text x="721"  y="883" font-family="Fira Code" font-size="10" fill="#fbbf24">🔑 ID : INT PK</text>
+<text x="721"  y="898" font-family="Fira Code" font-size="10" fill="#c084fc">🔗 MATRICULAID</text>
+<text x="721"  y="913" font-family="Fira Code" font-size="10" fill="#60a5fa">🔗 CURSOID, MODULOID</text>
+<text x="721"  y="928" font-family="Fira Code" font-size="10" fill="#f59e0b">   ESCOPO (Curso/Modulo)</text>
+<text x="721"  y="943" font-family="Fira Code" font-size="10" fill="#f59e0b">   ORIGEM, PERCENTUALMARCO</text>
+<text x="721"  y="958" font-family="Fira Code" font-size="10" fill="#64748b">   OBSERVACAO, GERADOEM</text>
+
+</svg>
+</div>
+
+<!-- TABELA RESUMO DE CARDINALIDADES -->
+<div class="bottom">
+    <div class="rel-card">
+        <h4 style="color:#22c55e">Domínio Usuários · Herança TPT</h4>
+        <div style="font-size:11px;color:#64748b;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #1e2130">
+            Tabela base <span style="color:#22c55e;font-weight:700">USUÁRIOS</span> + 4 tabelas de subtipo (Admins, Coordenadores,
+            Professores, Alunos), ligadas 1:1 pelo <code style="color:#f59e0b">Id</code> (Table Per Type)
+        </div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → TURMAS (leciona)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → MATRÍCULAS (realiza)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → CONTEÚDOS (cria, opt)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → QUESTÕESBANCO (elabora)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → AVALIAÇÕES (propõe)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → LANÇAMENTOSNOTAS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#22c55e22;color:#22c55e">1</span><div class="arr"></div><span class="badge" style="background:#22c55e22;color:#22c55e">N</span><span>USUÁRIOS → FEEDBACKACADÊMICO</span></div>
+    </div>
+    <div class="rel-card">
+        <h4 style="color:#3b82f6">Domínio Cursos / Conteúdo</h4>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>CURSOS → TURMAS (contém)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>CURSOS → MÓDULOS (organiza)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>CURSOS → MATRÍCULAS (em)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>TURMAS → MATRÍCULAS (agrupa, opt)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>MÓDULOS → CONTEÚDOS (compõe)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#3b82f622;color:#3b82f6">1</span><div class="arr"></div><span class="badge" style="background:#3b82f622;color:#3b82f6">N</span><span>MÓDULOS → AVALIAÇÕES (avaliado)</span></div>
+    </div>
+    <div class="rel-card">
+        <h4 style="color:#f97316">Domínio Avaliações</h4>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>AVALIAÇÕES → QUESTÕESPUBLICADAS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>AVALIAÇÕES → TENTATIVAS (gera)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>MATRÍCULAS → TENTATIVAS (tenta)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>TENTATIVAS → RESPOSTAS (contém)</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>QUESTÕESBANCO → ALT.QBANCO</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>QUESTÕESBANCO → ANEXOS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>QUESTÕESPUBLICADAS → ALT.QPUBL.</span></div>
+        <div class="rel-row"><span class="badge" style="background:#f9731622;color:#f97316">1</span><div class="arr"></div><span class="badge" style="background:#f9731622;color:#f97316">N</span><span>MATRÍCULAS → LANÇAMENTOSNOTAS</span></div>
+    </div>
+    <div class="rel-card">
+        <h4 style="color:#a855f7">Domínio Progresso</h4>
+        <div class="rel-row"><span class="badge" style="background:#a855f722;color:#a855f7">1</span><div class="arr"></div><span class="badge" style="background:#a855f722;color:#a855f7">N</span><span>MATRÍCULAS → PROGCONTEÚDOS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#a855f722;color:#a855f7">1</span><div class="arr"></div><span class="badge" style="background:#a855f722;color:#a855f7">N</span><span>MATRÍCULAS → PROGMÓDULOS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#a855f722;color:#a855f7">1</span><div class="arr"></div><span class="badge" style="background:#a855f722;color:#a855f7">N</span><span>MATRÍCULAS → PROGCURSOS</span></div>
+        <div class="rel-row"><span class="badge" style="background:#a855f722;color:#a855f7">1</span><div class="arr"></div><span class="badge" style="background:#a855f722;color:#a855f7">N</span><span>MATRÍCULAS → MARCOSPROGRESSOS</span></div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;padding-top:8px;border-top:1px solid #1e2130">
+            Todas as entidades de progresso possuem Unique Constraint composta para evitar duplicatas por matrícula.
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

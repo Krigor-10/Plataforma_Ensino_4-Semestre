@@ -29,6 +29,8 @@
             --tag-en-fg:   #fff;
             --tag-disc-bg: #7c5cfc;
             --tag-disc-fg: #fff;
+            --tag-uk-bg:   #d62839;
+            --tag-uk-fg:   #fff;
         }
 
         body {
@@ -340,6 +342,7 @@
         .nul  { background: var(--tag-null-bg); color: var(--tag-null-fg); }
         .en   { background: var(--tag-en-bg);   color: var(--tag-en-fg); }
         .disc { background: var(--tag-disc-bg); color: var(--tag-disc-fg); }
+        .uk   { background: var(--tag-uk-bg);   color: var(--tag-uk-fg); }
 
         /* ── TABLE SECTION ── */
         .table-section {
@@ -655,8 +658,8 @@
         </div>
     </div>
     <div class="cover-footer">
-        <div><strong>Tecnologia:</strong> .NET 10 · ASP.NET Core · Entity Framework Core (TPH) · SQL Server LocalDB</div>
-        <div><strong>20 tabelas documentadas</strong></div>
+        <div><strong>Tecnologia:</strong> .NET 10 · ASP.NET Core · Entity Framework Core (TPT) · SQL Server LocalDB</div>
+        <div><strong>24 tabelas documentadas</strong></div>
     </div>
 </div>
 
@@ -677,6 +680,10 @@
         <div class="nav-section">
             <span class="nav-section-label">1. Usuários</span>
             <a href="#Usuarios"><span class="nav-num">1.1</span>Usuarios</a>
+            <a href="#Alunos"><span class="nav-num">1.2</span>Alunos</a>
+            <a href="#Professores"><span class="nav-num">1.3</span>Professores</a>
+            <a href="#Coordenadores"><span class="nav-num">1.4</span>Coordenadores</a>
+            <a href="#Admins"><span class="nav-num">1.5</span>Admins</a>
         </div>
 
         <div class="nav-section">
@@ -735,7 +742,7 @@
         <div class="intro-block" id="intro">
             <h2>Apresentação</h2>
             <p>Este documento descreve a estrutura de dados do sistema <strong>PlataformaEnsino</strong>, desenvolvido como parte do Projeto Integrado Multidisciplinar (PIM III) do curso de Tecnologia da Informação da Universidade Paulista — UNIP.</p>
-            <p>O banco de dados foi modelado utilizando a abordagem <em>Code-First</em> do Entity Framework Core com SQL Server, aplicando o padrão <em>Table Per Hierarchy</em> (TPH) para a hierarquia de usuários. Para cada tabela são especificados: nome da coluna, tipo de dado SQL Server, restrições de integridade e descrição semântica do campo.</p>
+            <p>O banco de dados foi modelado utilizando a abordagem <em>Code-First</em> do Entity Framework Core com SQL Server, aplicando o padrão <em>Table Per Type</em> (TPT) para a hierarquia de usuários — cada perfil concreto (Aluno, Professor, Coordenador, Admin) tem sua própria tabela, ligada 1:1 à tabela base <code>Usuarios</code>. Para cada tabela são especificados: nome da coluna, tipo de dado SQL Server, restrições de integridade e descrição semântica do campo.</p>
         </div>
 
         <!-- ── Sumário ── -->
@@ -754,7 +761,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td class="td-center td-type">1.1</td><td class="td-name">Usuarios</td><td class="td-desc">Usuários</td><td class="td-desc">Hierarquia TPH de todos os perfis do sistema</td></tr>
+                        <tr><td class="td-center td-type">1.1</td><td class="td-name">Usuarios</td><td class="td-desc">Usuários</td><td class="td-desc">Dados base comuns a todo usuário do sistema</td></tr>
+                        <tr><td class="td-center td-type">1.2</td><td class="td-name">Alunos</td><td class="td-desc">Usuários</td><td class="td-desc">Dados exclusivos do perfil Aluno (TPT)</td></tr>
+                        <tr><td class="td-center td-type">1.3</td><td class="td-name">Professores</td><td class="td-desc">Usuários</td><td class="td-desc">Dados exclusivos do perfil Professor (TPT)</td></tr>
+                        <tr><td class="td-center td-type">1.4</td><td class="td-name">Coordenadores</td><td class="td-desc">Usuários</td><td class="td-desc">Dados exclusivos do perfil Coordenador (TPT)</td></tr>
+                        <tr><td class="td-center td-type">1.5</td><td class="td-name">Admins</td><td class="td-desc">Usuários</td><td class="td-desc">Perfil de administração do sistema (TPT)</td></tr>
                         <tr><td class="td-center td-type">2.1</td><td class="td-name">Cursos</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Catálogo de cursos ofertados</td></tr>
                         <tr><td class="td-center td-type">2.2</td><td class="td-name">Modulos</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Unidades de aprendizagem de um curso</td></tr>
                         <tr><td class="td-center td-type">2.3</td><td class="td-name">Turmas</td><td class="td-desc">Estrutura Acadêmica</td><td class="td-desc">Instâncias de curso conduzidas por professor</td></tr>
@@ -789,7 +800,8 @@
                 <div class="leg"><span class="tag fk">FK</span> Chave Estrangeira — referência a outra tabela</div>
                 <div class="leg"><span class="tag nn">NN</span> NOT NULL — campo obrigatório</div>
                 <div class="leg"><span class="tag nul">NULL</span> Permite valor nulo</div>
-                <div class="leg"><span class="tag disc">DISC</span> Discriminador TPH</div>
+                <div class="leg"><span class="tag uk">UK</span> Chave Única — valor não pode se repetir na tabela</div>
+                <div class="leg"><span class="tag disc">DISC</span> Discriminador de tipo (TipoUsuario)</div>
                 <div class="leg"><span class="tag en">ENUM</span> Valor inteiro mapeado a enumerador</div>
             </div>
         </div>
@@ -803,11 +815,11 @@
         <div class="table-section" id="Usuarios">
             <div class="table-section-header">
                 <h3><span class="tbl-num">1.1</span> Usuarios</h3>
-                <div class="tbl-desc">Armazena todos os perfis de usuário do sistema. Implementada com Table Per Hierarchy (TPH).</div>
-                <div class="tbl-entity">Entidades: Usuario (abstrata) · Aluno · Professor · Coordenador · Admin</div>
+                <div class="tbl-desc">Tabela base com os dados comuns a todo usuário do sistema. Implementada com Table Per Type (TPT).</div>
+                <div class="tbl-entity">Entidade: Usuario (abstrata)</div>
             </div>
             <div class="note-box">
-                <strong>Table Per Hierarchy (TPH):</strong> uma única tabela representa toda a hierarquia de herança. O campo <code>TipoUsuario</code> funciona como discriminador e determina o tipo concreto do registro. Colunas exclusivas de um subtipo armazenam <code>NULL</code> para os demais perfis.
+                <strong>Table Per Type (TPT):</strong> cada tipo concreto da hierarquia tem sua própria tabela, ligada 1:1 a <code>Usuarios</code> por chave compartilhada (o <code>Id</code> de <code>Alunos</code>/<code>Professores</code>/<code>Coordenadores</code>/<code>Admins</code> é, ao mesmo tempo, PK da própria tabela e FK para <code>Usuarios.Id</code>, com exclusão em cascata). O campo <code>TipoUsuario</code> continua indicando o tipo concreto do registro, mas apenas como valor informativo — não é usado pelo EF Core como discriminador de tabela.
             </div>
             <div class="table-wrapper">
                 <table>
@@ -815,8 +827,8 @@
                     <tbody>
                         <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único do usuário (auto-increment)</td></tr>
                         <tr><td class="td-name">Nome</td><td class="td-type">NVARCHAR(150)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nome completo do usuário</td></tr>
-                        <tr><td class="td-name">Email</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Endereço de e-mail; utilizado como credencial de login</td></tr>
-                        <tr><td class="td-name">Cpf</td><td class="td-type">NVARCHAR(11)</td><td><span class="tag nn">NN</span></td><td class="td-desc">CPF sem pontuação — exatamente 11 dígitos numéricos</td></tr>
+                        <tr><td class="td-name">Email</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag uk">UK</span> <span class="tag nn">NN</span></td><td class="td-desc">Endereço de e-mail; utilizado como credencial de login — único no sistema</td></tr>
+                        <tr><td class="td-name">Cpf</td><td class="td-type">NVARCHAR(11)</td><td><span class="tag uk">UK</span> <span class="tag nn">NN</span></td><td class="td-desc">CPF sem pontuação — exatamente 11 dígitos numéricos, único no sistema</td></tr>
                         <tr><td class="td-name">Telefone</td><td class="td-type">NVARCHAR(20)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Número de telefone de contato</td></tr>
                         <tr><td class="td-name">Cep</td><td class="td-type">NVARCHAR(9)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de Endereçamento Postal</td></tr>
                         <tr><td class="td-name">Rua</td><td class="td-type">NVARCHAR(200)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Logradouro do endereço</td></tr>
@@ -824,15 +836,85 @@
                         <tr><td class="td-name">Bairro</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Bairro do endereço</td></tr>
                         <tr><td class="td-name">Cidade</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Cidade do endereço</td></tr>
                         <tr><td class="td-name">Estado</td><td class="td-type">NVARCHAR(2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Unidade Federativa — sigla de dois caracteres (ex.: SP)</td></tr>
-                        <tr><td class="td-name">TipoUsuario</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag disc">DISC</span> <span class="tag nn">NN</span></td><td class="td-desc">Discriminador TPH: Aluno | Professor | Coordenador | Admin</td></tr>
+                        <tr><td class="td-name">TipoUsuario</td><td class="td-type">NVARCHAR(40)</td><td><span class="tag disc">DISC</span> <span class="tag nn">NN</span></td><td class="td-desc">Tipo do usuário: Aluno | Professor | Coordenador | Admin (informativo, usado nas claims do JWT)</td></tr>
                         <tr><td class="td-name">DataCadastro</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora do cadastro no sistema (UTC)</td></tr>
                         <tr><td class="td-name">SenhaHash</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Hash BCrypt da senha do usuário</td></tr>
                         <tr><td class="td-name">Ativo</td><td class="td-type">BIT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Situação da conta: 1 = ativa, 0 = desativada</td></tr>
-                        <tr><td class="td-name">Matricula <small style="color:#aaa">(Aluno)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Código de matrícula do aluno</td></tr>
-                        <tr><td class="td-name">TurmaAtual <small style="color:#aaa">(Aluno)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Nome da turma atual do aluno</td></tr>
-                        <tr><td class="td-name">CodigoRegistro <small style="color:#aaa">(Prof/Coord)</small></td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Código de registro profissional do professor ou coordenador</td></tr>
-                        <tr><td class="td-name">Especialidade <small style="color:#aaa">(Professor)</small></td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Área de especialidade do professor</td></tr>
-                        <tr><td class="td-name">CursoResponsavel <small style="color:#aaa">(Coordenador)</small></td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Nome do curso sob responsabilidade do coordenador</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1.2 Alunos -->
+        <div class="table-section" id="Alunos">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">1.2</span> Alunos</h3>
+                <div class="tbl-desc">Dados exclusivos do perfil Aluno. Ligada 1:1 a Usuarios.</div>
+                <div class="tbl-entity">Entidade: Aluno</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Mesmo Id do usuário → Usuarios.Id (exclusão em cascata)</td></tr>
+                        <tr><td class="td-name">Matricula</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de matrícula/RA do aluno</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1.3 Professores -->
+        <div class="table-section" id="Professores">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">1.3</span> Professores</h3>
+                <div class="tbl-desc">Dados exclusivos do perfil Professor. Ligada 1:1 a Usuarios.</div>
+                <div class="tbl-entity">Entidade: Professor</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Mesmo Id do usuário → Usuarios.Id (exclusão em cascata)</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag uk">UK</span></td><td class="td-desc">Código de registro profissional do professor</td></tr>
+                        <tr><td class="td-name">Especialidade</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Área de especialidade do professor</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1.4 Coordenadores -->
+        <div class="table-section" id="Coordenadores">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">1.4</span> Coordenadores</h3>
+                <div class="tbl-desc">Dados exclusivos do perfil Coordenador. Ligada 1:1 a Usuarios.</div>
+                <div class="tbl-entity">Entidade: Coordenador</div>
+            </div>
+            <div class="note-box">
+                <strong>Curso sob coordenação:</strong> não é um campo desta tabela — é derivado de <code>Cursos.CoordenadorId</code> (um coordenador pode ser responsável por vários cursos simultaneamente).
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Mesmo Id do usuário → Usuarios.Id (exclusão em cascata)</td></tr>
+                        <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Código de registro do coordenador</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 1.5 Admins -->
+        <div class="table-section" id="Admins">
+            <div class="table-section-header">
+                <h3><span class="tbl-num">1.5</span> Admins</h3>
+                <div class="tbl-desc">Perfil de administração do sistema. Ligada 1:1 a Usuarios; não possui colunas próprias.</div>
+                <div class="tbl-entity">Entidade: Admin</div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
+                    <tbody>
+                        <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Mesmo Id do usuário → Usuarios.Id (exclusão em cascata)</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -858,8 +940,8 @@
                         <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(150)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título do curso</td></tr>
                         <tr><td class="td-name">Descricao</td><td class="td-type">NVARCHAR(1000)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Descrição detalhada do curso</td></tr>
                         <tr><td class="td-name">Preco</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Preço do curso em reais (≥ 0)</td></tr>
-                        <tr><td class="td-name">CoordenadorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Coordenador responsável pelo curso → Usuarios.Id</td></tr>
-                        <tr><td class="td-name">CriadoPor</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Administrador que criou o curso → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">CoordenadorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Coordenador responsável pelo curso → Coordenadores.Id</td></tr>
+                        <tr><td class="td-name">CriadoPor</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Administrador que criou o curso → Admins.Id</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -900,7 +982,7 @@
                         <tr><td class="td-name">NomeTurma</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nome ou identificação da turma</td></tr>
                         <tr><td class="td-name">DataCriacao</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora de criação da turma (UTC)</td></tr>
                         <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso associado à turma → Cursos.Id</td></tr>
-                        <tr><td class="td-name">ProfessorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor responsável pela condução da turma → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">ProfessorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor responsável pela condução da turma → Professores.Id</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -919,9 +1001,9 @@
                         <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da matrícula</td></tr>
                         <tr><td class="td-name">CodigoRegistro</td><td class="td-type">NVARCHAR(16)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Código de registro interno da matrícula</td></tr>
                         <tr><td class="td-name">DataSolicitacao</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da solicitação de matrícula (UTC)</td></tr>
-                        <tr><td class="td-name">NotaFinal</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final do aluno no curso, na escala de 0 a 10</td></tr>
+                        <tr><td class="td-name">NotaFinal</td><td class="td-type">DECIMAL(4,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final do aluno no curso (0–10), calculada automaticamente pela média ponderada das avaliações corrigidas — não é lançada manualmente</td></tr>
                         <tr><td class="td-name">Status</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusMatricula — Pendente=0 | Aprovada=1 | Rejeitada=2 | Cancelada=3</td></tr>
-                        <tr><td class="td-name">AlunoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Aluno matriculado → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">AlunoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Aluno matriculado → Alunos.Id</td></tr>
                         <tr><td class="td-name">CursoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Curso da matrícula → Cursos.Id</td></tr>
                         <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Turma vinculada após aprovação da matrícula → Turmas.Id</td></tr>
                     </tbody>
@@ -951,7 +1033,7 @@
                         <tr><td class="td-name">CorpoTexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Conteúdo textual (utilizado quando TipoConteudo = Texto)</td></tr>
                         <tr><td class="td-name">ArquivoUrl</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">URL do arquivo hospedado (PDF ou vídeo)</td></tr>
                         <tr><td class="td-name">LinkUrl</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">URL externa (utilizada quando TipoConteudo = Link)</td></tr>
-                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor autor do conteúdo → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor autor do conteúdo → Professores.Id</td></tr>
                         <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Turma à qual o conteúdo está disponibilizado → Turmas.Id</td></tr>
                         <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo ao qual o conteúdo pertence → Modulos.Id</td></tr>
                         <tr><td class="td-name">StatusPublicacao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">StatusPublicacao — Rascunho=1 | Publicado=2 | Arquivado=3</td></tr>
@@ -981,7 +1063,7 @@
                     <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
                     <tbody>
                         <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da questão</td></tr>
-                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a questão → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a questão → Professores.Id</td></tr>
                         <tr><td class="td-name">TituloInterno</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título para identificação interna (não exibido ao aluno)</td></tr>
                         <tr><td class="td-name">Contexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Texto introdutório ou situação-problema</td></tr>
                         <tr><td class="td-name">Enunciado</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Enunciado da questão apresentado ao aluno</td></tr>
@@ -1059,7 +1141,7 @@
                         <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da avaliação</td></tr>
                         <tr><td class="td-name">Titulo</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título da avaliação</td></tr>
                         <tr><td class="td-name">Descricao</td><td class="td-type">NVARCHAR(500)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Instruções ou descrição geral da avaliação</td></tr>
-                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a avaliação → Usuarios.Id</td></tr>
+                        <tr><td class="td-name">ProfessorAutorId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Professor que criou a avaliação → Professores.Id</td></tr>
                         <tr><td class="td-name">TurmaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Turma à qual a avaliação está associada → Turmas.Id</td></tr>
                         <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo ao qual a avaliação pertence → Modulos.Id</td></tr>
                         <tr><td class="td-name">TipoAvaliacao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoAvaliacao — Quiz=1 | Prova=2 | Exercicio=3</td></tr>
@@ -1178,6 +1260,9 @@
                 <h3><span class="tbl-num">5.6</span> LancamentosNotasAlunos</h3>
                 <div class="tbl-desc">Nota oficial lançada por avaliação, podendo ter origem automática ou manual.</div>
             </div>
+            <div class="note-box">
+                <strong>Lançamento automático:</strong> ao corrigir uma tentativa 100% objetiva (sem questão discursiva pendente), o sistema cria/atualiza automaticamente o lançamento (<code>OrigemCorrecao = Automatica</code>) e recalcula a média ponderada por <code>PesoNota</code> em <code>ProgressosModulosAlunos.MediaModulo</code>, <code>ProgressosCursosAlunos.MediaCurso</code> e <code>Matriculas.NotaFinal</code>. Avaliações com questão discursiva ainda não geram lançamento — a correção manual pelo professor (<code>OrigemCorrecao = Manual/Mista</code>) está prevista no modelo, mas não há endpoint implementado para isso.
+            </div>
             <div class="table-wrapper">
                 <table>
                     <thead><tr><th>Coluna</th><th>Tipo SQL</th><th>Restrições</th><th>Descrição</th></tr></thead>
@@ -1187,9 +1272,9 @@
                         <tr><td class="td-name">AvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Avaliação correspondente ao lançamento → Avaliacoes.Id</td></tr>
                         <tr><td class="td-name">ModuloId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Módulo da avaliação → Modulos.Id</td></tr>
                         <tr><td class="td-name">TentativaAvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Tentativa de origem; nulo em lançamentos manuais → TentativasAvaliacao.Id</td></tr>
-                        <tr><td class="td-name">ProfessorResponsavelId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Professor responsável pela correção manual → Usuarios.Id</td></tr>
-                        <tr><td class="td-name">NotaOficial</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final oficial lançada (≥ 0)</td></tr>
-                        <tr><td class="td-name">PesoNota</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso desta nota no cálculo da média do módulo</td></tr>
+                        <tr><td class="td-name">ProfessorResponsavelId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Professor responsável pela correção manual → Professores.Id</td></tr>
+                        <tr><td class="td-name">NotaOficial</td><td class="td-type">DECIMAL(6,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nota final oficial lançada (≥ 0)</td></tr>
+                        <tr><td class="td-name">PesoNota</td><td class="td-type">DECIMAL(6,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Peso desta nota no cálculo da média do módulo</td></tr>
                         <tr><td class="td-name">OrigemCorrecao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">OrigemCorrecaoNota — Automatica=1 | Manual=2 | Mista=3</td></tr>
                         <tr><td class="td-name">LiberadaAoAlunoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Data e hora em que a nota foi liberada ao aluno (UTC)</td></tr>
                         <tr><td class="td-name">FeedbackProfessor</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Comentário do professor sobre o desempenho do aluno</td></tr>
@@ -1250,7 +1335,7 @@
                         <tr><td class="td-name">TotalConteudos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de conteúdos existentes no módulo</td></tr>
                         <tr><td class="td-name">AvaliacoesConcluidas</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Quantidade de avaliações concluídas pelo aluno</td></tr>
                         <tr><td class="td-name">TotalAvaliacoes</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de avaliações existentes no módulo</td></tr>
-                        <tr><td class="td-name">MediaModulo</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no módulo</td></tr>
+                        <tr><td class="td-name">MediaModulo</td><td class="td-type">DECIMAL(6,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no módulo</td></tr>
                         <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da última atualização do registro (UTC)</td></tr>
                     </tbody>
                 </table>
@@ -1276,7 +1361,7 @@
                         <tr><td class="td-name">PesoTotal</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Soma total dos pesos do curso</td></tr>
                         <tr><td class="td-name">ModulosConcluidos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Quantidade de módulos concluídos pelo aluno</td></tr>
                         <tr><td class="td-name">TotalModulos</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Total de módulos existentes no curso</td></tr>
-                        <tr><td class="td-name">MediaCurso</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no curso</td></tr>
+                        <tr><td class="td-name">MediaCurso</td><td class="td-type">DECIMAL(6,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Média ponderada das notas do aluno no curso</td></tr>
                         <tr><td class="td-name">AtualizadoEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora da última atualização do registro (UTC)</td></tr>
                     </tbody>
                 </table>

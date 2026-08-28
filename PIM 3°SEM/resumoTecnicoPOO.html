@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo Técnico POO — PlataformaEnsino</title>
+    <style>
+
+        /* ═══════════════════════════════════════════
+           CONFIGURAÇÃO DE PÁGINA — ABNT NBR 14724
+           A4: 210×297 mm
+           Margens: Superior 3cm | Esquerda 3cm
+                    Inferior 2cm | Direita  2cm
+           Sem cabeçalho nem rodapé
+        ═══════════════════════════════════════════ */
+        @page {
+            size: 210mm 297mm;
+            margin: 3cm 2cm 2cm 3cm;
+        }
+
+        /* ═══════════════════════════════════════════
+           RESET E BASE
+        ═══════════════════════════════════════════ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           TIPOGRAFIA ABNT
+           Fonte: Arial 12pt
+           Espaçamento: 1,5
+           Alinhamento: Justificado
+        ═══════════════════════════════════════════ */
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000;
+            background: #fff;
+            text-align: justify;
+        }
+
+        /* Simulação de página A4 na tela */
+        @media screen {
+            html { background: #d0d0d0; }
+            body {
+                max-width: 210mm;
+                min-height: 297mm;
+                margin: 20px auto;
+                padding: 3cm 2cm 2cm 3cm;
+                background: #fff;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           TÍTULOS — ABNT
+           Seção primária: NEGRITO, MAIÚSCULAS
+           Seção secundária: Negrito, Título Normal
+        ═══════════════════════════════════════════ */
+        h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 18pt;
+            margin-bottom: 6pt;
+            line-height: 1.5;
+        }
+
+        h2 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 14pt;
+            margin-bottom: 4pt;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════
+           PARÁGRAFOS
+           Recuo de 1,5 cm na primeira linha
+           Espaçamento 1,5 entre linhas
+        ═══════════════════════════════════════════ */
+        p {
+            font-size: 12pt;
+            line-height: 1.5;
+            text-indent: 1.5cm;
+            text-align: justify;
+            margin-bottom: 0;
+        }
+
+        /* Parágrafos sem recuo (após título ou em bloco especial) */
+        p.no-indent {
+            text-indent: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           TABELAS — ABNT
+           Legenda acima: "Tabela X – Título"
+           Fonte interna: Arial 10pt
+           Bordas simples pretas
+        ═══════════════════════════════════════════ */
+        .tbl-caption {
+            font-size: 12pt;
+            font-weight: normal;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 12pt;
+            margin-bottom: 3pt;
+            line-height: 1.5;
+        }
+
+        .tbl-wrap {
+            margin-bottom: 6pt;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+
+        thead th {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            background: #e8e8e8;
+            font-weight: bold;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        tbody td {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) td {
+            background: #f5f5f5;
+        }
+
+        .td-code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            white-space: nowrap;
+        }
+
+        .tbl-source {
+            font-size: 10pt;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 2pt;
+            margin-bottom: 12pt;
+            color: #333;
+        }
+
+        /* ═══════════════════════════════════════════
+           CÓDIGO INLINE
+        ═══════════════════════════════════════════ */
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+        }
+
+        /* ═══════════════════════════════════════════
+           NOTA / AVISO
+        ═══════════════════════════════════════════ */
+        .nota {
+            border-left: 3pt solid #555;
+            padding: 6pt 10pt;
+            margin: 10pt 0 10pt 0;
+            font-size: 11pt;
+            line-height: 1.5;
+            text-align: justify;
+            text-indent: 0;
+            background: #f9f9f9;
+        }
+
+        /* ═══════════════════════════════════════════
+           TÍTULOS DE ENUM
+        ═══════════════════════════════════════════ */
+        .enum-title {
+            font-size: 10pt;
+            font-weight: bold;
+            text-align: left;
+            margin-top: 8pt;
+            margin-bottom: 2pt;
+        }
+
+        /* ═══════════════════════════════════════════
+           GRID DE ENUMS — 3 COLUNAS NA TELA / 2 NO PDF
+        ═══════════════════════════════════════════ */
+        .enum-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8pt;
+            margin-bottom: 10pt;
+        }
+
+        @media print {
+            .enum-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .enum-block table {
+            font-size: 9pt;
+        }
+
+        .enum-block thead th {
+            padding: 3pt 6pt;
+        }
+
+        .enum-block tbody td {
+            padding: 3pt 6pt;
+        }
+
+        .enum-block .td-val {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            width: 30pt;
+        }
+
+        /* ═══════════════════════════════════════════
+           CABEÇALHO DO DOCUMENTO (não é capa)
+        ═══════════════════════════════════════════ */
+        .doc-header {
+            text-align: center;
+            margin-bottom: 18pt;
+            padding-bottom: 8pt;
+            border-bottom: 1px solid #000;
+        }
+
+        .doc-header .doc-titulo {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-indent: 0;
+            line-height: 1.5;
+        }
+
+        .doc-header .doc-sub {
+            font-size: 12pt;
+            text-indent: 0;
+            line-height: 1.5;
+        }
+
+        .doc-header .doc-meta {
+            font-size: 10pt;
+            color: #555;
+            text-indent: 0;
+            margin-top: 4pt;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════
+           CONTROLE DE QUEBRA DE PÁGINA
+        ═══════════════════════════════════════════ */
+        @media print {
+            h1 {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+            h2 {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+            .tbl-caption {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+            .tbl-wrap {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            tbody tr {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            thead {
+                display: table-header-group;
+            }
+            .enum-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     CABEÇALHO DO DOCUMENTO
+══════════════════════════════════════ -->
+<div class="doc-header">
+    <p class="doc-titulo">Resumo Técnico — Programação Orientada a Objetos</p>
+    <p class="doc-sub">Sistema Acadêmico Integrado — PlataformaEnsino</p>
+    <p class="doc-meta">Projeto Integrado Multidisciplinar III · Universidade Paulista — UNIP · 2025</p>
+</div>
+
+<!-- ══════════════════════════════════════
+     NOTA DE SPRINT
+══════════════════════════════════════ -->
+<div class="nota">
+    <strong>Nota:</strong> este documento descreve a estrutura que <strong>será implementada</strong> na próxima
+    sprint do projeto. Os conceitos de Orientação a Objetos aqui detalhados — abstração, herança, polimorfismo
+    e encapsulamento — representam decisões de design do domínio a serem codificadas em C# com ASP.NET Core
+    e Entity Framework Core. Nenhuma funcionalidade descrita encontra-se ainda em produção.
+</div>
+
+
+<!-- ══════════════════════════════════════
+     1 ABSTRAÇÃO
+══════════════════════════════════════ -->
+<h1>1 Abstração</h1>
+
+<p>A classe <code>Usuario</code> será declarada como <strong>abstract</strong> em C#, o que impedirá que objetos
+do tipo base sejam instanciados diretamente. Essa decisão de design garantirá que todo ator do sistema
+possua um perfil definido — <code>Aluno</code>, <code>Professor</code>, <code>Coordenador</code> ou
+<code>Admin</code> —, centraliza a lógica compartilhada em um único ponto e elimina duplicação de código
+nas subclasses.</p>
+
+<p>No banco de dados, a hierarquia será mapeada pelo Entity Framework Core com a estratégia
+<strong>Table Per Type (TPT)</strong>: a tabela <code>Usuarios</code> guardará somente os atributos comuns
+da classe base, e cada subclasse concreta (<code>Alunos</code>, <code>Professores</code>,
+<code>Coordenadores</code>, <code>Admins</code>) terá sua própria tabela, ligada 1:1 a <code>Usuarios</code>
+pela chave primária compartilhada. A coluna <code>TipoUsuario</code> continuará indicando o perfil do
+registro, mas apenas como informação de apoio — não será usada pelo EF Core como discriminador de tabela.</p>
+
+<p class="tbl-caption">Tabela 1 – Atributos e métodos da classe abstrata <code>Usuario</code></p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Atributo / Método</th>
+                <th>Tipo</th>
+                <th>Modificador</th>
+                <th>Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="td-code">Id</td>                <td class="td-code">int</td>            <td>PK</td>                              <td>Chave primária gerada pelo banco</td></tr>
+            <tr><td class="td-code">Nome</td>              <td class="td-code">string(150)</td>    <td>required</td>                        <td>Nome completo do usuário</td></tr>
+            <tr><td class="td-code">Email</td>             <td class="td-code">string</td>         <td>required</td>                        <td>Endereço de e-mail único na plataforma</td></tr>
+            <tr><td class="td-code">Cpf</td>               <td class="td-code">string(11)</td>     <td>required</td>                        <td>CPF com exatamente 11 dígitos, sem formatação</td></tr>
+            <tr><td class="td-code">Telefone</td>          <td class="td-code">string(20)</td>     <td>required</td>                        <td>Telefone de contato</td></tr>
+            <tr><td class="td-code">Cep / Endereço</td>   <td class="td-code">string</td>         <td>required</td>                        <td>CEP, Rua, Número, Bairro, Cidade e Estado</td></tr>
+            <tr><td class="td-code">TipoUsuario</td>       <td class="td-code">string</td>         <td>private set</td>                     <td>Perfil do usuário — definido em <code>ConfigurarAcesso()</code>; incluído como claim no JWT</td></tr>
+            <tr><td class="td-code">SenhaHash</td>         <td class="td-code">string</td>         <td>private set</td>                     <td>Hash BCrypt — alterável apenas por <code>ConfigurarAcesso()</code> ou <code>AtualizarSenhaHash()</code></td></tr>
+            <tr><td class="td-code">Ativo</td>             <td class="td-code">bool</td>           <td>private set</td>                     <td>Alternado exclusivamente por <code>Ativar()</code> e <code>Desativar()</code></td></tr>
+            <tr><td class="td-code">DataCadastro</td>      <td class="td-code">DateTime</td>       <td>private set</td>                     <td>Atribuído automaticamente na criação — imutável após isso</td></tr>
+            <tr><td class="td-code">ExibirDados()</td>     <td class="td-code">string</td>         <td><strong>virtual</strong></td>        <td>Retorna dados formatados do usuário — será sobrescrito por cada subclasse</td></tr>
+            <tr><td class="td-code">ConfigurarAcesso()</td><td class="td-code">void</td>           <td>encapsulado</td>                     <td>Define <code>TipoUsuario</code>, <code>SenhaHash</code> e <code>Ativo</code> com validação</td></tr>
+            <tr><td class="td-code">AlterarDados()</td>    <td class="td-code">void</td>           <td>encapsulado</td>                     <td>Atualiza dados pessoais e de endereço de forma controlada</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+
+<!-- ══════════════════════════════════════
+     2 HERANÇA
+══════════════════════════════════════ -->
+<h1>2 Herança</h1>
+
+<p>Quatro classes concretas herdarão de <code>Usuario</code>, cada uma representando um perfil distinto
+da plataforma. A herança permitirá que as subclasses reaproveitem todos os atributos e comportamentos
+da classe pai e acrescentem somente os elementos específicos de cada papel.</p>
+
+<h2>2.1 Aluno</h2>
+<p>Representará o estudante matriculado em cursos da plataforma. Além dos atributos herdados de
+<code>Usuario</code>, possuirá <code>Matricula</code> (código da matrícula institucional) e a coleção
+<code>Matriculas</code> (lista de matrículas em cursos, associação 1:N). A turma atual do aluno não será
+um atributo próprio — será derivada em tempo de consulta a partir da matrícula aprovada mais recente
+(<code>Matriculas → Turma</code>), evitando um dado duplicado que poderia ficar desatualizado.
+Sobrescreverá <code>ExibirDados()</code> acrescentando perfil e número de matrícula.</p>
+
+<h2>2.2 Professor</h2>
+<p>Representará o docente responsável pela criação de conteúdo didático e avaliações. Incluirá os atributos
+<code>Especialidade</code> (área acadêmica de atuação) e <code>CodigoRegistro</code> (registro profissional),
+além das coleções <code>QuestoesBanco</code>, <code>ConteudosDidaticos</code> e
+<code>AvaliacoesPublicadas</code>. Sobrescreverá <code>ExibirDados()</code> acrescentando perfil e
+especialidade.</p>
+
+<h2>2.3 Coordenador</h2>
+<p>Representará o gestor acadêmico, podendo responder por um ou mais cursos. Possuirá apenas
+<code>CodigoRegistro</code> como atributo próprio — o(s) curso(s) sob sua responsabilidade não será(ão)
+um atributo do Coordenador, e sim derivado(s) da ponta oposta do relacionamento
+(<code>Curso.CoordenadorId</code>), já que um coordenador pode responder por vários cursos ao mesmo tempo.
+Sobrescreverá <code>ExibirDados()</code> acrescentando apenas o perfil.</p>
+
+<h2>2.4 Admin</h2>
+<p>Representará o administrador da plataforma com acesso irrestrito. Não possuirá atributos exclusivos —
+herdará integralmente os atributos de <code>Usuario</code>. Sobrescreverá <code>ExibirDados()</code>
+indicando o nível de acesso total ao sistema.</p>
+
+<p class="tbl-caption">Tabela 2 – Visão geral da hierarquia de herança</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Subclasse</th>
+                <th>Papel na Plataforma</th>
+                <th>Atributos Exclusivos</th>
+                <th>Associações Diretas</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="td-code">Aluno</td>
+                <td>Estudante matriculado</td>
+                <td><code>Matricula</code></td>
+                <td><code>List&lt;Matricula&gt;</code> (turma atual derivada daqui)</td>
+            </tr>
+            <tr>
+                <td class="td-code">Professor</td>
+                <td>Docente criador de conteúdo</td>
+                <td><code>Especialidade</code>, <code>CodigoRegistro</code></td>
+                <td><code>List&lt;QuestaoBanco&gt;</code>, <code>List&lt;Avaliacao&gt;</code>, <code>List&lt;ConteudoDidatico&gt;</code></td>
+            </tr>
+            <tr>
+                <td class="td-code">Coordenador</td>
+                <td>Gestor acadêmico de curso(s)</td>
+                <td><code>CodigoRegistro</code></td>
+                <td>Curso(s) via <code>Curso.CoordenadorId</code> (1:N, ponta oposta)</td>
+            </tr>
+            <tr>
+                <td class="td-code">Admin</td>
+                <td>Administrador da plataforma</td>
+                <td>—</td>
+                <td><code>List&lt;Curso&gt;</code> (via <code>CriadoPor</code>)</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+
+<!-- ══════════════════════════════════════
+     3 POLIMORFISMO
+══════════════════════════════════════ -->
+<h1>3 Polimorfismo</h1>
+
+<p>O método <code>ExibirDados()</code> será declarado <strong>virtual</strong> na classe <code>Usuario</code>
+e sobrescrito (<strong>override</strong>) em cada uma das quatro subclasses. O comportamento do método
+variará conforme o tipo concreto do objeto em tempo de execução, sem que o código chamador precise
+conhecer o tipo específico — característica central do polimorfismo em orientação a objetos.</p>
+
+<p>Todas as implementações invocarão <code>base.ExibirDados()</code> antes de acrescentar suas informações
+específicas, demonstrando polimorfismo por extensão e não por substituição total do comportamento
+da classe pai.</p>
+
+<p class="tbl-caption">Tabela 3 – Comportamento polimórfico de <code>ExibirDados()</code> por subclasse</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Classe</th>
+                <th>Modificador</th>
+                <th>Informação Acrescentada ao Retorno da Base</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="td-code">Usuario</td>     <td><strong>virtual</strong></td>   <td>Nome, E-mail, CPF, Telefone, Endereço completo, Data de cadastro</td></tr>
+            <tr><td class="td-code">Aluno</td>       <td><strong>override</strong></td>  <td>Perfil: ALUNO · Número de matrícula · Turma atual</td></tr>
+            <tr><td class="td-code">Professor</td>   <td><strong>override</strong></td>  <td>Perfil: PROFESSOR · Especialidade acadêmica</td></tr>
+            <tr><td class="td-code">Coordenador</td> <td><strong>override</strong></td>  <td>Perfil: COORDENADOR · Curso responsável</td></tr>
+            <tr><td class="td-code">Admin</td>       <td><strong>override</strong></td>  <td>Perfil: ADMINISTRADOR DO SISTEMA (Acesso Total)</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+<p>O polimorfismo também se manifestará na camada de autorização. O campo <code>TipoUsuario</code>,
+definido via <code>ConfigurarAcesso()</code>, será incluído como <em>claim</em> no token JWT emitido
+pelo endpoint <code>POST /api/auth/login</code>. Os controllers utilizarão o atributo
+<code>[Authorize(Roles = "...")]</code> para restringir endpoints com base no tipo concreto do usuário
+autenticado em tempo de execução.</p>
+
+<p class="tbl-caption">Tabela 4 – Controle de acesso por perfil (polimorfismo de autorização)</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>TipoUsuario (claim JWT)</th>
+                <th>Prefixo de Rota</th>
+                <th>Escopo de Acesso</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="td-code">Admin</td>       <td class="td-code">/api/admin/**</td>       <td>Gestão completa de usuários, cursos e configurações da plataforma</td></tr>
+            <tr><td class="td-code">Coordenador</td> <td class="td-code">/api/coordenador/**</td> <td>Gerenciamento de cursos, turmas, matrículas e professores vinculados</td></tr>
+            <tr><td class="td-code">Professor</td>   <td class="td-code">/api/professor/**</td>   <td>Criação de conteúdo, questões e avaliações — a nota é calculada automaticamente na correção</td></tr>
+            <tr><td class="td-code">Aluno</td>       <td class="td-code">/api/aluno/**</td>       <td>Acesso a conteúdos, submissão de avaliações e visualização de progresso</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+
+<!-- ══════════════════════════════════════
+     4 ENCAPSULAMENTO
+══════════════════════════════════════ -->
+<h1>4 Encapsulamento</h1>
+
+<p>O encapsulamento será aplicado por meio de propriedades com modificador <code>private set</code>,
+impedindo que o estado interno dos objetos seja alterado diretamente por código externo à classe.
+Toda mutação de estado ocorrerá exclusivamente por meio de métodos de negócio controlados, que
+aplicarão as devidas validações antes de aceitar a alteração.</p>
+
+<p class="tbl-caption">Tabela 5 – Propriedades encapsuladas e métodos de controle</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Classe</th>
+                <th>Propriedade</th>
+                <th>Modificador</th>
+                <th>Método que controla a mutação</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="td-code">Usuario</td>    <td class="td-code">SenhaHash</td>           <td>private set</td> <td><code>ConfigurarAcesso()</code> · <code>AtualizarSenhaHash()</code></td></tr>
+            <tr><td class="td-code">Usuario</td>    <td class="td-code">TipoUsuario</td>          <td>private set</td> <td><code>ConfigurarAcesso()</code> — definido uma única vez</td></tr>
+            <tr><td class="td-code">Usuario</td>    <td class="td-code">Ativo</td>                <td>private set</td> <td><code>Ativar()</code> · <code>Desativar()</code></td></tr>
+            <tr><td class="td-code">Usuario</td>    <td class="td-code">DataCadastro</td>         <td>private set</td> <td>Preenchido na criação — imutável após isso</td></tr>
+            <tr><td class="td-code">Matricula</td>  <td class="td-code">Status</td>               <td>private set</td> <td><code>Aprovar()</code> · <code>Rejeitar()</code> · <code>Cancelar()</code></td></tr>
+            <tr><td class="td-code">Matricula</td>  <td class="td-code">NotaFinal</td>            <td>private set</td> <td><code>LancarNotaFinal()</code> — valida se status é <em>Aprovada</em> e se nota está entre 0 e 10</td></tr>
+            <tr><td class="td-code">Matricula</td>  <td class="td-code">TurmaId</td>              <td>private set</td> <td><code>VincularTurma()</code> — valida integridade do identificador informado</td></tr>
+            <tr><td class="td-code">Matricula</td>  <td class="td-code">DataSolicitacao</td>      <td>private set</td> <td><code>RegistrarSolicitacao()</code> — imutável após o registro</td></tr>
+            <tr><td class="td-code">Avaliacao</td>  <td class="td-code">StatusPublicacao</td>     <td>private set</td> <td><code>Publicar()</code> · <code>Arquivar()</code> · <code>VoltarParaRascunho()</code></td></tr>
+            <tr><td class="td-code">Avaliacao</td>  <td class="td-code">ProfessorAutorId</td>     <td>private set</td> <td><code>DefinirAutor()</code> — atribuído uma única vez com validação</td></tr>
+            <tr><td class="td-code">Avaliacao</td>  <td class="td-code">TentativasPermitidas</td> <td>private set</td> <td><code>DefinirTentativasPermitidas()</code> — mínimo de 1 tentativa</td></tr>
+            <tr><td class="td-code">Avaliacao</td>  <td class="td-code">PublicadoEm</td>          <td>private set</td> <td>Preenchido automaticamente ao invocar <code>Publicar()</code></td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+
+<!-- ══════════════════════════════════════
+     5 ENUMERAÇÕES DE DOMÍNIO
+══════════════════════════════════════ -->
+<h1>5 Enumerações de Domínio</h1>
+
+<p>As enumerações serão centralizadas no arquivo <code>PedagogicalEnums.cs</code> e definirão os
+estados válidos de cada entidade do domínio pedagógico, impedindo valores arbitrários em campos
+de estado e tornando o código autodocumentado.</p>
+
+<p class="tbl-caption">Tabela 6 – Enumerações de domínio e seus valores válidos</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Enumeração</th>
+                <th>Entidade Relacionada</th>
+                <th>Valores (índice · rótulo)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="td-code">StatusMatricula</td>
+                <td>Matricula</td>
+                <td>1 · Pendente &nbsp;|&nbsp; 2 · Aprovada &nbsp;|&nbsp; 3 · Rejeitada &nbsp;|&nbsp; 4 · Cancelada</td>
+            </tr>
+            <tr>
+                <td class="td-code">TipoConteudoDidatico</td>
+                <td>ConteudoDidatico</td>
+                <td>1 · Texto &nbsp;|&nbsp; 2 · PDF &nbsp;|&nbsp; 3 · Vídeo &nbsp;|&nbsp; 4 · Link</td>
+            </tr>
+            <tr>
+                <td class="td-code">TipoQuestao</td>
+                <td>QuestaoBanco</td>
+                <td>1 · Múltipla Escolha &nbsp;|&nbsp; 2 · Verdadeiro / Falso &nbsp;|&nbsp; 3 · Discursiva</td>
+            </tr>
+            <tr>
+                <td class="td-code">TipoAvaliacao</td>
+                <td>Avaliacao</td>
+                <td>1 · Quiz &nbsp;|&nbsp; 2 · Prova &nbsp;|&nbsp; 3 · Exercício</td>
+            </tr>
+            <tr>
+                <td class="td-code">StatusPublicacao</td>
+                <td>Avaliacao / ConteudoDidatico</td>
+                <td>1 · Rascunho &nbsp;|&nbsp; 2 · Publicado &nbsp;|&nbsp; 3 · Arquivado</td>
+            </tr>
+            <tr>
+                <td class="td-code">StatusTentativaAvaliacao</td>
+                <td>TentativaAvaliacao</td>
+                <td>1 · Em Andamento &nbsp;|&nbsp; 2 · Enviada &nbsp;|&nbsp; 3 · Corrigida &nbsp;|&nbsp; 4 · Expirada</td>
+            </tr>
+            <tr>
+                <td class="td-code">StatusProgressoAprendizagem</td>
+                <td>ProgressoConteudoAluno / ProgressoModuloAluno</td>
+                <td>1 · Não Iniciado &nbsp;|&nbsp; 2 · Em Andamento &nbsp;|&nbsp; 3 · Concluído</td>
+            </tr>
+            <tr>
+                <td class="td-code">OrigemCorrecaoNota</td>
+                <td>LancamentoNotaAluno</td>
+                <td>1 · Automática &nbsp;|&nbsp; 2 · Manual &nbsp;|&nbsp; 3 · Mista</td>
+            </tr>
+            <tr>
+                <td class="td-code">EscopoMarcoProgresso</td>
+                <td>MarcoProgressoAluno</td>
+                <td>1 · Curso &nbsp;|&nbsp; 2 · Módulo</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: modelagem do domínio — PlataformaEnsino (sprint futura).</p>
+
+</body>
+</html>

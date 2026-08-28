@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -63,7 +63,6 @@
             overflow-x: auto;
         }
 
-        /* SVG diagrama MER estilizado */
         svg {
             display: block;
             margin: 0 auto;
@@ -71,7 +70,6 @@
             overflow: visible;
         }
 
-        /* Legenda abaixo */
         .legend-box {
             margin-top: 40px;
             background: #1c1c1c;
@@ -160,260 +158,312 @@
 
     <div class="mer-canvas">
 
-        <!-- SVG Principal MER -->
-        <svg viewBox="0 0 1400 900" width="1400" height="900" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#1c1c1c" />
-                </marker>
-                <marker id="arr-blue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#457b9d" />
-                </marker>
-                <marker id="arr-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#f4a261" />
-                </marker>
-                <marker id="arr-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#2d6a4f" />
-                </marker>
-            </defs>
+        <svg viewBox="0 0 1600 1050" width="1600" height="1050" xmlns="http://www.w3.org/2000/svg">
 
-            <!-- ====== ENTIDADES (retângulos) ====== -->
-            <!-- USUARIOS (centro-esquerdo) -->
-            <rect x="30" y="360" width="160" height="80" rx="4" fill="#1c1c1c" stroke="none" />
-            <text x="110" y="396" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#f4a261">USUÁRIOS</text>
-            <text x="110" y="414" text-anchor="middle" font-family="Outfit" font-size="10" fill="#aaa">(ALUNOS/PROF./COORDENADOR/ADMINS)</text>
+            <!-- ====== FUNDO DE ZONAS ====== -->
+            <rect x="8"   y="220" width="200" height="410" rx="8" fill="#f5f3fe" opacity="0.6" />
+            <rect x="255" y="55"  width="280" height="620" rx="8" fill="#edf3f8" opacity="0.6" />
+            <rect x="540" y="55"  width="640" height="540" rx="8" fill="#fff5f2" opacity="0.5" />
+            <rect x="1040" y="545" width="530" height="210" rx="8" fill="#f5f0ff" opacity="0.6" />
 
-            <!-- CURSOS (centro) -->
-            <rect x="280" y="180" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
-            <text x="360" y="213" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">CURSOS</text>
-            <text x="360" y="231" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, TITULO, PRECO</text>
+            <!-- ====== RÓTULOS DE ZONA ====== -->
+            <text x="108" y="238" text-anchor="middle" font-family="Outfit" font-size="9" font-weight="700" fill="#7c5cfc" letter-spacing="1.5">AUTENTICAÇÃO</text>
+            <text x="395" y="72"  text-anchor="middle" font-family="Outfit" font-size="9" font-weight="700" fill="#457b9d" letter-spacing="1.5">ESTRUTURA ACADÊMICA</text>
+            <text x="700" y="65"  text-anchor="middle" font-family="Outfit" font-size="9" font-weight="700" fill="#e76f51" letter-spacing="1.5">AVALIAÇÕES E QUESTÕES</text>
+            <text x="1170" y="560" text-anchor="middle" font-family="Outfit" font-size="9" font-weight="700" fill="#bc8cff" letter-spacing="1.5">PROGRESSOS</text>
 
-            <!-- TURMAS -->
-            <rect x="280" y="360" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
-            <text x="360" y="393" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">TURMAS</text>
-            <text x="360" y="411" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, NOMETURMA</text>
+            <!-- ====== ENTIDADES ====== -->
 
-            <!-- MODULOS -->
-            <rect x="280" y="530" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
-            <text x="360" y="563" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">MÓDULOS</text>
-            <text x="360" y="581" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, TITULO, DATACRIACAO</text>
-
-            <!-- MATRICULAS (losango relacionamento forte) -->
-            <polygon points="540,375 630,345 720,375 630,405" fill="#2d6a4f" stroke="none" />
-            <text x="630" y="379" text-anchor="middle" font-family="Outfit" font-size="11" font-weight="800" fill="#fff">MATRÍCULAS</text>
-
-            <!-- CONTEUDOS DIDATICOS -->
-            <rect x="560" y="510" width="180" height="70" rx="4" fill="#457b9d" stroke="none" />
-            <text x="650" y="543" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">CONTEÚDOS</text>
-            <text x="650" y="561" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">DIDÁTICOS</text>
-
-            <!-- AVALIACOES -->
-            <rect x="560" y="180" width="160" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="640" y="213" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">AVALIAÇÕES</text>
-            <text x="640" y="231" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">ID, TITULO, TIPOAVALIAÇÃO</text>
-
-            <!-- QUESTOES BANCO -->
-            <rect x="560" y="70" width="160" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="640" y="103" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">QUESTÕES</text>
-            <text x="640" y="121" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">BANCO</text>
-
-            <!-- ALTERNATIVAS BANCO -->
-            <rect x="760" y="70" width="170" height="70" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="845" y="103" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ALT. QUESTÕES</text>
-            <text x="845" y="121" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">BANCO</text>
-
-            <!-- ANEXOS BANCO -->
-            <rect x="760" y="180" width="170" height="70" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="845" y="213" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ANEXOS</text>
-            <text x="845" y="231" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">QUESTÕES BANCO</text>
-
-            <!-- QUESTOES PUBLICADAS -->
-            <rect x="760" y="290" width="170" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="845" y="323" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">QUESTÕES</text>
-            <text x="845" y="341" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">PUBLICADAS</text>
-
-            <!-- ALTERNATIVAS PUBLICADAS -->
-            <rect x="980" y="290" width="170" height="70" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="1065" y="323" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ALT. QUESTÕES</text>
-            <text x="1065" y="341" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">PUBLICADAS</text>
-
-            <!-- TENTATIVAS AVALIACAO -->
-            <rect x="780" y="450" width="170" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="865" y="483" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">TENTATIVAS</text>
-            <text x="865" y="501" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">AVALIAÇÃO</text>
-
-            <!-- RESPOSTAS ALUNOS -->
-            <rect x="980" y="450" width="170" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="1065" y="483" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">RESPOSTAS</text>
-            <text x="1065" y="501" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">ALUNOS</text>
-
-            <!-- LANCAMENTOS NOTAS -->
-            <rect x="780" y="600" width="170" height="70" rx="4" fill="#e76f51" stroke="none" />
-            <text x="865" y="633" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">LANÇAMENTOS</text>
-            <text x="865" y="651" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">NOTAS ALUNOS</text>
-
-            <!-- PROGRESSOS CONTEUDOS -->
-            <rect x="1000" y="570" width="170" height="65" rx="4" fill="#bc8cff" stroke="none" />
-            <text x="1085" y="601" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
-            <text x="1085" y="619" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">CONTEÚDOS</text>
-
-            <!-- PROGRESSOS MODULOS -->
-            <rect x="1000" y="670" width="170" height="65" rx="4" fill="#bc8cff" stroke="none" />
-            <text x="1085" y="701" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
-            <text x="1085" y="719" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">MÓDULOS</text>
-
-            <!-- PROGRESSOS CURSOS -->
-            <rect x="1200" y="570" width="170" height="65" rx="4" fill="#bc8cff" stroke="none" />
-            <text x="1285" y="601" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
-            <text x="1285" y="619" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">CURSOS</text>
-
-            <!-- MARCOS PROGRESSOS -->
-            <rect x="1200" y="670" width="170" height="65" rx="4" fill="#bc8cff" stroke="none" />
-            <text x="1285" y="701" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">MARCOS</text>
-            <text x="1285" y="719" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">PROGRESSOS</text>
+            <!-- USUARIOS -->
+            <rect x="30" y="320" width="160" height="80" rx="4" fill="#1c1c1c" stroke="none" />
+            <text x="110" y="356" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#f4a261">USUÁRIOS</text>
+            <text x="110" y="374" text-anchor="middle" font-family="Outfit" font-size="9"  fill="#aaa">(ALUNOS / PROF. / COORD. / ADMIN)</text>
 
             <!-- FEEDBACKS ACADEMICOS -->
-            <rect x="30" y="530" width="160" height="70" rx="4" fill="#1c1c1c" stroke="none" />
-            <text x="110" y="563" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#f4a261">FEEDBACKS</text>
-            <text x="110" y="581" text-anchor="middle" font-family="Outfit" font-size="10" fill="#aaa">ACADÊMICOS</text>
+            <rect x="30" y="490" width="160" height="70" rx="4" fill="#1c1c1c" stroke="none" />
+            <text x="110" y="523" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#f4a261">FEEDBACKS</text>
+            <text x="110" y="541" text-anchor="middle" font-family="Outfit" font-size="10" fill="#aaa">ACADÊMICOS</text>
 
-            <!-- ====== CONEXÕES / RELACIONAMENTOS ====== -->
-            <!-- Usuario → Feedback -->
-            <line x1="110" y1="440" x2="110" y2="530" stroke="#1c1c1c" stroke-width="2" />
-            <text x="128" y="490" font-family="Outfit" font-size="10" fill="#555">envia/recebe</text>
+            <!-- CURSOS -->
+            <rect x="280" y="160" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
+            <text x="360" y="193" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">CURSOS</text>
+            <text x="360" y="211" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, TITULO, PRECO</text>
 
-            <!-- Usuario → Turma (leciona) -->
-            <line x1="190" y1="390" x2="280" y2="390" stroke="#1c1c1c" stroke-width="2" stroke-dasharray="6,3" />
-            <text x="235" y="383" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">leciona</text>
-            <text x="200" y="403" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
-            <text x="265" y="403" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+            <!-- TURMAS -->
+            <rect x="280" y="330" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
+            <text x="360" y="363" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">TURMAS</text>
+            <text x="360" y="381" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, NOMETURMA</text>
 
-            <!-- Usuario → Matricula (realiza) -->
-            <line x1="190" y1="390" x2="540" y2="375" stroke="#2d6a4f" stroke-width="2" />
-            <text x="355" y="368" text-anchor="middle" font-family="Outfit" font-size="10" fill="#2d6a4f">realiza</text>
-            <text x="210" y="385" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">1</text>
-            <text x="522" y="375" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">N</text>
+            <!-- MODULOS -->
+            <rect x="280" y="500" width="160" height="70" rx="4" fill="#457b9d" stroke="none" />
+            <text x="360" y="533" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">MÓDULOS</text>
+            <text x="360" y="551" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">ID, TITULO, DATACRIACAO</text>
 
-            <!-- Curso → Turma (contém) -->
-            <line x1="360" y1="250" x2="360" y2="360" stroke="#1c1c1c" stroke-width="2" />
-            <text x="372" y="310" font-family="Outfit" font-size="10" fill="#555">contém</text>
-            <text x="348" y="263" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
-            <text x="348" y="352" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+            <!-- CONTEUDOS DIDATICOS -->
+            <rect x="560" y="480" width="180" height="70" rx="4" fill="#457b9d" stroke="none" />
+            <text x="650" y="513" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">CONTEÚDOS</text>
+            <text x="650" y="531" text-anchor="middle" font-family="Outfit" font-size="10" fill="#cde">DIDÁTICOS</text>
 
-            <!-- Curso → Modulo -->
-            <line x1="360" y1="250" x2="360" y2="530" stroke="#1c1c1c" stroke-width="2" />
-            <text x="372" y="420" font-family="Outfit" font-size="10" fill="#555">organiza</text>
-            <text x="348" y="263" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
-            <text x="348" y="522" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+            <!-- AVALIACOES -->
+            <rect x="560" y="160" width="160" height="70" rx="4" fill="#e76f51" stroke="none" />
+            <text x="640" y="193" text-anchor="middle" font-family="Outfit" font-size="14" font-weight="800" fill="#fff">AVALIAÇÕES</text>
+            <text x="640" y="211" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">ID, TITULO, TIPO</text>
 
-            <!-- Curso → Matricula -->
-            <line x1="440" y1="215" x2="610" y2="350" stroke="#2d6a4f" stroke-width="2" />
-            <text x="540" y="285" text-anchor="middle" font-family="Outfit" font-size="10" fill="#2d6a4f">é de</text>
-            <text x="455" y="225" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">1</text>
-            <text x="600" y="348" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">N</text>
+            <!-- QUESTOES BANCO -->
+            <rect x="560" y="75" width="160" height="65" rx="4" fill="#e76f51" stroke="none" />
+            <text x="640" y="105" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">QUESTÕES</text>
+            <text x="640" y="123" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">BANCO</text>
 
-            <!-- Modulo → Conteudo -->
-            <line x1="440" y1="565" x2="560" y2="545" stroke="#457b9d" stroke-width="2" />
-            <text x="500" y="558" font-family="Outfit" font-size="10" fill="#457b9d">tem</text>
-            <text x="445" y="558" font-family="Outfit" font-size="11" font-weight="700" fill="#457b9d">1</text>
-            <text x="548" y="548" font-family="Outfit" font-size="11" font-weight="700" fill="#457b9d">N</text>
+            <!-- ALTERNATIVAS BANCO (fraca) -->
+            <rect x="760" y="75" width="170" height="65" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
+            <text x="845" y="105" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ALT. QUESTÕES</text>
+            <text x="845" y="123" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">BANCO</text>
 
-            <!-- Modulo → Avaliacao -->
-            <line x1="440" y1="545" x2="560" y2="215" stroke="#e76f51" stroke-width="2" />
-            <text x="500" y="380" font-family="Outfit" font-size="10" fill="#e76f51">avalia</text>
+            <!-- ANEXOS BANCO (fraca) -->
+            <rect x="760" y="165" width="170" height="65" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
+            <text x="845" y="195" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ANEXOS</text>
+            <text x="845" y="213" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">QUESTÕES BANCO</text>
 
-            <!-- Avaliacao → QuestaoPublicada -->
-            <line x1="720" y1="215" x2="760" y2="325" stroke="#e76f51" stroke-width="2" />
-            <text x="740" y="260" font-family="Outfit" font-size="10" fill="#e76f51">publica</text>
-            <text x="722" y="225" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
-            <text x="750" y="322" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+            <!-- QUESTOES PUBLICADAS -->
+            <rect x="760" y="270" width="170" height="65" rx="4" fill="#e76f51" stroke="none" />
+            <text x="845" y="300" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">QUESTÕES</text>
+            <text x="845" y="318" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">PUBLICADAS</text>
 
-            <!-- QuestaoPublicada → AlternativaPublicada -->
-            <line x1="930" y1="325" x2="980" y2="325" stroke="#e9c46a" stroke-width="2" />
-            <text x="955" y="318" font-family="Outfit" font-size="10" fill="#555">tem</text>
-            <text x="932" y="335" font-family="Outfit" font-size="11" font-weight="700" fill="#555">1</text>
-            <text x="968" y="335" font-family="Outfit" font-size="11" font-weight="700" fill="#555">N</text>
+            <!-- ALTERNATIVAS PUBLICADAS (fraca) -->
+            <rect x="980" y="270" width="170" height="65" rx="4" fill="#e9c46a" stroke="#1c1c1c" stroke-width="1.5" />
+            <text x="1065" y="300" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#1c1c1c">ALT. QUESTÕES</text>
+            <text x="1065" y="318" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">PUBLICADAS</text>
 
-            <!-- QuestaoPublicada → QuestoesBanco (origem) -->
-            <line x1="845" y1="290" x2="720" y2="140" stroke="#e76f51" stroke-width="1.5" stroke-dasharray="5,3" />
-            <text x="782" y="205" font-family="Outfit" font-size="10" fill="#e76f51">origem (opt)</text>
+            <!-- TENTATIVAS AVALIACAO -->
+            <rect x="780" y="430" width="170" height="65" rx="4" fill="#e76f51" stroke="none" />
+            <text x="865" y="460" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">TENTATIVAS</text>
+            <text x="865" y="478" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">AVALIAÇÃO</text>
 
-            <!-- QuestoesBanco → Alternativa Banco -->
-            <line x1="720" y1="105" x2="760" y2="105" stroke="#e9c46a" stroke-width="2" />
-            <text x="740" y="98" font-family="Outfit" font-size="10" fill="#555">tem</text>
-            <text x="722" y="115" font-family="Outfit" font-size="11" font-weight="700" fill="#555">1</text>
-            <text x="748" y="115" font-family="Outfit" font-size="11" font-weight="700" fill="#555">N</text>
+            <!-- RESPOSTAS ALUNOS -->
+            <rect x="980" y="430" width="170" height="65" rx="4" fill="#e76f51" stroke="none" />
+            <text x="1065" y="460" text-anchor="middle" font-family="Outfit" font-size="13" font-weight="800" fill="#fff">RESPOSTAS</text>
+            <text x="1065" y="478" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">ALUNOS</text>
 
-            <!-- QuestoesBanco → Anexo Banco -->
-            <line x1="720" y1="140" x2="760" y2="215" stroke="#e9c46a" stroke-width="2" />
-            <text x="740" y="175" font-family="Outfit" font-size="10" fill="#555">tem</text>
+            <!-- LANCAMENTOS NOTAS -->
+            <rect x="780" y="570" width="170" height="65" rx="4" fill="#e76f51" stroke="none" />
+            <text x="865" y="601" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">LANÇAMENTOS</text>
+            <text x="865" y="619" text-anchor="middle" font-family="Outfit" font-size="10" fill="#fdd">NOTAS ALUNOS</text>
 
-            <!-- Matricula → TentativaAvaliacao -->
-            <line x1="720" y1="375" x2="780" y2="485" stroke="#e76f51" stroke-width="2" />
-            <text x="745" y="425" font-family="Outfit" font-size="10" fill="#e76f51">tenta</text>
-            <text x="722" y="380" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
-            <text x="768" y="480" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+            <!-- MATRÍCULAS (losango N:N) — maior para mais legibilidade -->
+            <polygon points="500,355 630,315 760,355 630,395" fill="#2d6a4f" stroke="none" />
+            <text x="630" y="351" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">MATRÍCULAS</text>
+            <text x="630" y="367" text-anchor="middle" font-family="Outfit" font-size="8"  fill="#a8d5b5">(N:N alunos ↔ cursos)</text>
 
-            <!-- Avaliacao → TentativaAvaliacao -->
-            <line x1="680" y1="250" x2="820" y2="450" stroke="#e76f51" stroke-width="2" />
-            <text x="755" y="345" font-family="Outfit" font-size="10" fill="#e76f51">avalia em</text>
+            <!-- PROGRESSOS CONTEUDOS -->
+            <rect x="1060" y="575" width="170" height="60" rx="4" fill="#bc8cff" stroke="none" />
+            <text x="1145" y="603" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
+            <text x="1145" y="621" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">CONTEÚDOS</text>
 
-            <!-- TentativaAvaliacao → RespostaAluno -->
-            <line x1="950" y1="485" x2="980" y2="485" stroke="#e76f51" stroke-width="2" />
-            <text x="963" y="478" font-family="Outfit" font-size="10" fill="#e76f51">contém</text>
-            <text x="952" y="495" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
-            <text x="968" y="495" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+            <!-- PROGRESSOS MODULOS -->
+            <rect x="1060" y="670" width="170" height="60" rx="4" fill="#bc8cff" stroke="none" />
+            <text x="1145" y="698" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
+            <text x="1145" y="716" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">MÓDULOS</text>
 
-            <!-- Matricula → LancamentoNota -->
-            <line x1="720" y1="390" x2="780" y2="620" stroke="#e76f51" stroke-width="1.5" stroke-dasharray="5,3" />
-            <text x="740" y="510" font-family="Outfit" font-size="10" fill="#e76f51">recebe</text>
+            <!-- PROGRESSOS CURSOS -->
+            <rect x="1280" y="575" width="170" height="60" rx="4" fill="#bc8cff" stroke="none" />
+            <text x="1365" y="603" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">PROGRESSOS</text>
+            <text x="1365" y="621" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">CURSOS</text>
 
-            <!-- Matricula → ProgressoConteudo -->
-            <line x1="720" y1="370" x2="1000" y2="595" stroke="#bc8cff" stroke-width="1.5" />
-            <text x="860" y="480" font-family="Outfit" font-size="10" fill="#bc8cff">progride</text>
+            <!-- MARCOS PROGRESSOS -->
+            <rect x="1280" y="670" width="170" height="60" rx="4" fill="#bc8cff" stroke="none" />
+            <text x="1365" y="698" text-anchor="middle" font-family="Outfit" font-size="12" font-weight="800" fill="#fff">MARCOS</text>
+            <text x="1365" y="716" text-anchor="middle" font-family="Outfit" font-size="10" fill="#ece">PROGRESSOS</text>
 
-            <!-- Matricula → ProgressoModulo -->
-            <line x1="720" y1="380" x2="1000" y2="695" stroke="#bc8cff" stroke-width="1.5" />
+            <!-- ====== ATRIBUTOS ELIPSES ====== -->
 
-            <!-- Matricula → ProgressoCurso -->
-            <line x1="720" y1="380" x2="1200" y2="595" stroke="#bc8cff" stroke-width="1.5" />
+            <!-- USUÁRIOS: ID (PK, sublinhado), email (único), TIPOUSUARIO, senhaHash -->
+            <ellipse cx="50"  cy="260" rx="38" ry="17" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
+            <line    x1="12"  y1="264" x2="88"  y2="264" stroke="#1c1c1c" stroke-width="1.5" />
+            <text    x="50"   y="263" text-anchor="middle" font-family="Outfit" font-size="9" fill="#1c1c1c">ID (PK)</text>
+            <line    x1="65"  y1="276" x2="85"  y2="320" stroke="#1c1c1c" stroke-width="1" />
 
-            <!-- Matricula → MarcoProgresso -->
-            <line x1="720" y1="385" x2="1200" y2="695" stroke="#bc8cff" stroke-width="1.5" stroke-dasharray="5,3" />
+            <ellipse cx="115" cy="248" rx="36" ry="16" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
+            <line    x1="79"  y1="252" x2="151" y2="252" stroke="#1c1c1c" stroke-width="1" />
+            <text    x="115"  y="250" text-anchor="middle" font-family="Outfit" font-size="9" fill="#1c1c1c">email</text>
+            <line    x1="115" y1="264" x2="110" y2="320" stroke="#1c1c1c" stroke-width="1" />
 
-            <!-- ====== ATRIBUTOS ELIPSES (selecionados) ====== -->
-            <!-- Atributos do Usuario -->
-            <ellipse cx="50" cy="290" rx="45" ry="20" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="50" y="295" text-anchor="middle" font-family="Outfit" font-size="10" fill="#1c1c1c">ID (PK)</text>
-            <line x1="75" y1="305" x2="100" y2="360" stroke="#1c1c1c" stroke-width="1" />
+            <ellipse cx="18"  cy="415" rx="36" ry="16" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
+            <text    x="18"   y="418" text-anchor="middle" font-family="Outfit" font-size="8.5" fill="#1c1c1c">TIPOUSUARIO</text>
+            <line    x1="40"  y1="415" x2="55"  y2="390" stroke="#1c1c1c" stroke-width="1" />
 
-            <ellipse cx="22" cy="450" rx="40" ry="18" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="22" y="455" text-anchor="middle" font-family="Outfit" font-size="10" fill="#1c1c1c">TIPOUSUARIO</text>
-            <line x1="40" y1="450" x2="70" y2="420" stroke="#1c1c1c" stroke-width="1" />
+            <ellipse cx="148" cy="460" rx="37" ry="16" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
+            <text    x="148"  y="463" text-anchor="middle" font-family="Outfit" font-size="9" fill="#1c1c1c">senhaHash</text>
+            <line    x1="148" y1="444" x2="148" y2="400" stroke="#1c1c1c" stroke-width="1" />
 
-            <ellipse cx="140" cy="485" rx="42" ry="18" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
-            <text x="140" y="488" text-anchor="middle" font-family="Outfit" font-size="10" fill="#1c1c1c">senhaHash</text>
-            <line x1="140" y1="467" x2="140" y2="440" stroke="#1c1c1c" stroke-width="1" />
+            <!-- CURSOS: ID (PK, sublinhado) -->
+            <ellipse cx="310" cy="130" rx="28" ry="14" fill="none" stroke="#457b9d" stroke-width="1.5" />
+            <line    x1="282" y1="134" x2="338" y2="134" stroke="#457b9d" stroke-width="1.5" />
+            <text    x="310"  y="133" text-anchor="middle" font-family="Outfit" font-size="9" fill="#457b9d">ID (PK)</text>
+            <line    x1="310" y1="144" x2="320" y2="160" stroke="#457b9d" stroke-width="1" />
 
-            <!-- Atrib email sublinhado duplo (único) -->
-            <ellipse cx="110" cy="275" rx="42" ry="18" fill="none" stroke="#1c1c1c" stroke-width="1.5" />
-            <line x1="68" y1="279" x2="152" y2="279" stroke="#1c1c1c" stroke-width="1" />
-            <text x="110" y="277" text-anchor="middle" font-family="Outfit" font-size="10" fill="#1c1c1c">email</text>
-            <line x1="110" y1="293" x2="110" y2="360" stroke="#1c1c1c" stroke-width="1" />
+            <!-- TURMAS: ID (PK, sublinhado) -->
+            <ellipse cx="310" cy="300" rx="28" ry="14" fill="none" stroke="#457b9d" stroke-width="1.5" />
+            <line    x1="282" y1="304" x2="338" y2="304" stroke="#457b9d" stroke-width="1.5" />
+            <text    x="310"  y="303" text-anchor="middle" font-family="Outfit" font-size="9" fill="#457b9d">ID (PK)</text>
+            <line    x1="310" y1="314" x2="320" y2="330" stroke="#457b9d" stroke-width="1" />
+
+            <!-- MÓDULOS: ID (PK, sublinhado) -->
+            <ellipse cx="310" cy="470" rx="28" ry="14" fill="none" stroke="#457b9d" stroke-width="1.5" />
+            <line    x1="282" y1="474" x2="338" y2="474" stroke="#457b9d" stroke-width="1.5" />
+            <text    x="310"  y="473" text-anchor="middle" font-family="Outfit" font-size="9" fill="#457b9d">ID (PK)</text>
+            <line    x1="310" y1="484" x2="320" y2="500" stroke="#457b9d" stroke-width="1" />
+
+            <!-- ====== CONEXÕES ====== -->
+
+            <!-- Usuário → Feedback (1:N) -->
+            <line x1="110" y1="400" x2="110" y2="490" stroke="#1c1c1c" stroke-width="2" />
+            <text x="126" y="448" font-family="Outfit" font-size="10" fill="#555">envia/recebe</text>
+            <text x="96"  y="412" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
+            <text x="96"  y="484" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+
+            <!-- Usuário → Turma (leciona, 1:N, opcional) -->
+            <line x1="190" y1="360" x2="280" y2="360" stroke="#1c1c1c" stroke-width="2" stroke-dasharray="6,3" />
+            <text x="235" y="352" text-anchor="middle" font-family="Outfit" font-size="10" fill="#555">leciona</text>
+            <text x="200" y="374" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
+            <text x="266" y="374" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+
+            <!-- Usuário → Matrícula (realiza, 1:N) -->
+            <line x1="190" y1="355" x2="500" y2="355" stroke="#2d6a4f" stroke-width="2" />
+            <text x="345" y="345" text-anchor="middle" font-family="Outfit" font-size="10" fill="#2d6a4f">realiza</text>
+            <text x="206" y="368" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">1</text>
+            <text x="486" y="355" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">N</text>
+
+            <!-- Curso → Turma (contém, 1:N) -->
+            <line x1="360" y1="230" x2="360" y2="330" stroke="#1c1c1c" stroke-width="2" />
+            <text x="372" y="285" font-family="Outfit" font-size="10" fill="#555">contém</text>
+            <text x="348" y="244" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
+            <text x="348" y="323" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+
+            <!-- Curso → Módulo (organiza, 1:N) -->
+            <line x1="340" y1="230" x2="340" y2="500" stroke="#1c1c1c" stroke-width="2" />
+            <text x="352" y="390" font-family="Outfit" font-size="10" fill="#555">organiza</text>
+            <text x="326" y="244" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">1</text>
+            <text x="326" y="494" font-family="Outfit" font-size="11" font-weight="700" fill="#1c1c1c">N</text>
+
+            <!-- Curso → Matrícula (é de, 1:N) -->
+            <line x1="440" y1="195" x2="600" y2="330" stroke="#2d6a4f" stroke-width="2" />
+            <text x="530" y="265" text-anchor="middle" font-family="Outfit" font-size="10" fill="#2d6a4f">é de</text>
+            <text x="452" y="207" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">1</text>
+            <text x="588" y="328" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">N</text>
+
+            <!-- Módulo → Conteúdo (tem, 1:N) -->
+            <line x1="440" y1="535" x2="560" y2="515" stroke="#457b9d" stroke-width="2" />
+            <text x="500" y="525" font-family="Outfit" font-size="10" fill="#457b9d">tem</text>
+            <text x="444" y="528" font-family="Outfit" font-size="11" font-weight="700" fill="#457b9d">1</text>
+            <text x="547" y="518" font-family="Outfit" font-size="11" font-weight="700" fill="#457b9d">N</text>
+
+            <!-- Módulo → Avaliação (avalia, 1:N) -->
+            <line x1="440" y1="515" x2="560" y2="195" stroke="#e76f51" stroke-width="2" />
+            <text x="505" y="355" font-family="Outfit" font-size="10" fill="#e76f51">avalia</text>
+            <text x="444" y="508" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="548" y="208" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- Avaliação → QuestõesBanco (origem questões, 1:N) -->
+            <line x1="640" y1="160" x2="640" y2="140" stroke="#e76f51" stroke-width="2" />
+            <text x="652" y="152" font-family="Outfit" font-size="10" fill="#e76f51">contém</text>
+            <text x="626" y="157" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+            <text x="626" y="142" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+
+            <!-- Avaliação → QuestãoPublicada (publica, 1:N) -->
+            <line x1="720" y1="195" x2="760" y2="295" stroke="#e76f51" stroke-width="2" />
+            <text x="748" y="238" font-family="Outfit" font-size="10" fill="#e76f51">publica</text>
+            <text x="722" y="208" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="748" y="292" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- Avaliação → TentativaAvaliação (avalia em, 1:N) -->
+            <line x1="680" y1="225" x2="820" y2="435" stroke="#e76f51" stroke-width="2" />
+            <text x="756" y="325" font-family="Outfit" font-size="10" fill="#e76f51">avalia em</text>
+            <text x="682" y="240" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="810" y="432" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- QuestãoPublicada → Alt.Publicada (tem, 1:N) -->
+            <line x1="930" y1="302" x2="980" y2="302" stroke="#e9c46a" stroke-width="2" />
+            <text x="955" y="295" font-family="Outfit" font-size="10" fill="#555">tem</text>
+            <text x="932" y="316" font-family="Outfit" font-size="11" font-weight="700" fill="#555">1</text>
+            <text x="968" y="316" font-family="Outfit" font-size="11" font-weight="700" fill="#555">N</text>
+
+            <!-- QuestãoPublicada → QuestõesBanco (origem, opcional, tracejado) -->
+            <line x1="845" y1="270" x2="720" y2="140" stroke="#e76f51" stroke-width="1.5" stroke-dasharray="5,3" />
+            <text x="782" y="196" font-family="Outfit" font-size="10" fill="#e76f51">origem (opt)</text>
+
+            <!-- QuestõesBanco → Alt.Banco (tem, 1:N) -->
+            <line x1="720" y1="107" x2="760" y2="107" stroke="#e9c46a" stroke-width="2" />
+            <text x="740" y="100" font-family="Outfit" font-size="10" fill="#555">tem</text>
+            <text x="722" y="120" font-family="Outfit" font-size="11" font-weight="700" fill="#555">1</text>
+            <text x="748" y="120" font-family="Outfit" font-size="11" font-weight="700" fill="#555">N</text>
+
+            <!-- QuestõesBanco → Anexos (tem, 1:N) -->
+            <line x1="720" y1="130" x2="760" y2="192" stroke="#e9c46a" stroke-width="2" />
+            <text x="742" y="160" font-family="Outfit" font-size="10" fill="#555">tem</text>
+            <text x="722" y="140" font-family="Outfit" font-size="11" font-weight="700" fill="#555">1</text>
+            <text x="752" y="190" font-family="Outfit" font-size="11" font-weight="700" fill="#555">N</text>
+
+            <!-- Matrícula → TentativaAvaliação (tenta, 1:N) -->
+            <line x1="735" y1="360" x2="785" y2="435" stroke="#e76f51" stroke-width="2" />
+            <text x="756" y="393" font-family="Outfit" font-size="10" fill="#e76f51">tenta</text>
+            <text x="738" y="373" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="773" y="432" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- TentativaAvaliação → RespostasAlunos (contém, 1:N) -->
+            <line x1="950" y1="462" x2="980" y2="462" stroke="#e76f51" stroke-width="2" />
+            <text x="963" y="455" font-family="Outfit" font-size="10" fill="#e76f51">contém</text>
+            <text x="952" y="476" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="968" y="476" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- Matrícula → LançamentosNotas (recebe, 1:N, tracejado) -->
+            <line x1="720" y1="370" x2="780" y2="585" stroke="#e76f51" stroke-width="1.5" stroke-dasharray="5,3" />
+            <text x="742" y="480" font-family="Outfit" font-size="10" fill="#e76f51">recebe</text>
+            <text x="722" y="382" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">1</text>
+            <text x="770" y="583" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">N</text>
+
+            <!-- Matrícula → ProgressoConteúdo (progride, 1:1) -->
+            <line x1="760" y1="350" x2="1060" y2="592" stroke="#bc8cff" stroke-width="1.5" />
+            <text x="906" y="464" font-family="Outfit" font-size="10" fill="#bc8cff">progride</text>
+            <text x="762" y="362" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">1</text>
+            <text x="1048" y="590" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">N</text>
+
+            <!-- Matrícula → ProgressoMódulo (progride, 1:N) -->
+            <line x1="755" y1="362" x2="1060" y2="690" stroke="#bc8cff" stroke-width="1.5" />
+            <text x="900" y="530" font-family="Outfit" font-size="10" fill="#bc8cff">progride</text>
+            <text x="757" y="375" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">1</text>
+            <text x="1048" y="688" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">N</text>
+
+            <!-- Matrícula → ProgressoCurso (progride, 1:N) -->
+            <line x1="760" y1="355" x2="1280" y2="592" stroke="#bc8cff" stroke-width="1.5" />
+            <text x="1014" y="472" font-family="Outfit" font-size="10" fill="#bc8cff">progride</text>
+            <text x="762" y="367" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">1</text>
+            <text x="1268" y="590" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">N</text>
+
+            <!-- Matrícula → MarcosProgressos (marca, 1:N, tracejado) -->
+            <line x1="760" y1="360" x2="1280" y2="690" stroke="#bc8cff" stroke-width="1.5" stroke-dasharray="5,3" />
+            <text x="1010" y="530" font-family="Outfit" font-size="10" fill="#bc8cff">marca</text>
+            <text x="762" y="372" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">1</text>
+            <text x="1268" y="688" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">N</text>
 
             <!-- ====== NOTAS ====== -->
-            <rect x="30" y="800" width="340" height="60" rx="6" fill="#f0faf3" stroke="#2d6a4f" stroke-width="1.5" />
-            <text x="45" y="821" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">Nota: Entidades de Progresso</text>
-            <text x="45" y="838" font-family="Outfit" font-size="10" fill="#555">ProgressosConteúdos, Módulos, Cursos</text>
-            <text x="45" y="853" font-family="Outfit" font-size="10" fill="#555">e MarcosProgressos derivam de Matrículas.</text>
+            <rect x="30"  y="900" width="340" height="70" rx="6" fill="#f0faf3" stroke="#2d6a4f" stroke-width="1.5" />
+            <text x="45"  y="922" font-family="Outfit" font-size="11" font-weight="700" fill="#2d6a4f">Nota: Entidades de Progresso</text>
+            <text x="45"  y="939" font-family="Outfit" font-size="10" fill="#555">ProgressosConteúdos, Módulos, Cursos</text>
+            <text x="45"  y="955" font-family="Outfit" font-size="10" fill="#555">e MarcosProgressos derivam de Matrículas.</text>
 
-            <rect x="400" y="800" width="340" height="60" rx="6" fill="#fff8f0" stroke="#e76f51" stroke-width="1.5" />
-            <text x="415" y="821" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">Nota: QuestõesPublicadas</text>
-            <text x="415" y="838" font-family="Outfit" font-size="10" fill="#555">São snapshots imutáveis — desacopladas do banco</text>
-            <text x="415" y="853" font-family="Outfit" font-size="10" fill="#555">para preservar histórico de avaliações.</text>
+            <rect x="390" y="900" width="370" height="70" rx="6" fill="#fff8f0" stroke="#e76f51" stroke-width="1.5" />
+            <text x="405" y="922" font-family="Outfit" font-size="11" font-weight="700" fill="#e76f51">Nota: QuestõesPublicadas</text>
+            <text x="405" y="939" font-family="Outfit" font-size="10" fill="#555">São snapshots imutáveis — desacopladas do banco</text>
+            <text x="405" y="955" font-family="Outfit" font-size="10" fill="#555">para preservar o histórico de avaliações.</text>
+
+            <rect x="780" y="900" width="370" height="70" rx="6" fill="#f8f4ff" stroke="#bc8cff" stroke-width="1.5" />
+            <text x="795" y="922" font-family="Outfit" font-size="11" font-weight="700" fill="#bc8cff">Nota: Relacionamento N:N</text>
+            <text x="795" y="939" font-family="Outfit" font-size="10" fill="#555">Matrículas resolve o relacionamento N:N entre</text>
+            <text x="795" y="955" font-family="Outfit" font-size="10" fill="#555">Alunos e Cursos, carregando TurmaId e status.</text>
+
         </svg>
 
-        <!-- Tabela de cardinalidades explicadas -->
+        <!-- Cardinalidades detalhadas -->
         <div class="card-info">
             <div class="rel-card">
                 <h4>👤 Usuários ↔ Turmas</h4>
@@ -423,7 +473,7 @@
             <div class="rel-card">
                 <h4>👤 Alunos ↔ Cursos (via Matrículas)</h4>
                 <div class="rel-row"><span class="cardinality">M</span><div class="rel-connector"></div><span class="cardinality">N</span></div>
-                <div style="font-size:11px;color:#666">Um aluno pode se matricular em muitos cursos. Um curso pode ter muitos alunos. A entidade Matrículas resolve o N:N.</div>
+                <div style="font-size:11px;color:#666">Um aluno pode se matricular em muitos cursos. Um curso pode ter muitos alunos. Matrículas resolve o N:N e carrega TurmaId e status.</div>
             </div>
             <div class="rel-card">
                 <h4>📚 Cursos ↔ Módulos</h4>
@@ -434,6 +484,11 @@
                 <h4>📦 Módulos ↔ ConteúdosDidáticos</h4>
                 <div class="rel-row"><span class="cardinality">1</span><div class="rel-connector"></div><span class="cardinality">N</span></div>
                 <div style="font-size:11px;color:#666">Um módulo agrupa vídeos, PDFs, textos e outros materiais em ordem.</div>
+            </div>
+            <div class="rel-card">
+                <h4>📋 Módulos ↔ Avaliações</h4>
+                <div class="rel-row"><span class="cardinality">1</span><div class="rel-connector"></div><span class="cardinality">N</span></div>
+                <div style="font-size:11px;color:#666">Um módulo pode ter várias avaliações associadas.</div>
             </div>
             <div class="rel-card">
                 <h4>📋 Avaliações ↔ QuestõesPublicadas</h4>
@@ -454,6 +509,11 @@
                 <h4>✏️ TentativasAvaliação ↔ RespostasAlunos</h4>
                 <div class="rel-row"><span class="cardinality">1</span><div class="rel-connector"></div><span class="cardinality">N</span></div>
                 <div style="font-size:11px;color:#666">Cada tentativa registra uma resposta por questão. Alternativa é NULL para dissertativas.</div>
+            </div>
+            <div class="rel-card">
+                <h4>📈 Matrículas ↔ Progressos</h4>
+                <div class="rel-row"><span class="cardinality">1</span><div class="rel-connector"></div><span class="cardinality">N</span></div>
+                <div style="font-size:11px;color:#666">Cada matrícula gera registros de progresso por conteúdo, módulo e curso, além de marcos automáticos.</div>
             </div>
         </div>
 
@@ -498,6 +558,10 @@
             <div class="leg">
                 <span style="background:#e76f51;color:#fff;padding:4px 10px;border-radius:4px;font-size:12px">■</span>
                 <span>Entidades de Avaliação</span>
+            </div>
+            <div class="leg">
+                <span style="background:#1c1c1c;color:#f4a261;padding:4px 10px;border-radius:4px;font-size:12px">■</span>
+                <span>Usuários e Feedbacks</span>
             </div>
         </div>
 
