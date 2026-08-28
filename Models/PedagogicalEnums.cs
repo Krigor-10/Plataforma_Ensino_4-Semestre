@@ -20,7 +20,7 @@ public enum TipoQuestao
 {
     MultiplaEscolha = 1,
     VerdadeiroFalso = 2,
-    Discursiva = 3
+    Dissertativa = 3
 }
 
 public enum TipoAvaliacao

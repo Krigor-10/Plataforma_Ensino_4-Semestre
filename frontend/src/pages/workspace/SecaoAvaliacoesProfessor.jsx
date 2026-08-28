@@ -27,13 +27,13 @@ const OPCOES_STATUS_PUBLICACAO = [
 const OPCOES_TIPO_QUESTAO = [
   { value: "1", label: "Multipla escolha" },
   { value: "2", label: "Verdadeiro/Falso" },
-  { value: "3", label: "Discursiva" }
+  { value: "3", label: "Dissertativa" }
 ];
 
 const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D"];
 
 function normalizeQuestionType(type) {
-  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Discursiva" };
+  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa" };
   return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
 }
 
@@ -667,7 +667,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       <header className="cabecalho-pagina">
         <div style={{ flex: 1 }}>
           <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h1 className="cabecalho-pagina__titulo">Avaliacoes</h1>
+            <h2 className="cabecalho-pagina__titulo">Avaliacoes</h2>
             {total > 0 ? (
               <select
                 aria-label="Navegar para turma"

@@ -612,7 +612,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
       const nota =
         Number(tentativa.statusTentativa) === 3
           ? ` Nota: ${formatScore(tentativa.notaBruta)} de ${formatScore(tentativa.notaMaxima)}.`
-          : " Respostas discursivas aguardam correcao do professor.";
+          : " Respostas dissertativas aguardam correcao do professor.";
 
       setMensagem({ tone: "success", message: `Avaliacao enviada com sucesso.${nota}` });
       onRefresh?.();
@@ -635,7 +635,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     <div className="tela-avaliacoes-aluno">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Realizar avaliacao</h1>
+          <h2 className="cabecalho-pagina__titulo">Realizar avaliacao</h2>
           <p className="cabecalho-pagina__subtitulo">Somente avaliacoes publicadas para as suas turmas aprovadas aparecem aqui.</p>
         </div>
       </header>
@@ -1089,7 +1089,7 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
       <header className="cabecalho-pagina">
         <div style={{ flex: 1 }}>
           <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h1 className="cabecalho-pagina__titulo">Conteudos</h1>
+            <h2 className="cabecalho-pagina__titulo">Conteudos</h2>
             {total > 0 ? (
               <select
                 aria-label="Navegar para curso"
@@ -1447,7 +1447,7 @@ function normalizeQuestionType(type) {
   const labels = {
     1: "Multipla escolha",
     2: "Verdadeiro/Falso",
-    3: "Discursiva"
+    3: "Dissertativa"
   };
 
   if (typeof type === "number") {

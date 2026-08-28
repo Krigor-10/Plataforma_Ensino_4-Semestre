@@ -291,7 +291,7 @@ public class AvaliacaoService : IAvaliacaoService
         tentativa.Iniciar(tentativasRealizadas + 1, agora);
 
         var notaObjetiva = 0m;
-        var possuiDiscursiva = false;
+        var possuiDissertativa = false;
 
         foreach (var questao in questoes)
         {
@@ -302,15 +302,15 @@ public class AvaliacaoService : IAvaliacaoService
                 RespostaTexto = string.Empty
             };
 
-            if (questao.TipoQuestao == TipoQuestao.Discursiva)
+            if (questao.TipoQuestao == TipoQuestao.Dissertativa)
             {
                 var texto = (respostaDto.RespostaTexto ?? string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(texto))
                 {
-                    throw new ArgumentException("Preencha a resposta discursiva antes de enviar.");
+                    throw new ArgumentException("Preencha a resposta dissertativa antes de enviar.");
                 }
 
-                possuiDiscursiva = true;
+                possuiDissertativa = true;
                 resposta.RespostaTexto = texto;
                 resposta.Corrigir(null, 0);
             }
@@ -337,7 +337,7 @@ public class AvaliacaoService : IAvaliacaoService
         }
 
         tentativa.MarcarEnvio(agora);
-        if (!possuiDiscursiva)
+        if (!possuiDissertativa)
         {
             tentativa.MarcarCorrecao(decimal.Round(notaObjetiva, 2, MidpointRounding.AwayFromZero), agora);
         }
@@ -345,7 +345,7 @@ public class AvaliacaoService : IAvaliacaoService
         await _context.TentativasAvaliacao.AddAsync(tentativa);
         await _context.SaveChangesAsync();
 
-        if (!possuiDiscursiva)
+        if (!possuiDissertativa)
         {
             await _progressoAlunoService.RecalcularNotaAvaliacaoAsync(matricula.Id, avaliacao.Id);
         }
@@ -568,7 +568,7 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("A pontuacao da questao deve ser maior que zero.");
         }
 
-        if (dto.TipoQuestao == TipoQuestao.Discursiva)
+        if (dto.TipoQuestao == TipoQuestao.Dissertativa)
         {
             return;
         }
@@ -591,7 +591,7 @@ public class AvaliacaoService : IAvaliacaoService
 
     private static List<AlternativaQuestaoBanco> MontarAlternativasBanco(CriarQuestaoAvaliacaoDto dto)
     {
-        if (dto.TipoQuestao == TipoQuestao.Discursiva)
+        if (dto.TipoQuestao == TipoQuestao.Dissertativa)
         {
             return new List<AlternativaQuestaoBanco>();
         }

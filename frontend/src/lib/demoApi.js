@@ -1046,7 +1046,7 @@ function submitStudentEvaluation(evaluationId, payload) {
 
   const respostasPorQuestao = new Map(respostas.map((resposta) => [Number(resposta.questaoId), resposta]));
   let notaBruta = 0;
-  let possuiDiscursiva = false;
+  let possuiDissertativa = false;
   const now = new Date().toISOString();
   const tentativaId = nextId(db.tentativasAvaliacao);
 
@@ -1056,10 +1056,10 @@ function submitStudentEvaluation(evaluationId, payload) {
     if (Number(questao.tipoQuestao) === 3) {
       const texto = String(resposta?.respostaTexto || "").trim();
       if (!texto) {
-        throw new DemoApiError("Preencha a resposta discursiva demo antes de enviar.", 400);
+        throw new DemoApiError("Preencha a resposta dissertativa demo antes de enviar.", 400);
       }
 
-      possuiDiscursiva = true;
+      possuiDissertativa = true;
       db.respostasAvaliacao.push({
         id: nextId(db.respostasAvaliacao),
         tentativaAvaliacaoId: tentativaId,
@@ -1099,12 +1099,12 @@ function submitStudentEvaluation(evaluationId, payload) {
     avaliacaoId: evaluationId,
     matriculaId: matricula.id,
     numeroTentativa: tentativas.length + 1,
-    statusTentativa: possuiDiscursiva ? 2 : 3,
-    notaBruta: possuiDiscursiva ? 0 : roundDemoNumber(notaBruta),
+    statusTentativa: possuiDissertativa ? 2 : 3,
+    notaBruta: possuiDissertativa ? 0 : roundDemoNumber(notaBruta),
     notaMaxima: Number(avaliacao.notaMaxima || 10),
     iniciadaEm: now,
     enviadaEm: now,
-    corrigidaEm: possuiDiscursiva ? null : now
+    corrigidaEm: possuiDissertativa ? null : now
   };
 
   db.tentativasAvaliacao.push(tentativa);

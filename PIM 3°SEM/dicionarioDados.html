@@ -1067,7 +1067,7 @@
                         <tr><td class="td-name">TituloInterno</td><td class="td-type">NVARCHAR(180)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Título para identificação interna (não exibido ao aluno)</td></tr>
                         <tr><td class="td-name">Contexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Texto introdutório ou situação-problema</td></tr>
                         <tr><td class="td-name">Enunciado</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Enunciado da questão apresentado ao aluno</td></tr>
-                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Discursiva=3</td></tr>
+                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Dissertativa=3</td></tr>
                         <tr><td class="td-name">Tema</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Tema principal da questão para fins de categorização</td></tr>
                         <tr><td class="td-name">Subtema</td><td class="td-type">NVARCHAR(120)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Assunto específico dentro do tema</td></tr>
                         <tr><td class="td-name">Dificuldade</td><td class="td-type">TINYINT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Nível de dificuldade de 1 (fácil) a 5 (muito difícil)</td></tr>
@@ -1177,7 +1177,7 @@
                         <tr><td class="td-name">Ordem</td><td class="td-type">INT</td><td><span class="tag nn">NN</span></td><td class="td-desc">Posição da questão na sequência da avaliação</td></tr>
                         <tr><td class="td-name">ContextoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Cópia do contexto registrada no momento da publicação</td></tr>
                         <tr><td class="td-name">EnunciadoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Cópia do enunciado registrada no momento da publicação</td></tr>
-                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Discursiva=3</td></tr>
+                        <tr><td class="td-name">TipoQuestao</td><td class="td-type">INT</td><td><span class="tag en">ENUM</span> <span class="tag nn">NN</span></td><td class="td-desc">TipoQuestao — MultiplaEscolha=1 | VerdadeiroFalso=2 | Dissertativa=3</td></tr>
                         <tr><td class="td-name">ExplicacaoSnapshot</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Cópia da explicação pós-resposta registrada na publicação</td></tr>
                         <tr><td class="td-name">Pontos</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Pontuação da questão na avaliação (padrão 1,00)</td></tr>
                     </tbody>
@@ -1244,8 +1244,8 @@
                         <tr><td class="td-name">Id</td><td class="td-type">INT</td><td><span class="tag pk">PK</span> <span class="tag nn">NN</span></td><td class="td-desc">Identificador único da resposta</td></tr>
                         <tr><td class="td-name">TentativaAvaliacaoId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Tentativa à qual a resposta pertence → TentativasAvaliacao.Id</td></tr>
                         <tr><td class="td-name">QuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nn">NN</span></td><td class="td-desc">Questão respondida → QuestoesPublicadas.Id</td></tr>
-                        <tr><td class="td-name">AlternativaQuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Alternativa selecionada; nulo para questões discursivas → AlternativasQuestoesPublicadas.Id</td></tr>
-                        <tr><td class="td-name">RespostaTexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Resposta textual; preenchida em questões discursivas</td></tr>
+                        <tr><td class="td-name">AlternativaQuestaoPublicadaId</td><td class="td-type">INT</td><td><span class="tag fk">FK</span> <span class="tag nul">NULL</span></td><td class="td-desc">Alternativa selecionada; nulo para questões dissertativas → AlternativasQuestoesPublicadas.Id</td></tr>
+                        <tr><td class="td-name">RespostaTexto</td><td class="td-type">NVARCHAR(MAX)</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Resposta textual; preenchida em questões dissertativas</td></tr>
                         <tr><td class="td-name">Correta</td><td class="td-type">BIT</td><td><span class="tag nul">NULL</span></td><td class="td-desc">Resultado da correção; nulo indica aguardando correção manual</td></tr>
                         <tr><td class="td-name">PontosObtidos</td><td class="td-type">DECIMAL(18,2)</td><td><span class="tag nn">NN</span></td><td class="td-desc">Pontuação obtida nesta resposta</td></tr>
                         <tr><td class="td-name">RespondidaEm</td><td class="td-type">DATETIME2</td><td><span class="tag nn">NN</span></td><td class="td-desc">Data e hora em que a resposta foi registrada (UTC)</td></tr>
@@ -1261,7 +1261,7 @@
                 <div class="tbl-desc">Nota oficial lançada por avaliação, podendo ter origem automática ou manual.</div>
             </div>
             <div class="note-box">
-                <strong>Lançamento automático:</strong> ao corrigir uma tentativa 100% objetiva (sem questão discursiva pendente), o sistema cria/atualiza automaticamente o lançamento (<code>OrigemCorrecao = Automatica</code>) e recalcula a média ponderada por <code>PesoNota</code> em <code>ProgressosModulosAlunos.MediaModulo</code>, <code>ProgressosCursosAlunos.MediaCurso</code> e <code>Matriculas.NotaFinal</code>. Avaliações com questão discursiva ainda não geram lançamento — a correção manual pelo professor (<code>OrigemCorrecao = Manual/Mista</code>) está prevista no modelo, mas não há endpoint implementado para isso.
+                <strong>Lançamento automático:</strong> ao corrigir uma tentativa 100% objetiva (sem questão dissertativa pendente), o sistema cria/atualiza automaticamente o lançamento (<code>OrigemCorrecao = Automatica</code>) e recalcula a média ponderada por <code>PesoNota</code> em <code>ProgressosModulosAlunos.MediaModulo</code>, <code>ProgressosCursosAlunos.MediaCurso</code> e <code>Matriculas.NotaFinal</code>. Avaliações com questão dissertativa ainda não geram lançamento — a correção manual pelo professor (<code>OrigemCorrecao = Manual/Mista</code>) está prevista no modelo, mas não há endpoint implementado para isso.
             </div>
             <div class="table-wrapper">
                 <table>
@@ -1463,7 +1463,7 @@
                 <table><tbody>
                     <tr><td class="td-val">1</td><td class="td-desc">Múltipla Escolha</td></tr>
                     <tr><td class="td-val">2</td><td class="td-desc">Verdadeiro / Falso</td></tr>
-                    <tr><td class="td-val">3</td><td class="td-desc">Discursiva</td></tr>
+                    <tr><td class="td-val">3</td><td class="td-desc">Dissertativa</td></tr>
                 </tbody></table>
             </div>
             <div class="enum-card">

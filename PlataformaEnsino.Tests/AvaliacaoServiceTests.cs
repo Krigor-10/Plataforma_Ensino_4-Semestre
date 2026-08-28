@@ -342,7 +342,7 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task AdicionarQuestaoAsync_Discursiva_NaoExigeAlternativas()
+    public async Task AdicionarQuestaoAsync_Dissertativa_NaoExigeAlternativas()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -354,9 +354,9 @@ public class AvaliacaoServiceTests
 
         var dto = new CriarQuestaoAvaliacaoDto
         {
-            TituloInterno = "Questao discursiva",
+            TituloInterno = "Questao dissertativa",
             Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Discursiva,
+            TipoQuestao = TipoQuestao.Dissertativa,
             Pontos = 10
         };
 
@@ -429,14 +429,14 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task EnviarRespostasAlunoAsync_ComQuestaoDiscursiva_FicaEnviadaSemCorrecaoAutomatica()
+    public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_FicaEnviadaSemCorrecaoAutomatica()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDiscursiva = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
+        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {
-            TituloInterno = "Discursiva",
+            TituloInterno = "Dissertativa",
             Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Discursiva,
+            TipoQuestao = TipoQuestao.Dissertativa,
             Pontos = 10
         });
 
@@ -444,7 +444,7 @@ public class AvaliacaoServiceTests
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto>
             {
-                new() { QuestaoId = questaoDiscursiva.Id, RespostaTexto = "Minha resposta." }
+                new() { QuestaoId = questaoDissertativa.Id, RespostaTexto = "Minha resposta." }
             }
         };
 
@@ -455,14 +455,14 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task EnviarRespostasAlunoAsync_DiscursivaVazia_LancaArgumentException()
+    public async Task EnviarRespostasAlunoAsync_DissertativaVazia_LancaArgumentException()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDiscursiva = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
+        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {
-            TituloInterno = "Discursiva",
+            TituloInterno = "Dissertativa",
             Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Discursiva,
+            TipoQuestao = TipoQuestao.Dissertativa,
             Pontos = 10
         });
 
@@ -470,7 +470,7 @@ public class AvaliacaoServiceTests
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto>
             {
-                new() { QuestaoId = questaoDiscursiva.Id, RespostaTexto = "   " }
+                new() { QuestaoId = questaoDissertativa.Id, RespostaTexto = "   " }
             }
         };
 
@@ -653,14 +653,14 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task EnviarRespostasAlunoAsync_ComQuestaoDiscursiva_NaoLancaNotaAutomatica()
+    public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_NaoLancaNotaAutomatica()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDiscursiva = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
+        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {
-            TituloInterno = "Discursiva",
+            TituloInterno = "Dissertativa",
             Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Discursiva,
+            TipoQuestao = TipoQuestao.Dissertativa,
             Pontos = 10
         });
 
@@ -668,7 +668,7 @@ public class AvaliacaoServiceTests
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto>
             {
-                new() { QuestaoId = questaoDiscursiva.Id, RespostaTexto = "Minha resposta." }
+                new() { QuestaoId = questaoDissertativa.Id, RespostaTexto = "Minha resposta." }
             }
         };
 
