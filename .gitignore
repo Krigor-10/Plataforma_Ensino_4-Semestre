@@ -14,6 +14,10 @@ Storage/Uploads/
 # Sobra de ferramenta externa (Codex CLI) rodando build/validate localmente
 .codex-tmp/
 
+# Perfis de automacao de navegador (Edge/Chromium) deixados por ferramentas
+# de screenshot ao tirar as capturas de responsive-screenshots/*.png
+frontend/responsive-screenshots/edge-profile*/
+
 # User-specific files
 *.rsuser
 *.suo
