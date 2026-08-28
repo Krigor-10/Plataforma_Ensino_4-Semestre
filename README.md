@@ -1,4 +1,4 @@
-# CodeRyse Academy - Projeto Integrado Multidisciplinar (PIM) III
+# CodeRyse Academy - Projeto Integrado Multidisciplinar (PIM 4°Semestre)
 
 Plataforma educacional multiplataforma desenvolvida como requisito acadêmico para o Projeto Integrado Multidisciplinar (PIM) do 3º semestre do curso de Análise e Desenvolvimento de Sistemas da UNIP.
 
