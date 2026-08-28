@@ -46,18 +46,7 @@ public class AlunoService : IAlunoService
 
     public async Task<Aluno> CriarAlunoAsync(CriarAlunoDto dto)
     {
-        var emailNormalizado = dto.Email.Trim().ToLower();
-        var cpfNormalizado = new string(dto.Cpf.Where(char.IsDigit).ToArray());
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Email.ToLower() == emailNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este e-mail.");
-        }
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Cpf == cpfNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este CPF.");
-        }
+        var (emailNormalizado, cpfNormalizado) = await UsuarioValidacao.NormalizarEGarantirDisponivelAsync(_context, dto.Email, dto.Cpf);
 
         var aluno = new Aluno
         {
@@ -83,18 +72,7 @@ public class AlunoService : IAlunoService
 
     public async Task CadastrarAlunoCompletoAsync(CadastroAlunoDto dto)
     {
-        var emailNormalizado = dto.Email.Trim().ToLower();
-        var cpfNormalizado = new string(dto.Cpf.Where(char.IsDigit).ToArray());
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Email.ToLower() == emailNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este e-mail.");
-        }
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Cpf == cpfNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este CPF.");
-        }
+        var (emailNormalizado, cpfNormalizado) = await UsuarioValidacao.NormalizarEGarantirDisponivelAsync(_context, dto.Email, dto.Cpf);
 
         if (!await _context.Cursos.AnyAsync(curso => curso.Id == dto.CursoId))
         {

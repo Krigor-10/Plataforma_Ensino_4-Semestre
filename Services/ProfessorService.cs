@@ -26,18 +26,7 @@ public class ProfessorService : IProfessorService
 
     public async Task<Professor> CriarProfessorAsync(CriarProfessorDto dto)
     {
-        var emailNormalizado = dto.Email.Trim().ToLower();
-        var cpfNormalizado = new string(dto.Cpf.Where(char.IsDigit).ToArray());
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Email.ToLower() == emailNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este e-mail.");
-        }
-
-        if (await _context.Usuarios.AnyAsync(usuario => usuario.Cpf == cpfNormalizado))
-        {
-            throw new ArgumentException("Ja existe um usuario com este CPF.");
-        }
+        var (emailNormalizado, cpfNormalizado) = await UsuarioValidacao.NormalizarEGarantirDisponivelAsync(_context, dto.Email, dto.Cpf);
 
         var professor = new Professor
         {
