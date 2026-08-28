@@ -6,6 +6,7 @@ import Insignia from "../../components/Insignia.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDate, formatGrade } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
+import { getCourseCover } from "../../data/courseCovers.js";
 
 export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onRefresh, onSessionExpired, turmas, usuario }) {
   if (ehAluno) {
@@ -38,14 +39,14 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
 }
 
 /* Card de curso reaproveitado pelo catalogo (Matriculas) e por Meus Cursos.
-   O bloco de imagem so aparece quando curso.imagemUrl existir - hoje o backend
-   nao expoe esse campo, entao fica inerte ate essa fonte de dados ser criada. */
+   Imagem vem da mesma fonte usada na Home Publica (getCourseCover, em
+   data/courseCovers.js) - mapeamento por titulo do curso pra um asset
+   estatico, com fallback generico, garantindo que as tres telas mostrem
+   sempre a mesma imagem por curso. */
 function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temTurmaDisponivel = false }) {
   return (
     <li className="catalogo-card">
-      {curso.imagemUrl ? (
-        <img alt="" className="catalogo-card__imagem" src={curso.imagemUrl} />
-      ) : null}
+      <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
       <div className="catalogo-card__corpo">
         <div className="meus-cursos__titulo-linha">
           <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
