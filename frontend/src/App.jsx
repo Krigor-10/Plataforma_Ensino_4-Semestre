@@ -14,9 +14,17 @@ import { clearSession, persistSession, readSession } from "./lib/session.js";
 
 export default function App() {
   const [route, setRoute] = useState(() => readRoute());
-  const [session, setSession] = useState(() => readSession());
+  const [session, setSession] = useState({ token: "", refreshToken: "", user: null });
+  const [sessionReady, setSessionReady] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(() => readDemoMode());
   const canDisableDemoMode = !isDemoModeLocked();
+
+  useEffect(() => {
+    readSession().then((sessaoSalva) => {
+      setSession(sessaoSalva);
+      setSessionReady(true);
+    });
+  }, []);
 
   useEffect(() => {
     function syncRoute() {
@@ -28,16 +36,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (route.kind === "app" && !session.user) {
+    if (sessionReady && route.kind === "app" && !session.user) {
       navigate("/login", setRoute, { replace: true });
     }
-  }, [route.kind, session.user]);
+  }, [sessionReady, route.kind, session.user]);
 
   useEffect(() => {
-    if (session.user && (route.kind === "login" || route.kind === "cadastro")) {
+    if (sessionReady && session.user && (route.kind === "login" || route.kind === "cadastro")) {
       navigate("/app", setRoute, { replace: true });
     }
-  }, [route.kind, session.user]);
+  }, [sessionReady, route.kind, session.user]);
 
   function handleNavigate(path, options) {
     navigate(path, setRoute, options);
@@ -77,7 +85,9 @@ export default function App() {
 
   let content;
 
-  if (route.kind === "app" && !session.user) {
+  if (!sessionReady && route.kind === "app") {
+    content = <RouteGate title="Preparando o acesso" text="Verificando sua sessao." />;
+  } else if (route.kind === "app" && !session.user) {
     content = <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da EdTech." />;
   } else if (session.user && (route.kind === "login" || route.kind === "cadastro")) {
     content = <RouteGate title="Voltando ao painel" text="Sua sessao ja esta ativa no ambiente React." />;
