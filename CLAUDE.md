@@ -140,3 +140,77 @@ Services throw these standard exception types directly; controllers do not catch
 ### API docs
 
 Swagger/OpenAPI is available at `/swagger` and Scalar UI at `/scalar/v1` in development.
+
+## Regras obrigatórias de desenvolvimento
+
+Estas regras devem ser seguidas em todas as implementações, alterações e novos componentes do projeto.
+
+### 1. Nomenclatura semântica e clara
+
+- Utilizar nomes claros, descritivos e semânticos para: funções, variáveis, constantes, classes CSS, componentes, arquivos, propriedades e métodos.
+- Evitar nomes genéricos ou sem significado (`data`, `item`, `value`, `temp`, `test`, `func`, `div1`, `box1`, etc.) quando existir uma alternativa mais descritiva.
+- Os nomes devem representar claramente a responsabilidade ou finalidade do elemento.
+
+### 2. Código organizado e sustentável
+
+- Priorizar código limpo, legível e de fácil manutenção.
+- Evitar duplicação de lógica e código desnecessário; reutilizar componentes, funções e estruturas existentes sempre que possível.
+- Manter responsabilidades bem definidas.
+- Não realizar alterações desnecessárias em funcionalidades que não fazem parte da solicitação.
+
+### 3. HTML e estrutura semântica
+
+- Utilizar elementos HTML semânticos sempre que apropriado (`header`, `nav`, `main`, `section`, `article`, `aside`, `footer`, `button`, `form`, `label`).
+- Evitar o uso excessivo de `div` quando existir uma tag semântica mais adequada.
+
+### 4. Responsividade multiplataforma
+
+Toda interface deve ser desenvolvida e validada para funcionar corretamente em Web/Desktop, notebook, tablet e mobile, considerando diferentes resoluções e tamanhos de tela. Garantir que:
+
+- Nenhum conteúdo seja cortado.
+- Não existam rolagens horizontais desnecessárias.
+- Textos permaneçam legíveis.
+- Botões e elementos interativos sejam adequados para toque em dispositivos móveis.
+- Cards, tabelas, menus e demais componentes se adaptem corretamente.
+- A navegação continue funcional em todas as plataformas.
+
+### 5. Mobile First e adaptação responsiva
+
+Sempre que apropriado, utilizar uma abordagem responsiva consistente, preferencialmente Mobile First, com layouts flexíveis, Grid ou Flexbox, unidades responsivas e media queries quando necessárias. Evitar dimensões fixas que possam quebrar o layout em diferentes dispositivos.
+
+### 6. SEO
+
+Todas as páginas públicas devem seguir boas práticas de SEO, quando aplicável:
+
+- Título (`title`) adequado para cada página e meta description.
+- Estrutura correta de headings (`h1`, `h2`, `h3`, ...), com apenas um `h1` principal por página.
+- HTML semântico e URLs amigáveis.
+- Textos alternativos (`alt`) descritivos para imagens relevantes, com carregamento otimizado.
+- Evitar conteúdo duplicado; manter estrutura adequada para mecanismos de busca.
+
+### 7. Acessibilidade
+
+Sempre que possível, seguir boas práticas de acessibilidade:
+
+- Utilizar HTML semântico e garantir contraste adequado.
+- Adicionar `alt` significativo em imagens e usar `label` corretamente em campos de formulário.
+- Garantir navegação por teclado e feedback adequado para ações e erros.
+- Utilizar atributos ARIA somente quando realmente necessários.
+
+### 8. Validação antes de finalizar
+
+Antes de considerar uma tarefa concluída, verificar:
+
+1. Se a implementação funciona corretamente.
+2. Se não houve regressão em funcionalidades existentes.
+3. A responsividade em mobile, tablet e desktop.
+4. A organização e nomenclatura do código.
+5. A semântica do HTML.
+6. Boas práticas de SEO nas páginas públicas.
+7. Códigos duplicados ou desnecessários, corrigindo quando encontrados.
+
+### Regra final
+
+Priorizar sempre: **código limpo + nomenclatura semântica + reutilização + responsividade multiplataforma + acessibilidade + SEO + facilidade de manutenção.**
+
+Não implementar soluções rápidas que comprometam a organização, escalabilidade, responsividade ou manutenção futura do projeto.
