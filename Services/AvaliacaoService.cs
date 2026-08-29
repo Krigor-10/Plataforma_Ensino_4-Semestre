@@ -343,7 +343,15 @@ public class AvaliacaoService : IAvaliacaoService
         }
 
         await _context.TentativasAvaliacao.AddAsync(tentativa);
-        await _context.SaveChangesAsync();
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("O limite de tentativas para esta avaliacao ja foi atingido.");
+        }
 
         if (!possuiDissertativa)
         {
