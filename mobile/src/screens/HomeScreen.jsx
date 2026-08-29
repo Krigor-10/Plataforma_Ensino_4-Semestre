@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiRequest } from "../lib/api.js";
 
 export default function HomeScreen({ onLogout, usuario }) {
   const [cursos, setCursos] = useState([]);
   const [status, setStatus] = useState("loading");
   const [erro, setErro] = useState("");
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     let ignore = false;
@@ -30,7 +32,7 @@ export default function HomeScreen({ onLogout, usuario }) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
       <View style={styles.cabecalho}>
         <View>
           <Text style={styles.saudacao}>Ola, {usuario.nome}</Text>
@@ -57,6 +59,8 @@ export default function HomeScreen({ onLogout, usuario }) {
             </View>
           )}
           ListEmptyComponent={<Text style={styles.vazio}>Nenhum curso cadastrado ainda.</Text>}
+          style={styles.lista}
+          contentContainerStyle={styles.listaConteudo}
         />
       ) : null}
     </View>
@@ -67,8 +71,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#191221",
-    paddingHorizontal: 20,
-    paddingTop: 60
+    paddingHorizontal: 20
   },
   cabecalho: {
     flexDirection: "row",
@@ -94,6 +97,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12
+  },
+  lista: {
+    flex: 1
+  },
+  listaConteudo: {
+    paddingBottom: 24
   },
   cartao: {
     backgroundColor: "#241a30",

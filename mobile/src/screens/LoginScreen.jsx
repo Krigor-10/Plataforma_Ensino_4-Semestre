@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { apiRequest } from "../lib/api.js";
 
 export default function LoginScreen({ onLogin }) {
@@ -27,43 +37,55 @@ export default function LoginScreen({ onLogin }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.logo}>
-        Ed<Text style={styles.logoDestaque}>Tech</Text>
-      </Text>
-      <Text style={styles.subtitulo}>Entre com sua conta para abrir o painel.</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <ScrollView
+        contentContainerStyle={styles.conteudo}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.logo}>
+          Ed<Text style={styles.logoDestaque}>Tech</Text>
+        </Text>
+        <Text style={styles.subtitulo}>Entre com sua conta para abrir o painel.</Text>
 
-      <View style={styles.campo}>
-        <Text style={styles.rotulo}>E-mail</Text>
-        <TextInput
-          autoCapitalize="none"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          style={styles.entrada}
-          value={email}
-        />
-      </View>
+        <View style={styles.campo}>
+          <Text style={styles.rotulo}>E-mail</Text>
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            style={styles.entrada}
+            value={email}
+          />
+        </View>
 
-      <View style={styles.campo}>
-        <Text style={styles.rotulo}>Senha</Text>
-        <TextInput onChangeText={setSenha} secureTextEntry style={styles.entrada} value={senha} />
-      </View>
+        <View style={styles.campo}>
+          <Text style={styles.rotulo}>Senha</Text>
+          <TextInput onChangeText={setSenha} secureTextEntry style={styles.entrada} value={senha} />
+        </View>
 
-      {erro ? <Text style={styles.erro}>{erro}</Text> : null}
+        {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
-      <TouchableOpacity disabled={carregando} onPress={entrar} style={styles.botao}>
-        {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Abrir painel</Text>}
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity disabled={carregando} onPress={entrar} style={styles.botao}>
+          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Abrir painel</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#191221"
+  },
+  conteudo: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#191221"
+    paddingVertical: 32
   },
   logo: {
     fontSize: 34,
