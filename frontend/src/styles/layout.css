@@ -595,10 +595,6 @@
 }
 
 @media (max-width: 768px) {
-  :root {
-    --largura-sidebar: 0px;
-  }
-
   .sidebar {
     transform: translateX(-100%);
     width: 240px;
