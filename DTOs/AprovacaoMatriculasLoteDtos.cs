@@ -18,6 +18,7 @@ public class AprovacaoMatriculaItemDto
 {
     public int MatriculaId { get; set; }
     public string CodigoRegistro { get; set; } = string.Empty;
+    public int AlunoId { get; set; }
     public int CursoId { get; set; }
     public int TurmaId { get; set; }
     public string NomeTurma { get; set; } = string.Empty;

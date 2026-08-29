@@ -10,11 +10,13 @@ public class AvaliacaoService : IAvaliacaoService
 {
     private readonly PlataformaContext _context;
     private readonly IProgressoAlunoService _progressoAlunoService;
+    private readonly INotificacaoService _notificacaoService;
 
-    public AvaliacaoService(PlataformaContext context, IProgressoAlunoService progressoAlunoService)
+    public AvaliacaoService(PlataformaContext context, IProgressoAlunoService progressoAlunoService, INotificacaoService notificacaoService)
     {
         _context = context;
         _progressoAlunoService = progressoAlunoService;
+        _notificacaoService = notificacaoService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -356,6 +358,13 @@ public class AvaliacaoService : IAvaliacaoService
         if (!possuiDissertativa)
         {
             await _progressoAlunoService.RecalcularNotaAvaliacaoAsync(matricula.Id, avaliacao.Id);
+
+            await _notificacaoService.NotificarAsync(
+                alunoId,
+                "Avaliacao corrigida",
+                $"Sua avaliacao \"{avaliacao.Titulo}\" foi corrigida. Nota: {tentativa.NotaBruta:0.##}.",
+                TipoNotificacao.AvaliacaoCorrigida,
+                "/app/avaliacoes");
         }
 
         return MapTentativaAluno(tentativa, avaliacao);

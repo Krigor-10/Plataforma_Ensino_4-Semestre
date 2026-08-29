@@ -1520,6 +1520,153 @@
 }
 
 /* ------------------------------------------------------------
+   NOTIFICAÇÕES — sino na topbar
+   ------------------------------------------------------------ */
+.topbar__notificacoes-wrapper {
+  position: relative;
+}
+
+.topbar__botao-notificacoes {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--raio-circular);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition: background var(--transicao-rapida), color var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.topbar__botao-notificacoes:hover {
+  background: var(--cor-fundo-elevado);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-forte);
+}
+
+.topbar__notificacoes-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--raio-circular);
+  background: var(--cor-erro);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.painel-notificacoes {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, 90vw);
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-md);
+  z-index: 300;
+  box-shadow: var(--sombra-lg);
+  animation: popup-surgir var(--transicao-normal) ease;
+}
+
+.painel-notificacoes__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  padding-bottom: var(--espaco-sm);
+  margin-bottom: var(--espaco-xs);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.painel-notificacoes__titulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+  margin: 0;
+}
+
+.painel-notificacoes__marcar-todas {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.painel-notificacoes__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.painel-notificacoes__vazio {
+  padding: var(--espaco-lg) var(--espaco-sm);
+  text-align: center;
+  color: var(--cor-texto-mudo);
+  font-size: 0.85rem;
+}
+
+.painel-notificacoes__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 0.65rem 0.6rem;
+  border: none;
+  border-radius: var(--raio-md);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao-rapida);
+}
+
+.painel-notificacoes__item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.painel-notificacoes__item--nao-lida {
+  background: rgba(123, 47, 247, 0.08);
+}
+
+.painel-notificacoes__item--nao-lida:hover {
+  background: rgba(123, 47, 247, 0.14);
+}
+
+.painel-notificacoes__item-titulo {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.painel-notificacoes__item-mensagem {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel-notificacoes__item-data {
+  font-size: 0.7rem;
+  color: var(--cor-texto-mudo);
+  margin-top: 2px;
+}
+
+@media (max-width: 480px) {
+  .painel-notificacoes {
+    width: min(300px, 90vw);
+    right: -8px;
+  }
+}
+
+/* ------------------------------------------------------------
    TRANSIÇÃO DE ENTRADA — TROCA DE SEÇÃO NO WORKSPACE
    ------------------------------------------------------------ */
 @keyframes tela-entrar {

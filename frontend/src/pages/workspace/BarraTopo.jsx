@@ -10,13 +10,17 @@ import {
   TbLayoutDashboard, TbUsers, TbChalkboard, TbUserShield,
   TbBooks, TbStack, TbSchool, TbClipboardList,
   TbFileCheck, TbFileText,
-  TbUserCircle, TbX, TbSearch, TbUserFilled,
+  TbUserCircle, TbX, TbSearch, TbUserFilled, TbBell, TbBellRinging,
 } from "react-icons/tb";
 import { MdLogout } from "react-icons/md";
 import Insignia from "../../components/Insignia.jsx";
 import NavGrupo, { temNavGrupo } from "./NavGrupo.jsx";
 import { getSectionMeta } from "../../data/appConfig.js";
 import { corPorTipo } from "./BarraLateral.jsx";
+import { apiRequest } from "../../lib/api.js";
+import { formatDate } from "../../lib/format.js";
+
+const INTERVALO_POLL_NOTIFICACOES_MS = 30000;
 
 const iconesPorSecao = {
   dashboard: TbLayoutDashboard,
@@ -54,6 +58,12 @@ export default function BarraTopo({
   const [indiceBusca, setIndiceBusca] = useState(-1);
   const refInputBusca = useRef(null);
 
+  const [notificacoesAbertas, setNotificacoesAbertas] = useState(false);
+  const [notificacoes, setNotificacoes] = useState([]);
+  const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
+  const [carregandoNotificacoes, setCarregandoNotificacoes] = useState(false);
+  const refNotificacoes = useRef(null);
+
   const role = usuario.tipoUsuario;
   const meta = getSectionMeta(secaoAtual, role);
   const IconeSecao = iconesPorSecao[secaoAtual] || TbLayoutDashboard;
@@ -69,6 +79,87 @@ export default function BarraTopo({
     if (popupAberto) document.addEventListener("mousedown", fecharAoClicarFora);
     return () => document.removeEventListener("mousedown", fecharAoClicarFora);
   }, [popupAberto]);
+
+  useEffect(() => {
+    function fecharAoClicarFora(e) {
+      if (refNotificacoes.current && !refNotificacoes.current.contains(e.target)) {
+        setNotificacoesAbertas(false);
+      }
+    }
+    if (notificacoesAbertas) document.addEventListener("mousedown", fecharAoClicarFora);
+    return () => document.removeEventListener("mousedown", fecharAoClicarFora);
+  }, [notificacoesAbertas]);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function buscarContagem() {
+      try {
+        const resposta = await apiRequest("/Notificacoes/nao-lidas/contagem");
+        if (!cancelado) {
+          setNotificacoesNaoLidas(resposta.total || 0);
+        }
+      } catch {
+        // silencioso: badge de notificacao nao e critico o suficiente pra interromper a navegacao
+      }
+    }
+
+    buscarContagem();
+    const intervalo = setInterval(buscarContagem, INTERVALO_POLL_NOTIFICACOES_MS);
+
+    return () => {
+      cancelado = true;
+      clearInterval(intervalo);
+    };
+  }, []);
+
+  async function abrirNotificacoes() {
+    const vaiAbrir = !notificacoesAbertas;
+    setNotificacoesAbertas(vaiAbrir);
+
+    if (vaiAbrir) {
+      setCarregandoNotificacoes(true);
+      try {
+        const resposta = await apiRequest("/Notificacoes");
+        setNotificacoes(resposta);
+      } catch {
+        setNotificacoes([]);
+      } finally {
+        setCarregandoNotificacoes(false);
+      }
+    }
+  }
+
+  async function marcarNotificacaoComoLida(notificacao) {
+    setNotificacoes((atuais) =>
+      atuais.map((item) => (item.id === notificacao.id ? { ...item, lida: true } : item))
+    );
+    if (!notificacao.lida) {
+      setNotificacoesNaoLidas((atual) => Math.max(0, atual - 1));
+    }
+
+    try {
+      await apiRequest(`/Notificacoes/${notificacao.id}/lida`, { method: "PUT" });
+    } catch {
+      // ignora falha silenciosamente; proxima abertura do dropdown resincroniza
+    }
+
+    setNotificacoesAbertas(false);
+    if (notificacao.link) {
+      onNavigate(notificacao.link);
+    }
+  }
+
+  async function marcarTodasNotificacoesComoLidas() {
+    setNotificacoes((atuais) => atuais.map((item) => ({ ...item, lida: true })));
+    setNotificacoesNaoLidas(0);
+
+    try {
+      await apiRequest("/Notificacoes/lidas", { method: "PUT" });
+    } catch {
+      // ignora falha silenciosamente; proxima abertura do dropdown resincroniza
+    }
+  }
 
   function calcularGruposBusca(termo) {
     if (!termo.trim()) return [];
@@ -276,6 +367,77 @@ export default function BarraTopo({
               <span className="topbar__separador" aria-hidden="true" />
             </>
           )}
+
+          <div className="topbar__notificacoes-wrapper" ref={refNotificacoes}>
+            <button
+              className="topbar__botao-notificacoes"
+              onClick={abrirNotificacoes}
+              aria-haspopup="dialog"
+              aria-expanded={notificacoesAbertas}
+              aria-label={notificacoesNaoLidas > 0 ? `Notificacoes, ${notificacoesNaoLidas} nao lidas` : "Notificacoes"}
+              type="button"
+            >
+              {notificacoesNaoLidas > 0 ? (
+                <TbBellRinging size={19} aria-hidden="true" />
+              ) : (
+                <TbBell size={19} aria-hidden="true" />
+              )}
+              {notificacoesNaoLidas > 0 ? (
+                <span className="topbar__notificacoes-badge" aria-hidden="true">
+                  {notificacoesNaoLidas > 9 ? "9+" : notificacoesNaoLidas}
+                </span>
+              ) : null}
+            </button>
+
+            <AnimatePresence>
+              {notificacoesAbertas && (
+                <motion.div
+                  className="painel-notificacoes"
+                  role="dialog"
+                  aria-label="Notificacoes"
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 22 }}
+                >
+                  <header className="painel-notificacoes__cabecalho">
+                    <h2 className="painel-notificacoes__titulo">Notificacoes</h2>
+                    {notificacoesNaoLidas > 0 ? (
+                      <button
+                        className="link-botao painel-notificacoes__marcar-todas"
+                        onClick={marcarTodasNotificacoesComoLidas}
+                        type="button"
+                      >
+                        Marcar todas como lidas
+                      </button>
+                    ) : null}
+                  </header>
+
+                  <ul className="painel-notificacoes__lista" role="list">
+                    {carregandoNotificacoes ? (
+                      <li className="painel-notificacoes__vazio">Carregando...</li>
+                    ) : notificacoes.length === 0 ? (
+                      <li className="painel-notificacoes__vazio">Nenhuma notificacao por aqui.</li>
+                    ) : (
+                      notificacoes.map((notificacao) => (
+                        <li key={notificacao.id}>
+                          <button
+                            className={`painel-notificacoes__item${notificacao.lida ? "" : " painel-notificacoes__item--nao-lida"}`}
+                            onClick={() => marcarNotificacaoComoLida(notificacao)}
+                            type="button"
+                          >
+                            <span className="painel-notificacoes__item-titulo">{notificacao.titulo}</span>
+                            <span className="painel-notificacoes__item-mensagem">{notificacao.mensagem}</span>
+                            <span className="painel-notificacoes__item-data">{formatDate(notificacao.criadoEm)}</span>
+                          </button>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           <div className="topbar__perfil-wrapper" ref={refWrapper}>
             <button

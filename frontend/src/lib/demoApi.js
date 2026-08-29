@@ -30,6 +30,14 @@ export async function demoRequest(endpoint, options = {}) {
       return handleEsqueciSenha();
     case path === "/Auth/redefinir-senha" && method === "POST":
       return handleRedefinirSenha();
+    case path === "/Notificacoes" && method === "GET":
+      return listNotifications();
+    case path === "/Notificacoes/nao-lidas/contagem" && method === "GET":
+      return countUnreadNotifications();
+    case /^\/Notificacoes\/\d+\/lida$/.test(path) && method === "PUT":
+      return markNotificationAsRead(getNotificacaoActionId(path));
+    case path === "/Notificacoes/lidas" && method === "PUT":
+      return markAllNotificationsAsRead();
     case path === "/Cursos" && method === "GET":
       return listCourses();
     case path === "/Cursos/meus" && method === "GET":
@@ -172,6 +180,81 @@ function handleRedefinirSenha() {
     "O modo demonstracao usa contas fixas e nao permite redefinir senha. Use uma das contas demo informadas no login.",
     422
   );
+}
+
+let demoNotificacoesState = null;
+
+function getDemoNotificacoes() {
+  if (!demoNotificacoesState) {
+    const agora = Date.now();
+    demoNotificacoesState = [
+      {
+        id: 1,
+        titulo: "Matricula aprovada",
+        mensagem: "Sua matricula no curso de demonstracao foi aprovada.",
+        tipo: "MatriculaAprovada",
+        link: "/app/cursos-matriculados",
+        lida: false,
+        criadoEm: new Date(agora - 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 2,
+        titulo: "Avaliacao corrigida",
+        mensagem: "Sua avaliacao foi corrigida. Nota: 8.5.",
+        tipo: "AvaliacaoCorrigida",
+        link: "/app/avaliacoes",
+        lida: false,
+        criadoEm: new Date(agora - 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 3,
+        titulo: "Novo conteudo publicado",
+        mensagem: "Um novo conteudo foi publicado na sua turma.",
+        tipo: "ConteudoPublicado",
+        link: "/app/conteudos",
+        lida: true,
+        criadoEm: new Date(agora - 2 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+  }
+
+  return demoNotificacoesState;
+}
+
+function listNotifications() {
+  return [...getDemoNotificacoes()].sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+}
+
+function countUnreadNotifications() {
+  return { total: getDemoNotificacoes().filter((notificacao) => !notificacao.lida).length };
+}
+
+function markNotificationAsRead(id) {
+  const notificacao = getDemoNotificacoes().find((item) => item.id === id);
+  if (notificacao) {
+    notificacao.lida = true;
+  }
+
+  return {};
+}
+
+function markAllNotificationsAsRead() {
+  getDemoNotificacoes().forEach((notificacao) => {
+    notificacao.lida = true;
+  });
+
+  return {};
+}
+
+function getNotificacaoActionId(path) {
+  const match = String(path).match(/^\/Notificacoes\/(\d+)\/lida$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
 }
 
 function listCourses() {

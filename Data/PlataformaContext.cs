@@ -34,6 +34,7 @@ public class PlataformaContext : DbContext
     public DbSet<MarcoProgressoAluno> MarcosProgressosAlunos { get; set; }
     public DbSet<FeedbackAcademico> FeedbacksAcademicos { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Notificacao> Notificacoes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

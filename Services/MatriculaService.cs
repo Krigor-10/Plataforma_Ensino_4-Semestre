@@ -14,17 +14,20 @@ public class MatriculaService : IMatriculaService
     private readonly IMatriculaRepository _matriculaRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
     private readonly IGenericRepository<Turma> _turmaRepository;
+    private readonly INotificacaoService _notificacaoService;
 
     public MatriculaService(
         IMatriculaRepository matriculaRepository,
         IGenericRepository<Aluno> alunoRepository,
         IGenericRepository<Turma> turmaRepository,
-        PlataformaContext context)
+        PlataformaContext context,
+        INotificacaoService notificacaoService)
     {
         _context = context;
         _matriculaRepository = matriculaRepository;
         _alunoRepository = alunoRepository;
         _turmaRepository = turmaRepository;
+        _notificacaoService = notificacaoService;
     }
 
     public async Task<Matricula> MatricularAlunoAsync(int alunoId, int turmaId)
@@ -131,6 +134,13 @@ public class MatriculaService : IMatriculaService
 
         await AprovarNaTurmaResolvidaAsync(matricula, turma, aluno);
         await SalvarComProtecaoDeConcorrenciaAsync();
+
+        await _notificacaoService.NotificarAsync(
+            aluno.Id,
+            "Matricula aprovada",
+            $"Sua matricula na turma \"{turma.NomeTurma}\" foi aprovada.",
+            TipoNotificacao.MatriculaAprovada,
+            "/app/cursos-matriculados");
     }
 
     /// <summary>
@@ -176,6 +186,13 @@ public class MatriculaService : IMatriculaService
                 var aprovada = await AprovarMatriculaAutomaticamenteCoreAsync(id);
                 await SalvarComProtecaoDeConcorrenciaAsync();
                 resultado.Aprovadas.Add(aprovada);
+
+                await _notificacaoService.NotificarAsync(
+                    aprovada.AlunoId,
+                    "Matricula aprovada",
+                    $"Sua matricula na turma \"{aprovada.NomeTurma}\" foi aprovada.",
+                    TipoNotificacao.MatriculaAprovada,
+                    "/app/cursos-matriculados");
             }
             catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or ArgumentException)
             {
@@ -195,6 +212,13 @@ public class MatriculaService : IMatriculaService
 
         _matriculaRepository.Atualizar(matricula);
         await _matriculaRepository.SalvarAlteracoesAsync();
+
+        await _notificacaoService.NotificarAsync(
+            matricula.AlunoId,
+            "Matricula rejeitada",
+            "Sua solicitacao de matricula foi rejeitada. Entre em contato com a coordenacao para mais detalhes.",
+            TipoNotificacao.MatriculaRejeitada,
+            "/app/matriculas");
     }
     private static string MascararCpf(string cpf)
     {
@@ -257,6 +281,7 @@ public class MatriculaService : IMatriculaService
         {
             MatriculaId = matriculaResultante.Id,
             CodigoRegistro = matriculaResultante.CodigoRegistro,
+            AlunoId = aluno.Id,
             CursoId = matriculaResultante.CursoId,
             TurmaId = turma.Id,
             NomeTurma = turma.NomeTurma

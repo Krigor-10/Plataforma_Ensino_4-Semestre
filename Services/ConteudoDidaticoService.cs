@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -11,19 +13,25 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     private readonly IGenericRepository<Professor> _professorRepository;
     private readonly IGenericRepository<Turma> _turmaRepository;
     private readonly IGenericRepository<Modulo> _moduloRepository;
+    private readonly INotificacaoService _notificacaoService;
+    private readonly PlataformaContext _context;
 
     public ConteudoDidaticoService(
         IConteudoDidaticoRepository conteudoRepository,
         IGenericRepository<Aluno> alunoRepository,
         IGenericRepository<Professor> professorRepository,
         IGenericRepository<Turma> turmaRepository,
-        IGenericRepository<Modulo> moduloRepository)
+        IGenericRepository<Modulo> moduloRepository,
+        INotificacaoService notificacaoService,
+        PlataformaContext context)
     {
         _conteudoRepository = conteudoRepository;
         _alunoRepository = alunoRepository;
         _professorRepository = professorRepository;
         _turmaRepository = turmaRepository;
         _moduloRepository = moduloRepository;
+        _notificacaoService = notificacaoService;
+        _context = context;
     }
 
     public async Task<IEnumerable<ConteudoDidatico>> ListarConteudosPorProfessorAsync(int professorId)
@@ -87,6 +95,11 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         await _conteudoRepository.AdicionarAsync(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
 
+        if (conteudo.StatusPublicacao == StatusPublicacao.Publicado)
+        {
+            await NotificarAlunosDaTurmaAsync(turma.Id, conteudo.Titulo);
+        }
+
         return await _conteudoRepository.ObterDetalhePorIdAsync(conteudo.Id) ?? conteudo;
     }
 
@@ -95,6 +108,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         ArgumentNullException.ThrowIfNull(dto);
 
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
+        var statusAnterior = conteudo.StatusPublicacao;
         var turma = await ValidarTurmaDoProfessorAsync(professorId, dto.TurmaId);
         var modulo = await ValidarModuloAsync(dto.ModuloId);
 
@@ -119,7 +133,27 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         _conteudoRepository.Atualizar(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
 
+        if (statusAnterior != StatusPublicacao.Publicado && conteudo.StatusPublicacao == StatusPublicacao.Publicado)
+        {
+            await NotificarAlunosDaTurmaAsync(turma.Id, conteudo.Titulo);
+        }
+
         return await _conteudoRepository.ObterDetalhePorIdAsync(id) ?? conteudo;
+    }
+
+    private async Task NotificarAlunosDaTurmaAsync(int turmaId, string tituloConteudo)
+    {
+        var alunoIds = await _context.Matriculas
+            .Where(m => m.TurmaId == turmaId && m.Status == StatusMatricula.Aprovada)
+            .Select(m => m.AlunoId)
+            .ToListAsync();
+
+        await _notificacaoService.NotificarVariosAsync(
+            alunoIds,
+            "Novo conteudo publicado",
+            $"O conteudo \"{tituloConteudo}\" foi publicado na sua turma.",
+            TipoNotificacao.ConteudoPublicado,
+            "/app/conteudos");
     }
 
     public async Task ExcluirConteudoAsync(int id, int professorId)

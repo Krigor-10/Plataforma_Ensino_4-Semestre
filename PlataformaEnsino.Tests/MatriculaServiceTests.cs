@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Repositories;
@@ -15,7 +16,8 @@ public class MatriculaServiceTests
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
             new GenericRepository<Turma>(context),
-            context);
+            context,
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
 
         return (service, context);
     }

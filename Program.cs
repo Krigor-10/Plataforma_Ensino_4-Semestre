@@ -72,6 +72,7 @@ builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoSer
 builder.Services.AddScoped<ICertificadoService, CertificadoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];

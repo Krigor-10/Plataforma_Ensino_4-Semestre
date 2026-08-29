@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Models;
@@ -8,7 +9,7 @@ namespace PlataformaEnsino.Tests;
 
 public class AvaliacaoServiceTests
 {
-    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context));
+    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
@@ -371,7 +372,7 @@ public class AvaliacaoServiceTests
         int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null)
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context));
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
         var professor = CriarProfessor(context);
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
@@ -532,7 +533,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_AlunoSemMatriculaAprovadaNaTurma_LancaInvalidOperation()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context));
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
@@ -704,7 +705,7 @@ public class AvaliacaoServiceTests
     public async Task ListarAvaliacoesPorAlunoAsync_SemMatriculaAprovada_RetornaVazio()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context));
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
         var aluno = CriarAluno(context);
 
         var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
