@@ -57,4 +57,25 @@ public class AuthController : ControllerBase
 
         return Ok();
     }
+
+    [HttpPost("esqueci-senha")]
+    [AllowAnonymous]
+    public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaDto dto)
+    {
+        await _authService.SolicitarRecuperacaoSenhaAsync(dto.Email);
+
+        return Ok(new
+        {
+            mensagem = "Se o e-mail informado estiver cadastrado, enviaremos as instrucoes de recuperacao."
+        });
+    }
+
+    [HttpPost("redefinir-senha")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaDto dto)
+    {
+        await _authService.RedefinirSenhaAsync(dto.Token, dto.NovaSenha);
+
+        return Ok(new { mensagem = "Senha redefinida com sucesso. Faca login com a nova senha." });
+    }
 }

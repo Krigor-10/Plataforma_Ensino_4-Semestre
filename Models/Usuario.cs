@@ -57,6 +57,12 @@ public abstract class Usuario
     public bool Ativo { get; private set; } = true;
 
     [JsonIgnore]
+    public string? TokenRecuperacaoSenhaHash { get; private set; }
+
+    [JsonIgnore]
+    public DateTime? TokenRecuperacaoSenhaExpiraEm { get; private set; }
+
+    [JsonIgnore]
     [ValidateNever]
     public List<FeedbackAcademico> FeedbacksRecebidos { get; set; } = new();
 
@@ -102,6 +108,18 @@ public abstract class Usuario
         }
 
         SenhaHash = senhaHash;
+    }
+
+    public void DefinirTokenRecuperacaoSenha(string tokenHash, DateTime expiraEm)
+    {
+        TokenRecuperacaoSenhaHash = tokenHash;
+        TokenRecuperacaoSenhaExpiraEm = expiraEm;
+    }
+
+    public void LimparTokenRecuperacaoSenha()
+    {
+        TokenRecuperacaoSenhaHash = null;
+        TokenRecuperacaoSenhaExpiraEm = null;
     }
 
     public void Ativar()

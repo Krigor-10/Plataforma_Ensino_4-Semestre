@@ -16,6 +16,14 @@ export function readRoute(pathname = window.location.pathname) {
     return { kind: "cadastro" };
   }
 
+  if (segments[0] === "esqueci-senha") {
+    return { kind: "esqueci-senha" };
+  }
+
+  if (segments[0] === "redefinir-senha") {
+    return { kind: "redefinir-senha", token: segments[1] || "" };
+  }
+
   if (segments[0] === "verificar") {
     return { kind: "verificar", codigo: segments[1] || "" };
   }

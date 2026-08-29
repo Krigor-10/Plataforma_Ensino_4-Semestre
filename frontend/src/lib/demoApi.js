@@ -26,6 +26,10 @@ export async function demoRequest(endpoint, options = {}) {
   switch (true) {
     case path === "/Auth/login" && method === "POST":
       return handleLogin(payload);
+    case path === "/Auth/esqueci-senha" && method === "POST":
+      return handleEsqueciSenha();
+    case path === "/Auth/redefinir-senha" && method === "POST":
+      return handleRedefinirSenha();
     case path === "/Cursos" && method === "GET":
       return listCourses();
     case path === "/Cursos/meus" && method === "GET":
@@ -155,6 +159,19 @@ function handleLogin(payload) {
     token: `demo-token-${dynamicUser.id}`,
     usuario: sanitizeDemoUser(dynamicUser)
   };
+}
+
+function handleEsqueciSenha() {
+  return {
+    mensagem: "Se o e-mail informado estiver cadastrado, enviaremos as instrucoes de recuperacao."
+  };
+}
+
+function handleRedefinirSenha() {
+  throw new DemoApiError(
+    "O modo demonstracao usa contas fixas e nao permite redefinir senha. Use uma das contas demo informadas no login.",
+    422
+  );
 }
 
 function listCourses() {

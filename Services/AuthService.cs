@@ -15,11 +15,13 @@ public class AuthService : IAuthService
 {
     private readonly PlataformaContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IEmailService _emailService;
 
-    public AuthService(PlataformaContext context, IConfiguration configuration)
+    public AuthService(PlataformaContext context, IConfiguration configuration, IEmailService emailService)
     {
         _context = context;
         _configuration = configuration;
+        _emailService = emailService;
     }
 
     public async Task<AuthResponseDto?> LoginAsync(string email, string senha)
@@ -78,6 +80,82 @@ public class AuthService : IAuthService
             tokenExistente.Revogar();
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task SolicitarRecuperacaoSenhaAsync(string email)
+    {
+        var emailNormalizado = email.Trim().ToLower();
+
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.Email != null && u.Email.ToLower() == emailNormalizado);
+
+        if (usuario is null || !usuario.Ativo)
+        {
+            return;
+        }
+
+        var tokenBruto = GerarTokenUrlSeguro();
+        var expiraEm = DateTime.UtcNow.AddHours(1);
+
+        usuario.DefinirTokenRecuperacaoSenha(CalcularHashToken(tokenBruto), expiraEm);
+        await _context.SaveChangesAsync();
+
+        var baseUrl = (_configuration["Frontend:BaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
+        var link = $"{baseUrl}/redefinir-senha/{tokenBruto}";
+
+        var corpoHtml =
+            $"<p>Ola, {usuario.Nome}.</p>" +
+            "<p>Recebemos uma solicitacao para redefinir sua senha na EdTech Academy. " +
+            $"Clique no link abaixo para continuar (valido por 1 hora):</p>" +
+            $"<p><a href=\"{link}\">{link}</a></p>" +
+            "<p>Se voce nao solicitou essa alteracao, ignore este e-mail.</p>";
+
+        await _emailService.EnviarAsync(usuario.Email, "Recuperacao de senha - EdTech Academy", corpoHtml);
+    }
+
+    public async Task RedefinirSenhaAsync(string token, string novaSenha)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            throw new ArgumentException("Token de recuperacao invalido.");
+        }
+
+        var tokenHash = CalcularHashToken(token);
+
+        var usuario = await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.TokenRecuperacaoSenhaHash == tokenHash);
+
+        if (usuario is null || usuario.TokenRecuperacaoSenhaExpiraEm is null || usuario.TokenRecuperacaoSenhaExpiraEm < DateTime.UtcNow)
+        {
+            throw new InvalidOperationException("Link de recuperacao invalido ou expirado. Solicite a recuperacao novamente.");
+        }
+
+        usuario.AtualizarSenhaHash(BCrypt.Net.BCrypt.HashPassword(novaSenha));
+        usuario.LimparTokenRecuperacaoSenha();
+
+        var refreshTokensAtivos = await _context.RefreshTokens
+            .Where(r => r.UsuarioId == usuario.Id && r.RevogadoEm == null)
+            .ToListAsync();
+        foreach (var refreshToken in refreshTokensAtivos)
+        {
+            refreshToken.Revogar();
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private static string GerarTokenUrlSeguro()
+    {
+        return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+            .Replace('+', '-')
+            .Replace('/', '_')
+            .TrimEnd('=');
+    }
+
+    private static string CalcularHashToken(string token)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+        return Convert.ToHexString(bytes);
     }
 
     private async Task<AuthResponseDto> MontarRespostaAsync(Usuario usuario)

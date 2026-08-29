@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { RouteGate } from "./components/Primitives.jsx";
 import TooltipGlobal from "./components/TooltipGlobal.jsx";
 import CadastroScreen from "./pages/CadastroScreen.jsx";
+import EsqueciSenhaScreen from "./pages/EsqueciSenhaScreen.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
+import RedefinirSenhaScreen from "./pages/RedefinirSenhaScreen.jsx";
 import NotFoundScreen from "./pages/NotFoundScreen.jsx";
 import PublicHome from "./pages/PublicHome.jsx";
 import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
@@ -42,7 +44,11 @@ export default function App() {
   }, [sessionReady, route.kind, session.user]);
 
   useEffect(() => {
-    if (sessionReady && session.user && (route.kind === "login" || route.kind === "cadastro")) {
+    if (
+      sessionReady &&
+      session.user &&
+      (route.kind === "login" || route.kind === "cadastro" || route.kind === "esqueci-senha" || route.kind === "redefinir-senha")
+    ) {
       navigate("/app", setRoute, { replace: true });
     }
   }, [sessionReady, route.kind, session.user]);
@@ -89,7 +95,10 @@ export default function App() {
     content = <RouteGate title="Preparando o acesso" text="Verificando sua sessao." />;
   } else if (route.kind === "app" && !session.user) {
     content = <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da EdTech." />;
-  } else if (session.user && (route.kind === "login" || route.kind === "cadastro")) {
+  } else if (
+    session.user &&
+    (route.kind === "login" || route.kind === "cadastro" || route.kind === "esqueci-senha" || route.kind === "redefinir-senha")
+  ) {
     content = <RouteGate title="Voltando ao painel" text="Sua sessao ja esta ativa no ambiente React." />;
   } else if (route.kind === "login") {
     content = (
@@ -104,6 +113,10 @@ export default function App() {
     );
   } else if (route.kind === "cadastro") {
     content = <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
+  } else if (route.kind === "esqueci-senha") {
+    content = <EsqueciSenhaScreen onNavigate={handleNavigate} />;
+  } else if (route.kind === "redefinir-senha") {
+    content = <RedefinirSenhaScreen token={route.token} onNavigate={handleNavigate} />;
   } else if (route.kind === "verificar") {
     content = <VerificarCertificadoScreen codigo={route.codigo} onNavigate={handleNavigate} />;
   } else if (route.kind === "app" && session.user) {

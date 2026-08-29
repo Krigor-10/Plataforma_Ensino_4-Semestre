@@ -118,6 +118,15 @@ export default function LoginScreen({
             <Botao variante="primario" tamanho="grande" className="botao--bloco" disabled={status === "pending"} type="submit">
               {status === "pending" ? "Entrando..." : "Abrir painel"}
             </Botao>
+
+            <button
+              className="link-botao"
+              style={{ alignSelf: "center" }}
+              type="button"
+              onClick={() => onNavigate("/esqueci-senha")}
+            >
+              Esqueci minha senha
+            </button>
           </form>
 
           {message ? <InlineMessage tone={tone}>{message}</InlineMessage> : null}
