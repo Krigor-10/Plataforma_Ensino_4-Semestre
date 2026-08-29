@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import LayoutWorkspace from "./workspace/LayoutWorkspace.jsx";
 import { SecaoAlunos } from "./workspace/SecaoAlunos.jsx";
 import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.jsx";
@@ -784,6 +785,16 @@ export default function WorkspaceScreen({
 }
 
 function ConfirmacaoSessaoModal({ confirmLabel, description, onCancel, onConfirm, title }) {
+  const refCartaoModal = useFocusTrap();
+
+  useEffect(() => {
+    function fecharComEsc(evento) {
+      if (evento.key === "Escape") onCancel();
+    }
+    document.addEventListener("keydown", fecharComEsc);
+    return () => document.removeEventListener("keydown", fecharComEsc);
+  }, [onCancel]);
+
   return (
     <div
       className="content-form-modal session-confirmation-modal"
@@ -794,7 +805,13 @@ function ConfirmacaoSessaoModal({ confirmLabel, description, onCancel, onConfirm
       }}
       role="presentation"
     >
-      <div aria-label={title} aria-modal="true" className="content-form-modal__card content-form-modal__card--compact" role="dialog">
+      <div
+        ref={refCartaoModal}
+        aria-label={title}
+        aria-modal="true"
+        className="content-form-modal__card content-form-modal__card--compact"
+        role="dialog"
+      >
         <PanelCard description={description} title={title}>
           <div className="session-confirmation-modal__actions">
             <button className="button button--secondary" onClick={onCancel} type="button">
