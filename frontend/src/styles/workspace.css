@@ -1697,12 +1697,12 @@
   display: inline-flex;
   font: inherit;
   font-weight: 900;
-  height: 34px;
+  height: 44px;
   justify-content: center;
   line-height: 1;
   padding: 0;
   transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
-  width: 34px;
+  width: 44px;
 }
 
 .table-row-arrow:hover {
@@ -3845,8 +3845,8 @@
 }
 
 .menu-contexto__botao {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--raio-sm);
   border: 1px solid transparent;
   background: transparent;
@@ -4369,8 +4369,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--raio-md);
   border: none;
   background: none;
