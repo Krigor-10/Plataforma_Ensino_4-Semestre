@@ -585,6 +585,11 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("A pontuacao da questao deve ser maior que zero.");
         }
 
+        if (!Enum.IsDefined(dto.TipoQuestao))
+        {
+            throw new ArgumentException("Tipo de questao invalido.");
+        }
+
         if (dto.TipoQuestao == TipoQuestao.Dissertativa)
         {
             return;
