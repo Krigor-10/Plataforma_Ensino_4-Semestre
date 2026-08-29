@@ -317,7 +317,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
 
                 return (
                   <tr className="tabela-linha-clicavel" key={professor.id} onClick={() => setProfessorDetalhe(professor)}>
-                    <td>
+                    <td data-label="Professor">
                       <div className="tabela-aluno">
                         <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
                           {iniciaisNome(professor.nome)}
@@ -328,18 +328,18 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
                         </div>
                       </div>
                     </td>
-                    <td>{professor.especialidade || "-"}</td>
-                    <td>
+                    <td data-label="Especialidade">{professor.especialidade || "-"}</td>
+                    <td data-label="Cursos em andamento">
                       {cursosDoProfessor.length === 0 ? (
                         <span className="tabela-matricula__vazio">Nenhum curso</span>
                       ) : (
                         <span>{cursosDoProfessor[0].titulo}{cursosDoProfessor.length > 1 ? ` +${cursosDoProfessor.length - 1}` : ""}</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <Insignia texto={professor.ativo ? "Ativo" : "Inativo"} variante={professor.ativo ? "sucesso" : "erro"} />
                     </td>
-                    <td onClick={(event) => event.stopPropagation()}>
+                    <td data-label="" onClick={(event) => event.stopPropagation()}>
                       <button
                         aria-expanded={kebabAbertoId === professor.id}
                         aria-haspopup="menu"

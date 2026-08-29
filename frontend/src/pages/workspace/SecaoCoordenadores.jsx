@@ -316,7 +316,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
                 return (
                   <tr className="tabela-linha-clicavel" key={coordenador.id} onClick={() => setCoordenadorDetalhe(coordenador)}>
-                    <td>
+                    <td data-label="Coordenador">
                       <div className="tabela-aluno">
                         <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
                           {iniciaisNome(coordenador.nome)}
@@ -327,17 +327,17 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Curso sob supervisao">
                       {cursoPrincipal ? (
                         <span>{cursoPrincipal}{cursosDoCoordenador.length > 1 ? ` +${cursosDoCoordenador.length - 1}` : ""}</span>
                       ) : (
                         <span className="tabela-matricula__vazio">Sem curso</span>
                       )}
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <Insignia texto={coordenador.ativo ? "Ativo" : "Inativo"} variante={coordenador.ativo ? "sucesso" : "erro"} />
                     </td>
-                    <td onClick={(event) => event.stopPropagation()}>
+                    <td data-label="" onClick={(event) => event.stopPropagation()}>
                       <button
                         aria-expanded={kebabAbertoId === coordenador.id}
                         aria-haspopup="menu"

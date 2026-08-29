@@ -558,20 +558,63 @@ select.campo__entrada option {
    ------------------------------------------------------------ */
 @media (max-width: 600px) {
   .tabela-dados {
+    border-collapse: separate;
+    border-spacing: 0 0.75rem;
     font-size: 0.82rem;
   }
 
-  .tabela-dados th {
-    padding: 0.45rem 0.55rem;
-    font-size: 0.65rem;
+  .tabela-dados thead {
+    display: none;
+  }
+
+  .tabela-dados,
+  .tabela-dados tbody,
+  .tabela-dados tr,
+  .tabela-dados td {
+    display: block;
+    width: 100%;
+  }
+
+  .tabela-dados tbody tr {
+    background: var(--cor-fundo-elevado);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-md);
+    overflow: hidden;
   }
 
   .tabela-dados td {
-    padding: 0.55rem 0.55rem;
+    display: grid;
+    grid-template-columns: minmax(88px, 0.42fr) minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .tabela-dados td:last-child {
+    border-bottom: 0;
+  }
+
+  .tabela-dados td::before {
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--cor-texto-mudo);
+  }
+
+  .tabela-dados td[data-label=""] {
+    grid-template-columns: 1fr;
+  }
+
+  .tabela-dados td[data-label=""]::before {
+    display: none;
   }
 
   .tabela-dados--sem-dados td {
+    display: block;
     padding: 1.5rem 0.6rem;
+    text-align: center;
   }
 }
 

@@ -481,7 +481,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
                   key={matricula.id}
                 >
                   {abaAtiva === "pendentes" ? (
-                    <td>
+                    <td data-label="">
                       <input
                         aria-label={`Selecionar matricula de ${matricula.aluno}`}
                         checked={matriculasSelecionadas.has(matricula.id)}
@@ -492,11 +492,11 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
                       />
                     </td>
                   ) : null}
-                  <td>{matricula.codigoRegistro || "Sem protocolo"}</td>
-                  <td>{matricula.aluno}</td>
-                  <td>{matricula.curso}</td>
-                  <td>{matricula.turma}</td>
-                  <td>{formatDate(matricula.dataSolicitacao)}</td>
+                  <td data-label="Protocolo">{matricula.codigoRegistro || "Sem protocolo"}</td>
+                  <td data-label="Aluno">{matricula.aluno}</td>
+                  <td data-label="Curso">{matricula.curso}</td>
+                  <td data-label="Turma">{matricula.turma}</td>
+                  <td data-label="Solicitada em">{formatDate(matricula.dataSolicitacao)}</td>
                 </tr>
               ))
             )}
