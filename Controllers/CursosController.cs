@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.Common;
+using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
 
@@ -22,9 +23,15 @@ public class CursosController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin,Coordenador")]
-    public async Task<IActionResult> CriarCurso([FromBody] Curso curso)
+    public async Task<IActionResult> CriarCurso([FromBody] CriarCursoDto dto)
     {
-        var novoCurso = await _cursoService.CriarCursoAsync(curso);
+        var criadoPorId = User.ObterUsuarioId();
+        if (!criadoPorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o usuario autenticado." });
+        }
+
+        var novoCurso = await _cursoService.CriarCursoAsync(dto, criadoPorId.Value);
         return CreatedAtAction(nameof(ObterCursoPorId), new { id = novoCurso.Id }, novoCurso);
     }
 

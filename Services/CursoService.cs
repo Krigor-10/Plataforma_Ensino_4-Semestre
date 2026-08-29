@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
+using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
 
@@ -22,11 +23,16 @@ public class CursoService : ICursoService
         _coordenadorRepository = coordenadorRepository;
     }
 
-    public async Task<Curso> CriarCursoAsync(Curso novoCurso)
+    public async Task<Curso> CriarCursoAsync(CriarCursoDto dto, int criadoPorId)
     {
-        ValidarCurso(novoCurso);
-
-        novoCurso.CodigoRegistro = await GerarCodigoCursoAsync();
+        var novoCurso = new Curso
+        {
+            Titulo = dto.Titulo.Trim(),
+            Descricao = dto.Descricao?.Trim() ?? string.Empty,
+            Preco = dto.Preco,
+            CriadoPor = criadoPorId,
+            CodigoRegistro = await GerarCodigoCursoAsync()
+        };
 
         await _cursoRepository.AdicionarAsync(novoCurso);
         await _cursoRepository.SalvarAlteracoesAsync();
@@ -99,21 +105,6 @@ public class CursoService : ICursoService
         await _cursoRepository.SalvarAlteracoesAsync();
 
         return curso;
-    }
-
-    private static void ValidarCurso(Curso curso)
-    {
-        ArgumentNullException.ThrowIfNull(curso);
-
-        if (string.IsNullOrWhiteSpace(curso.Titulo))
-        {
-            throw new ArgumentException("O título do curso é obrigatório.");
-        }
-
-        if (curso.Preco < 0)
-        {
-            throw new ArgumentException("O preço não pode ser negativo.");
-        }
     }
 
     private Task<string> GerarCodigoCursoAsync() =>

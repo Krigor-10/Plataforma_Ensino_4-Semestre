@@ -13,9 +13,4 @@ public class CriarCursoDto
 
     [Range(0, double.MaxValue)]
     public decimal Preco { get; set; }
-
-    public int? CoordenadorId { get; set; }
-
-    [Range(1, int.MaxValue)]
-    public int CriadoPor { get; set; }
 }

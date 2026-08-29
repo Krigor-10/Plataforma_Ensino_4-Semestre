@@ -1,10 +1,11 @@
+using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Interfaces;
 
 public interface ICursoService
 {
-    Task<Curso> CriarCursoAsync(Curso novoCurso);
+    Task<Curso> CriarCursoAsync(CriarCursoDto dto, int criadoPorId);
     Task<Curso> ObterCursoPorIdAsync(int id);
     Task<IEnumerable<Curso>> ListarTodosCursosAsync();
     Task<IEnumerable<Curso>> ListarCursosPorProfessorAsync(int professorId);
