@@ -2,7 +2,6 @@
   --workspace-topbar-height: 74px;
   background: var(--bg-main);
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 .workspace-globalbar {
@@ -2955,7 +2954,6 @@
   .workspace-sidebar,
   .workspace-main {
     max-width: 100vw;
-    overflow-x: hidden;
   }
 
   .workspace-globalbar,
@@ -3181,25 +3179,31 @@
 }
 
 .cartao-curso-ativo__info {
+  flex: 1 1 0%;
   min-width: 0;
-  flex-shrink: 0;
 }
 
 .cartao-curso-ativo__titulo {
+  display: block;
   font-size: 1rem;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cartao-curso-ativo__meta {
   font-size: 0.8rem;
   color: var(--cor-texto-suave);
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .cartao-curso-ativo__progresso {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0%;
+  min-width: 90px;
 }
 
 .cursos-ativos-lista {
@@ -3350,8 +3354,8 @@
 }
 
 .campo__entrada--inline {
-  font-size: 0.9rem;
-  padding: 4px 8px;
+  font-size: 1rem;
+  padding: 8px 10px;
   width: calc(100% - 28px);
 }
 
@@ -3387,6 +3391,10 @@
 
 .lista-detalhes__item:last-child {
   border-bottom: none;
+}
+
+.lista-detalhes__item:has(.btn-editar-linha) {
+  padding-right: 32px;
 }
 
 .lista-detalhes__item dt {
@@ -3791,10 +3799,6 @@
     padding: var(--espaco-sm) var(--espaco-md);
     align-items: flex-start;
     position: relative;
-  }
-
-  .desempenho-curso-item__checkbox {
-    display: none;
   }
 
   .desempenho-curso-item__identidade {
@@ -5226,12 +5230,14 @@
 
 .anexo-selector {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--espaco-sm);
   margin-top: 4px;
 }
 
 .anexo-clip {
-  flex: 1;
+  flex: 1 1 88px;
+  min-width: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -87,28 +87,6 @@ export default function WorkspaceScreen({
   }, [activeSection, onNavigate]);
 
   useEffect(() => {
-    if (!isProfileOpen) {
-      return undefined;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") {
-        setIsProfileOpen(false);
-      }
-    }
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isProfileOpen]);
-
-  useEffect(() => {
     if (!confirmacaoSessao) {
       return undefined;
     }

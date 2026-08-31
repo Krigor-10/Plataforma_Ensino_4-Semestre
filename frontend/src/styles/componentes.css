@@ -276,12 +276,14 @@
   display: flex;
   align-items: center;
   gap: var(--espaco-sm);
+  min-width: 0;
 }
 
 .barra-progresso__texto {
+  flex-shrink: 0;
   font-size: var(--texto-xs);
   color: var(--cor-texto-suave);
-  min-width: 36px;
+  min-width: 32px;
   text-align: right;
 }
 
@@ -424,7 +426,9 @@ select.campo__entrada option {
 
 .modal-rodape {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--espaco-sm);
   margin-top: var(--espaco-xl);
 }

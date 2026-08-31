@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TbAward, TbCertificate, TbDownload, TbTrophy } from "react-icons/tb";
 import { LuEye, LuDownload } from "react-icons/lu";
+import Modal from "../../components/Modal.jsx";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDate, formatGrade } from "../../lib/format.js";
@@ -266,84 +267,67 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
       </section>
 
       {certificadoAberto ? (
-        <div
-          className="modal-fundo"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              fecharCertificado();
-            }
-          }}
-          role="presentation"
-        >
-          <article aria-label="Certificado de conclusao" aria-modal="true" className="modal-caixa modal-caixa--certificado" role="dialog">
-            <header className="modal-cabecalho">
-              <h2 className="modal-titulo">Certificado de Conclusao</h2>
-              <button className="modal-fechar" onClick={fecharCertificado} type="button" aria-label="Fechar modal">
-                ✕
-              </button>
-            </header>
+        <Modal className="modal-caixa--certificado" onFechar={fecharCertificado} titulo="Certificado de Conclusao">
+          <div className="certificado-modal">
+          {emitindo ? (
+            <p className="texto-vazio" role="status">Emitindo certificado...</p>
+          ) : erroEmissao ? (
+            <InlineMessage tone="error">{erroEmissao}</InlineMessage>
+          ) : certificadoEmitido ? (
+            <div className="certificate-print-area">
+              <figure className="certificate-sheet">
+                <div aria-hidden="true" className="certificate-sheet__faixa">
+                  <span className="certificate-sheet__selo">
+                    <TbAward size={34} />
+                  </span>
+                </div>
 
-            <div className="certificado-modal">
-            {emitindo ? (
-              <p className="texto-vazio" role="status">Emitindo certificado...</p>
-            ) : erroEmissao ? (
-              <InlineMessage tone="error">{erroEmissao}</InlineMessage>
-            ) : certificadoEmitido ? (
-              <div className="certificate-print-area">
-                <figure className="certificate-sheet">
-                  <div aria-hidden="true" className="certificate-sheet__faixa">
-                    <span className="certificate-sheet__selo">
-                      <TbAward size={34} />
-                    </span>
-                  </div>
+                <div className="certificate-sheet__conteudo">
+                  <h3 className="certificate-sheet__titulo">
+                    CERTIFICADO<span>DE CONCLUSÃO</span>
+                  </h3>
 
-                  <div className="certificate-sheet__conteudo">
-                    <h3 className="certificate-sheet__titulo">
-                      CERTIFICADO<span>DE CONCLUSÃO</span>
-                    </h3>
+                  <p className="certificate-sheet__intro">Outorgado a</p>
+                  <strong className="certificate-sheet__name">{certificadoEmitido.alunoNome}</strong>
 
-                    <p className="certificate-sheet__intro">Outorgado a</p>
-                    <strong className="certificate-sheet__name">{certificadoEmitido.alunoNome}</strong>
+                  <p className="certificate-sheet__body">
+                    Por ter concluído com aproveitamento o curso de <strong>{certificadoEmitido.cursoTitulo}</strong>
+                    {certificadoEmitido.turmaNome ? <> na turma {certificadoEmitido.turmaNome}</> : null}, com nota final{" "}
+                    {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
+                  </p>
 
-                    <p className="certificate-sheet__body">
-                      Por ter concluído com aproveitamento o curso de <strong>{certificadoEmitido.cursoTitulo}</strong>
-                      {certificadoEmitido.turmaNome ? <> na turma {certificadoEmitido.turmaNome}</> : null}, com nota final{" "}
-                      {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
-                    </p>
+                  <p className="certificate-sheet__data">{formatDate(certificadoEmitido.emitidoEm)}</p>
+                  <p className="certificate-sheet__escola">Oferecido pela escola: <strong>EdTech Academy</strong></p>
 
-                    <p className="certificate-sheet__data">{formatDate(certificadoEmitido.emitidoEm)}</p>
-                    <p className="certificate-sheet__escola">Oferecido pela escola: <strong>EdTech Academy</strong></p>
-
-                    <div className="certificate-sheet__assinaturas">
-                      <div className="certificate-sheet__assinatura">
-                        <span className="certificate-sheet__linha" />
-                        <span>Coordenação Acadêmica</span>
-                      </div>
-                      <TbAward aria-hidden="true" className="certificate-sheet__laurel" size={22} />
-                      <div className="certificate-sheet__assinatura">
-                        <span className="certificate-sheet__linha" />
-                        <span>EdTech Academy</span>
-                      </div>
+                  <div className="certificate-sheet__assinaturas">
+                    <div className="certificate-sheet__assinatura">
+                      <span className="certificate-sheet__linha" />
+                      <span>Coordenação Acadêmica</span>
                     </div>
-
-                    <p className="certificate-sheet__verificacao">
-                      Código de verificação: <strong>{certificadoEmitido.codigoVerificacao}</strong>
-                      <br />
-                      Verifique a autenticidade em {window.location.origin}/verificar/{certificadoEmitido.codigoVerificacao}
-                    </p>
+                    <TbAward aria-hidden="true" className="certificate-sheet__laurel" size={22} />
+                    <div className="certificate-sheet__assinatura">
+                      <span className="certificate-sheet__linha" />
+                      <span>EdTech Academy</span>
+                    </div>
                   </div>
-                </figure>
-              </div>
-            ) : null}
-            </div>
 
-            <footer className="modal-rodape">
-              <button className="botao botao--primario" disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button">
-                <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
-              </button>
-            </footer>
-          </article>
-        </div>
+                  <p className="certificate-sheet__verificacao">
+                    Código de verificação: <strong>{certificadoEmitido.codigoVerificacao}</strong>
+                    <br />
+                    Verifique a autenticidade em {window.location.origin}/verificar/{certificadoEmitido.codigoVerificacao}
+                  </p>
+                </div>
+              </figure>
+            </div>
+          ) : null}
+          </div>
+
+          <footer className="modal-rodape">
+            <button className="botao botao--primario" disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button">
+              <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
+            </button>
+          </footer>
+        </Modal>
       ) : null}
     </div>
   );

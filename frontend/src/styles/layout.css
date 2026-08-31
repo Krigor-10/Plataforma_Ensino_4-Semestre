@@ -734,7 +734,9 @@
 }
 
 .topbar__esquerda {
+  display: flex;
   align-items: center;
+  gap: var(--espaco-md);
   min-width: 0;
 }
 
@@ -968,7 +970,7 @@
 }
 
 .sidebar__item--filho {
-  min-height: 38px;
+  min-height: 44px;
   padding-left: calc(0.72rem + 34px + 0.75rem);
   font-size: 0.875rem;
 }
@@ -1006,6 +1008,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-height: 44px;
   padding: 0.45rem;
   margin-top: var(--espaco-sm);
   background: none;
@@ -1077,6 +1080,15 @@
   padding: 10px 20px;
   transition: background 0.18s, color 0.18s, box-shadow 0.18s;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .abas-matriculas__aba {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    gap: 6px;
+  }
 }
 
 .abas-matriculas__aba:hover:not(.abas-matriculas__aba--ativa) {
@@ -1189,10 +1201,18 @@
   .topbar__hamburger {
     display: flex;
   }
+
+  /* No drawer mobile a sidebar so abre/fecha (overlay + hamburguer);
+     "recolher" nao faz sentido nesse estado e so gera uma faixa
+     estreita de icones dentro do proprio overlay. */
+  .sidebar__toggle {
+    display: none;
+  }
 }
 
-/* ── Mobile: oculta itens que causam overflow ────────────────── */
-@media (max-width: 600px) {
+/* ── Tablet/notebook estreito: oculta os atalhos extras (ja disponiveis
+   na sidebar) antes que a topbar transborde e cause scroll horizontal ── */
+@media (max-width: 1100px) {
   .topbar__atalho-certificados,
   .topbar__separador,
   .topbar__btn-reset,
@@ -1217,7 +1237,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
+  height: 44px;
   padding: 0 10px;
   border-radius: 0;
   border: none;

@@ -17,6 +17,14 @@ export default function Modal({ titulo, onFechar, children, className, acoes }) 
     return () => document.removeEventListener("keydown", fecharComEsc);
   }, [onFechar]);
 
+  useEffect(() => {
+    const overflowOriginal = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = overflowOriginal;
+    };
+  }, []);
+
   return (
     <div
       className="modal-fundo"
