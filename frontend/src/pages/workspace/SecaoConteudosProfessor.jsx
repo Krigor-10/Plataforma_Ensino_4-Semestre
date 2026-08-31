@@ -6,7 +6,7 @@ import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
-import { ApiError, apiRequest } from "../../lib/api.js";
+import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
 
@@ -700,7 +700,7 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
                     <p className="campo__ajuda">
                       Arquivo atual: {nomeArquivoSelecionado || nomeArquivoDaUrl(dadosFormulario.arquivoUrl)}
                       {tipoConteudoSelecionado === 5 ? (
-                        <img alt="" className="novo-cont__miniatura" src={dadosFormulario.arquivoUrl} />
+                        <img alt="" className="novo-cont__miniatura" src={resolverUrlArquivo(dadosFormulario.arquivoUrl)} />
                       ) : null}
                     </p>
                   ) : null}

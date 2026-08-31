@@ -51,9 +51,10 @@ public class AuthService : IAuthService
             return null;
         }
 
+        var tokenHash = CalcularHashToken(refreshToken);
         var tokenExistente = await _context.RefreshTokens
             .Include(r => r.Usuario)
-            .FirstOrDefaultAsync(r => r.Token == refreshToken);
+            .FirstOrDefaultAsync(r => r.TokenHash == tokenHash);
 
         if (tokenExistente is null || !tokenExistente.EstaAtivo || tokenExistente.Usuario is null || !tokenExistente.Usuario.Ativo)
         {
@@ -72,8 +73,9 @@ public class AuthService : IAuthService
             return;
         }
 
+        var tokenHash = CalcularHashToken(refreshToken);
         var tokenExistente = await _context.RefreshTokens
-            .FirstOrDefaultAsync(r => r.Token == refreshToken);
+            .FirstOrDefaultAsync(r => r.TokenHash == tokenHash);
 
         if (tokenExistente is not null && tokenExistente.RevogadoEm is null)
         {
@@ -213,7 +215,7 @@ public class AuthService : IAuthService
         var expireDias = _configuration.GetValue<int>("Jwt:RefreshTokenExpireDays", 30);
         var valor = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
-        var refreshToken = RefreshToken.Emitir(usuarioId, valor, expireDias);
+        var refreshToken = RefreshToken.Emitir(usuarioId, CalcularHashToken(valor), expireDias);
         _context.RefreshTokens.Add(refreshToken);
         await _context.SaveChangesAsync();
 

@@ -8,4 +8,5 @@ public interface IMatriculaRepository : IGenericRepository<Matricula>
     Task<List<Matricula>> ObterMatriculasPorAlunoAsync(int alunoId);
     Task<bool> ExisteMatriculaAsync(int alunoId, int turmaId);
     Task<List<Matricula>> ObterMatriculasPendentesAsync();
+    Task<(List<Matricula> Itens, int TotalItens)> ListarPaginadoAsync(int? pagina, int? tamanhoPagina);
 }

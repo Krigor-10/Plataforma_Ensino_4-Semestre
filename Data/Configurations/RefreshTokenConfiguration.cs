@@ -12,12 +12,12 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
             .ToTable("RefreshTokens");
 
         builder
-            .Property(r => r.Token)
+            .Property(r => r.TokenHash)
             .HasMaxLength(200)
             .IsRequired();
 
         builder
-            .HasIndex(r => r.Token)
+            .HasIndex(r => r.TokenHash)
             .IsUnique();
 
         builder

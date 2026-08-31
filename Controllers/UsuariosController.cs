@@ -6,7 +6,7 @@ using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [ApiController]
 [Authorize]
 public class UsuariosController : ControllerBase

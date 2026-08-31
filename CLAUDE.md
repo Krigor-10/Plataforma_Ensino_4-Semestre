@@ -118,7 +118,7 @@ Assessment system: `QuestaoBanco → QuestaoPublicada → Avaliacao → Tentativ
 
 ### Authentication
 
-`POST /api/auth/login` validates credentials and issues a JWT (HS256). The token contains claims for `usuarioId`, `ClaimTypes.Role` (TipoUsuario), and standard JWT fields. Token expiry defaults to 120 minutes. Frontend stores token in `localStorage` and attaches it as `Authorization: Bearer <token>`.
+`POST /api/v1/auth/login` validates credentials and issues a JWT (HS256). The token contains claims for `usuarioId`, `ClaimTypes.Role` (TipoUsuario), and standard JWT fields. Token expiry defaults to 20 minutes (short-lived on purpose — a deactivated account or role change takes effect quickly; the refresh token, valid 30 days, silently renews it). Frontend stores token in `localStorage` and attaches it as `Authorization: Bearer <token>`.
 
 ### Frontend architecture
 

@@ -7,7 +7,7 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { mapById } from "../../lib/dashboard.js";
-import { ApiError, apiRequest } from "../../lib/api.js";
+import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { siglas } from "../../lib/format.js";
 
 function normalizarBusca(valor) {
@@ -679,7 +679,7 @@ export function SecaoCursos({
           </div>
 
           {previewImagem ? (
-            <img alt="" className="novo-cont__miniatura" src={previewImagem} style={{ marginTop: "var(--espaco-md)" }} />
+            <img alt="" className="novo-cont__miniatura" src={resolverUrlArquivo(previewImagem)} style={{ marginTop: "var(--espaco-md)" }} />
           ) : null}
 
           {mensagemImagem.message ? <InlineMessage tone={mensagemImagem.tone}>{mensagemImagem.message}</InlineMessage> : null}

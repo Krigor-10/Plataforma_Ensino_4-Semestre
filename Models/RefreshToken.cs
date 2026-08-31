@@ -7,7 +7,7 @@ public class RefreshToken
 {
     public int Id { get; set; }
 
-    public string Token { get; private set; } = string.Empty;
+    public string TokenHash { get; private set; } = string.Empty;
 
     public int UsuarioId { get; set; }
 
@@ -22,12 +22,12 @@ public class RefreshToken
     [JsonIgnore]
     public bool EstaAtivo => RevogadoEm is null && ExpiraEm > DateTime.UtcNow;
 
-    public static RefreshToken Emitir(int usuarioId, string token, int expiraEmDias)
+    public static RefreshToken Emitir(int usuarioId, string tokenHash, int expiraEmDias)
     {
         return new RefreshToken
         {
             UsuarioId = usuarioId,
-            Token = token,
+            TokenHash = tokenHash,
             CriadoEm = DateTime.UtcNow,
             ExpiraEm = DateTime.UtcNow.AddDays(expiraEmDias)
         };

@@ -8,7 +8,7 @@ using PlataformaEnsino.API.Models;
 namespace PlataformaEnsino.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class CertificadosController : ControllerBase
 {
     private readonly ICertificadoService _certificadoService;

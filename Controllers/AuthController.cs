@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [ApiController]
 public class AuthController : ControllerBase
 {
@@ -18,6 +19,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Senha))
@@ -37,6 +39,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto dto)
     {
         var resposta = await _authService.RefreshAsync(dto.RefreshToken);
@@ -60,6 +63,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("esqueci-senha")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> EsqueciSenha([FromBody] EsqueciSenhaDto dto)
     {
         await _authService.SolicitarRecuperacaoSenhaAsync(dto.Email);
@@ -72,6 +76,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("redefinir-senha")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> RedefinirSenha([FromBody] RedefinirSenhaDto dto)
     {
         await _authService.RedefinirSenhaAsync(dto.Token, dto.NovaSenha);

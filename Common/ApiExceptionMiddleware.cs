@@ -22,18 +22,22 @@ public class ApiExceptionMiddleware
         }
         catch (KeyNotFoundException ex)
         {
+            _logger.LogWarning(ex, "Recurso nao encontrado.");
             await WriteErrorAsync(context, HttpStatusCode.NotFound, ex.Message);
         }
         catch (UnauthorizedAccessException ex)
         {
+            _logger.LogWarning(ex, "Acesso nao autorizado.");
             await WriteErrorAsync(context, HttpStatusCode.Unauthorized, ex.Message);
         }
         catch (ArgumentException ex)
         {
+            _logger.LogWarning(ex, "Requisicao invalida.");
             await WriteErrorAsync(context, HttpStatusCode.BadRequest, ex.Message);
         }
         catch (InvalidOperationException ex)
         {
+            _logger.LogWarning(ex, "Operacao rejeitada por regra de negocio.");
             await WriteErrorAsync(context, HttpStatusCode.UnprocessableEntity, ex.Message);
         }
         catch (Exception ex)
@@ -51,7 +55,8 @@ public class ApiExceptionMiddleware
         var payload = JsonSerializer.Serialize(new
         {
             erro = message,
-            status = (int)statusCode
+            status = (int)statusCode,
+            correlationId = context.Items.TryGetValue(RequestLoggingMiddleware.ChaveCorrelationId, out var valor) ? valor as string : null
         });
 
         await context.Response.WriteAsync(payload);

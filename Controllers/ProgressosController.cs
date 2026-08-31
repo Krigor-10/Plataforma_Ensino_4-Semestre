@@ -6,7 +6,7 @@ using PlataformaEnsino.API.Interfaces;
 namespace PlataformaEnsino.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize(Roles = "Aluno")]
 public class ProgressosController : ControllerBase
 {

@@ -22,7 +22,7 @@ import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
-import { ApiError, apiRequest } from "../../lib/api.js";
+import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
   compactText,
@@ -1743,11 +1743,11 @@ function obterAcaoConteudoAluno(conteudo) {
   const tipo = Number(conteudo.tipoConteudo);
 
   if (tipo === 2 && conteudo.arquivoUrl) {
-    return { href: conteudo.arquivoUrl, label: "Abrir PDF" };
+    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir PDF" };
   }
 
   if (tipo === 3 && conteudo.arquivoUrl) {
-    return { href: conteudo.arquivoUrl, label: "Abrir video" };
+    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir video" };
   }
 
   if (tipo === 4 && conteudo.linkUrl) {
@@ -1755,7 +1755,7 @@ function obterAcaoConteudoAluno(conteudo) {
   }
 
   if (tipo === 5 && conteudo.arquivoUrl) {
-    return { href: conteudo.arquivoUrl, label: "Ver imagem" };
+    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Ver imagem" };
   }
 
   return null;

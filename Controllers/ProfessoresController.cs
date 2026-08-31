@@ -6,7 +6,7 @@ using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin,Coordenador")]
     public class ProfessoresController : ControllerBase

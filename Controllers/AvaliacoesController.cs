@@ -8,7 +8,7 @@ using PlataformaEnsino.API.Models;
 namespace PlataformaEnsino.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [Authorize]
 public class AvaliacoesController : ControllerBase
 {

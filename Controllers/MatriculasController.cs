@@ -7,7 +7,7 @@ using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 [ApiController]
 [Authorize]
 public class MatriculasController : ControllerBase
@@ -19,12 +19,20 @@ public class MatriculasController : ControllerBase
         _matriculaService = matriculaService;
     }
 
+    // Sem "pagina": retorna a lista completa (comportamento atual, sem quebrar clientes existentes).
+    // Com "pagina": retorna so aquela pagina e expoe o total em X-Total-Count.
     [HttpGet]
     [Authorize(Roles = "Admin,Coordenador")]
-    public async Task<ActionResult<IEnumerable<MatriculaResponseDto>>> GetMatriculas()
+    public async Task<ActionResult<IEnumerable<MatriculaResponseDto>>> GetMatriculas([FromQuery] int? pagina, [FromQuery] int? tamanhoPagina)
     {
-        var matriculas = await _matriculaService.ListarMatriculasAsync();
-        return Ok(matriculas.Select(MapResponse));
+        var (itens, totalItens) = await _matriculaService.ListarMatriculasAsync(pagina, tamanhoPagina);
+
+        if (pagina.HasValue)
+        {
+            Response.Headers["X-Total-Count"] = totalItens.ToString();
+        }
+
+        return Ok(itens.Select(MapResponse));
     }
 
     [HttpGet("pendentes")]

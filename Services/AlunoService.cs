@@ -18,15 +18,27 @@ public class AlunoService : IAlunoService
         _matriculaService = matriculaService;
     }
 
-    public async Task<IEnumerable<AlunoResponseDto>> ListarAlunosAsync()
+    public async Task<(IEnumerable<AlunoResponseDto> Itens, int TotalItens)> ListarAlunosAsync(int? pagina, int? tamanhoPagina)
     {
-        var alunos = await _context.Alunos
+        var query = _context.Alunos
             .AsNoTracking()
             .Include(aluno => aluno.Matriculas)
                 .ThenInclude(matricula => matricula.Turma)
-            .ToListAsync();
+            .OrderBy(aluno => aluno.Nome);
 
-        return alunos.Select(MapResponse);
+        var totalItens = await query.CountAsync();
+
+        if (!pagina.HasValue)
+        {
+            var todos = await query.ToListAsync();
+            return (todos.Select(MapResponse), totalItens);
+        }
+
+        var tamanho = Math.Clamp(tamanhoPagina ?? 20, 1, 100);
+        var pular = Math.Max(0, (pagina.Value - 1) * tamanho);
+
+        var alunosDaPagina = await query.Skip(pular).Take(tamanho).ToListAsync();
+        return (alunosDaPagina.Select(MapResponse), totalItens);
     }
 
     private static AlunoResponseDto MapResponse(Aluno aluno)

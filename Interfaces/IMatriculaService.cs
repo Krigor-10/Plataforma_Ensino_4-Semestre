@@ -10,7 +10,7 @@ public interface IMatriculaService
     Task<Matricula> ObterMatriculaPorIdAsync(int id);
     Task<IEnumerable<Matricula>> ListarMatriculasPorAlunoAsync(int alunoId);
     Task<IEnumerable<MatriculaPendenteDto>> ListarMatriculasPendentesAsync();
-    Task<IEnumerable<Matricula>> ListarMatriculasAsync();
+    Task<(IEnumerable<Matricula> Itens, int TotalItens)> ListarMatriculasAsync(int? pagina, int? tamanhoPagina);
     Task AprovarMatriculaAsync(int matriculaId, int turmaId);
     Task<AprovacaoMatriculasLoteResultadoDto> AprovarMatriculasAutomaticamenteAsync(IEnumerable<int> matriculaIds);
     Task RejeitarMatriculaAsync(int matriculaId);

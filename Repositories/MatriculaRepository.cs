@@ -44,4 +44,26 @@ public class MatriculaRepository : GenericRepository<Matricula>, IMatriculaRepos
             .Where(m => m.Status == StatusMatricula.Pendente)
             .ToListAsync();
     }
+
+    public async Task<(List<Matricula> Itens, int TotalItens)> ListarPaginadoAsync(int? pagina, int? tamanhoPagina)
+    {
+        var query = Context.Set<Matricula>()
+            .AsNoTracking()
+            .Include(m => m.Aluno)
+            .Include(m => m.Turma)
+            .OrderByDescending(m => m.DataSolicitacao);
+
+        var totalItens = await query.CountAsync();
+
+        if (!pagina.HasValue)
+        {
+            return (await query.ToListAsync(), totalItens);
+        }
+
+        var tamanho = Math.Clamp(tamanhoPagina ?? 20, 1, 100);
+        var pular = Math.Max(0, (pagina.Value - 1) * tamanho);
+
+        var itensDaPagina = await query.Skip(pular).Take(tamanho).ToListAsync();
+        return (itensDaPagina, totalItens);
+    }
 }

@@ -7,7 +7,7 @@ using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v1/[controller]")]
     [ApiController]
     public class AlunosController : ControllerBase
     {
@@ -19,11 +19,20 @@ namespace PlataformaEnsino.API.Controllers
         }
 
         // GET: api/Alunos
+        // Sem "pagina": retorna a lista completa (comportamento atual, sem quebrar clientes existentes).
+        // Com "pagina": retorna so aquela pagina e expoe o total em X-Total-Count.
         [HttpGet]
         [Authorize(Roles = "Admin,Coordenador")]
-        public async Task<ActionResult<IEnumerable<AlunoResponseDto>>> GetAlunos()
+        public async Task<ActionResult<IEnumerable<AlunoResponseDto>>> GetAlunos([FromQuery] int? pagina, [FromQuery] int? tamanhoPagina)
         {
-            return Ok(await _alunoService.ListarAlunosAsync());
+            var (itens, totalItens) = await _alunoService.ListarAlunosAsync(pagina, tamanhoPagina);
+
+            if (pagina.HasValue)
+            {
+                Response.Headers["X-Total-Count"] = totalItens.ToString();
+            }
+
+            return Ok(itens);
         }
 
         // POST: api/Alunos

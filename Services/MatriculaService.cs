@@ -106,9 +106,10 @@ public class MatriculaService : IMatriculaService
         });
     }
 
-    public async Task<IEnumerable<Matricula>> ListarMatriculasAsync()
+    public async Task<(IEnumerable<Matricula> Itens, int TotalItens)> ListarMatriculasAsync(int? pagina, int? tamanhoPagina)
     {
-        return await _matriculaRepository.ObterTodosAsync();
+        var (itens, totalItens) = await _matriculaRepository.ListarPaginadoAsync(pagina, tamanhoPagina);
+        return (itens, totalItens);
     }
 
     public async Task AprovarMatriculaAsync(int matriculaId, int turmaId)
