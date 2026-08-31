@@ -5469,6 +5469,27 @@
   white-space: nowrap;
 }
 
+.quiz-cabecalho__acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+}
+
+.quiz-cronometro {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-forte);
+  white-space: nowrap;
+}
+
+.quiz-cronometro--urgente {
+  color: var(--cor-erro);
+}
+
 .quiz-steps {
   display: flex;
   flex-wrap: wrap;
@@ -5658,6 +5679,80 @@
   .quiz-cabecalho {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+.quiz-confirmacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.quiz-confirmacao__titulo {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.quiz-confirmacao__curso {
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.quiz-confirmacao__resumo {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-sm) var(--espaco-lg);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-lg);
+  margin: 0;
+}
+
+.quiz-confirmacao__resumo-item dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cor-texto-suave);
+  margin-bottom: 0.2rem;
+}
+
+.quiz-confirmacao__resumo-item dd {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+  margin: 0;
+}
+
+.quiz-confirmacao__aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+  background: var(--cor-aviso-fundo);
+  border: 1px solid var(--cor-aviso);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-md) var(--espaco-lg);
+  color: var(--cor-texto-forte);
+}
+
+.quiz-confirmacao__aviso svg {
+  flex-shrink: 0;
+  color: var(--cor-aviso);
+  margin-top: 0.15rem;
+}
+
+.quiz-confirmacao__aviso p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .quiz-confirmacao__resumo {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  TbAlertTriangle,
   TbArrowLeft,
   TbArrowRight,
   TbCertificate,
   TbCheck,
   TbChevronDown,
   TbChevronUp,
+  TbClock,
   TbFile,
   TbFileText,
   TbLayoutGrid,
@@ -15,7 +17,8 @@ import {
   TbPlayerPlay,
   TbExternalLink,
   TbRefresh,
-  TbTrophy
+  TbTrophy,
+  TbX
 } from "react-icons/tb";
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
@@ -439,6 +442,7 @@ function SlideProgressoCurso({ detalhe, onNavigate }) {
 }
 
 export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }) {
+  const [avaliacaoParaConfirmar, setAvaliacaoParaConfirmar] = useState(null);
   const [avaliacaoEmExecucao, setAvaliacaoEmExecucao] = useState(null);
   const [questoes, setQuestoes] = useState([]);
   const [respostas, setRespostas] = useState({});
@@ -448,6 +452,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [apoioAberto, setApoioAberto] = useState(true);
   const [resultadoTentativa, setResultadoTentativa] = useState(null);
+  const [tempoRestanteSegundos, setTempoRestanteSegundos] = useState(null);
 
   const avaliacoesOrdenadas = useMemo(
     () =>
@@ -489,13 +494,35 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     };
   }, [avaliacaoEmExecucao, enviandoRespostas]);
 
-  async function abrirExecucaoAvaliacao(avaliacao) {
+  useEffect(() => {
+    if (!avaliacaoEmExecucao || resultadoTentativa || carregandoQuestoes || tempoRestanteSegundos === null) {
+      return undefined;
+    }
+
+    if (tempoRestanteSegundos <= 0) {
+      submeterRespostas(true);
+      return undefined;
+    }
+
+    const temporizador = setTimeout(() => {
+      setTempoRestanteSegundos((atual) => (atual === null ? null : atual - 1));
+    }, 1000);
+
+    return () => clearTimeout(temporizador);
+  }, [avaliacaoEmExecucao, carregandoQuestoes, enviandoRespostas, resultadoTentativa, tempoRestanteSegundos]);
+
+  function abrirConfirmacaoAvaliacao(avaliacao) {
     const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
     if (!disponibilidade.podeRealizar) {
       setMensagem({ tone: "warning", message: disponibilidade.mensagem });
       return;
     }
 
+    setAvaliacaoParaConfirmar(avaliacao);
+  }
+
+  async function abrirExecucaoAvaliacao(avaliacao) {
+    setAvaliacaoParaConfirmar(null);
     setAvaliacaoEmExecucao(avaliacao);
     setQuestoes([]);
     setRespostas({});
@@ -503,6 +530,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setIndiceAtual(0);
     setApoioAberto(true);
     setResultadoTentativa(null);
+    setTempoRestanteSegundos(avaliacao.tempoLimiteMinutos > 0 ? avaliacao.tempoLimiteMinutos * 60 : null);
     setCarregandoQuestoes(true);
 
     try {
@@ -532,6 +560,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setMensagem({ tone: "", message: "" });
     setIndiceAtual(0);
     setResultadoTentativa(null);
+    setTempoRestanteSegundos(null);
   }
 
   function refazerAvaliacao() {
@@ -577,7 +606,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     }));
   }
 
-  async function enviarRespostas(event) {
+  function enviarRespostas(event) {
     event.preventDefault();
 
     if (!avaliacaoEmExecucao || !questoes.length) {
@@ -599,6 +628,14 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
       return;
     }
 
+    submeterRespostas();
+  }
+
+  async function submeterRespostas(porTempoEsgotado = false) {
+    if (!avaliacaoEmExecucao || !questoes.length || enviandoRespostas) {
+      return;
+    }
+
     const payload = {
       respostas: questoes.map((questao) => {
         const resposta = respostas[questao.id];
@@ -612,7 +649,11 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     };
 
     setEnviandoRespostas(true);
-    setMensagem({ tone: "", message: "" });
+    setMensagem(
+      porTempoEsgotado
+        ? { tone: "warning", message: "Tempo esgotado. Enviando suas respostas automaticamente." }
+        : { tone: "", message: "" }
+    );
 
     try {
       const tentativa = await apiRequest(`/Avaliacoes/${avaliacaoEmExecucao.id}/aluno/respostas`, {
@@ -697,7 +738,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
                       >
                         <Botao
                           disabled={carregandoQuestoes || enviandoRespostas}
-                          onClick={() => abrirExecucaoAvaliacao(avaliacao)}
+                          onClick={() => abrirConfirmacaoAvaliacao(avaliacao)}
                           tamanho="pequeno"
                           variante="primario"
                         >
@@ -715,6 +756,62 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
         </ul>
       )}
 
+      {avaliacaoParaConfirmar ? (
+        <Modal
+          onFechar={() => setAvaliacaoParaConfirmar(null)}
+          titulo="Antes de comecar"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={() => setAvaliacaoParaConfirmar(null)} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao onClick={() => abrirExecucaoAvaliacao(avaliacaoParaConfirmar)} type="button" variante="primario">
+                <TbPlayerPlay aria-hidden="true" size={15} /> Iniciar
+              </Botao>
+            </footer>
+          }
+        >
+          <div className="quiz-confirmacao">
+            <h3 className="quiz-confirmacao__titulo">{avaliacaoParaConfirmar.titulo}</h3>
+            <p className="quiz-confirmacao__curso">
+              {avaliacaoParaConfirmar.cursoTitulo || "Curso"} - {avaliacaoParaConfirmar.turmaNome || "Turma"}
+            </p>
+
+            <dl className="quiz-confirmacao__resumo">
+              <div className="quiz-confirmacao__resumo-item">
+                <dt>Questoes</dt>
+                <dd>{avaliacaoParaConfirmar.totalQuestoes || 0}</dd>
+              </div>
+              <div className="quiz-confirmacao__resumo-item">
+                <dt>Tempo limite</dt>
+                <dd>
+                  {avaliacaoParaConfirmar.tempoLimiteMinutos > 0
+                    ? `${avaliacaoParaConfirmar.tempoLimiteMinutos} minutos`
+                    : "Sem limite"}
+                </dd>
+              </div>
+              <div className="quiz-confirmacao__resumo-item">
+                <dt>Nota maxima</dt>
+                <dd>{formatScore(avaliacaoParaConfirmar.notaMaxima)}</dd>
+              </div>
+              <div className="quiz-confirmacao__resumo-item">
+                <dt>Tentativas</dt>
+                <dd>
+                  {(avaliacaoParaConfirmar.tentativasRealizadas || 0) + 1} de {avaliacaoParaConfirmar.tentativasPermitidas || 1}
+                </dd>
+              </div>
+            </dl>
+
+            {avaliacaoParaConfirmar.tempoLimiteMinutos > 0 ? (
+              <div className="quiz-confirmacao__aviso">
+                <TbAlertTriangle aria-hidden="true" size={18} />
+                <p>O cronometro inicia assim que voce confirmar. Certifique-se de estar em um ambiente sem interrupcoes.</p>
+              </div>
+            ) : null}
+          </div>
+        </Modal>
+      ) : null}
+
       {avaliacaoEmExecucao ? (() => {
         const corrigida = resultadoTentativa ? Number(resultadoTentativa.statusTentativa) === 3 : false;
         const porcentagem =
@@ -727,7 +824,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
 
         return (
         <Modal
-          className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : undefined}
+          className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : "modal-caixa--avaliacao"}
           onFechar={fecharExecucaoAvaliacao}
           titulo={avaliacaoEmExecucao.titulo}
           rodape={
@@ -830,6 +927,25 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
                       </button>
                     ))}
                   </nav>
+                </div>
+                <div className="quiz-cabecalho__acoes">
+                  {tempoRestanteSegundos !== null ? (
+                    <span
+                      className={`quiz-cronometro${tempoRestanteSegundos <= 60 ? " quiz-cronometro--urgente" : ""}`}
+                      title="Tempo restante"
+                    >
+                      <TbClock aria-hidden="true" size={16} /> {formatarTempoRestante(tempoRestanteSegundos)}
+                    </span>
+                  ) : null}
+                  <Botao
+                    disabled={enviandoRespostas}
+                    onClick={fecharExecucaoAvaliacao}
+                    tamanho="pequeno"
+                    type="button"
+                    variante="perigo"
+                  >
+                    <TbX aria-hidden="true" size={15} /> Sair
+                  </Botao>
                 </div>
               </header>
 
@@ -1567,6 +1683,13 @@ function criarRespostasIniciais(questoes) {
 
 function formatScore(value) {
   return Number(value || 0).toFixed(1).replace(".", ",");
+}
+
+function formatarTempoRestante(segundosRestantes) {
+  const segundosPositivos = Math.max(0, segundosRestantes);
+  const minutos = Math.floor(segundosPositivos / 60);
+  const segundos = segundosPositivos % 60;
+  return `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
 }
 
 function obterDisponibilidadeAvaliacao(avaliacao) {
