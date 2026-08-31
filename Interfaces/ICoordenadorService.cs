@@ -7,4 +7,6 @@ public interface ICoordenadorService
 {
     Task<IEnumerable<Coordenador>> ListarCoordenadoresAsync();
     Task<Coordenador> CriarCoordenadorAsync(CriarCoordenadorDto dto);
+    Task<Coordenador> AtualizarCoordenadorAsync(int id, AtualizarCoordenadorDto dto);
+    Task ExcluirCoordenadorAsync(int id);
 }

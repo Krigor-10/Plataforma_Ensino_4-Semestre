@@ -34,6 +34,22 @@ namespace PlataformaEnsino.API.Controllers
             return Ok(MapResponse(coordenador));
         }
 
+        // PUT: api/Coordenadores/5
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<CoordenadorResponseDto>> PutCoordenador(int id, [FromBody] AtualizarCoordenadorDto dto)
+        {
+            var coordenador = await _coordenadorService.AtualizarCoordenadorAsync(id, dto);
+            return Ok(MapResponse(coordenador));
+        }
+
+        // DELETE: api/Coordenadores/5
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteCoordenador(int id)
+        {
+            await _coordenadorService.ExcluirCoordenadorAsync(id);
+            return NoContent();
+        }
+
         private static CoordenadorResponseDto MapResponse(Coordenador coordenador) =>
             new CoordenadorResponseDto
             {

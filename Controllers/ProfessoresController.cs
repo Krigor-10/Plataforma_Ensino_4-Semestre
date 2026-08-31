@@ -34,6 +34,22 @@ namespace PlataformaEnsino.API.Controllers
             return Ok(MapResponse(professor));
         }
 
+        // PUT: api/Professores/5
+        [HttpPut("{id:int}")]
+        public async Task<ActionResult<ProfessorResponseDto>> PutProfessor(int id, [FromBody] AtualizarProfessorDto dto)
+        {
+            var professor = await _professorService.AtualizarProfessorAsync(id, dto);
+            return Ok(MapResponse(professor));
+        }
+
+        // DELETE: api/Professores/5
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteProfessor(int id)
+        {
+            await _professorService.ExcluirProfessorAsync(id);
+            return NoContent();
+        }
+
         private static ProfessorResponseDto MapResponse(Professor professor) =>
             new ProfessorResponseDto
             {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TbDotsVertical, TbSearch, TbX } from "react-icons/tb";
-import { MdGroups, MdLayers, MdMenuBook, MdSchool } from "react-icons/md";
+import { MdGroups, MdLayers, MdMenuBook, MdSave, MdSchool } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
@@ -44,6 +44,10 @@ export function SecaoCursos({
   const [previewImagem, setPreviewImagem] = useState("");
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [mensagemImagem, setMensagemImagem] = useState({ tone: "", message: "" });
+  const [cursoParaEditar, setCursoParaEditar] = useState(null);
+  const [dadosEdicaoCurso, setDadosEdicaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
+  const [mensagemEdicao, setMensagemEdicao] = useState({ tone: "", message: "" });
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   useEffect(() => {
     if (menuAberto === null) {
@@ -251,6 +255,72 @@ export function SecaoCursos({
   function abrirSecaoRelacionada(section, curso) {
     setMenuAberto(null);
     onAbrirSecaoCurso?.(section, curso);
+  }
+
+  function abrirModalEdicao(curso) {
+    setMenuAberto(null);
+    setCursoParaEditar(curso);
+    setDadosEdicaoCurso({
+      titulo: curso.titulo || "",
+      descricao: curso.descricao || "",
+      preco: String(curso.preco ?? "")
+    });
+    setMensagemEdicao({ tone: "", message: "" });
+  }
+
+  function fecharModalEdicao() {
+    if (salvandoEdicao) {
+      return;
+    }
+
+    setCursoParaEditar(null);
+  }
+
+  function atualizarCampoEdicao(event) {
+    const { name, value } = event.target;
+    setDadosEdicaoCurso((atual) => ({ ...atual, [name]: value }));
+  }
+
+  async function salvarEdicaoCurso(event) {
+    event.preventDefault();
+
+    const preco = Number(dadosEdicaoCurso.preco);
+
+    if (!dadosEdicaoCurso.titulo.trim()) {
+      setMensagemEdicao({ tone: "error", message: "Informe o titulo do curso." });
+      return;
+    }
+
+    if (!Number.isFinite(preco) || preco < 0) {
+      setMensagemEdicao({ tone: "error", message: "Informe um preco valido." });
+      return;
+    }
+
+    setSalvandoEdicao(true);
+    setMensagemEdicao({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Cursos/${cursoParaEditar.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          titulo: dadosEdicaoCurso.titulo.trim(),
+          descricao: dadosEdicaoCurso.descricao.trim(),
+          preco
+        })
+      });
+
+      setCursoParaEditar(null);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemEdicao({ tone: "error", message: err.message || "Nao foi possivel salvar o curso agora." });
+    } finally {
+      setSalvandoEdicao(false);
+    }
   }
 
   function abrirModalImagem(curso) {
@@ -529,11 +599,18 @@ export function SecaoCursos({
                           </button>
                         </li>
                         {ehAdmin || ehCoordenador ? (
-                          <li>
-                            <button onClick={() => abrirModalImagem(curso)} type="button">
-                              Alterar foto de capa
-                            </button>
-                          </li>
+                          <>
+                            <li>
+                              <button onClick={() => abrirModalEdicao(curso)} type="button">
+                                Editar curso
+                              </button>
+                            </li>
+                            <li>
+                              <button onClick={() => abrirModalImagem(curso)} type="button">
+                                Alterar foto de capa
+                              </button>
+                            </li>
+                          </>
                         ) : null}
                       </ul>
                     ) : null}
@@ -544,6 +621,36 @@ export function SecaoCursos({
           </ul>
         </>
       )}
+
+      {cursoParaEditar ? (
+        <Modal onFechar={fecharModalEdicao} titulo={`Editar curso - ${cursoParaEditar.titulo}`}>
+          <form className="formulario-modal" onSubmit={salvarEdicaoCurso}>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-titulo">Titulo *</label>
+              <input className="campo__entrada" disabled={salvandoEdicao} id="curso-titulo" maxLength={150} name="titulo" onChange={atualizarCampoEdicao} value={dadosEdicaoCurso.titulo} />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-descricao">Descricao</label>
+              <textarea className="campo__entrada" disabled={salvandoEdicao} id="curso-descricao" maxLength={1000} name="descricao" onChange={atualizarCampoEdicao} rows={4} value={dadosEdicaoCurso.descricao} />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-preco">Preco (R$) *</label>
+              <input className="campo__entrada" disabled={salvandoEdicao} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
+            </div>
+
+            {mensagemEdicao.message ? <InlineMessage tone={mensagemEdicao.tone}>{mensagemEdicao.message}</InlineMessage> : null}
+
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoEdicao} onClick={fecharModalEdicao} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoEdicao} type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoEdicao ? "Salvando..." : "Salvar alteracoes"}
+              </Botao>
+            </footer>
+          </form>
+        </Modal>
+      ) : null}
 
       {cursoParaImagem ? (
         <Modal onFechar={fecharModalImagem} titulo={`Foto de capa - ${cursoParaImagem.titulo}`}>

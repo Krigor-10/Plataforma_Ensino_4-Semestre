@@ -85,6 +85,12 @@ public class Matricula
     public void Rejeitar() => Status = StatusMatricula.Rejeitada;
     public void Cancelar() => Status = StatusMatricula.Cancelada;
 
+    public void Reabrir()
+    {
+        Status = StatusMatricula.Pendente;
+        RegistrarSolicitacao(DateTime.UtcNow);
+    }
+
     public void LancarNotaFinal(decimal nota)
     {
         if (Status != StatusMatricula.Aprovada)

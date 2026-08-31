@@ -96,6 +96,34 @@ public class MatriculasController : ControllerBase
         return Ok(new { mensagem = "Matrícula rejeitada com sucesso." });
     }
 
+    [HttpPut("{id:int}/cancelar")]
+    public async Task<IActionResult> Cancelar(int id)
+    {
+        var matricula = await _matriculaService.ObterMatriculaPorIdAsync(id);
+
+        if (!UsuarioAtualPodeAcessarAluno(matricula.AlunoId))
+        {
+            return Forbid();
+        }
+
+        await _matriculaService.CancelarMatriculaAsync(id);
+        return Ok(new { mensagem = "Solicitacao de matricula cancelada com sucesso." });
+    }
+
+    [HttpPut("{id:int}/reabrir")]
+    public async Task<IActionResult> Reabrir(int id)
+    {
+        var matricula = await _matriculaService.ObterMatriculaPorIdAsync(id);
+
+        if (!UsuarioAtualPodeAcessarAluno(matricula.AlunoId))
+        {
+            return Forbid();
+        }
+
+        await _matriculaService.ReabrirMatriculaAsync(id);
+        return Ok(new { mensagem = "Solicitacao de matricula reaberta com sucesso." });
+    }
+
     private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
 
     private static MatriculaResponseDto MapResponse(Matricula matricula) =>

@@ -32,7 +32,8 @@ export default function WorkspaceScreen({
   usuario,
   onNavigate,
   onLogout,
-  onSessionExpired
+  onSessionExpired,
+  onUsuarioAtualizado
 }) {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   const [status, setStatus] = useState("loading");
@@ -518,6 +519,9 @@ export default function WorkspaceScreen({
           perfil={role}
           iniciaisUsuario={userInitials}
           nomeUsuario={usuario.nome}
+          usuario={usuario}
+          onSessionExpired={onSessionExpired}
+          onUsuarioAtualizado={onUsuarioAtualizado}
         />
       ) : null}
 
@@ -748,7 +752,12 @@ export default function WorkspaceScreen({
             ) : null}
 
             {activeSection === "cursos-matriculados" ? (
-              <SecaoMeusCursosMatriculados cursos={snapshot.cursos} linhasMatriculas={matriculaRows} />
+              <SecaoMeusCursosMatriculados
+                cursos={snapshot.cursos}
+                linhasMatriculas={matriculaRows}
+                onRefresh={() => setRefreshKey((current) => current + 1)}
+                onSessionExpired={onSessionExpired}
+              />
             ) : null}
 
             {activeSection === "certificados" ? (

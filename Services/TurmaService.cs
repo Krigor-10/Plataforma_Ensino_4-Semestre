@@ -100,6 +100,48 @@ public class TurmaService : ITurmaService
         await _turmaRepository.SalvarAlteracoesAsync();
     }
 
+    public async Task<Turma> AtualizarNomeTurmaAsync(int turmaId, string nomeTurma)
+    {
+        if (string.IsNullOrWhiteSpace(nomeTurma))
+        {
+            throw new ArgumentException("Informe um nome valido para a turma.");
+        }
+
+        var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
+            ?? throw new KeyNotFoundException("Turma nao encontrada.");
+
+        turma.NomeTurma = nomeTurma.Trim();
+        _turmaRepository.Atualizar(turma);
+        await _turmaRepository.SalvarAlteracoesAsync();
+
+        return turma;
+    }
+
+    public async Task ExcluirTurmaAsync(int turmaId)
+    {
+        var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
+            ?? throw new KeyNotFoundException("Turma nao encontrada.");
+
+        var possuiConteudoOuAvaliacao = await _context.ConteudosDidaticos.AnyAsync(conteudo => conteudo.TurmaId == turmaId)
+            || await _context.Avaliacoes.AnyAsync(avaliacao => avaliacao.TurmaId == turmaId);
+
+        if (possuiConteudoOuAvaliacao)
+        {
+            throw new InvalidOperationException("Nao e possivel excluir a turma pois ela possui conteudos ou avaliacoes vinculados.");
+        }
+
+        _turmaRepository.Deletar(turma);
+
+        try
+        {
+            await _turmaRepository.SalvarAlteracoesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("Nao e possivel excluir a turma pois ela possui matriculas vinculadas.");
+        }
+    }
+
     private Task<string> GerarCodigoTurmaAsync() =>
         CodigoRegistroGenerator.GerarCodigoUnicoAsync(
             CodigoRegistroGenerator.GerarTurma,

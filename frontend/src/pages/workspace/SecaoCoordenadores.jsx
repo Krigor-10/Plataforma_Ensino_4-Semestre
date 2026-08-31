@@ -24,7 +24,8 @@ const ESTADO_INICIAL_FORMULARIO = {
   cidade: "",
   estado: "",
   senha: "",
-  confirmarSenha: ""
+  confirmarSenha: "",
+  ativo: true
 };
 
 function normalizarBusca(valor) {
@@ -47,8 +48,11 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const [coordenadorDetalhe, setCoordenadorDetalhe] = useState(null);
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [coordenadorEmEdicaoId, setCoordenadorEmEdicaoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
+  const [coordenadorParaExcluir, setCoordenadorParaExcluir] = useState(null);
+  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [salvando, setSalvando] = useState(false);
   const kebabRef = useRef(null);
 
@@ -152,9 +156,32 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   }
 
   function abrirFormulario() {
+    setCoordenadorEmEdicaoId(null);
     setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
     setMensagemFormulario({ tone: "", message: "" });
     setFormularioAberto(true);
+  }
+
+  function abrirEdicaoCoordenador(coordenador) {
+    setCoordenadorEmEdicaoId(coordenador.id);
+    setDadosFormulario({
+      nome: coordenador.nome || "",
+      email: coordenador.email || "",
+      cpf: coordenador.cpf || "",
+      telefone: coordenador.telefone || "",
+      cep: coordenador.cep || "",
+      rua: coordenador.rua || "",
+      numero: coordenador.numero || "",
+      bairro: coordenador.bairro || "",
+      cidade: coordenador.cidade || "",
+      estado: coordenador.estado || "",
+      senha: "",
+      confirmarSenha: "",
+      ativo: coordenador.ativo !== false
+    });
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
+    setKebabAbertoId(null);
   }
 
   function fecharFormulario() {
@@ -166,16 +193,16 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   }
 
   function atualizarCampo(event) {
-    const { name, value } = event.target;
-    setDadosFormulario((atual) => ({ ...atual, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    setDadosFormulario((atual) => ({ ...atual, [name]: type === "checkbox" ? checked : value }));
   }
 
   function validarFormulario() {
-    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado", "senha", "confirmarSenha"];
+    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado"];
     const campoVazio = obrigatorios.find((campo) => !String(dadosFormulario[campo] || "").trim());
 
     if (campoVazio) {
-      return "Preencha todos os campos obrigatorios para cadastrar a coordenacao.";
+      return `Preencha todos os campos obrigatorios para ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} a coordenacao.`;
     }
 
     if (onlyDigits(dadosFormulario.cpf).length !== 11) {
@@ -190,12 +217,14 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       return "Informe a UF com 2 letras.";
     }
 
-    if (dadosFormulario.senha.length < 6) {
-      return "A senha precisa ter pelo menos 6 caracteres.";
-    }
+    if (!coordenadorEmEdicaoId) {
+      if (dadosFormulario.senha.length < 6) {
+        return "A senha precisa ter pelo menos 6 caracteres.";
+      }
 
-    if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
-      return "As senhas nao coincidem.";
+      if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
+        return "As senhas nao coincidem.";
+      }
     }
 
     return "";
@@ -213,24 +242,31 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     setSalvando(true);
     setMensagemFormulario({ tone: "", message: "" });
 
+    const dadosBase = {
+      nome: dadosFormulario.nome.trim(),
+      email: dadosFormulario.email.trim(),
+      cpf: onlyDigits(dadosFormulario.cpf),
+      telefone: dadosFormulario.telefone.trim(),
+      cep: formatCep(onlyDigits(dadosFormulario.cep)),
+      rua: dadosFormulario.rua.trim(),
+      numero: dadosFormulario.numero.trim(),
+      bairro: dadosFormulario.bairro.trim(),
+      cidade: dadosFormulario.cidade.trim(),
+      estado: dadosFormulario.estado.trim().toUpperCase()
+    };
+
     try {
-      await apiRequest("/Coordenadores", {
-        method: "POST",
-        body: JSON.stringify({
-          nome: dadosFormulario.nome.trim(),
-          email: dadosFormulario.email.trim(),
-          cpf: onlyDigits(dadosFormulario.cpf),
-          telefone: dadosFormulario.telefone.trim(),
-          cep: formatCep(onlyDigits(dadosFormulario.cep)),
-          rua: dadosFormulario.rua.trim(),
-          numero: dadosFormulario.numero.trim(),
-          bairro: dadosFormulario.bairro.trim(),
-          cidade: dadosFormulario.cidade.trim(),
-          estado: dadosFormulario.estado.trim().toUpperCase(),
-          senha: dadosFormulario.senha,
-          ativo: true
-        })
-      });
+      if (coordenadorEmEdicaoId) {
+        await apiRequest(`/Coordenadores/${coordenadorEmEdicaoId}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...dadosBase, ativo: dadosFormulario.ativo })
+        });
+      } else {
+        await apiRequest("/Coordenadores", {
+          method: "POST",
+          body: JSON.stringify({ ...dadosBase, senha: dadosFormulario.senha, ativo: true })
+        });
+      }
 
       setFormularioAberto(false);
       onRefresh?.();
@@ -240,7 +276,41 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         return;
       }
 
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel cadastrar a coordenacao agora." });
+      setMensagemFormulario({
+        tone: "error",
+        message: err.message || `Nao foi possivel ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} a coordenacao agora.`
+      });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function abrirExclusaoCoordenador(coordenador) {
+    setCoordenadorParaExcluir(coordenador);
+    setMensagemExclusao("");
+    setKebabAbertoId(null);
+  }
+
+  async function confirmarExclusaoCoordenador() {
+    if (!coordenadorParaExcluir) {
+      return;
+    }
+
+    setSalvando(true);
+    setMensagemExclusao("");
+
+    try {
+      await apiRequest(`/Coordenadores/${coordenadorParaExcluir.id}`, { method: "DELETE" });
+
+      setCoordenadorParaExcluir(null);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemExclusao(err.message || "Nao foi possivel excluir a coordenacao agora.");
     } finally {
       setSalvando(false);
     }
@@ -397,6 +467,12 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               >
                 Ver detalhes
               </button>
+              <button className="kebab-menu__item" onClick={() => abrirEdicaoCoordenador(coordenadorKebab)} type="button">
+                Editar
+              </button>
+              <button className="kebab-menu__item kebab-menu__item--perigo" onClick={() => abrirExclusaoCoordenador(coordenadorKebab)} type="button">
+                Excluir
+              </button>
             </div>,
             document.body
           )
@@ -457,8 +533,25 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </Modal>
       ) : null}
 
+      {coordenadorParaExcluir ? (
+        <Modal onFechar={() => setCoordenadorParaExcluir(null)} titulo="Excluir coordenacao">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir a coordenacao de <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
+          <footer className="modal-rodape">
+            <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="primario">
+              {salvando ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo="Cadastrar coordenacao">
+        <Modal onFechar={fecharFormulario} titulo={coordenadorEmEdicaoId ? "Editar coordenacao" : "Cadastrar coordenacao"}>
           <form className="formulario-modal" onSubmit={salvarCoordenador}>
             <div className="formulario-perfil__grade">
               <div className="campo formulario-perfil__campo--largo">
@@ -501,14 +594,23 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                 <label className="campo__rotulo" htmlFor="coordenador-estado">UF *</label>
                 <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
               </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>
-                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-confirmar-senha">Confirmar senha *</label>
-                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
-              </div>
+              {coordenadorEmEdicaoId ? (
+                <div className="campo formulario-perfil__campo--largo" style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+                  <input checked={dadosFormulario.ativo} disabled={salvando} id="coordenador-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
+                  <label className="campo__rotulo" htmlFor="coordenador-ativo" style={{ marginBottom: 0 }}>Conta ativa</label>
+                </div>
+              ) : (
+                <>
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>
+                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                  </div>
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="coordenador-confirmar-senha">Confirmar senha *</label>
+                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+                  </div>
+                </>
+              )}
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
@@ -518,7 +620,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
               <Botao disabled={salvando} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Cadastrar coordenacao"}
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : coordenadorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar coordenacao"}
               </Botao>
             </footer>
           </form>

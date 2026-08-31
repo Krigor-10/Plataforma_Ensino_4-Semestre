@@ -44,6 +44,13 @@ export function SecaoTurmas({
   const [mensagemAtribuicao, setMensagemAtribuicao] = useState({ tone: "", message: "" });
   const [salvandoAtribuicao, setSalvandoAtribuicao] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [turmaEditandoNome, setTurmaEditandoNome] = useState(null);
+  const [nomeEdicaoTurma, setNomeEdicaoTurma] = useState("");
+  const [mensagemEdicaoTurma, setMensagemEdicaoTurma] = useState({ tone: "", message: "" });
+  const [salvandoNomeTurma, setSalvandoNomeTurma] = useState(false);
+  const [turmaParaExcluir, setTurmaParaExcluir] = useState(null);
+  const [mensagemExclusaoTurma, setMensagemExclusaoTurma] = useState("");
+  const [excluindoTurma, setExcluindoTurma] = useState(false);
 
   useEffect(() => {
     if (!menuAberto) {
@@ -282,6 +289,74 @@ export function SecaoTurmas({
     }
   }
 
+  function abrirEdicaoNomeTurma(turma) {
+    setTurmaEditandoNome(turma);
+    setNomeEdicaoTurma(turma.nomeTurma || "");
+    setMensagemEdicaoTurma({ tone: "", message: "" });
+    setMenuAberto(false);
+  }
+
+  async function salvarNomeTurma() {
+    if (!nomeEdicaoTurma.trim()) {
+      setMensagemEdicaoTurma({ tone: "error", message: "Informe um nome valido para a turma." });
+      return;
+    }
+
+    try {
+      setSalvandoNomeTurma(true);
+      setMensagemEdicaoTurma({ tone: "", message: "" });
+
+      await apiRequest(`/Turmas/${turmaEditandoNome.id}`, {
+        method: "PUT",
+        body: JSON.stringify(nomeEdicaoTurma.trim())
+      });
+
+      setTurmaEditandoNome(null);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemEdicaoTurma({ tone: "error", message: err.message || "Nao foi possivel salvar o nome da turma agora." });
+    } finally {
+      setSalvandoNomeTurma(false);
+    }
+  }
+
+  function abrirExclusaoTurma(turma) {
+    setTurmaParaExcluir(turma);
+    setMensagemExclusaoTurma("");
+    setMenuAberto(false);
+  }
+
+  async function confirmarExclusaoTurma() {
+    if (!turmaParaExcluir) {
+      return;
+    }
+
+    try {
+      setExcluindoTurma(true);
+      setMensagemExclusaoTurma("");
+
+      await apiRequest(`/Turmas/${turmaParaExcluir.id}`, { method: "DELETE" });
+
+      setTurmaParaExcluir(null);
+      setSlideAtual(0);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemExclusaoTurma(err.message || "Nao foi possivel excluir a turma agora.");
+    } finally {
+      setExcluindoTurma(false);
+    }
+  }
+
   return (
     <div className="tela-turmas">
       <header className="cabecalho-pagina">
@@ -401,6 +476,8 @@ export function SecaoTurmas({
               cursoTitulo={cursoPorId.get(turmasFiltradas[slide].cursoId)?.titulo || `Curso #${turmasFiltradas[slide].cursoId}`}
               menuAberto={menuAberto}
               onAtribuirProfessor={podeAtribuirProfessor ? () => abrirAtribuicaoProfessor(turmasFiltradas[slide]) : null}
+              onEditarNome={podeGerenciarTurmas ? () => abrirEdicaoNomeTurma(turmasFiltradas[slide]) : null}
+              onExcluirTurma={podeGerenciarTurmas ? () => abrirExclusaoTurma(turmasFiltradas[slide]) : null}
               onToggleMenu={() => setMenuAberto((atual) => !atual)}
               professorNome={
                 turmasFiltradas[slide].professorId
@@ -439,6 +516,50 @@ export function SecaoTurmas({
               </Botao>
             </footer>
           </div>
+        </Modal>
+      ) : null}
+
+      {turmaEditandoNome ? (
+        <Modal onFechar={() => setTurmaEditandoNome(null)} titulo="Editar nome da turma">
+          <div className="formulario-modal">
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="turma-nome-edicao">Nome da turma *</label>
+              <input
+                className="campo__entrada"
+                disabled={salvandoNomeTurma}
+                id="turma-nome-edicao"
+                maxLength={120}
+                onChange={(event) => setNomeEdicaoTurma(event.target.value)}
+                value={nomeEdicaoTurma}
+              />
+            </div>
+            {mensagemEdicaoTurma.message ? <InlineMessage tone={mensagemEdicaoTurma.tone}>{mensagemEdicaoTurma.message}</InlineMessage> : null}
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoNomeTurma} onClick={() => setTurmaEditandoNome(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoNomeTurma} onClick={salvarNomeTurma} variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoNomeTurma ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          </div>
+        </Modal>
+      ) : null}
+
+      {turmaParaExcluir ? (
+        <Modal onFechar={() => setTurmaParaExcluir(null)} titulo="Excluir turma">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir a turma <strong>{turmaParaExcluir.nomeTurma}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          {mensagemExclusaoTurma ? <InlineMessage tone="error">{mensagemExclusaoTurma}</InlineMessage> : null}
+          <footer className="modal-rodape">
+            <Botao disabled={excluindoTurma} onClick={() => setTurmaParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={excluindoTurma} onClick={confirmarExclusaoTurma} variante="primario">
+              {excluindoTurma ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
         </Modal>
       ) : null}
 
@@ -489,7 +610,7 @@ export function SecaoTurmas({
   );
 }
 
-function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfessor, onToggleMenu, professorNome, turma }) {
+function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfessor, onEditarNome, onExcluirTurma, onToggleMenu, professorNome, turma }) {
   const alunosFiltrados = busca.trim()
     ? alunos.filter((aluno) => aluno.nome.toLowerCase().includes(busca.toLowerCase()))
     : alunos;
@@ -548,7 +669,7 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
             </div>
           </div>
 
-          {onAtribuirProfessor ? (
+          {onAtribuirProfessor || onEditarNome || onExcluirTurma ? (
             <div className="menu-contexto">
               <button
                 aria-expanded={menuAberto}
@@ -565,11 +686,27 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
               </button>
               {menuAberto ? (
                 <ul className="menu-contexto__lista">
-                  <li>
-                    <button onClick={onAtribuirProfessor} type="button">
-                      Atribuir professor
-                    </button>
-                  </li>
+                  {onAtribuirProfessor ? (
+                    <li>
+                      <button onClick={onAtribuirProfessor} type="button">
+                        Atribuir professor
+                      </button>
+                    </li>
+                  ) : null}
+                  {onEditarNome ? (
+                    <li>
+                      <button onClick={onEditarNome} type="button">
+                        Editar nome
+                      </button>
+                    </li>
+                  ) : null}
+                  {onExcluirTurma ? (
+                    <li>
+                      <button className="menu-item--perigo" onClick={onExcluirTurma} type="button">
+                        Excluir turma
+                      </button>
+                    </li>
+                  ) : null}
                 </ul>
               ) : null}
             </div>

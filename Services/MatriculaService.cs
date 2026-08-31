@@ -220,6 +220,38 @@ public class MatriculaService : IMatriculaService
             TipoNotificacao.MatriculaRejeitada,
             "/app/matriculas");
     }
+    public async Task CancelarMatriculaAsync(int matriculaId)
+    {
+        var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
+            ?? throw new KeyNotFoundException("Matrícula não encontrada.");
+
+        if (matricula.Status != StatusMatricula.Pendente)
+        {
+            throw new InvalidOperationException("Apenas matriculas pendentes podem ser canceladas.");
+        }
+
+        matricula.Cancelar();
+
+        _matriculaRepository.Atualizar(matricula);
+        await _matriculaRepository.SalvarAlteracoesAsync();
+    }
+
+    public async Task ReabrirMatriculaAsync(int matriculaId)
+    {
+        var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
+            ?? throw new KeyNotFoundException("Matrícula não encontrada.");
+
+        if (matricula.Status != StatusMatricula.Rejeitada)
+        {
+            throw new InvalidOperationException("Apenas matriculas rejeitadas podem ser reabertas.");
+        }
+
+        matricula.Reabrir();
+
+        _matriculaRepository.Atualizar(matricula);
+        await _matriculaRepository.SalvarAlteracoesAsync();
+    }
+
     private static string MascararCpf(string cpf)
     {
         if (string.IsNullOrWhiteSpace(cpf))

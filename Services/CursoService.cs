@@ -40,6 +40,21 @@ public class CursoService : ICursoService
         return novoCurso;
     }
 
+    public async Task<Curso> AtualizarCursoAsync(int id, AtualizarCursoDto dto)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(id)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        curso.Titulo = dto.Titulo.Trim();
+        curso.Descricao = dto.Descricao?.Trim() ?? string.Empty;
+        curso.Preco = dto.Preco;
+
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+
+        return curso;
+    }
+
     public async Task<Curso> ObterCursoPorIdAsync(int id)
     {
         return await _cursoRepository.ObterPorIdAsync(id)

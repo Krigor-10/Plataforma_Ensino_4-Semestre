@@ -50,6 +50,56 @@ public class CoordenadorService : ICoordenadorService
         return coordenador;
     }
 
+    public async Task<Coordenador> AtualizarCoordenadorAsync(int id, AtualizarCoordenadorDto dto)
+    {
+        var coordenador = await _context.Coordenadores.FirstOrDefaultAsync(coordenador => coordenador.Id == id)
+            ?? throw new KeyNotFoundException("Coordenador nao encontrado.");
+
+        var (emailNormalizado, cpfNormalizado) = await UsuarioValidacao.NormalizarEGarantirDisponivelAsync(_context, dto.Email, dto.Cpf, id);
+
+        coordenador.AlterarDados(
+            dto.Nome.Trim(),
+            emailNormalizado,
+            dto.Telefone.Trim(),
+            dto.Cep.Trim(),
+            dto.Rua.Trim(),
+            dto.Numero.Trim(),
+            dto.Bairro.Trim(),
+            dto.Cidade.Trim(),
+            dto.Estado.Trim().ToUpper());
+        coordenador.Cpf = cpfNormalizado;
+
+        if (dto.Ativo)
+        {
+            coordenador.Ativar();
+        }
+        else
+        {
+            coordenador.Desativar();
+        }
+
+        await _context.SaveChangesAsync();
+
+        return coordenador;
+    }
+
+    public async Task ExcluirCoordenadorAsync(int id)
+    {
+        var coordenador = await _context.Coordenadores.FirstOrDefaultAsync(coordenador => coordenador.Id == id)
+            ?? throw new KeyNotFoundException("Coordenador nao encontrado.");
+
+        _context.Coordenadores.Remove(coordenador);
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            throw new InvalidOperationException("Nao e possivel excluir o coordenador pois ele esta vinculado a um ou mais cursos.");
+        }
+    }
+
     private Task<string> GerarCodigoCoordenadorAsync() =>
         CodigoRegistroGenerator.GerarCodigoUnicoAsync(
             CodigoRegistroGenerator.GerarCoordenador,

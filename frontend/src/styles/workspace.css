@@ -4416,6 +4416,15 @@
   background: rgba(123, 47, 247, 0.08);
 }
 
+.kebab-menu__item--perigo {
+  color: #fca5a5;
+}
+
+.kebab-menu__item--perigo:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fecaca;
+}
+
 .paginacao {
   display: flex;
   align-items: center;

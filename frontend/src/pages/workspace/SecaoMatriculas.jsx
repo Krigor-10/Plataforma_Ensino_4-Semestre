@@ -43,7 +43,7 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    data/courseCovers.js) - mapeamento por titulo do curso pra um asset
    estatico, com fallback generico, garantindo que as tres telas mostrem
    sempre a mesma imagem por curso. */
-function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temTurmaDisponivel = false }) {
+function CartaoCursoMatricula({ curso, matricula, onCancelar, onReabrir, onSolicitar, processando, solicitando, temTurmaDisponivel = false }) {
   return (
     <li className="catalogo-card">
       <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
@@ -63,6 +63,16 @@ function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temT
             <footer className="catalogo-card__rodape-aluno">
               <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span>
               {matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
+              {matricula.status === "Pendente" && onCancelar ? (
+                <Botao disabled={processando} onClick={onCancelar} tamanho="pequeno" variante="perigo">
+                  {processando ? "Cancelando..." : "Cancelar solicitacao"}
+                </Botao>
+              ) : null}
+              {matricula.status === "Rejeitada" && onReabrir ? (
+                <Botao disabled={processando} onClick={onReabrir} tamanho="pequeno" variante="primario">
+                  {processando ? "Reabrindo..." : "Reabrir solicitacao"}
+                </Botao>
+              ) : null}
             </footer>
           </>
         ) : (
@@ -82,12 +92,53 @@ function CartaoCursoMatricula({ curso, matricula, onSolicitar, solicitando, temT
 }
 
 /* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
-export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [] }) {
+export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onRefresh, onSessionExpired }) {
+  const [matriculaProcessando, setMatriculaProcessando] = useState(null);
+  const [mensagem, setMensagem] = useState({ tone: "", message: "" });
+
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
   const cursosMatriculados = useMemo(
     () => cursos.filter((curso) => matriculaPorCursoId.has(curso.id)),
     [cursos, matriculaPorCursoId]
   );
+
+  async function cancelarMatricula(matricula) {
+    setMatriculaProcessando(matricula.id);
+    setMensagem({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Matriculas/${matricula.id}/cancelar`, { method: "PUT" });
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagem({ tone: "error", message: err.message || "Nao foi possivel cancelar a solicitacao agora." });
+    } finally {
+      setMatriculaProcessando(null);
+    }
+  }
+
+  async function reabrirMatricula(matricula) {
+    setMatriculaProcessando(matricula.id);
+    setMensagem({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Matriculas/${matricula.id}/reabrir`, { method: "PUT" });
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagem({ tone: "error", message: err.message || "Nao foi possivel reabrir a solicitacao agora." });
+    } finally {
+      setMatriculaProcessando(null);
+    }
+  }
 
   return (
     <div className="tela-matriculas">
@@ -98,13 +149,26 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
         </div>
       </header>
 
+      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
       {cursosMatriculados.length === 0 ? (
         <EmptyState message="Voce ainda nao esta matriculado em nenhum curso. Explore o catalogo em Matriculas." />
       ) : (
         <ul aria-label="Meus cursos matriculados" className="catalogo-grade" role="list">
-          {cursosMatriculados.map((curso) => (
-            <CartaoCursoMatricula curso={curso} key={curso.id} matricula={matriculaPorCursoId.get(curso.id)} />
-          ))}
+          {cursosMatriculados.map((curso) => {
+            const matricula = matriculaPorCursoId.get(curso.id);
+
+            return (
+              <CartaoCursoMatricula
+                curso={curso}
+                key={curso.id}
+                matricula={matricula}
+                onCancelar={() => cancelarMatricula(matricula)}
+                onReabrir={() => reabrirMatricula(matricula)}
+                processando={matriculaProcessando === matricula.id}
+              />
+            );
+          })}
         </ul>
       )}
     </div>

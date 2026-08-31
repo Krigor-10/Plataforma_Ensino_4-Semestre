@@ -63,6 +63,14 @@ public class CursosController : ControllerBase
         return Ok(curso);
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> AtualizarCurso(int id, [FromBody] AtualizarCursoDto dto)
+    {
+        var curso = await _cursoService.AtualizarCursoAsync(id, dto);
+        return Ok(curso);
+    }
+
     [HttpPut("{id:int}/coordenador")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AtribuirCoordenador(int id, [FromBody] int coordenadorId)

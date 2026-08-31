@@ -27,7 +27,8 @@ const ESTADO_INICIAL_FORMULARIO = {
   estado: "",
   especialidade: "",
   senha: "",
-  confirmarSenha: ""
+  confirmarSenha: "",
+  ativo: true
 };
 
 function normalizarBusca(valor) {
@@ -50,8 +51,11 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const [professorDetalhe, setProfessorDetalhe] = useState(null);
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [professorEmEdicaoId, setProfessorEmEdicaoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
+  const [professorParaExcluir, setProfessorParaExcluir] = useState(null);
+  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [salvando, setSalvando] = useState(false);
   const kebabRef = useRef(null);
 
@@ -151,9 +155,33 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   }
 
   function abrirFormulario() {
+    setProfessorEmEdicaoId(null);
     setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
     setMensagemFormulario({ tone: "", message: "" });
     setFormularioAberto(true);
+  }
+
+  function abrirEdicaoProfessor(professor) {
+    setProfessorEmEdicaoId(professor.id);
+    setDadosFormulario({
+      nome: professor.nome || "",
+      email: professor.email || "",
+      cpf: professor.cpf || "",
+      telefone: professor.telefone || "",
+      cep: professor.cep || "",
+      rua: professor.rua || "",
+      numero: professor.numero || "",
+      bairro: professor.bairro || "",
+      cidade: professor.cidade || "",
+      estado: professor.estado || "",
+      especialidade: professor.especialidade || "",
+      senha: "",
+      confirmarSenha: "",
+      ativo: professor.ativo !== false
+    });
+    setMensagemFormulario({ tone: "", message: "" });
+    setFormularioAberto(true);
+    setKebabAbertoId(null);
   }
 
   function fecharFormulario() {
@@ -165,16 +193,16 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   }
 
   function atualizarCampo(event) {
-    const { name, value } = event.target;
-    setDadosFormulario((atual) => ({ ...atual, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    setDadosFormulario((atual) => ({ ...atual, [name]: type === "checkbox" ? checked : value }));
   }
 
   function validarFormulario() {
-    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado", "especialidade", "senha", "confirmarSenha"];
+    const obrigatorios = ["nome", "email", "cpf", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado", "especialidade"];
     const campoVazio = obrigatorios.find((campo) => !String(dadosFormulario[campo] || "").trim());
 
     if (campoVazio) {
-      return "Preencha todos os campos para cadastrar o professor.";
+      return `Preencha todos os campos para ${professorEmEdicaoId ? "salvar" : "cadastrar"} o professor.`;
     }
 
     if (onlyDigits(dadosFormulario.cpf).length !== 11) {
@@ -189,12 +217,14 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       return "Informe a UF com 2 letras.";
     }
 
-    if (dadosFormulario.senha.length < 6) {
-      return "A senha precisa ter pelo menos 6 caracteres.";
-    }
+    if (!professorEmEdicaoId) {
+      if (dadosFormulario.senha.length < 6) {
+        return "A senha precisa ter pelo menos 6 caracteres.";
+      }
 
-    if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
-      return "As senhas nao coincidem.";
+      if (dadosFormulario.senha !== dadosFormulario.confirmarSenha) {
+        return "As senhas nao coincidem.";
+      }
     }
 
     return "";
@@ -212,25 +242,32 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
     setSalvando(true);
     setMensagemFormulario({ tone: "", message: "" });
 
+    const dadosBase = {
+      nome: dadosFormulario.nome.trim(),
+      email: dadosFormulario.email.trim(),
+      cpf: onlyDigits(dadosFormulario.cpf),
+      telefone: dadosFormulario.telefone.trim(),
+      cep: formatCep(onlyDigits(dadosFormulario.cep)),
+      rua: dadosFormulario.rua.trim(),
+      numero: dadosFormulario.numero.trim(),
+      bairro: dadosFormulario.bairro.trim(),
+      cidade: dadosFormulario.cidade.trim(),
+      estado: dadosFormulario.estado.trim().toUpperCase(),
+      especialidade: dadosFormulario.especialidade.trim()
+    };
+
     try {
-      await apiRequest("/Professores", {
-        method: "POST",
-        body: JSON.stringify({
-          nome: dadosFormulario.nome.trim(),
-          email: dadosFormulario.email.trim(),
-          cpf: onlyDigits(dadosFormulario.cpf),
-          telefone: dadosFormulario.telefone.trim(),
-          cep: formatCep(onlyDigits(dadosFormulario.cep)),
-          rua: dadosFormulario.rua.trim(),
-          numero: dadosFormulario.numero.trim(),
-          bairro: dadosFormulario.bairro.trim(),
-          cidade: dadosFormulario.cidade.trim(),
-          estado: dadosFormulario.estado.trim().toUpperCase(),
-          especialidade: dadosFormulario.especialidade.trim(),
-          senha: dadosFormulario.senha,
-          ativo: true
-        })
-      });
+      if (professorEmEdicaoId) {
+        await apiRequest(`/Professores/${professorEmEdicaoId}`, {
+          method: "PUT",
+          body: JSON.stringify({ ...dadosBase, ativo: dadosFormulario.ativo })
+        });
+      } else {
+        await apiRequest("/Professores", {
+          method: "POST",
+          body: JSON.stringify({ ...dadosBase, senha: dadosFormulario.senha, ativo: true })
+        });
+      }
 
       setFormularioAberto(false);
       onRefresh?.();
@@ -240,7 +277,41 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         return;
       }
 
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel cadastrar o professor agora." });
+      setMensagemFormulario({
+        tone: "error",
+        message: err.message || `Nao foi possivel ${professorEmEdicaoId ? "salvar" : "cadastrar"} o professor agora.`
+      });
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function abrirExclusaoProfessor(professor) {
+    setProfessorParaExcluir(professor);
+    setMensagemExclusao("");
+    setKebabAbertoId(null);
+  }
+
+  async function confirmarExclusaoProfessor() {
+    if (!professorParaExcluir) {
+      return;
+    }
+
+    setSalvando(true);
+    setMensagemExclusao("");
+
+    try {
+      await apiRequest(`/Professores/${professorParaExcluir.id}`, { method: "DELETE" });
+
+      setProfessorParaExcluir(null);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemExclusao(err.message || "Nao foi possivel excluir o professor agora.");
     } finally {
       setSalvando(false);
     }
@@ -399,6 +470,12 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               >
                 Ver detalhes
               </button>
+              <button className="kebab-menu__item" onClick={() => abrirEdicaoProfessor(professorKebab)} type="button">
+                Editar
+              </button>
+              <button className="kebab-menu__item kebab-menu__item--perigo" onClick={() => abrirExclusaoProfessor(professorKebab)} type="button">
+                Excluir
+              </button>
             </div>,
             document.body
           )
@@ -466,8 +543,25 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </Modal>
       ) : null}
 
+      {professorParaExcluir ? (
+        <Modal onFechar={() => setProfessorParaExcluir(null)} titulo="Excluir professor">
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+            Deseja excluir o professor <strong>{professorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
+          </p>
+          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
+          <footer className="modal-rodape">
+            <Botao disabled={salvando} onClick={() => setProfessorParaExcluir(null)} variante="perigo">
+              <TbX aria-hidden="true" size={15} /> Cancelar
+            </Botao>
+            <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="primario">
+              {salvando ? "Excluindo..." : "Confirmar exclusao"}
+            </Botao>
+          </footer>
+        </Modal>
+      ) : null}
+
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo="Cadastrar professor">
+        <Modal onFechar={fecharFormulario} titulo={professorEmEdicaoId ? "Editar professor" : "Cadastrar professor"}>
           <form className="formulario-modal" onSubmit={salvarProfessor}>
             <div className="formulario-perfil__grade">
               <div className="campo formulario-perfil__campo--largo">
@@ -514,14 +608,23 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
                 <label className="campo__rotulo" htmlFor="professor-especialidade">Especialidade *</label>
                 <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-especialidade" maxLength={120} name="especialidade" onChange={atualizarCampo} placeholder="Ex.: Engenharia de Software" value={dadosFormulario.especialidade} />
               </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-senha">Senha *</label>
-                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-confirmar-senha">Confirmar senha *</label>
-                <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
-              </div>
+              {professorEmEdicaoId ? (
+                <div className="campo formulario-perfil__campo--largo" style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+                  <input checked={dadosFormulario.ativo} disabled={salvando} id="professor-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
+                  <label className="campo__rotulo" htmlFor="professor-ativo" style={{ marginBottom: 0 }}>Conta ativa</label>
+                </div>
+              ) : (
+                <>
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="professor-senha">Senha *</label>
+                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                  </div>
+                  <div className="campo">
+                    <label className="campo__rotulo" htmlFor="professor-confirmar-senha">Confirmar senha *</label>
+                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+                  </div>
+                </>
+              )}
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
@@ -531,7 +634,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
               <Botao disabled={salvando} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Cadastrar professor"}
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : professorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar professor"}
               </Botao>
             </footer>
           </form>

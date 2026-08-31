@@ -76,6 +76,14 @@ export default function App() {
     handleNavigate(nextPath, { replace: true });
   }
 
+  function handleUsuarioAtualizado(usuarioAtualizado) {
+    setSession((atual) => {
+      const proximaSessao = { ...atual, user: { ...atual.user, ...usuarioAtualizado } };
+      persistSession(proximaSessao);
+      return proximaSessao;
+    });
+  }
+
   function handleLogout(nextPath = "/") {
     if (!isDemoMode && session.refreshToken) {
       apiRequest("/Auth/logout", {
@@ -130,6 +138,7 @@ export default function App() {
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         onSessionExpired={() => handleLogout("/login")}
+        onUsuarioAtualizado={handleUsuarioAtualizado}
       />
     );
   } else if (route.kind === "notfound") {

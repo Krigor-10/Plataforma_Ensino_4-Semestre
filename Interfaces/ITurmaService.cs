@@ -9,4 +9,6 @@ public interface ITurmaService
     Task<IEnumerable<Turma>> ListarTurmasAsync();
     Task<IEnumerable<Turma>> ListarTurmasPorProfessorAsync(int professorId);
     Task AtribuirProfessorAsync(int turmaId, int professorId);
+    Task<Turma> AtualizarNomeTurmaAsync(int turmaId, string nomeTurma);
+    Task ExcluirTurmaAsync(int turmaId);
 }

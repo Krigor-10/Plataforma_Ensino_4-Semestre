@@ -14,4 +14,6 @@ public interface IMatriculaService
     Task AprovarMatriculaAsync(int matriculaId, int turmaId);
     Task<AprovacaoMatriculasLoteResultadoDto> AprovarMatriculasAutomaticamenteAsync(IEnumerable<int> matriculaIds);
     Task RejeitarMatriculaAsync(int matriculaId);
+    Task CancelarMatriculaAsync(int matriculaId);
+    Task ReabrirMatriculaAsync(int matriculaId);
 }

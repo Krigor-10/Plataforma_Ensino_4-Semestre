@@ -146,5 +146,32 @@ public class TurmasController : ControllerBase
         return Ok(new { mensagem = "Professor atribuido a turma com sucesso." });
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> AtualizarNome(int id, [FromBody] string nomeTurma)
+    {
+        var turma = await _turmaService.AtualizarNomeTurmaAsync(id, nomeTurma);
+
+        var response = new TurmaResponseDto
+        {
+            Id = turma.Id,
+            CodigoRegistro = turma.CodigoRegistro,
+            NomeTurma = turma.NomeTurma,
+            DataCriacao = turma.DataCriacao,
+            CursoId = turma.CursoId,
+            ProfessorId = turma.ProfessorId
+        };
+
+        return Ok(response);
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> ExcluirTurma(int id)
+    {
+        await _turmaService.ExcluirTurmaAsync(id);
+        return NoContent();
+    }
+
     private int? ObterProfessorId() => User.ObterUsuarioId();
 }
