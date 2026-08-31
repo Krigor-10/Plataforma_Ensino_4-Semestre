@@ -179,7 +179,20 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
       </main>
 
       {cursoModal ? (
-        <Modal titulo={cursoModal.titulo} onFechar={() => setCursoModal(null)}>
+        <Modal
+          titulo={cursoModal.titulo}
+          onFechar={() => setCursoModal(null)}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao variante="perigo" onClick={() => setCursoModal(null)} style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
+                <TbX size={15} aria-hidden="true" /> Fechar
+              </Botao>
+              <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
+              </Botao>
+            </footer>
+          }
+        >
           <dl className="lista-detalhes">
             <div className="lista-detalhes__item">
               <dt>Investimento</dt>
@@ -190,14 +203,6 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               <dd>{cursoModal.descricao}</dd>
             </div>
           </dl>
-          <footer className="modal-rodape">
-            <Botao variante="perigo" onClick={() => setCursoModal(null)} style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
-              <TbX size={15} aria-hidden="true" /> Fechar
-            </Botao>
-            <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 

@@ -760,7 +760,27 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       )}
 
       {avaliacaoDetalhe ? (
-        <Modal onFechar={fecharDetalheAvaliacao} titulo="Detalhes da avaliacao">
+        <Modal
+          onFechar={fecharDetalheAvaliacao}
+          titulo="Detalhes da avaliacao"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={fecharDetalheAvaliacao} style={{ alignItems: "center", display: "flex", gap: "6px", marginRight: "auto" }} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Fechar
+              </Botao>
+              <Botao
+                onClick={() => {
+                  setAvaliacaoParaExcluir(avaliacaoDetalhe);
+                  fecharDetalheAvaliacao();
+                }}
+                style={{ alignItems: "center", display: "flex", gap: "6px" }}
+                variante="perigo"
+              >
+                <MdDelete aria-hidden="true" size={19} /> Excluir
+              </Botao>
+            </footer>
+          }
+        >
           <dl className="lista-detalhes">
             <div className="lista-detalhes__item">
               <dt>Titulo</dt>
@@ -941,43 +961,72 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               </button>
             </div>
           </div>
-
-          <footer className="modal-rodape">
-            <Botao onClick={fecharDetalheAvaliacao} style={{ alignItems: "center", display: "flex", gap: "6px", marginRight: "auto" }} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Fechar
-            </Botao>
-            <Botao
-              onClick={() => {
-                setAvaliacaoParaExcluir(avaliacaoDetalhe);
-                fecharDetalheAvaliacao();
-              }}
-              style={{ alignItems: "center", display: "flex", gap: "6px" }}
-              variante="perigo"
-            >
-              <MdDelete aria-hidden="true" size={19} /> Excluir
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {avaliacaoParaExcluir ? (
-        <Modal onFechar={() => setAvaliacaoParaExcluir(null)} titulo="Excluir avaliacao">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setAvaliacaoParaExcluir(null)}
+          titulo="Excluir avaliacao"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={() => setAvaliacaoParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} onClick={confirmarExclusaoAvaliacao} variante="primario">
+                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir a avaliacao <strong>{avaliacaoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
-          <footer className="modal-rodape">
-            <Botao disabled={salvando} onClick={() => setAvaliacaoParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={salvando} onClick={confirmarExclusaoAvaliacao} variante="primario">
-              {salvando ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {assistenteAberto ? (
-        <Modal className="modal-caixa--avaliacao" onFechar={fecharAssistente} titulo={avaliacaoAssistenteId ? "Editar avaliacao" : "Nova avaliacao"}>
+        <Modal
+          className="modal-caixa--avaliacao"
+          onFechar={fecharAssistente}
+          titulo={avaliacaoAssistenteId ? "Editar avaliacao" : "Nova avaliacao"}
+          rodape={
+            !turmasDoProfessor.length || !modulosDoProfessor.length ? null : etapaAtiva === "dados" ? (
+              <footer className="criar-avaliacao__rodape">
+                <Botao disabled={salvando} onClick={fecharAssistente} type="button" variante="perigo">
+                  <TbX aria-hidden="true" size={15} /> Cancelar
+                </Botao>
+                <div className="criar-avaliacao__rodape-direita">
+                  <Botao disabled={salvando || !modulosDisponiveis.length} form="form-avaliacao-dados" type="submit" variante="primario">
+                    <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : avaliacaoAssistenteId ? "Salvar alteracoes" : "Criar avaliacao e continuar"}
+                  </Botao>
+                </div>
+              </footer>
+            ) : etapaAtiva === "nova-questao" ? (
+              <footer className="criar-avaliacao__rodape">
+                <Botao disabled={salvandoQuestao} onClick={() => setEtapaAtiva("dados")} type="button" variante="perigo">
+                  <TbX aria-hidden="true" size={15} /> Voltar
+                </Botao>
+                <div className="criar-avaliacao__rodape-direita">
+                  <Botao disabled={salvandoQuestao} form="form-avaliacao-questao" type="submit" variante="primario">
+                    <MdSave aria-hidden="true" size={17} /> {salvandoQuestao ? "Salvando..." : "Adicionar questao"}
+                  </Botao>
+                </div>
+              </footer>
+            ) : typeof etapaAtiva === "number" && questoesAvaliacao.some((item) => item.id === etapaAtiva) ? (
+              <footer className="criar-avaliacao__rodape">
+                <Botao
+                  disabled={salvandoQuestao}
+                  onClick={() => excluirQuestao(questoesAvaliacao.find((item) => item.id === etapaAtiva))}
+                  type="button"
+                  variante="perigo"
+                >
+                  <MdDelete aria-hidden="true" size={17} /> Excluir questao
+                </Botao>
+              </footer>
+            ) : null
+          }
+        >
           {!turmasDoProfessor.length ? (
             <InlineMessage tone="info">Seu usuario ainda nao possui turmas atribuidas.</InlineMessage>
           ) : !modulosDoProfessor.length ? (
@@ -1026,7 +1075,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                 {etapaAtiva === "dados" ? (
                   <section className="criar-avaliacao__secao">
                     <h3 className="criar-avaliacao__secao-titulo">Dados gerais</h3>
-                    <form className="criar-avaliacao__secao-corpo" onSubmit={salvarDadosGerais}>
+                    <form className="criar-avaliacao__secao-corpo" id="form-avaliacao-dados" onSubmit={salvarDadosGerais}>
                       <div className="grade-3">
                         <div className="campo">
                           <label className="campo__rotulo" htmlFor="avaliacao-turma">Turma *</label>
@@ -1146,17 +1195,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                       </div>
 
                       {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-                      <footer className="criar-avaliacao__rodape">
-                        <Botao disabled={salvando} onClick={fecharAssistente} type="button" variante="perigo">
-                          <TbX aria-hidden="true" size={15} /> Cancelar
-                        </Botao>
-                        <div className="criar-avaliacao__rodape-direita">
-                          <Botao disabled={salvando || !modulosDisponiveis.length} type="submit" variante="primario">
-                            <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : avaliacaoAssistenteId ? "Salvar alteracoes" : "Criar avaliacao e continuar"}
-                          </Botao>
-                        </div>
-                      </footer>
                     </form>
                   </section>
                 ) : null}
@@ -1164,7 +1202,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                 {etapaAtiva === "nova-questao" ? (
                   <section className="criar-avaliacao__secao">
                     <h3 className="criar-avaliacao__secao-titulo">Nova questao</h3>
-                    <form className="criar-avaliacao__secao-corpo" onSubmit={salvarQuestao}>
+                    <form className="criar-avaliacao__secao-corpo" id="form-avaliacao-questao" onSubmit={salvarQuestao}>
                       <div className="grade-3">
                         <div className="campo">
                           <label className="campo__rotulo" htmlFor="questao-tipo">Tipo da questao</label>
@@ -1258,17 +1296,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                       </div>
 
                       {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
-
-                      <footer className="criar-avaliacao__rodape">
-                        <Botao disabled={salvandoQuestao} onClick={() => setEtapaAtiva("dados")} type="button" variante="perigo">
-                          <TbX aria-hidden="true" size={15} /> Voltar
-                        </Botao>
-                        <div className="criar-avaliacao__rodape-direita">
-                          <Botao disabled={salvandoQuestao} type="submit" variante="primario">
-                            <MdSave aria-hidden="true" size={17} /> {salvandoQuestao ? "Salvando..." : "Adicionar questao"}
-                          </Botao>
-                        </div>
-                      </footer>
                     </form>
                   </section>
                 ) : null}
@@ -1292,12 +1319,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                             </span>
 
                             {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
-
-                            <footer className="criar-avaliacao__rodape">
-                              <Botao disabled={salvandoQuestao} onClick={() => excluirQuestao(questao)} type="button" variante="perigo">
-                                <MdDelete aria-hidden="true" size={17} /> Excluir questao
-                              </Botao>
-                            </footer>
                           </div>
                         </section>
                       );

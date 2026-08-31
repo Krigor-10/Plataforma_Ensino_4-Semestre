@@ -502,65 +502,87 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       )}
 
       {conteudoParaExcluir ? (
-        <Modal onFechar={() => setConteudoParaExcluir(null)} titulo="Excluir conteudo">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setConteudoParaExcluir(null)}
+          titulo="Excluir conteudo"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={() => setConteudoParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
+                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir o conteudo <strong>{conteudoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
-          <footer className="modal-rodape">
-            <Botao disabled={salvando} onClick={() => setConteudoParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
-              {salvando ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo={conteudoEmEdicaoId ? "Editar conteudo" : "Novo conteudo"}>
+        <Modal
+          onFechar={fecharFormulario}
+          titulo={conteudoEmEdicaoId ? "Editar conteudo" : "Novo conteudo"}
+          rodape={
+            turmasDoProfessor.length && modulosDoProfessor.length ? (
+              <footer className="modal-rodape">
+                <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                  <TbX aria-hidden="true" size={15} /> Cancelar
+                </Botao>
+                <Botao disabled={salvando || enviandoArquivo || !modulosDisponiveis.length} form="form-conteudo" type="submit" variante="primario">
+                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
+                </Botao>
+              </footer>
+            ) : null
+          }
+        >
           {!turmasDoProfessor.length ? (
             <InlineMessage tone="info">Seu usuario ainda nao possui turmas atribuidas.</InlineMessage>
           ) : !modulosDoProfessor.length ? (
             <InlineMessage tone="info">Suas turmas ainda nao tem modulos cadastrados nos cursos correspondentes.</InlineMessage>
           ) : (
-            <form className="formulario-modal" onSubmit={salvarConteudoDidatico}>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-turma">Turma *</label>
-                <select
-                  className="campo__entrada"
-                  disabled={salvando}
-                  id="conteudo-turma"
-                  name="turmaId"
-                  onChange={atualizarCampoFormulario}
-                  value={dadosFormulario.turmaId}
-                >
-                  {turmasDoProfessor.map((turma) => (
-                    <option key={turma.id} value={turma.id}>
-                      {turma.nomeTurma}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <form className="formulario-modal" id="form-conteudo" onSubmit={salvarConteudoDidatico}>
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-turma">Turma *</label>
+                  <select
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="conteudo-turma"
+                    name="turmaId"
+                    onChange={atualizarCampoFormulario}
+                    value={dadosFormulario.turmaId}
+                  >
+                    {turmasDoProfessor.map((turma) => (
+                      <option key={turma.id} value={turma.id}>
+                        {turma.nomeTurma}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-modulo">Modulo *</label>
-                <select
-                  className="campo__entrada"
-                  disabled={salvando || !modulosDisponiveis.length}
-                  id="conteudo-modulo"
-                  key={dadosFormulario.turmaId || "sem-turma"}
-                  name="moduloId"
-                  onChange={atualizarCampoFormulario}
-                  value={dadosFormulario.moduloId}
-                >
-                  {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
-                  {modulosDisponiveis.map((modulo) => (
-                    <option key={modulo.id} value={modulo.id}>
-                      {modulo.titulo}
-                    </option>
-                  ))}
-                </select>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="conteudo-modulo">Modulo *</label>
+                  <select
+                    className="campo__entrada"
+                    disabled={salvando || !modulosDisponiveis.length}
+                    id="conteudo-modulo"
+                    key={dadosFormulario.turmaId || "sem-turma"}
+                    name="moduloId"
+                    onChange={atualizarCampoFormulario}
+                    value={dadosFormulario.moduloId}
+                  >
+                    {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
+                    {modulosDisponiveis.map((modulo) => (
+                      <option key={modulo.id} value={modulo.id}>
+                        {modulo.titulo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="novo-cont__preview">
@@ -732,15 +754,6 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
               </div>
 
               {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-              <footer className="modal-rodape">
-                <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                  <TbX aria-hidden="true" size={15} /> Cancelar
-                </Botao>
-                <Botao disabled={salvando || enviandoArquivo || !modulosDisponiveis.length} type="submit" variante="primario">
-                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
-                </Botao>
-              </footer>
             </form>
           )}
         </Modal>

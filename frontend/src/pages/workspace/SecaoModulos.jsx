@@ -385,7 +385,28 @@ export function SecaoModulos({
       )}
 
       {moduloDetalhe ? (
-        <Modal onFechar={() => setModuloDetalheId(null)} titulo={moduloDetalhe.titulo}>
+        <Modal
+          onFechar={() => setModuloDetalheId(null)}
+          titulo={moduloDetalhe.titulo}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: podeGerenciar ? "auto" : 0 }} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Fechar
+              </Botao>
+              {podeGerenciar ? (
+                <Botao
+                  onClick={() => {
+                    setModuloDetalheId(null);
+                    abrirEdicaoModulo(moduloDetalhe);
+                  }}
+                  variante="primario"
+                >
+                  Editar titulo
+                </Botao>
+              ) : null}
+            </footer>
+          }
+        >
           <dl className="lista-detalhes">
             <div className="lista-detalhes__item">
               <dt>Codigo do modulo</dt>
@@ -411,44 +432,46 @@ export function SecaoModulos({
               <dd>{formatDate(moduloDetalhe.dataCriacao)}</dd>
             </div>
           </dl>
-          <footer className="modal-rodape">
-            <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: podeGerenciar ? "auto" : 0 }} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Fechar
-            </Botao>
-            {podeGerenciar ? (
-              <Botao
-                onClick={() => {
-                  setModuloDetalheId(null);
-                  abrirEdicaoModulo(moduloDetalhe);
-                }}
-                variante="primario"
-              >
-                Editar titulo
-              </Botao>
-            ) : null}
-          </footer>
         </Modal>
       ) : null}
 
       {moduloParaExcluir ? (
-        <Modal onFechar={() => setModuloParaExcluir(null)} titulo="Excluir modulo">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setModuloParaExcluir(null)}
+          titulo="Excluir modulo"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={() => setModuloParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
+                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
-          <footer className="modal-rodape">
-            <Botao disabled={salvando} onClick={() => setModuloParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
-              {salvando ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo={moduloEmEdicaoId ? "Editar modulo" : "Novo modulo"}>
-          <form className="formulario-modal" onSubmit={salvarModulo}>
+        <Modal
+          onFechar={fecharFormulario}
+          titulo={moduloEmEdicaoId ? "Editar modulo" : "Novo modulo"}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} form="form-modulo" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          }
+        >
+          <form className="formulario-modal" id="form-modulo" onSubmit={salvarModulo}>
             <div className="campo">
               <label className="campo__rotulo" htmlFor="modulo-curso">Curso *</label>
               <SelectSimples
@@ -478,14 +501,6 @@ export function SecaoModulos({
               </p>
             ) : null}
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Salvar"}
-              </Botao>
-            </footer>
           </form>
         </Modal>
       ) : null}

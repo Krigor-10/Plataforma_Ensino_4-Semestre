@@ -401,19 +401,14 @@ export function SecaoTurmas({
                 ))}
               </select>
             ) : null}
-            <div style={{ flexShrink: 0, position: "relative", width: "220px" }}>
-              <TbSearch
-                aria-hidden="true"
-                size={15}
-                style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-              />
+            <div className="campo-busca campo-busca--compacta">
+              <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
               <label className="visualmente-oculto" htmlFor="busca-aluno-turma">Buscar aluno</label>
               <input
                 className="campo__entrada"
                 id="busca-aluno-turma"
                 onChange={(event) => setBuscaAluno(event.target.value)}
                 placeholder="Buscar aluno..."
-                style={{ paddingLeft: "32px", width: "100%" }}
                 type="search"
                 value={buscaAluno}
               />
@@ -491,7 +486,20 @@ export function SecaoTurmas({
       )}
 
       {turmaAtribuindo ? (
-        <Modal onFechar={() => setTurmaAtribuindo(null)} titulo="Atribuir professor">
+        <Modal
+          onFechar={() => setTurmaAtribuindo(null)}
+          titulo="Atribuir professor"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoAtribuicao} onClick={() => setTurmaAtribuindo(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoAtribuicao} onClick={salvarAtribuicaoProfessor} variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoAtribuicao ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          }
+        >
           <div className="formulario-modal">
             <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.875rem", margin: 0 }}>
               Turma <strong>{turmaAtribuindo.nomeTurma}</strong>
@@ -507,20 +515,25 @@ export function SecaoTurmas({
               />
             </div>
             {mensagemAtribuicao.message ? <InlineMessage tone={mensagemAtribuicao.tone}>{mensagemAtribuicao.message}</InlineMessage> : null}
-            <footer className="modal-rodape">
-              <Botao disabled={salvandoAtribuicao} onClick={() => setTurmaAtribuindo(null)} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvandoAtribuicao} onClick={salvarAtribuicaoProfessor} variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvandoAtribuicao ? "Salvando..." : "Salvar"}
-              </Botao>
-            </footer>
           </div>
         </Modal>
       ) : null}
 
       {turmaEditandoNome ? (
-        <Modal onFechar={() => setTurmaEditandoNome(null)} titulo="Editar nome da turma">
+        <Modal
+          onFechar={() => setTurmaEditandoNome(null)}
+          titulo="Editar nome da turma"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoNomeTurma} onClick={() => setTurmaEditandoNome(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoNomeTurma} onClick={salvarNomeTurma} variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoNomeTurma ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          }
+        >
           <div className="formulario-modal">
             <div className="campo">
               <label className="campo__rotulo" htmlFor="turma-nome-edicao">Nome da turma *</label>
@@ -534,39 +547,49 @@ export function SecaoTurmas({
               />
             </div>
             {mensagemEdicaoTurma.message ? <InlineMessage tone={mensagemEdicaoTurma.tone}>{mensagemEdicaoTurma.message}</InlineMessage> : null}
-            <footer className="modal-rodape">
-              <Botao disabled={salvandoNomeTurma} onClick={() => setTurmaEditandoNome(null)} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvandoNomeTurma} onClick={salvarNomeTurma} variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvandoNomeTurma ? "Salvando..." : "Salvar"}
-              </Botao>
-            </footer>
           </div>
         </Modal>
       ) : null}
 
       {turmaParaExcluir ? (
-        <Modal onFechar={() => setTurmaParaExcluir(null)} titulo="Excluir turma">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setTurmaParaExcluir(null)}
+          titulo="Excluir turma"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={excluindoTurma} onClick={() => setTurmaParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={excluindoTurma} onClick={confirmarExclusaoTurma} variante="primario">
+                {excluindoTurma ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir a turma <strong>{turmaParaExcluir.nomeTurma}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusaoTurma ? <InlineMessage tone="error">{mensagemExclusaoTurma}</InlineMessage> : null}
-          <footer className="modal-rodape">
-            <Botao disabled={excluindoTurma} onClick={() => setTurmaParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={excluindoTurma} onClick={confirmarExclusaoTurma} variante="primario">
-              {excluindoTurma ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {formularioCriacaoAberto ? (
-        <Modal onFechar={fecharFormularioCriacao} titulo="Nova turma">
+        <Modal
+          onFechar={fecharFormularioCriacao}
+          titulo="Nova turma"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoCriacao} onClick={fecharFormularioCriacao} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoCriacao} form="form-nova-turma" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoCriacao ? "Salvando..." : "Salvar"}
+              </Botao>
+            </footer>
+          }
+        >
           <div aria-hidden="true" className="modal-edicao__avatar">+</div>
-          <form className="formulario-modal" onSubmit={salvarTurma}>
+          <form className="formulario-modal" id="form-nova-turma" onSubmit={salvarTurma}>
             <div className="campo">
               <label className="campo__rotulo" htmlFor="curso-turma">Curso *</label>
               <SelectSimples
@@ -595,14 +618,6 @@ export function SecaoTurmas({
               </p>
             ) : null}
             {mensagemFormularioTurma.message ? <InlineMessage tone={mensagemFormularioTurma.tone}>{mensagemFormularioTurma.message}</InlineMessage> : null}
-            <footer className="modal-rodape">
-              <Botao disabled={salvandoCriacao} onClick={fecharFormularioCriacao} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvandoCriacao} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvandoCriacao ? "Salvando..." : "Salvar"}
-              </Botao>
-            </footer>
           </form>
         </Modal>
       ) : null}

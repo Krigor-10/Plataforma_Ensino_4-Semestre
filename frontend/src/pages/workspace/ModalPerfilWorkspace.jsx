@@ -196,7 +196,26 @@ export function ModalPerfilWorkspace({
   }
 
   return (
-    <Modal className="modal-caixa--perfil" onFechar={aoFechar} titulo="Meu perfil">
+    <Modal
+      className="modal-caixa--perfil"
+      onFechar={aoFechar}
+      titulo="Meu perfil"
+      rodape={
+        aba === "editar" ? (
+          <footer className="modal-rodape">
+            <Botao disabled={salvandoPerfil} form="form-perfil-editar" type="submit" variante="primario">
+              <MdSave aria-hidden="true" size={17} /> {salvandoPerfil ? "Salvando..." : "Salvar alteracoes"}
+            </Botao>
+          </footer>
+        ) : aba === "configuracoes" ? (
+          <footer className="modal-rodape">
+            <Botao disabled={salvandoSenha} form="form-perfil-senha" type="submit" variante="primario">
+              <MdSave aria-hidden="true" size={17} /> {salvandoSenha ? "Salvando..." : "Trocar senha"}
+            </Botao>
+          </footer>
+        ) : null
+      }
+    >
       <div className="perfil-grade">
         <aside className="perfil-cartao-identidade">
           <div aria-hidden="true" className="perfil-avatar-grande" style={{ "--cor-perfil": corPorTipo[perfil] ?? "#7b2ff7" }}>
@@ -292,7 +311,7 @@ export function ModalPerfilWorkspace({
                 </h3>
               </header>
               <div className="painel-secao__conteudo">
-                <form className="formulario-modal" onSubmit={salvarPerfil}>
+                <form className="formulario-modal" id="form-perfil-editar" onSubmit={salvarPerfil}>
                   <div className="formulario-perfil__grade">
                     <div className="campo formulario-perfil__campo--largo">
                       <label className="campo__rotulo" htmlFor="perfil-nome">Nome completo *</label>
@@ -333,12 +352,6 @@ export function ModalPerfilWorkspace({
                   </div>
 
                   {mensagemPerfil.message ? <InlineMessage tone={mensagemPerfil.tone}>{mensagemPerfil.message}</InlineMessage> : null}
-
-                  <footer className="modal-rodape">
-                    <Botao disabled={salvandoPerfil} type="submit" variante="primario">
-                      <MdSave aria-hidden="true" size={17} /> {salvandoPerfil ? "Salvando..." : "Salvar alteracoes"}
-                    </Botao>
-                  </footer>
                 </form>
               </div>
             </section>
@@ -383,7 +396,7 @@ export function ModalPerfilWorkspace({
                     </div>
                   </div>
 
-                  <form className="formulario-modal" onSubmit={salvarSenha} style={{ width: "100%" }}>
+                  <form className="formulario-modal" id="form-perfil-senha" onSubmit={salvarSenha} style={{ width: "100%" }}>
                     <div className="formulario-perfil__grade">
                       <div className="campo formulario-perfil__campo--largo">
                         <label className="campo__rotulo" htmlFor="senha-atual">Senha atual *</label>
@@ -400,12 +413,6 @@ export function ModalPerfilWorkspace({
                     </div>
 
                     {mensagemSenha.message ? <InlineMessage tone={mensagemSenha.tone}>{mensagemSenha.message}</InlineMessage> : null}
-
-                    <footer className="modal-rodape">
-                      <Botao disabled={salvandoSenha} type="submit" variante="primario">
-                        <MdSave aria-hidden="true" size={17} /> {salvandoSenha ? "Salvando..." : "Trocar senha"}
-                      </Botao>
-                    </footer>
                   </form>
                 </div>
               </div>

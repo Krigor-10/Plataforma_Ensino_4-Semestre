@@ -2870,6 +2870,7 @@
     width: 100% !important;
   }
 
+  .modal-conteudo,
   .certificado-modal {
     overflow: visible !important;
   }
@@ -4760,15 +4761,15 @@
 
 .cartao-conteudo__icone-btn {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 1rem;
   color: #fff;
@@ -5669,36 +5670,10 @@
    aprovacao por avaliacao, entao o tom reflete se a correcao ja
    terminou (sucesso) ou se ha questoes dissertativas aguardando
    o professor (pendente), em vez de aprovado/reprovado.
-   Segue o padrao de rodape fixo ja usado em .modal-caixa--certificado:
-   cabecalho e rodape ficam fora do fluxo que rola.
+   Cabecalho/conteudo/rodape ja ficam fora do fluxo que rola por
+   padrao (ver .modal-caixa/.modal-conteudo em componentes.css) —
+   nao precisa de CSS extra aqui pra isso.
    ------------------------------------------------------------ */
-.modal-caixa--resultado-avaliacao {
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
-}
-
-.modal-caixa--resultado-avaliacao .modal-cabecalho {
-  margin: 0;
-  padding: var(--espaco-lg) var(--espaco-xl);
-  position: static;
-  flex-shrink: 0;
-}
-
-.modal-caixa--resultado-avaliacao .resultado-avaliacao {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 var(--espaco-xl) var(--espaco-lg);
-}
-
-.modal-caixa--resultado-avaliacao .modal-rodape {
-  margin: 0;
-  padding: var(--espaco-md) var(--espaco-xl);
-  flex-shrink: 0;
-  border-top: 1px solid var(--cor-borda);
-}
-
 .resultado-avaliacao {
   display: flex;
   flex-direction: column;
@@ -6668,26 +6643,26 @@
 }
 
 /* Estabiliza a altura do modal entre as abas: sem isso, cada aba tem
-   uma quantidade de conteudo bem diferente (formulario fixo de 8
-   campos vs. lista de cursos do aluno vs. toggle+3 campos de senha),
-   e o modal inteiro mudava de altura (e de posicao vertical, ja que
-   fica centralizado) a cada troca de aba. O valor cobre a aba mais
-   alta e previsivel (Editar dados), entao as abas mais curtas passam
-   a ocupar o mesmo espaco em vez de deixar o modal "encolher". Como
-   as abas mais curtas nao preenchem essa altura, o conteudo e
-   centralizado verticalmente (ver .painel-secao__conteudo abaixo) em
-   vez de ficar colado no topo com um vao vazio no rodape. */
+   uma quantidade de conteudo bem diferente (formulario de 8 campos
+   vs. lista de cursos do aluno vs. toggle+3 campos de senha), e o
+   modal inteiro mudava de altura (e de posicao vertical, ja que fica
+   centralizado) a cada troca de aba. Valor recalibrado em 2026-08-31
+   (39rem, antes 45rem) depois que o rodape passou a ficar fora dessa
+   area (prop rodape do Modal.jsx) — os 45rem antigos foram calibrados
+   quando o botao de acao ainda contava nessa altura, e sobraram como
+   vao morto depois da correcao do rodape fixo. Alinhamento no topo
+   (nao mais centralizado) porque centralizar dividia o vao sobrando
+   em dois — acima E abaixo do conteudo —, parecendo card quebrado;
+   um unico vao no rodape do card e o mesmo padrao do resto do app
+   (nenhum outro .painel-secao__conteudo usa justify-content). */
 .modal-caixa--perfil .painel-secao {
-  min-height: 45rem;
+  min-height: 39rem;
   display: flex;
   flex-direction: column;
 }
 
 .modal-caixa--perfil .painel-secao__conteudo {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
 /* A lista de cursos aprovados (aba Informacoes) nao tem limite proprio

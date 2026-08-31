@@ -267,7 +267,18 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
       </section>
 
       {certificadoAberto ? (
-        <Modal className="modal-caixa--certificado" onFechar={fecharCertificado} titulo="Certificado de Conclusao">
+        <Modal
+          className="modal-caixa--certificado"
+          onFechar={fecharCertificado}
+          titulo="Certificado de Conclusao"
+          rodape={
+            <footer className="modal-rodape">
+              <button className="botao botao--primario" disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button">
+                <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
+              </button>
+            </footer>
+          }
+        >
           <div className="certificado-modal">
           {emitindo ? (
             <p className="texto-vazio" role="status">Emitindo certificado...</p>
@@ -321,12 +332,6 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
             </div>
           ) : null}
           </div>
-
-          <footer className="modal-rodape">
-            <button className="botao botao--primario" disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button">
-              <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
-            </button>
-          </footer>
         </Modal>
       ) : null}
     </div>

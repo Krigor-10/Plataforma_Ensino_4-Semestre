@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
-export default function Modal({ titulo, onFechar, children, className, acoes }) {
+export default function Modal({ titulo, onFechar, children, className, acoes, rodape }) {
   const refModal = useFocusTrap();
 
   useEffect(() => {
@@ -46,7 +46,8 @@ export default function Modal({ titulo, onFechar, children, className, acoes }) 
             ✕
           </button>
         </header>
-        {children}
+        <div className="modal-conteudo">{children}</div>
+        {rodape}
       </article>
     </div>
   );

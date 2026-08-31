@@ -326,12 +326,8 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
           <p className="cabecalho-pagina__subtitulo">{coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"}</p>
         </div>
-        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
-          <TbSearch
-            aria-hidden="true"
-            size={15}
-            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-          />
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
           <label className="visualmente-oculto" htmlFor="busca-coordenadores">Buscar coordenador</label>
           <input
             className="campo__entrada"
@@ -341,7 +337,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               setPagina(1);
             }}
             placeholder="Buscar por nome ou e-mail..."
-            style={{ paddingLeft: "32px", width: "100%" }}
             type="search"
             value={busca}
           />
@@ -479,7 +474,17 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         : null}
 
       {coordenadorDetalhe ? (
-        <Modal onFechar={() => setCoordenadorDetalhe(null)} titulo="Detalhes do coordenador">
+        <Modal
+          onFechar={() => setCoordenadorDetalhe(null)}
+          titulo="Detalhes do coordenador"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={() => setCoordenadorDetalhe(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Fechar
+              </Botao>
+            </footer>
+          }
+        >
           <div className="detalhe-usuario__perfil">
             <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
               {iniciaisNome(coordenadorDetalhe.nome)}
@@ -524,47 +529,59 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               </ul>
             )}
           </section>
-
-          <footer className="modal-rodape">
-            <Botao onClick={() => setCoordenadorDetalhe(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Fechar
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {coordenadorParaExcluir ? (
-        <Modal onFechar={() => setCoordenadorParaExcluir(null)} titulo="Excluir coordenacao">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setCoordenadorParaExcluir(null)}
+          titulo="Excluir coordenacao"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="primario">
+                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir a coordenacao de <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
-          <footer className="modal-rodape">
-            <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="primario">
-              {salvando ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo={coordenadorEmEdicaoId ? "Editar coordenacao" : "Cadastrar coordenacao"}>
-          <form className="formulario-modal" onSubmit={salvarCoordenador}>
+        <Modal
+          onFechar={fecharFormulario}
+          titulo={coordenadorEmEdicaoId ? "Editar coordenacao" : "Cadastrar coordenacao"}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} form="form-coordenador" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : coordenadorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar coordenacao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <form className="formulario-modal" id="form-coordenador" onSubmit={salvarCoordenador}>
             <div className="formulario-perfil__grade">
               <div className="campo formulario-perfil__campo--largo">
                 <label className="campo__rotulo" htmlFor="coordenador-nome">Nome completo *</label>
                 <input autoComplete="name" className="campo__entrada" disabled={salvando} id="coordenador-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
               </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="coordenador-cpf">CPF *</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+              </div>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="coordenador-email">E-mail *</label>
                 <input autoComplete="email" className="campo__entrada" disabled={salvando} id="coordenador-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-cpf">CPF *</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
               </div>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="coordenador-telefone">Telefone *</label>
@@ -614,15 +631,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : coordenadorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar coordenacao"}
-              </Botao>
-            </footer>
           </form>
         </Modal>
       ) : null}

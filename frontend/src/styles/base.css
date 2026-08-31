@@ -65,19 +65,19 @@
   --transicao-normal: 200ms ease;
   --transicao-lenta: 320ms ease;
 
-  --altura-topbar: 88px;
-  --largura-sidebar: 272px;
+  --altura-topbar: 5.5rem;
+  --largura-sidebar: 17rem;
 
   /* ------------------------------------------------------------
      Tokens legados (em inglês) — usados pelas telas ainda não
      portadas ao estilo do protótipo. Ver nota no topo do arquivo.
      ------------------------------------------------------------ */
-  --global-header-height: 119px;
-  --page-max-width: 1280px;
-  --header-max-width: 1480px;
-  --page-gutter: 32px;
-  --page-gutter-compact: 18px;
-  --page-gutter-mobile: 14px;
+  --global-header-height: 7.4375rem;
+  --page-max-width: 80rem;
+  --header-max-width: 92.5rem;
+  --page-gutter: 2rem;
+  --page-gutter-compact: 1.125rem;
+  --page-gutter-mobile: 0.875rem;
   --bg-main: #191b21;
   --bg-alt: #20232c;
   --bg-alt-strong: #2a2d37;
@@ -100,22 +100,22 @@
   --shadow-lg: 0 28px 80px rgba(8, 8, 12, 0.46);
   --shadow-md: 0 18px 44px rgba(8, 8, 12, 0.28);
   --shadow-accent: 0 20px 48px rgba(123, 47, 247, 0.22);
-  --radius-xl: 28px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --button-height: 44px;
-  --button-height-compact: 38px;
-  --button-height-nav: 40px;
-  --button-min-width: 128px;
-  --button-min-width-wide: 152px;
-  --button-min-width-compact: 104px;
-  --button-min-width-nav: 118px;
-  --button-padding-x: 18px;
-  --button-padding-x-compact: 14px;
-  --button-padding-x-nav: 16px;
-  --button-gap: 10px;
-  --button-gap-tight: 8px;
-  --button-gap-loose: 12px;
+  --radius-xl: 1.75rem;
+  --radius-lg: 1.25rem;
+  --radius-md: 0.875rem;
+  --button-height: 2.75rem;
+  --button-height-compact: 2.375rem;
+  --button-height-nav: 2.5rem;
+  --button-min-width: 8rem;
+  --button-min-width-wide: 9.5rem;
+  --button-min-width-compact: 6.5rem;
+  --button-min-width-nav: 7.375rem;
+  --button-padding-x: 1.125rem;
+  --button-padding-x-compact: 0.875rem;
+  --button-padding-x-nav: 1rem;
+  --button-gap: 0.625rem;
+  --button-gap-tight: 0.5rem;
+  --button-gap-loose: 0.75rem;
   --font-body: "Aptos", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;
   --font-display: "Aptos Display", "Bahnschrift", "Segoe UI Variable Display", sans-serif;
 }
@@ -661,13 +661,13 @@ h4 { letter-spacing: -0.01em; }
 
 @media (max-width: 1100px) {
   :root {
-    --page-gutter: 24px;
+    --page-gutter: 1.5rem;
   }
 }
 
 @media (max-width: 780px) {
   :root {
-    --global-header-height: 76px;
+    --global-header-height: 4.75rem;
     --page-gutter: var(--page-gutter-compact);
   }
 

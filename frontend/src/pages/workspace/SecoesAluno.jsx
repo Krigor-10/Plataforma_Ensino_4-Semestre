@@ -715,24 +715,49 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
         </ul>
       )}
 
-      {avaliacaoEmExecucao ? (
+      {avaliacaoEmExecucao ? (() => {
+        const corrigida = resultadoTentativa ? Number(resultadoTentativa.statusTentativa) === 3 : false;
+        const porcentagem =
+          resultadoTentativa && Number(resultadoTentativa.notaMaxima) > 0
+            ? (Number(resultadoTentativa.notaBruta) / Number(resultadoTentativa.notaMaxima)) * 100
+            : 0;
+        const tentativasUsadas = (avaliacaoEmExecucao.tentativasRealizadas || 0) + 1;
+        const tentativasPermitidas = avaliacaoEmExecucao.tentativasPermitidas || 1;
+        const podeRefazer = tentativasUsadas < tentativasPermitidas;
+
+        return (
         <Modal
           className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : undefined}
           onFechar={fecharExecucaoAvaliacao}
           titulo={avaliacaoEmExecucao.titulo}
+          rodape={
+            resultadoTentativa ? (
+              <footer className="modal-rodape">
+                <Botao
+                  onClick={fecharExecucaoAvaliacao}
+                  style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}
+                  type="button"
+                  variante="fantasma"
+                >
+                  <TbArrowLeft aria-hidden="true" size={16} /> Voltar as avaliacoes
+                </Botao>
+                {podeRefazer ? (
+                  <Botao
+                    onClick={refazerAvaliacao}
+                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    type="button"
+                    variante="secundario"
+                  >
+                    <TbRefresh aria-hidden="true" size={16} /> Refazer avaliacao
+                  </Botao>
+                ) : (
+                  <span className="resultado-avaliacao__tentativas">Limite de tentativas atingido</span>
+                )}
+              </footer>
+            ) : null
+          }
         >
           {resultadoTentativa ? (
-            (() => {
-              const corrigida = Number(resultadoTentativa.statusTentativa) === 3;
-              const porcentagem =
-                Number(resultadoTentativa.notaMaxima) > 0
-                  ? (Number(resultadoTentativa.notaBruta) / Number(resultadoTentativa.notaMaxima)) * 100
-                  : 0;
-              const tentativasUsadas = (avaliacaoEmExecucao.tentativasRealizadas || 0) + 1;
-              const tentativasPermitidas = avaliacaoEmExecucao.tentativasPermitidas || 1;
-              const podeRefazer = tentativasUsadas < tentativasPermitidas;
-
-              return (
                 <section
                   aria-labelledby="resultado-avaliacao-titulo"
                   className={`resultado-avaliacao resultado-avaliacao--${corrigida ? "sucesso" : "pendente"}`}
@@ -779,32 +804,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
                       <dd>{tentativasUsadas} de {tentativasPermitidas}</dd>
                     </div>
                   </dl>
-
-                  <footer className="modal-rodape">
-                    <Botao
-                      onClick={fecharExecucaoAvaliacao}
-                      style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}
-                      type="button"
-                      variante="fantasma"
-                    >
-                      <TbArrowLeft aria-hidden="true" size={16} /> Voltar as avaliacoes
-                    </Botao>
-                    {podeRefazer ? (
-                      <Botao
-                        onClick={refazerAvaliacao}
-                        style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                        type="button"
-                        variante="secundario"
-                      >
-                        <TbRefresh aria-hidden="true" size={16} /> Refazer avaliacao
-                      </Botao>
-                    ) : (
-                      <span className="resultado-avaliacao__tentativas">Limite de tentativas atingido</span>
-                    )}
-                  </footer>
                 </section>
-              );
-            })()
           ) : carregandoQuestoes ? (
             <EmptyState message="Carregando questoes da avaliacao." />
           ) : (
@@ -912,7 +912,8 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
             </>
           )}
         </Modal>
-      ) : null}
+        );
+      })() : null}
     </div>
   );
 }

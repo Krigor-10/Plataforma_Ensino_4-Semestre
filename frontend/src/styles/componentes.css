@@ -325,6 +325,37 @@
   border-color: var(--cor-erro);
 }
 
+/* Campo de busca com icone — reaproveitado nas telas de gestao
+   (Alunos, Professores, Coordenadores, Cursos, Turmas, Matriculas)
+   em vez de repetir o mesmo style inline em cada arquivo. */
+.campo-busca {
+  flex-shrink: 0;
+  position: relative;
+  width: min(16.25rem, 100%);
+}
+
+.campo-busca--cabecalho {
+  margin-left: auto;
+}
+
+.campo-busca--compacta {
+  width: min(13.75rem, 100%);
+}
+
+.campo-busca__icone {
+  color: var(--cor-texto-mudo);
+  left: 0.625rem;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.campo-busca .campo__entrada {
+  padding-left: 2rem;
+  width: 100%;
+}
+
 .campo__mensagem-erro {
   font-size: 0.8rem;
   color: var(--cor-erro);
@@ -430,11 +461,20 @@ select.campo__entrada option {
   align-items: center;
   justify-content: flex-end;
   gap: var(--espaco-sm);
-  margin-top: var(--espaco-xl);
+  flex-shrink: 0;
+  padding: var(--espaco-md) var(--espaco-xl) var(--espaco-xl);
+  border-top: 1px solid var(--cor-borda);
 }
 
 /* ------------------------------------------------------------
    MODAL
+   Estrutura real de 3 partes em flex column: cabecalho e rodape
+   sao flex-shrink:0 (nunca rolam), .modal-conteudo e o unico
+   .flex:1 com overflow-y:auto (unico container que rola). O
+   rodape fica fora da area rolavel de proposito — sticky/bleed
+   nao funciona pra isso porque um elemento sticky no fim do fluxo
+   comeca fora da tela e so "gruda" depois que o usuario rola ate
+   ele; only a real DOM separation keeps it visible from scrollTop 0.
    ------------------------------------------------------------ */
 .modal-fundo {
   position: fixed;
@@ -453,14 +493,23 @@ select.campo__entrada option {
   background: var(--cor-fundo-elevado);
   border: 1px solid var(--cor-borda-forte);
   border-radius: var(--raio-xl);
-  padding: var(--espaco-xl);
   width: 100%;
   max-width: 32.5rem;
   max-height: 90dvh;
-  overflow-y: auto;
-  scrollbar-gutter: stable;
   box-shadow: var(--sombra-lg);
   animation: deslizar-cima var(--transicao-normal) ease;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-conteudo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 0 var(--espaco-xl) var(--espaco-xl);
 }
 
 @media (max-width: 480px) {
@@ -470,10 +519,17 @@ select.campo__entrada option {
   }
 
   .modal-caixa {
-    padding: var(--espaco-lg);
     border-radius: var(--raio-xl) var(--raio-xl) 0 0;
     max-width: 100%;
     max-height: 85dvh;
+  }
+
+  .modal-conteudo {
+    padding: 0 var(--espaco-lg) var(--espaco-lg);
+  }
+
+  .modal-rodape {
+    padding: var(--espaco-sm) var(--espaco-lg) var(--espaco-lg);
   }
 }
 
@@ -494,42 +550,30 @@ select.campo__entrada option {
 
 .modal-caixa--certificado {
   max-width: min(720px, 90vw);
-  display: flex;
-  flex-direction: column;
-  padding: 0;
-  overflow: hidden;
 }
 
 .modal-caixa--certificado .modal-cabecalho {
-  margin: 0;
   padding: var(--espaco-md) var(--espaco-lg);
-  position: static;
-  flex-shrink: 0;
+}
+
+.modal-caixa--certificado .modal-conteudo {
+  padding: 0 var(--espaco-lg) var(--espaco-lg);
 }
 
 .modal-caixa--certificado .certificado-modal {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
   margin-bottom: 0;
 }
 
 .modal-caixa--certificado .modal-rodape {
   padding: var(--espaco-md) var(--espaco-lg);
-  flex-shrink: 0;
-  border-top: 1px solid var(--cor-borda);
 }
 
 .modal-cabecalho {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: calc(-1 * var(--espaco-xl)) calc(-1 * var(--espaco-xl)) var(--espaco-lg);
-  padding: var(--espaco-xl) var(--espaco-xl) 0;
-  position: sticky;
-  top: calc(-1 * var(--espaco-xl));
-  z-index: 5;
-  background: var(--cor-fundo-elevado);
+  flex-shrink: 0;
+  padding: var(--espaco-xl) var(--espaco-xl) var(--espaco-lg);
 }
 
 .modal-titulo {
@@ -635,9 +679,7 @@ select.campo__entrada option {
    ------------------------------------------------------------ */
 @media (max-width: 480px) {
   .modal-cabecalho {
-    margin: calc(-1 * var(--espaco-lg)) calc(-1 * var(--espaco-lg)) var(--espaco-md);
-    padding: var(--espaco-lg) var(--espaco-lg) 0;
-    top: calc(-1 * var(--espaco-lg));
+    padding: var(--espaco-lg) var(--espaco-lg) var(--espaco-md);
   }
 
   .modal-titulo {
@@ -827,7 +869,7 @@ select.campo__entrada option {
 
 .sel-usr__painel ul {
   list-style: none;
-  max-height: 200px;
+  max-height: 12.5rem;
   overflow-y: auto;
 }
 
@@ -919,7 +961,7 @@ select.campo__entrada option {
 
 .sel-simples__painel ul {
   list-style: none;
-  max-height: 220px;
+  max-height: 13.75rem;
   overflow-y: auto;
 }
 

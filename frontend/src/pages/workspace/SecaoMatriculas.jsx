@@ -237,18 +237,13 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
           <p className="cabecalho-pagina__subtitulo">Explore o catalogo e acompanhe suas solicitacoes de matricula.</p>
         </div>
         <label className="visualmente-oculto" htmlFor="busca-catalogo-aluno">Buscar curso</label>
-        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
-          <TbSearch
-            aria-hidden="true"
-            size={15}
-            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-          />
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
           <input
             className="campo__entrada"
             id="busca-catalogo-aluno"
             onChange={(event) => setBusca(event.target.value)}
             placeholder="Pesquisar cursos"
-            style={{ paddingLeft: "32px", width: "100%" }}
             type="search"
             value={busca}
           />

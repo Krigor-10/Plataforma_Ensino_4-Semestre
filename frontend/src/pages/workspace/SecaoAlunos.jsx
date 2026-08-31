@@ -146,12 +146,8 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
             {alunos.length} cadastrado{alunos.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
           </p>
         </div>
-        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
-          <TbSearch
-            aria-hidden="true"
-            size={15}
-            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-          />
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
           <label className="visualmente-oculto" htmlFor="busca-alunos">Buscar aluno</label>
           <input
             className="campo__entrada"
@@ -161,7 +157,6 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
               setPagina(1);
             }}
             placeholder="Buscar por nome ou e-mail..."
-            style={{ paddingLeft: "32px", width: "100%" }}
             type="search"
             value={busca}
           />
@@ -302,7 +297,17 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
         : null}
 
       {alunoDetalhe ? (
-        <Modal onFechar={() => setAlunoDetalhe(null)} titulo="Detalhes do aluno">
+        <Modal
+          onFechar={() => setAlunoDetalhe(null)}
+          titulo="Detalhes do aluno"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={() => setAlunoDetalhe(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Fechar
+              </Botao>
+            </footer>
+          }
+        >
           <div className="detalhe-usuario__perfil">
             <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
               {iniciaisNome(alunoDetalhe.nome)}
@@ -348,12 +353,6 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
               </ul>
             )}
           </section>
-
-          <footer className="modal-rodape">
-            <Botao onClick={() => setAlunoDetalhe(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Fechar
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
     </div>

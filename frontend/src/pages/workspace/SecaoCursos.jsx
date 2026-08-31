@@ -396,18 +396,13 @@ export function SecaoCursos({
           </p>
         </div>
         <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
-        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
-          <TbSearch
-            aria-hidden="true"
-            size={15}
-            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-          />
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
           <input
             className="campo__entrada"
             id="busca-cursos"
             onChange={(event) => setBuscaCurso(event.target.value)}
             placeholder="Pesquisar cursos"
-            style={{ paddingLeft: "32px", width: "100%" }}
             type="search"
             value={buscaCurso}
           />
@@ -623,8 +618,21 @@ export function SecaoCursos({
       )}
 
       {cursoParaEditar ? (
-        <Modal onFechar={fecharModalEdicao} titulo={`Editar curso - ${cursoParaEditar.titulo}`}>
-          <form className="formulario-modal" onSubmit={salvarEdicaoCurso}>
+        <Modal
+          onFechar={fecharModalEdicao}
+          titulo={`Editar curso - ${cursoParaEditar.titulo}`}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoEdicao} onClick={fecharModalEdicao} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoEdicao} form="form-editar-curso" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoEdicao ? "Salvando..." : "Salvar alteracoes"}
+              </Botao>
+            </footer>
+          }
+        >
+          <form className="formulario-modal" id="form-editar-curso" onSubmit={salvarEdicaoCurso}>
             <div className="campo">
               <label className="campo__rotulo" htmlFor="curso-titulo">Titulo *</label>
               <input className="campo__entrada" disabled={salvandoEdicao} id="curso-titulo" maxLength={150} name="titulo" onChange={atualizarCampoEdicao} value={dadosEdicaoCurso.titulo} />
@@ -639,21 +647,25 @@ export function SecaoCursos({
             </div>
 
             {mensagemEdicao.message ? <InlineMessage tone={mensagemEdicao.tone}>{mensagemEdicao.message}</InlineMessage> : null}
-
-            <footer className="modal-rodape">
-              <Botao disabled={salvandoEdicao} onClick={fecharModalEdicao} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvandoEdicao} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvandoEdicao ? "Salvando..." : "Salvar alteracoes"}
-              </Botao>
-            </footer>
           </form>
         </Modal>
       ) : null}
 
       {cursoParaImagem ? (
-        <Modal onFechar={fecharModalImagem} titulo={`Foto de capa - ${cursoParaImagem.titulo}`}>
+        <Modal
+          onFechar={fecharModalImagem}
+          titulo={`Foto de capa - ${cursoParaImagem.titulo}`}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={enviandoImagem} onClick={fecharModalImagem} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={enviandoImagem || !arquivoImagemSelecionado} onClick={enviarImagemCurso} type="button" variante="primario">
+                {enviandoImagem ? "Enviando..." : "Salvar"}
+              </Botao>
+            </footer>
+          }
+        >
           <div className="campo">
             <label className="campo__rotulo" htmlFor="curso-imagem">Imagem *</label>
             <input
@@ -671,15 +683,6 @@ export function SecaoCursos({
           ) : null}
 
           {mensagemImagem.message ? <InlineMessage tone={mensagemImagem.tone}>{mensagemImagem.message}</InlineMessage> : null}
-
-          <footer className="modal-rodape">
-            <Botao disabled={enviandoImagem} onClick={fecharModalImagem} type="button" variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={enviandoImagem || !arquivoImagemSelecionado} onClick={enviarImagemCurso} type="button" variante="primario">
-              {enviandoImagem ? "Enviando..." : "Salvar"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
     </div>

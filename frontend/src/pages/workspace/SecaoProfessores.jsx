@@ -328,12 +328,8 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
           <h2 className="cabecalho-pagina__titulo">Professores</h2>
           <p className="cabecalho-pagina__subtitulo">{professores.length} cadastrado{professores.length === 1 ? "" : "s"}</p>
         </div>
-        <div style={{ flexShrink: 0, marginLeft: "auto", position: "relative", width: "260px" }}>
-          <TbSearch
-            aria-hidden="true"
-            size={15}
-            style={{ color: "var(--cor-texto-mudo)", left: "10px", pointerEvents: "none", position: "absolute", top: "50%", transform: "translateY(-50%)" }}
-          />
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
           <label className="visualmente-oculto" htmlFor="busca-professores">Buscar professor</label>
           <input
             className="campo__entrada"
@@ -343,7 +339,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               setPagina(1);
             }}
             placeholder="Buscar por nome, e-mail ou especialidade..."
-            style={{ paddingLeft: "32px", width: "100%" }}
             type="search"
             value={busca}
           />
@@ -482,7 +477,17 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         : null}
 
       {professorDetalhe ? (
-        <Modal onFechar={() => setProfessorDetalhe(null)} titulo="Detalhes do professor">
+        <Modal
+          onFechar={() => setProfessorDetalhe(null)}
+          titulo="Detalhes do professor"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao onClick={() => setProfessorDetalhe(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Fechar
+              </Botao>
+            </footer>
+          }
+        >
           <div className="detalhe-usuario__perfil">
             <div aria-hidden="true" className="topbar__avatar detalhe-usuario__avatar">
               {iniciaisNome(professorDetalhe.nome)}
@@ -534,47 +539,59 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               </ul>
             )}
           </section>
-
-          <footer className="modal-rodape">
-            <Botao onClick={() => setProfessorDetalhe(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Fechar
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {professorParaExcluir ? (
-        <Modal onFechar={() => setProfessorParaExcluir(null)} titulo="Excluir professor">
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: "var(--espaco-xl)" }}>
+        <Modal
+          onFechar={() => setProfessorParaExcluir(null)}
+          titulo="Excluir professor"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={() => setProfessorParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="primario">
+                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir o professor <strong>{professorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
-          <footer className="modal-rodape">
-            <Botao disabled={salvando} onClick={() => setProfessorParaExcluir(null)} variante="perigo">
-              <TbX aria-hidden="true" size={15} /> Cancelar
-            </Botao>
-            <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="primario">
-              {salvando ? "Excluindo..." : "Confirmar exclusao"}
-            </Botao>
-          </footer>
         </Modal>
       ) : null}
 
       {formularioAberto ? (
-        <Modal onFechar={fecharFormulario} titulo={professorEmEdicaoId ? "Editar professor" : "Cadastrar professor"}>
-          <form className="formulario-modal" onSubmit={salvarProfessor}>
+        <Modal
+          onFechar={fecharFormulario}
+          titulo={professorEmEdicaoId ? "Editar professor" : "Cadastrar professor"}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando} form="form-professor" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : professorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar professor"}
+              </Botao>
+            </footer>
+          }
+        >
+          <form className="formulario-modal" id="form-professor" onSubmit={salvarProfessor}>
             <div className="formulario-perfil__grade">
               <div className="campo formulario-perfil__campo--largo">
                 <label className="campo__rotulo" htmlFor="professor-nome">Nome completo *</label>
                 <input autoComplete="name" className="campo__entrada" disabled={salvando} id="professor-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
               </div>
+              <div className="campo formulario-perfil__campo--largo">
+                <label className="campo__rotulo" htmlFor="professor-cpf">CPF *</label>
+                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+              </div>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="professor-email">E-mail *</label>
                 <input autoComplete="email" className="campo__entrada" disabled={salvando} id="professor-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-cpf">CPF *</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
               </div>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="professor-telefone">Telefone *</label>
@@ -628,15 +645,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : professorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar professor"}
-              </Botao>
-            </footer>
           </form>
         </Modal>
       ) : null}
