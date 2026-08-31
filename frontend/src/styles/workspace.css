@@ -3998,8 +3998,8 @@
 
 @media (max-width: 600px) {
   .carrossel-cursos__seta {
-    width: 30px;
-    height: 30px;
+    width: 44px;
+    height: 44px;
     font-size: 0.85rem;
   }
 }
@@ -4466,6 +4466,13 @@
 .paginacao__pagina:hover {
   background: var(--cor-fundo-elevado);
   color: var(--cor-texto-forte);
+}
+
+@media (max-width: 768px) {
+  .paginacao__pagina {
+    min-width: 44px;
+    height: 44px;
+  }
 }
 
 .paginacao__pagina--ativa {
@@ -5653,6 +5660,172 @@
   }
 }
 
+/* ------------------------------------------------------------
+   RESULTADO DA AVALIACAO — tela pos-envio do quiz (aluno)
+   Padrao visual de referencia: modal da Avaliacao Final do
+   prototipo (quiz-overlay/quiz-resultado) — icone, titulo,
+   barra de aproveitamento, grade de notas, rodape com acoes.
+   Adaptado ao nosso modelo de dados: nao ha nota minima de
+   aprovacao por avaliacao, entao o tom reflete se a correcao ja
+   terminou (sucesso) ou se ha questoes dissertativas aguardando
+   o professor (pendente), em vez de aprovado/reprovado.
+   Segue o padrao de rodape fixo ja usado em .modal-caixa--certificado:
+   cabecalho e rodape ficam fora do fluxo que rola.
+   ------------------------------------------------------------ */
+.modal-caixa--resultado-avaliacao {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modal-caixa--resultado-avaliacao .modal-cabecalho {
+  margin: 0;
+  padding: var(--espaco-lg) var(--espaco-xl);
+  position: static;
+  flex-shrink: 0;
+}
+
+.modal-caixa--resultado-avaliacao .resultado-avaliacao {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--espaco-xl) var(--espaco-lg);
+}
+
+.modal-caixa--resultado-avaliacao .modal-rodape {
+  margin: 0;
+  padding: var(--espaco-md) var(--espaco-xl);
+  flex-shrink: 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.resultado-avaliacao {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-lg);
+  text-align: center;
+}
+
+.resultado-avaliacao__icone {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  font-size: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.resultado-avaliacao--sucesso .resultado-avaliacao__icone {
+  background: var(--cor-sucesso);
+}
+
+.resultado-avaliacao--pendente .resultado-avaliacao__icone {
+  background: var(--cor-aviso);
+}
+
+.resultado-avaliacao__titulo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.resultado-avaliacao__descricao {
+  font-size: 0.92rem;
+  color: var(--cor-texto-suave);
+  max-width: 30rem;
+}
+
+.resultado-avaliacao__barra-wrap {
+  width: 100%;
+  max-width: 22.5rem;
+  height: 0.625rem;
+  background: var(--cor-borda);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.resultado-avaliacao__barra {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--cor-marca);
+  transition: width 0.6s ease;
+}
+
+.resultado-avaliacao--sucesso .resultado-avaliacao__barra {
+  background: var(--cor-sucesso);
+}
+
+.resultado-avaliacao--pendente .resultado-avaliacao__barra {
+  background: var(--cor-aviso);
+}
+
+.resultado-avaliacao__porcentagem {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--cor-texto-forte);
+}
+
+.resultado-avaliacao__notas {
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-md);
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.resultado-avaliacao__nota-item {
+  border-right: 1px solid var(--cor-borda-forte);
+  flex: 1;
+  min-width: 8rem;
+  padding: var(--espaco-sm) var(--espaco-md);
+  text-align: center;
+}
+
+.resultado-avaliacao__nota-item:last-child {
+  border-right: none;
+}
+
+.resultado-avaliacao__nota-item dt {
+  color: var(--cor-texto-suave);
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.resultado-avaliacao__nota-item dd {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--cor-texto-forte);
+}
+
+.resultado-avaliacao__tentativas {
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+@media (max-width: 768px) {
+  .resultado-avaliacao__notas {
+    flex-direction: column;
+  }
+
+  .resultado-avaliacao__nota-item {
+    border-right: none;
+    border-bottom: 1px solid var(--cor-borda-forte);
+  }
+
+  .resultado-avaliacao__nota-item:last-child {
+    border-bottom: none;
+  }
+}
+
 /* ============================================================
    ETAPA 6 — Meus cursos (trilha/progresso), Matriculas,
    Certificados, Perfil
@@ -6500,9 +6673,21 @@
    e o modal inteiro mudava de altura (e de posicao vertical, ja que
    fica centralizado) a cada troca de aba. O valor cobre a aba mais
    alta e previsivel (Editar dados), entao as abas mais curtas passam
-   a ocupar o mesmo espaco em vez de deixar o modal "encolher". */
+   a ocupar o mesmo espaco em vez de deixar o modal "encolher". Como
+   as abas mais curtas nao preenchem essa altura, o conteudo e
+   centralizado verticalmente (ver .painel-secao__conteudo abaixo) em
+   vez de ficar colado no topo com um vao vazio no rodape. */
 .modal-caixa--perfil .painel-secao {
   min-height: 45rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-caixa--perfil .painel-secao__conteudo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* A lista de cursos aprovados (aba Informacoes) nao tem limite proprio

@@ -489,7 +489,7 @@ select.campo__entrada option {
 }
 
 .modal-caixa--largo {
-  max-width: 640px;
+  max-width: min(40rem, 95vw);
 }
 
 .modal-caixa--certificado {

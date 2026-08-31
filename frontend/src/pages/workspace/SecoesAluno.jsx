@@ -14,6 +14,7 @@ import {
   TbPhoto,
   TbPlayerPlay,
   TbExternalLink,
+  TbRefresh,
   TbTrophy
 } from "react-icons/tb";
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
@@ -446,6 +447,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [apoioAberto, setApoioAberto] = useState(true);
+  const [resultadoTentativa, setResultadoTentativa] = useState(null);
 
   const avaliacoesOrdenadas = useMemo(
     () =>
@@ -500,6 +502,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setMensagem({ tone: "", message: "" });
     setIndiceAtual(0);
     setApoioAberto(true);
+    setResultadoTentativa(null);
     setCarregandoQuestoes(true);
 
     try {
@@ -528,6 +531,13 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
     setRespostas({});
     setMensagem({ tone: "", message: "" });
     setIndiceAtual(0);
+    setResultadoTentativa(null);
+  }
+
+  function refazerAvaliacao() {
+    if (avaliacaoEmExecucao) {
+      abrirExecucaoAvaliacao(avaliacaoEmExecucao);
+    }
   }
 
   function irParaQuestao(indice) {
@@ -609,12 +619,8 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
         method: "POST",
         body: JSON.stringify(payload)
       });
-      const nota =
-        Number(tentativa.statusTentativa) === 3
-          ? ` Nota: ${formatScore(tentativa.notaBruta)} de ${formatScore(tentativa.notaMaxima)}.`
-          : " Respostas dissertativas aguardam correcao do professor.";
 
-      setMensagem({ tone: "success", message: `Avaliacao enviada com sucesso.${nota}` });
+      setResultadoTentativa(tentativa);
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -710,8 +716,96 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
       )}
 
       {avaliacaoEmExecucao ? (
-        <Modal onFechar={fecharExecucaoAvaliacao} titulo={avaliacaoEmExecucao.titulo}>
-          {carregandoQuestoes ? (
+        <Modal
+          className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : undefined}
+          onFechar={fecharExecucaoAvaliacao}
+          titulo={avaliacaoEmExecucao.titulo}
+        >
+          {resultadoTentativa ? (
+            (() => {
+              const corrigida = Number(resultadoTentativa.statusTentativa) === 3;
+              const porcentagem =
+                Number(resultadoTentativa.notaMaxima) > 0
+                  ? (Number(resultadoTentativa.notaBruta) / Number(resultadoTentativa.notaMaxima)) * 100
+                  : 0;
+              const tentativasUsadas = (avaliacaoEmExecucao.tentativasRealizadas || 0) + 1;
+              const tentativasPermitidas = avaliacaoEmExecucao.tentativasPermitidas || 1;
+              const podeRefazer = tentativasUsadas < tentativasPermitidas;
+
+              return (
+                <section
+                  aria-labelledby="resultado-avaliacao-titulo"
+                  className={`resultado-avaliacao resultado-avaliacao--${corrigida ? "sucesso" : "pendente"}`}
+                >
+                  <div aria-hidden="true" className="resultado-avaliacao__icone">
+                    {corrigida ? <TbCheck size={30} /> : <TbFileText size={26} />}
+                  </div>
+
+                  <h3 className="resultado-avaliacao__titulo" id="resultado-avaliacao-titulo">
+                    {corrigida ? "Avaliacao corrigida" : "Respostas enviadas"}
+                  </h3>
+
+                  <p className="resultado-avaliacao__descricao">
+                    {corrigida
+                      ? "A correcao automatica foi concluida e sua nota ja esta disponivel abaixo."
+                      : "Suas respostas foram registradas. As questoes dissertativas aguardam correcao do professor — a nota abaixo considera apenas as questoes ja corrigidas automaticamente."}
+                  </p>
+
+                  <div
+                    aria-label={`Aproveitamento: ${formatPercent(porcentagem)}`}
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={Math.round(porcentagem)}
+                    className="resultado-avaliacao__barra-wrap"
+                    role="progressbar"
+                  >
+                    <div className="resultado-avaliacao__barra" style={{ width: `${Math.max(0, Math.min(porcentagem, 100))}%` }} />
+                  </div>
+                  <p className="resultado-avaliacao__porcentagem">{formatPercent(porcentagem)}</p>
+
+                  <dl className="resultado-avaliacao__notas">
+                    <div className="resultado-avaliacao__nota-item">
+                      <dt>Nota obtida</dt>
+                      <dd>
+                        {formatScore(resultadoTentativa.notaBruta)} / {formatScore(resultadoTentativa.notaMaxima)}
+                      </dd>
+                    </div>
+                    <div className="resultado-avaliacao__nota-item">
+                      <dt>Aproveitamento</dt>
+                      <dd>{formatPercent(porcentagem)}</dd>
+                    </div>
+                    <div className="resultado-avaliacao__nota-item">
+                      <dt>Tentativas usadas</dt>
+                      <dd>{tentativasUsadas} de {tentativasPermitidas}</dd>
+                    </div>
+                  </dl>
+
+                  <footer className="modal-rodape">
+                    <Botao
+                      onClick={fecharExecucaoAvaliacao}
+                      style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}
+                      type="button"
+                      variante="fantasma"
+                    >
+                      <TbArrowLeft aria-hidden="true" size={16} /> Voltar as avaliacoes
+                    </Botao>
+                    {podeRefazer ? (
+                      <Botao
+                        onClick={refazerAvaliacao}
+                        style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                        type="button"
+                        variante="secundario"
+                      >
+                        <TbRefresh aria-hidden="true" size={16} /> Refazer avaliacao
+                      </Botao>
+                    ) : (
+                      <span className="resultado-avaliacao__tentativas">Limite de tentativas atingido</span>
+                    )}
+                  </footer>
+                </section>
+              );
+            })()
+          ) : carregandoQuestoes ? (
             <EmptyState message="Carregando questoes da avaliacao." />
           ) : (
             <>

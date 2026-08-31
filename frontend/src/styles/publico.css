@@ -555,16 +555,16 @@
   .cabecalho-publico__link,
   .cabecalho-publico__acao-admin {
     display: flex;
-    padding: 0 8px;
-    height: 38px;
-    min-width: 38px;
+    padding: 0 6px;
+    height: 44px;
+    min-width: 44px;
     justify-content: center;
   }
 
   .cabecalho-publico__nav .botao {
-    min-width: 38px;
-    min-height: 38px;
-    padding-inline: 8px;
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 6px;
     font-size: 0.84rem;
   }
 
