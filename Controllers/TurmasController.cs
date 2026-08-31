@@ -28,71 +28,47 @@ public class TurmasController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        try
+        var turma = new Turma
         {
+            NomeTurma = dto.NomeTurma ?? string.Empty,
+            CursoId = dto.CursoId,
+            ProfessorId = dto.ProfessorId
+        };
 
-            var turma = new Turma
-            {
-                NomeTurma = dto.NomeTurma ?? string.Empty,
-                CursoId = dto.CursoId,
-                ProfessorId = dto.ProfessorId
-            };
+        var turmaCriada = await _turmaService.CriarTurmaAsync(turma);
 
-            var turmaCriada = await _turmaService.CriarTurmaAsync(turma);
-
-            var response = new TurmaResponseDto
-            {
-                Id = turmaCriada.Id,
-                CodigoRegistro = turmaCriada.CodigoRegistro,
-                NomeTurma = turmaCriada.NomeTurma,
-                DataCriacao = turmaCriada.DataCriacao,
-                CursoId = turmaCriada.CursoId,
-                ProfessorId = turmaCriada.ProfessorId
-            };
-
-            return CreatedAtAction(
-                nameof(ObterTurmaPorId),
-                new { id = response.Id },
-                response);
-        }
-        catch (ArgumentException ex)
+        var response = new TurmaResponseDto
         {
-            return BadRequest(new { mensagem = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { mensagem = ex.Message });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { mensagem = ex.Message });
-        }
+            Id = turmaCriada.Id,
+            CodigoRegistro = turmaCriada.CodigoRegistro,
+            NomeTurma = turmaCriada.NomeTurma,
+            DataCriacao = turmaCriada.DataCriacao,
+            CursoId = turmaCriada.CursoId,
+            ProfessorId = turmaCriada.ProfessorId
+        };
 
+        return CreatedAtAction(
+            nameof(ObterTurmaPorId),
+            new { id = response.Id },
+            response);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> ObterTurmaPorId(int id)
     {
-        try
-        {
-            var turma = await _turmaService.ObterTurmaPorIdAsync(id);
+        var turma = await _turmaService.ObterTurmaPorIdAsync(id);
 
-            var response = new TurmaResponseDto
-            {
-                Id = turma.Id,
-                CodigoRegistro = turma.CodigoRegistro,
-                NomeTurma = turma.NomeTurma,
-                DataCriacao = turma.DataCriacao,
-                CursoId = turma.CursoId,
-                ProfessorId = turma.ProfessorId
-            };
-
-            return Ok(response);
-        }
-        catch (KeyNotFoundException ex)
+        var response = new TurmaResponseDto
         {
-            return NotFound(new { mensagem = ex.Message });
-        }
+            Id = turma.Id,
+            CodigoRegistro = turma.CodigoRegistro,
+            NomeTurma = turma.NomeTurma,
+            DataCriacao = turma.DataCriacao,
+            CursoId = turma.CursoId,
+            ProfessorId = turma.ProfessorId
+        };
+
+        return Ok(response);
     }
 
     [HttpGet]
