@@ -684,6 +684,7 @@ export default function WorkspaceScreen({
                 />
               ) : (
                 <SecaoConteudosAluno
+                  avaliacoes={snapshot.avaliacoes}
                   conteudos={snapshot.conteudos}
                   cursos={snapshot.cursos}
                   matriculas={snapshot.matriculas}

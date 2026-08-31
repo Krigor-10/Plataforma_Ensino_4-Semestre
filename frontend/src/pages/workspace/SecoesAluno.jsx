@@ -441,7 +441,7 @@ function SlideProgressoCurso({ detalhe, onNavigate }) {
   );
 }
 
-export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }) {
+function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   const [avaliacaoParaConfirmar, setAvaliacaoParaConfirmar] = useState(null);
   const [avaliacaoEmExecucao, setAvaliacaoEmExecucao] = useState(null);
   const [questoes, setQuestoes] = useState([]);
@@ -453,24 +453,6 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
   const [apoioAberto, setApoioAberto] = useState(true);
   const [resultadoTentativa, setResultadoTentativa] = useState(null);
   const [tempoRestanteSegundos, setTempoRestanteSegundos] = useState(null);
-
-  const avaliacoesOrdenadas = useMemo(
-    () =>
-      [...avaliacoes].sort((avaliacaoA, avaliacaoB) => {
-        const cursoA = avaliacaoA.cursoTitulo || "";
-        const cursoB = avaliacaoB.cursoTitulo || "";
-        const comparacaoCurso = cursoA.localeCompare(cursoB, "pt-BR");
-
-        if (comparacaoCurso !== 0) {
-          return comparacaoCurso;
-        }
-
-        const aberturaA = timestampFromApiDate(avaliacaoA.dataAbertura || avaliacaoA.publicadoEm);
-        const aberturaB = timestampFromApiDate(avaliacaoB.dataAbertura || avaliacaoB.publicadoEm);
-        return aberturaA - aberturaB;
-      }),
-    [avaliacoes]
-  );
 
   useEffect(() => {
     if (!avaliacaoEmExecucao) {
@@ -678,84 +660,8 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
   const questaoAtual = questoes[indiceAtual] || null;
   const ehUltimaQuestao = indiceAtual === questoes.length - 1;
 
-  return (
-    <div className="tela-avaliacoes-aluno">
-      <header className="cabecalho-pagina">
-        <div>
-          <h2 className="cabecalho-pagina__titulo">Realizar avaliacao</h2>
-          <p className="cabecalho-pagina__subtitulo">Somente avaliacoes publicadas para as suas turmas aprovadas aparecem aqui.</p>
-        </div>
-      </header>
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
-
-      {avaliacoesOrdenadas.length === 0 ? (
-        <EmptyState message="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui." />
-      ) : (
-        <ul aria-label="Avaliacoes disponiveis" className="grade-avaliacoes" role="list">
-          {avaliacoesOrdenadas.map((avaliacao) => {
-            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
-
-            return (
-              <li
-                className={`cartao-avaliacao${disponibilidade.podeRealizar ? " cartao-avaliacao--disponivel" : " cartao-avaliacao--bloqueado"}`}
-                key={avaliacao.id}
-              >
-                <div className="cartao-avaliacao__topo">
-                  <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
-                  <StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill>
-                </div>
-                <div className="cartao-avaliacao__corpo">
-                  <dl className="cartao-avaliacao__meta">
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Turma</dt>
-                      <dd>{avaliacao.turmaNome || `Turma #${avaliacao.turmaId}`}</dd>
-                    </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Modulo</dt>
-                      <dd>{avaliacao.moduloTitulo || "-"}</dd>
-                    </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Tipo</dt>
-                      <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
-                    </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Tentativas</dt>
-                      <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
-                    </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? "Ultima nota" : "Questoes"}</dt>
-                      <dd>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? formatScore(avaliacao.ultimaNota) : avaliacao.totalQuestoes || 0}</dd>
-                    </div>
-                  </dl>
-                  <div className="cartao-avaliacao__rodape">
-                    {disponibilidade.podeRealizar ? (
-                      <motion.div
-                        style={{ display: "inline-block" }}
-                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                        whileHover={{ scale: 1.06 }}
-                        whileTap={{ scale: 0.96 }}
-                      >
-                        <Botao
-                          disabled={carregandoQuestoes || enviandoRespostas}
-                          onClick={() => abrirConfirmacaoAvaliacao(avaliacao)}
-                          tamanho="pequeno"
-                          variante="primario"
-                        >
-                          Realizar avaliacao
-                        </Botao>
-                      </motion.div>
-                    ) : (
-                      <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
-                    )}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
+  const modais = (
+    <>
       {avaliacaoParaConfirmar ? (
         <Modal
           onFechar={() => setAvaliacaoParaConfirmar(null)}
@@ -1030,12 +936,135 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
         </Modal>
         );
       })() : null}
+    </>
+  );
+
+  return { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem, modaisExecucaoAvaliacao: modais, setMensagem };
+}
+
+export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }) {
+  const { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
+    onRefresh,
+    onSessionExpired
+  });
+
+  const avaliacoesOrdenadas = useMemo(
+    () =>
+      [...avaliacoes].sort((avaliacaoA, avaliacaoB) => {
+        const cursoA = avaliacaoA.cursoTitulo || "";
+        const cursoB = avaliacaoB.cursoTitulo || "";
+        const comparacaoCurso = cursoA.localeCompare(cursoB, "pt-BR");
+
+        if (comparacaoCurso !== 0) {
+          return comparacaoCurso;
+        }
+
+        const aberturaA = timestampFromApiDate(avaliacaoA.dataAbertura || avaliacaoA.publicadoEm);
+        const aberturaB = timestampFromApiDate(avaliacaoB.dataAbertura || avaliacaoB.publicadoEm);
+        return aberturaA - aberturaB;
+      }),
+    [avaliacoes]
+  );
+
+  return (
+    <div className="tela-avaliacoes-aluno">
+      <header className="cabecalho-pagina">
+        <div>
+          <h2 className="cabecalho-pagina__titulo">Realizar avaliacao</h2>
+          <p className="cabecalho-pagina__subtitulo">Somente avaliacoes publicadas para as suas turmas aprovadas aparecem aqui.</p>
+        </div>
+      </header>
+
+      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
+      {avaliacoesOrdenadas.length === 0 ? (
+        <EmptyState message="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui." />
+      ) : (
+        <ul aria-label="Avaliacoes disponiveis" className="grade-avaliacoes" role="list">
+          {avaliacoesOrdenadas.map((avaliacao) => {
+            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+
+            return (
+              <li
+                className={`cartao-avaliacao${disponibilidade.podeRealizar ? " cartao-avaliacao--disponivel" : " cartao-avaliacao--bloqueado"}`}
+                key={avaliacao.id}
+              >
+                <div className="cartao-avaliacao__topo">
+                  <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
+                  <StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill>
+                </div>
+                <div className="cartao-avaliacao__corpo">
+                  <dl className="cartao-avaliacao__meta">
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Turma</dt>
+                      <dd>{avaliacao.turmaNome || `Turma #${avaliacao.turmaId}`}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Modulo</dt>
+                      <dd>{avaliacao.moduloTitulo || "-"}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Tipo</dt>
+                      <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>Tentativas</dt>
+                      <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
+                    </div>
+                    <div className="cartao-avaliacao__meta-item">
+                      <dt>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? "Ultima nota" : "Questoes"}</dt>
+                      <dd>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? formatScore(avaliacao.ultimaNota) : avaliacao.totalQuestoes || 0}</dd>
+                    </div>
+                  </dl>
+                  <div className="cartao-avaliacao__rodape">
+                    {disponibilidade.podeRealizar ? (
+                      <motion.div
+                        style={{ display: "inline-block" }}
+                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                        whileHover={{ scale: 1.06 }}
+                        whileTap={{ scale: 0.96 }}
+                      >
+                        <Botao
+                          disabled={carregandoQuestoes || enviandoRespostas}
+                          onClick={() => abrirConfirmacaoAvaliacao(avaliacao)}
+                          tamanho="pequeno"
+                          variante="primario"
+                        >
+                          Realizar avaliacao
+                        </Botao>
+                      </motion.div>
+                    ) : (
+                      <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {modaisExecucaoAvaliacao}
     </div>
   );
 }
 
-export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulos = [], onRefresh, onSessionExpired, progressos = {}, turmas = [] }) {
+export function SecaoConteudosAluno({
+  avaliacoes = [],
+  conteudos,
+  cursos = [],
+  matriculas,
+  modulos = [],
+  onRefresh,
+  onSessionExpired,
+  progressos = {},
+  turmas = []
+}) {
   const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
+  const { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem: mensagemQuiz, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
+    onRefresh,
+    onSessionExpired
+  });
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [conteudosConcluidosLocais, setConteudosConcluidosLocais] = useState(() => new Set());
   const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState(null);
@@ -1137,7 +1166,8 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
         titulo: tituloModulo || (moduloId ? `Modulo #${moduloId}` : "Modulo sem titulo"),
         dataCriacao,
         conteudos: [],
-        concluidos: 0
+        concluidos: 0,
+        quizzes: []
       };
 
       if (!modulo.dataCriacao && dataCriacao) {
@@ -1185,6 +1215,24 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
       curso.modulos.set(modulo.id, modulo);
     });
 
+    avaliacoes
+      .filter((avaliacao) => Number(avaliacao.tipoAvaliacao) === 1)
+      .forEach((avaliacao) => {
+        const cursoId = Number(avaliacao.cursoId);
+        const curso = cursosMapeados.get(cursoId);
+        if (!curso) {
+          return;
+        }
+
+        const moduloId = Number(avaliacao.moduloId);
+        const modulo = curso.modulos.get(moduloId);
+        if (!modulo) {
+          return;
+        }
+
+        modulo.quizzes.push(avaliacao);
+      });
+
     return [...cursosMapeados.values()].map((curso) => {
       const modulos = [...curso.modulos.values()]
         .map((modulo) => ({
@@ -1212,6 +1260,7 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
       };
     });
   }, [
+    avaliacoes,
     conteudosConcluidosLocais,
     conteudosOrdenados,
     cursoPorId,
@@ -1322,6 +1371,7 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
       </header>
 
       {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+      {mensagemQuiz.message ? <InlineMessage tone={mensagemQuiz.tone}>{mensagemQuiz.message}</InlineMessage> : null}
 
       {total === 0 ? (
         <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
@@ -1362,11 +1412,15 @@ export function SecaoConteudosAluno({ conteudos, cursos = [], matriculas, modulo
               curso={gruposConteudosPorCurso[slide]}
               key={gruposConteudosPorCurso[slide].id}
               onConcluir={marcarConteudoConcluido}
+              onIniciarQuiz={abrirConfirmacaoAvaliacao}
               onSelecionar={selecionarConteudoAluno}
+              quizIndisponivel={carregandoQuestoes || enviandoRespostas}
             />
           </div>
         </div>
       )}
+
+      {modaisExecucaoAvaliacao}
     </div>
   );
 }
@@ -1379,12 +1433,12 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   5: <TbPhoto aria-hidden="true" size={22} />
 };
 
-function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onSelecionar }) {
-  const modulosComConteudo = curso.modulos.filter((modulo) => modulo.conteudos.length > 0);
+function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onIniciarQuiz, onSelecionar, quizIndisponivel }) {
+  const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
 
   const [modulosAbertos, setModulosAbertos] = useState(() => {
-    const primeiroIncompleto = modulosComConteudo.find((modulo) => modulo.concluidos < modulo.conteudos.length);
-    const alvo = primeiroIncompleto || modulosComConteudo[0];
+    const primeiroIncompleto = modulosVisiveis.find((modulo) => modulo.concluidos < modulo.conteudos.length);
+    const alvo = primeiroIncompleto || modulosVisiveis[0];
     return alvo ? new Set([alvo.id]) : new Set();
   });
 
@@ -1425,12 +1479,12 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
         </div>
       ) : null}
 
-      {modulosComConteudo.length === 0 ? (
+      {modulosVisiveis.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-md)" }}>
-          {modulosComConteudo.map((modulo, indiceModulo) => {
-            const moduloAnterior = modulosComConteudo[indiceModulo - 1];
+          {modulosVisiveis.map((modulo, indiceModulo) => {
+            const moduloAnterior = modulosVisiveis[indiceModulo - 1];
             const bloqueado = Boolean(moduloAnterior) && moduloAnterior.concluidos < moduloAnterior.conteudos.length;
             const estaAberto = !bloqueado && modulosAbertos.has(modulo.id);
             const percentualModulo = modulo.conteudos.length ? Math.round((modulo.concluidos / modulo.conteudos.length) * 100) : 0;
@@ -1564,6 +1618,40 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                   </span>
                                 </div>
                               ) : null}
+                            </li>
+                          );
+                        })}
+                        {modulo.quizzes.map((quiz) => {
+                          const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
+                          const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
+
+                          return (
+                            <li className={`cartao-conteudo${quizConcluido ? " cartao-conteudo--concluido" : ""}`} key={`quiz-${quiz.id}`}>
+                              <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
+                                {quizConcluido ? (
+                                  <span aria-label="Quiz concluido" className="cartao-conteudo__badge-check">
+                                    <TbCheck aria-hidden="true" size={11} />
+                                  </span>
+                                ) : (
+                                  <span aria-hidden="true" className="cartao-conteudo__icone-btn">
+                                    <TbTrophy aria-hidden="true" size={18} />
+                                  </span>
+                                )}
+                                <div className="cartao-conteudo__info">
+                                  <strong className="cartao-conteudo__titulo">{quiz.titulo}</strong>
+                                  <p className="cartao-conteudo__modulo">Quiz - {quiz.totalQuestoes || 0} questao(oes)</p>
+                                </div>
+                                <div className="cartao-conteudo__meta">
+                                  <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
+                                </div>
+                                <div className="cartao-conteudo__acoes">
+                                  {disponibilidadeQuiz.podeRealizar ? (
+                                    <Botao disabled={quizIndisponivel} onClick={() => onIniciarQuiz(quiz)} tamanho="pequeno" variante="fantasma">
+                                      Iniciar quiz
+                                    </Botao>
+                                  ) : null}
+                                </div>
+                              </div>
                             </li>
                           );
                         })}
