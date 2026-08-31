@@ -200,20 +200,23 @@ export function ModalPerfilWorkspace({
       <div className="perfil-grade">
         <aside className="perfil-cartao-identidade">
           <div aria-hidden="true" className="perfil-avatar-grande" style={{ "--cor-perfil": corPorTipo[perfil] ?? "#7b2ff7" }}>
-            <TbUserFilled size={32} />
+            <TbUserFilled size={26} />
           </div>
-          <h3 className="perfil-cartao-identidade__nome">{nomeUsuario}</h3>
-          <Insignia
-            texto={perfil}
-            variante={variantePorTipo[perfil] ?? "neutro"}
-            style={perfil === "Admin" ? { color: "#fff" } : undefined}
-          />
+
+          <div className="perfil-cartao-identidade__principal">
+            <h3 className="perfil-cartao-identidade__nome">{nomeUsuario}</h3>
+            <Insignia
+              texto={perfil}
+              variante={variantePorTipo[perfil] ?? "neutro"}
+              style={perfil === "Admin" ? { color: "#fff" } : undefined}
+            />
+          </div>
 
           <dl className="perfil-cartao-identidade__dados">
             {fatos.map((fato) => (
               <div className="perfil-dado" key={fato.label}>
-                <dt>{fato.label}</dt>
-                <dd>{fato.value}</dd>
+                <dt title={fato.label}>{fato.label}</dt>
+                <dd title={String(fato.value)}>{fato.value}</dd>
               </div>
             ))}
           </dl>
@@ -371,7 +374,7 @@ export function ModalPerfilWorkspace({
                   </button>
                 </div>
 
-                <div className="perfil-seguranca-item" style={{ alignItems: "flex-start", flexDirection: "column", gap: "var(--espaco-md)" }}>
+                <div className="perfil-seguranca-item perfil-seguranca-item--formulario">
                   <div className="perfil-seguranca-item__info">
                     <TbLock aria-hidden="true" size={22} />
                     <div>

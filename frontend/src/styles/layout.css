@@ -1064,6 +1064,12 @@
   gap: 4px;
   margin-bottom: var(--espaco-lg);
   padding: 4px;
+  /* Esmaece as bordas quando ha abas escondidas pelo scroll horizontal —
+     em telas estreitas o conjunto de abas pode nao caber inteiro
+     (ex.: as 3 abas do modal "Meu perfil"), e sem essa pista visual
+     nao ha nenhum sinal de que existe mais conteudo pra rolar. */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
 }
 
 .abas-matriculas__aba {

@@ -455,9 +455,10 @@ select.campo__entrada option {
   border-radius: var(--raio-xl);
   padding: var(--espaco-xl);
   width: 100%;
-  max-width: 520px;
+  max-width: 32.5rem;
   max-height: 90dvh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   box-shadow: var(--sombra-lg);
   animation: deslizar-cima var(--transicao-normal) ease;
 }
@@ -500,7 +501,9 @@ select.campo__entrada option {
 }
 
 .modal-caixa--certificado .modal-cabecalho {
+  margin: 0;
   padding: var(--espaco-md) var(--espaco-lg);
+  position: static;
   flex-shrink: 0;
 }
 
@@ -521,7 +524,12 @@ select.campo__entrada option {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--espaco-lg);
+  margin: calc(-1 * var(--espaco-xl)) calc(-1 * var(--espaco-xl)) var(--espaco-lg);
+  padding: var(--espaco-xl) var(--espaco-xl) 0;
+  position: sticky;
+  top: calc(-1 * var(--espaco-xl));
+  z-index: 5;
+  background: var(--cor-fundo-elevado);
 }
 
 .modal-titulo {
@@ -627,7 +635,9 @@ select.campo__entrada option {
    ------------------------------------------------------------ */
 @media (max-width: 480px) {
   .modal-cabecalho {
-    margin-bottom: var(--espaco-md);
+    margin: calc(-1 * var(--espaco-lg)) calc(-1 * var(--espaco-lg)) var(--espaco-md);
+    padding: var(--espaco-lg) var(--espaco-lg) 0;
+    top: calc(-1 * var(--espaco-lg));
   }
 
   .modal-titulo {
