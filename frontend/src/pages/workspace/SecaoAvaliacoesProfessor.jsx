@@ -68,6 +68,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
+  const [questaoParaExcluir, setQuestaoParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [slideAtual, setSlideAtual] = useState(0);
 
@@ -637,16 +638,12 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     }
   }
 
-  async function excluirQuestao(questao) {
-    if (!avaliacaoAssistenteId) {
+  async function confirmarExclusaoQuestao() {
+    if (!avaliacaoAssistenteId || !questaoParaExcluir) {
       return;
     }
 
-    const exclusaoConfirmada = window.confirm(`Deseja excluir a questao ${questao.ordem}?`);
-    if (!exclusaoConfirmada) {
-      return;
-    }
-
+    const questao = questaoParaExcluir;
     setSalvandoQuestao(true);
     setMensagemQuestoes({ tone: "", message: "" });
 
@@ -656,6 +653,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       if (etapaAtiva === questao.id) {
         setEtapaAtiva("dados");
       }
+      setQuestaoParaExcluir(null);
       await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
       onRefresh();
     } catch (err) {
@@ -665,6 +663,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       }
 
       setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel excluir a questao agora." });
+      setQuestaoParaExcluir(null);
     } finally {
       setSalvandoQuestao(false);
     }
@@ -1017,7 +1016,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               <footer className="criar-avaliacao__rodape">
                 <Botao
                   disabled={salvandoQuestao}
-                  onClick={() => excluirQuestao(questoesAvaliacao.find((item) => item.id === etapaAtiva))}
+                  onClick={() => setQuestaoParaExcluir(questoesAvaliacao.find((item) => item.id === etapaAtiva))}
                   type="button"
                   variante="perigo"
                 >
@@ -1327,6 +1326,27 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               </div>
             </div>
           )}
+        </Modal>
+      ) : null}
+
+      {questaoParaExcluir ? (
+        <Modal
+          onFechar={() => setQuestaoParaExcluir(null)}
+          titulo="Excluir questao"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoQuestao} onClick={() => setQuestaoParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoQuestao} onClick={confirmarExclusaoQuestao} variante="primario">
+                {salvandoQuestao ? "Excluindo..." : "Confirmar exclusao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+            Deseja excluir a questao <strong>{questaoParaExcluir.ordem}</strong>? Esta acao nao pode ser desfeita.
+          </p>
         </Modal>
       ) : null}
     </div>
