@@ -68,6 +68,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
+  const [mensagemExclusaoAvaliacao, setMensagemExclusaoAvaliacao] = useState("");
   const [questaoParaExcluir, setQuestaoParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [slideAtual, setSlideAtual] = useState(0);
@@ -388,6 +389,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     }
 
     setSalvando(true);
+    setMensagemExclusaoAvaliacao("");
 
     try {
       await apiRequest(`/Avaliacoes/${avaliacaoParaExcluir.id}`, { method: "DELETE" });
@@ -404,8 +406,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
         return;
       }
 
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir a avaliacao agora." });
-      setAvaliacaoParaExcluir(null);
+      setMensagemExclusaoAvaliacao(err.message || "Nao foi possivel excluir a avaliacao agora.");
     } finally {
       setSalvando(false);
     }
@@ -748,6 +749,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               onEditar={abrirEdicaoAvaliacao}
               onExcluir={(avaliacao) => {
                 setAvaliacaoParaExcluir(avaliacao);
+                setMensagemExclusaoAvaliacao("");
                 setMenuAbertoId(null);
               }}
               onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
@@ -770,6 +772,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
               <Botao
                 onClick={() => {
                   setAvaliacaoParaExcluir(avaliacaoDetalhe);
+                  setMensagemExclusaoAvaliacao("");
                   fecharDetalheAvaliacao();
                 }}
                 style={{ alignItems: "center", display: "flex", gap: "6px" }}
@@ -978,9 +981,10 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
             </footer>
           }
         >
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: mensagemExclusaoAvaliacao ? "var(--espaco-md)" : 0 }}>
             Deseja excluir a avaliacao <strong>{avaliacaoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
+          {mensagemExclusaoAvaliacao ? <InlineMessage tone="error">{mensagemExclusaoAvaliacao}</InlineMessage> : null}
         </Modal>
       ) : null}
 

@@ -156,6 +156,13 @@ public class AvaliacaoService : IAvaliacaoService
     {
         var avaliacao = await ObterAvaliacaoPorProfessorAsync(id, professorId);
 
+        var possuiTentativas = await _context.TentativasAvaliacao.AnyAsync(tentativa => tentativa.AvaliacaoId == id);
+        if (possuiTentativas)
+        {
+            throw new InvalidOperationException(
+                "Esta avaliacao ja possui tentativas de alunos registradas e nao pode ser excluida.");
+        }
+
         _context.Avaliacoes.Remove(avaliacao);
         await _context.SaveChangesAsync();
     }
