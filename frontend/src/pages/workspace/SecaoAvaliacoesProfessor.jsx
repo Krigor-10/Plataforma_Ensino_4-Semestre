@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbDotsVertical, TbPencil, TbPlus, TbTrophy, TbX } from "react-icons/tb";
+import { AnimatePresence, motion } from "framer-motion";
+import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbTrophy, TbX } from "react-icons/tb";
 import { MdDelete, MdSave } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
@@ -1457,71 +1457,139 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   );
 }
 
-/* Avaliacoes pertencem diretamente ao curso (via TurmaId) - lista plana, sem
-   passar por modulos/conteudos (avaliacoesDoCursoAtivo ja filtra por turma).
-   O card do curso (GradeCursosProfessor) continua sendo a porta de entrada;
-   isto so desenha o conteudo depois que um curso ja foi acessado, reaproveitando
-   o padrao visual dos itens de conteudo dentro de um modulo (atividades-curso__*)
-   - ver SecaoConteudosProfessor.jsx para o padrao original. */
+/* Avaliacoes pertencem diretamente ao curso (via TurmaId) - avaliacoesDoCursoAtivo
+   ja filtra por turma, sem passar por modulos/conteudos. O card do curso
+   (GradeCursosProfessor) continua sendo a porta de entrada; isto so desenha o
+   conteudo depois que um curso ja foi acessado. Cada avaliacao vira seu proprio
+   accordion (mesmo padrao visual/interacao do cabecalho de modulo em
+   SecaoConteudosProfessor.jsx), com so uma aberta por vez; o menu "..." (Ver
+   detalhes/Editar/Excluir) fica ao lado do cabecalho, fora do botao de toggle. */
 function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
+  const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
+
   if (avaliacoes.length === 0) {
     return <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para este curso ainda.</p>;
   }
 
+  function alternarAvaliacao(avaliacaoId) {
+    setAvaliacaoAbertaId((atual) => (atual === avaliacaoId ? null : avaliacaoId));
+  }
+
   return (
-    <ul aria-label="Avaliacoes do curso" className="conteudos-modulo__lista atividades-curso__lista" role="list">
-      {avaliacoes.map((avaliacao) => (
-        <li className="atividades-curso__item" key={avaliacao.id}>
-          <div className="atividades-curso__linha">
-            <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-              <TbTrophy aria-hidden="true" size="1.5rem" />
-            </span>
-            <div className="atividades-curso__corpo">
-              <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
-              <p className="atividades-curso__meta">
-                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
-                <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                <span>Media {formatGrade(mediaNotaPorAvaliacaoId.get(avaliacao.id))}</span>
-              </p>
-            </div>
-            <div className="atividades-curso__acoes menu-contexto">
-              <button
-                aria-expanded={menuAbertoId === avaliacao.id}
-                aria-haspopup="true"
-                aria-label={`Opcoes para ${avaliacao.titulo}`}
-                className="menu-contexto__botao"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleMenu(avaliacao.id);
-                }}
-                type="button"
-              >
-                <TbDotsVertical aria-hidden="true" size={18} />
-              </button>
-              {menuAbertoId === avaliacao.id ? (
-                <ul className="menu-contexto__lista">
-                  <li>
-                    <button onClick={() => onVerDetalhes(avaliacao)} type="button">
-                      Ver detalhes
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => onEditar(avaliacao)} type="button">
-                      Editar
-                    </button>
-                  </li>
-                  <li>
-                    <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
-                      Excluir
-                    </button>
-                  </li>
-                </ul>
+    <div className="atividades-curso__lista-modulos">
+      {avaliacoes.map((avaliacao, indice) => {
+        const aberta = avaliacaoAbertaId === avaliacao.id;
+        const idDetalhe = `avaliacao-detalhe-${avaliacao.id}`;
+
+        return (
+          <section className="conteudos-modulo" key={avaliacao.id}>
+            <header className="conteudos-modulo__cabecalho">
+              <h3 className="conteudos-modulo__cabecalho-wrapper">
+                <button
+                  aria-controls={idDetalhe}
+                  aria-expanded={aberta}
+                  className="conteudos-modulo__toggle"
+                  onClick={() => alternarAvaliacao(avaliacao.id)}
+                  type="button"
+                >
+                  <div className="conteudos-modulo__info">
+                    <span aria-hidden="true" className="conteudos-modulo__icone">
+                      <TbTrophy size="1.4rem" />
+                    </span>
+                    <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
+                    <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
+                    <span className="conteudos-modulo__contagem">
+                      {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"} · {normalizePublicationStatus(avaliacao.statusPublicacao)}
+                    </span>
+                  </div>
+                  <TbChevronDown
+                    aria-hidden="true"
+                    className={`conteudos-modulo__chevron${aberta ? " conteudos-modulo__chevron--aberto" : ""}`}
+                    size="1.1rem"
+                  />
+                </button>
+              </h3>
+
+              <div className="menu-contexto">
+                <button
+                  aria-expanded={menuAbertoId === avaliacao.id}
+                  aria-haspopup="true"
+                  aria-label={`Opcoes para ${avaliacao.titulo}`}
+                  className="menu-contexto__botao"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleMenu(avaliacao.id);
+                  }}
+                  type="button"
+                >
+                  <TbDotsVertical aria-hidden="true" size={18} />
+                </button>
+                {menuAbertoId === avaliacao.id ? (
+                  <ul className="menu-contexto__lista">
+                    <li>
+                      <button onClick={() => onVerDetalhes(avaliacao)} type="button">
+                        Ver detalhes
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => onEditar(avaliacao)} type="button">
+                        Editar
+                      </button>
+                    </li>
+                    <li>
+                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
+                        Excluir
+                      </button>
+                    </li>
+                  </ul>
+                ) : null}
+              </div>
+            </header>
+
+            <AnimatePresence initial={false}>
+              {aberta ? (
+                <motion.div
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  id={idDetalhe}
+                  initial={{ height: 0, opacity: 0 }}
+                  key={`detalhe-avaliacao-${avaliacao.id}`}
+                  style={{ overflow: "hidden" }}
+                  transition={{ duration: 0.24, ease: "easeInOut" }}
+                >
+                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                    <div className="lista-detalhes__item">
+                      <dt>Status</dt>
+                      <dd><Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} /></dd>
+                    </div>
+                    <div className="lista-detalhes__item">
+                      <dt>Nota media</dt>
+                      <dd>{formatGrade(mediaNotaPorAvaliacaoId.get(avaliacao.id))}</dd>
+                    </div>
+                    <div className="lista-detalhes__item">
+                      <dt>Questoes</dt>
+                      <dd>{avaliacao.totalQuestoes || 0}</dd>
+                    </div>
+                    <div className="lista-detalhes__item">
+                      <dt>Tentativas permitidas</dt>
+                      <dd>{avaliacao.tentativasPermitidas}</dd>
+                    </div>
+                    <div className="lista-detalhes__item">
+                      <dt>Tempo limite</dt>
+                      <dd>{avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"}</dd>
+                    </div>
+                    <div className="lista-detalhes__item">
+                      <dt>Nota maxima</dt>
+                      <dd>{formatDecimal(avaliacao.notaMaxima)}</dd>
+                    </div>
+                  </dl>
+                </motion.div>
               ) : null}
-            </div>
-          </div>
-        </li>
-      ))}
-    </ul>
+            </AnimatePresence>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

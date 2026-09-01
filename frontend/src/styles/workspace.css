@@ -3418,6 +3418,33 @@
   justify-content: space-between;
 }
 
+/* Variante compacta e horizontal - usada no accordion de avaliacoes dentro do
+   curso (SecaoAvaliacoesProfessor.jsx), onde os detalhes ficam lado a lado em
+   vez de empilhados como na modal "Detalhes da avaliacao" (.lista-detalhes
+   padrao continua vertical la, sem alteracao). */
+.lista-detalhes--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 1.25rem;
+  row-gap: 0.35rem;
+}
+
+.lista-detalhes--inline .lista-detalhes__item {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding-bottom: 0;
+  border-bottom: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 30rem) {
+  .lista-detalhes--inline .lista-detalhes__item {
+    white-space: normal;
+  }
+}
+
 .lista-detalhes__item--com-acao > div {
   display: flex;
   flex-direction: column;
@@ -4114,6 +4141,15 @@
 .atividades-curso__lista-modulos {
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* So na tela de Avaliacoes: separacao entre o cabecalho da pagina (titulo do
+   curso + botao Nova avaliacao) e a lista de avaliacoes. Escopado a
+   .tela-avaliacoes pra nao alterar o mesmo espaco na Trilha de Conteudos, que
+   reaproveita a mesma .atividades-curso__lista-modulos. */
+.tela-avaliacoes .atividades-curso__lista-modulos {
+  margin-top: var(--espaco-xl);
 }
 
 .atividades-curso__lista {
@@ -4122,6 +4158,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
 }
 
 .atividades-curso__item {
@@ -4176,8 +4213,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   flex-shrink: 0;
   background: var(--cor-fundo-elevado);
   border: 1px solid var(--cor-borda);
@@ -4358,7 +4395,7 @@
   gap: 0.3rem;
   color: var(--cor-texto-suave);
   font-size: 0.85rem;
-  padding-left: calc(2.5rem + var(--espaco-md));
+  padding-left: calc(2.75rem + var(--espaco-md));
 }
 
 @media (max-width: 30rem) {
@@ -4368,7 +4405,7 @@
 
   .atividades-curso__acoes {
     width: 100%;
-    padding-left: calc(2.5rem + var(--espaco-md));
+    padding-left: calc(2.75rem + var(--espaco-md));
   }
 }
 

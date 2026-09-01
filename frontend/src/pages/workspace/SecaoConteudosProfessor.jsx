@@ -58,11 +58,11 @@ const ICONE_TIPO_CONTEUDO_GRANDE = {
 };
 
 const ICONE_TIPO_CONTEUDO_LINHA = {
-  1: <TbFileText aria-hidden="true" size="1.5rem" />,
-  2: <TbFile aria-hidden="true" size="1.5rem" />,
-  3: <TbPlayerPlay aria-hidden="true" size="1.5rem" />,
-  4: <TbExternalLink aria-hidden="true" size="1.5rem" />,
-  5: <TbPhoto aria-hidden="true" size="1.5rem" />
+  1: <TbFileText aria-hidden="true" size="1.75rem" />,
+  2: <TbFile aria-hidden="true" size="1.75rem" />,
+  3: <TbPlayerPlay aria-hidden="true" size="1.75rem" />,
+  4: <TbExternalLink aria-hidden="true" size="1.75rem" />,
+  5: <TbPhoto aria-hidden="true" size="1.75rem" />
 };
 
 const ACEITA_ARQUIVO_POR_TIPO = {
@@ -844,7 +844,7 @@ function TrilhaConteudosProfessor({
                     >
                       <div className="conteudos-modulo__info">
                         <span aria-hidden="true" className="conteudos-modulo__icone">
-                          <TbLayoutGrid size="1.15rem" />
+                          <TbLayoutGrid size="1.4rem" />
                         </span>
                         <span className="conteudos-modulo__eyebrow">Modulo {String(indiceModulo + 1).padStart(2, "0")}</span>
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
@@ -900,7 +900,7 @@ function TrilhaConteudosProfessor({
                                   tabIndex={0}
                                 >
                                   <span aria-hidden="true" className="atividades-curso__icone">
-                                    {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.5rem" />}
+                                    {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
                                   </span>
                                   <div className="atividades-curso__corpo">
                                     <span className="atividades-curso__item-titulo-linha">
@@ -1067,7 +1067,7 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
                   <div className="conteudos-modulo__cabecalho-wrapper">
                     <div className="conteudos-modulo__info">
                       <span aria-hidden="true" className="conteudos-modulo__icone">
-                        <TbLayoutGrid size="1.15rem" />
+                        <TbLayoutGrid size="1.4rem" />
                       </span>
                       <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
                       <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
@@ -1084,7 +1084,7 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
                       <li className="atividades-curso__item" key={conteudo.id}>
                         <div className="atividades-curso__linha">
                           <span aria-hidden="true" className="atividades-curso__icone">
-                            {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.5rem" />}
+                            {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
                           </span>
                           <div className="atividades-curso__corpo">
                             <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
@@ -1099,7 +1099,7 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
                             <li className="atividades-curso__item atividades-curso__item--quiz">
                               <div className="atividades-curso__linha">
                                 <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                  <TbTrophy aria-hidden="true" size="1.5rem" />
+                                  <TbTrophy aria-hidden="true" size="1.75rem" />
                                 </span>
                                 <div className="atividades-curso__corpo">
                                   <strong className="atividades-curso__item-titulo">{quizVinculado.titulo}</strong>
@@ -1116,7 +1116,7 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
                     <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-modulo-${quiz.id}`}>
                       <div className="atividades-curso__linha">
                         <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                          <TbTrophy aria-hidden="true" size="1.5rem" />
+                          <TbTrophy aria-hidden="true" size="1.75rem" />
                         </span>
                         <div className="atividades-curso__corpo">
                           <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
