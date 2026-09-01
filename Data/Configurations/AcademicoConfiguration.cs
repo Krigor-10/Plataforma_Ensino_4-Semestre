@@ -138,3 +138,23 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada");
     }
 }
+
+public sealed class PagamentoConfiguration : IEntityTypeConfiguration<Pagamento>
+{
+    public void Configure(EntityTypeBuilder<Pagamento> builder)
+    {
+        builder
+            .HasOne(p => p.Matricula)
+            .WithMany()
+            .HasForeignKey(p => p.MatriculaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasIndex(p => p.MatriculaId)
+            .IsUnique();
+
+        builder
+            .Property(p => p.Valor)
+            .HasPrecision(10, 2);
+    }
+}

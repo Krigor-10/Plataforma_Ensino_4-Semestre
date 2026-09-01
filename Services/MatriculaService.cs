@@ -348,8 +348,37 @@ public class MatriculaService : IMatriculaService
 
         matricula.AprovarComTurma(turma.Id, turma.CursoId);
         await GarantirCodigoAlunoAsync(aluno);
+        await CriarPagamentoPendenteSeNecessarioAsync(matricula);
 
         return matricula;
+    }
+
+    /// <summary>
+    /// Pagamento simulado: se o curso tiver preco, registra uma cobranca
+    /// pendente vinculada a matricula recem-aprovada. Nao ha integracao com
+    /// gateway externo — o aluno "paga" confirmando via PagamentosController,
+    /// e o registro so existe pra o app nao tratar Curso.Preco como decorativo.
+    /// </summary>
+    private async Task CriarPagamentoPendenteSeNecessarioAsync(Matricula matricula)
+    {
+        var jaTemPagamento = await _context.Pagamentos
+            .AnyAsync(pagamento => pagamento.MatriculaId == matricula.Id);
+        if (jaTemPagamento)
+        {
+            return;
+        }
+
+        var precoCurso = await _context.Cursos
+            .Where(curso => curso.Id == matricula.CursoId)
+            .Select(curso => curso.Preco)
+            .FirstOrDefaultAsync();
+
+        if (precoCurso <= 0)
+        {
+            return;
+        }
+
+        await _context.Pagamentos.AddAsync(Pagamento.CriarPendente(matricula.Id, precoCurso));
     }
 
     private async Task<Turma> ResolverTurmaAutomaticaAsync(Matricula matricula)

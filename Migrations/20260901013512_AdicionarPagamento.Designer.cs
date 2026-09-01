@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PlataformaEnsino.API.Data;
 
@@ -11,9 +12,11 @@ using PlataformaEnsino.API.Data;
 namespace Sistema_Academico_Integrado.Migrations
 {
     [DbContext(typeof(PlataformaContext))]
-    partial class PlataformaContextModelSnapshot : ModelSnapshot
+    [Migration("20260901013512_AdicionarPagamento")]
+    partial class AdicionarPagamento
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -145,9 +148,6 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime?>("AtualizadoEm")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ConteudoDidaticoId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("datetime2");
 
@@ -204,8 +204,6 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ConteudoDidaticoId");
 
                     b.HasIndex("ModuloId");
 
@@ -1261,11 +1259,6 @@ namespace Sistema_Academico_Integrado.Migrations
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Avaliacao", b =>
                 {
-                    b.HasOne("PlataformaEnsino.API.Models.ConteudoDidatico", "ConteudoDidatico")
-                        .WithMany()
-                        .HasForeignKey("ConteudoDidaticoId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("PlataformaEnsino.API.Models.Modulo", "Modulo")
                         .WithMany("Avaliacoes")
                         .HasForeignKey("ModuloId")
@@ -1283,8 +1276,6 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasForeignKey("TurmaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("ConteudoDidatico");
 
                     b.Navigation("Modulo");
 

@@ -8,4 +8,5 @@ const GATEWAY_HOST = Platform.select({
   default: "127.0.0.1"
 });
 
-export const API_BASE_URL = `http://${GATEWAY_HOST}:4000/api/v1`;
+export const GATEWAY_BASE_URL = `http://${GATEWAY_HOST}:4000`;
+export const API_BASE_URL = `${GATEWAY_BASE_URL}/api/v1`;

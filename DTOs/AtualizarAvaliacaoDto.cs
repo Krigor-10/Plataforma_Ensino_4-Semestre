@@ -18,6 +18,8 @@ public class AtualizarAvaliacaoDto
     [Range(1, int.MaxValue)]
     public int ModuloId { get; set; }
 
+    public int? ConteudoDidaticoId { get; set; }
+
     [Required]
     public TipoAvaliacao TipoAvaliacao { get; set; } = TipoAvaliacao.Quiz;
 

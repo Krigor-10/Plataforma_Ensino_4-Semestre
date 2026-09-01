@@ -336,6 +336,10 @@ export function SecaoCursos({
       return;
     }
 
+    if (previewImagem.startsWith("blob:")) {
+      URL.revokeObjectURL(previewImagem);
+    }
+
     setCursoParaImagem(null);
     setArquivoImagemSelecionado(null);
     setPreviewImagem("");
@@ -345,6 +349,10 @@ export function SecaoCursos({
     const arquivo = event.target.files?.[0];
     if (!arquivo) {
       return;
+    }
+
+    if (previewImagem.startsWith("blob:")) {
+      URL.revokeObjectURL(previewImagem);
     }
 
     setArquivoImagemSelecionado(arquivo);

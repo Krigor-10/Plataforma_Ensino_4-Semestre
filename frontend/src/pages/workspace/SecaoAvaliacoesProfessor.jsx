@@ -63,7 +63,7 @@ function toIsoOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefresh, onSessionExpired, solicitacaoNovaAvaliacao = 0, turmas, usuario }) {
+export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, modulos, onRefresh, onSessionExpired, solicitacaoNovaAvaliacao = 0, turmas, usuario }) {
   const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario([], []));
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
@@ -143,6 +143,17 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     return agrupados;
   }, [modulosDoProfessor]);
 
+  const materiaisPorModuloId = useMemo(() => {
+    const agrupados = new Map();
+    conteudos.forEach((material) => {
+      const atuais = agrupados.get(material.moduloId) || [];
+      atuais.push(material);
+      agrupados.set(material.moduloId, atuais);
+    });
+    agrupados.forEach((lista) => lista.sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR")));
+    return agrupados;
+  }, [conteudos]);
+
   useEffect(() => {
     if (avaliacaoAssistenteId || dadosFormulario.turmaId || !turmasDoProfessor.length) {
       return;
@@ -164,21 +175,40 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     return modulosPorCursoId.get(turmaSelecionadaFormulario.cursoId) || [];
   }, [modulosPorCursoId, turmaSelecionadaFormulario]);
 
+  const materiaisDisponiveis = useMemo(
+    () => materiaisPorModuloId.get(Number(dadosFormulario.moduloId)) || [],
+    [dadosFormulario.moduloId, materiaisPorModuloId]
+  );
+
   useEffect(() => {
     if (!turmaSelecionadaFormulario || avaliacaoAssistenteId) {
       return;
     }
 
     if (!modulosDisponiveis.length && dadosFormulario.moduloId) {
-      setDadosFormulario((current) => ({ ...current, moduloId: "" }));
+      setDadosFormulario((current) => ({ ...current, conteudoDidaticoId: "", moduloId: "" }));
       return;
     }
 
     const hasCurrentModule = modulosDisponiveis.some((modulo) => String(modulo.id) === dadosFormulario.moduloId);
     if (!hasCurrentModule && modulosDisponiveis[0]) {
-      setDadosFormulario((current) => ({ ...current, moduloId: String(modulosDisponiveis[0].id) }));
+      setDadosFormulario((current) => ({ ...current, conteudoDidaticoId: "", moduloId: String(modulosDisponiveis[0].id) }));
     }
   }, [avaliacaoAssistenteId, dadosFormulario.moduloId, modulosDisponiveis, turmaSelecionadaFormulario]);
+
+  useEffect(() => {
+    if (!dadosFormulario.conteudoDidaticoId) {
+      return;
+    }
+
+    const materialAindaValido = materiaisDisponiveis.some(
+      (material) => String(material.id) === dadosFormulario.conteudoDidaticoId
+    );
+
+    if (!materialAindaValido) {
+      setDadosFormulario((current) => ({ ...current, conteudoDidaticoId: "" }));
+    }
+  }, [dadosFormulario.conteudoDidaticoId, materiaisDisponiveis]);
 
   useEffect(() => {
     if (solicitacaoNovaAvaliacao > 0) {
@@ -261,6 +291,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
     setDadosFormulario({
       turmaId: String(avaliacao.turmaId),
       moduloId: String(avaliacao.moduloId),
+      conteudoDidaticoId: avaliacao.conteudoDidaticoId ? String(avaliacao.conteudoDidaticoId) : "",
       titulo: avaliacao.titulo || "",
       descricao: avaliacao.descricao || "",
       tipoAvaliacao: String(avaliacao.tipoAvaliacao || 1),
@@ -286,6 +317,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
       descricao: dadosFormulario.descricao.trim(),
       turmaId: Number(dadosFormulario.turmaId),
       moduloId: Number(dadosFormulario.moduloId),
+      conteudoDidaticoId: dadosFormulario.conteudoDidaticoId ? Number(dadosFormulario.conteudoDidaticoId) : null,
       tipoAvaliacao: Number(dadosFormulario.tipoAvaliacao),
       statusPublicacao: Number(dadosFormulario.statusPublicacao),
       dataAbertura: toIsoOrNull(dadosFormulario.dataAbertura),
@@ -1122,6 +1154,28 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, cursos, modulos, onRefres
                       </div>
 
                       <div className="campo">
+                        <label className="campo__rotulo" htmlFor="avaliacao-material">Material (opcional)</label>
+                        <select
+                          className="campo__entrada"
+                          disabled={salvando || !materiaisDisponiveis.length}
+                          id="avaliacao-material"
+                          name="conteudoDidaticoId"
+                          onChange={atualizarCampoFormulario}
+                          value={dadosFormulario.conteudoDidaticoId}
+                        >
+                          <option value="">Nenhum - vale para o modulo inteiro</option>
+                          {materiaisDisponiveis.map((material) => (
+                            <option key={material.id} value={material.id}>
+                              {material.titulo}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="campo__ajuda">
+                          Vincule o quiz a um material especifico pra ele aparecer dentro desse material em Conteudos, em vez de solto no modulo.
+                        </p>
+                      </div>
+
+                      <div className="campo">
                         <label className="campo__rotulo" htmlFor="avaliacao-titulo">Titulo *</label>
                         <input
                           className="campo__entrada"
@@ -1441,6 +1495,7 @@ function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {
   return {
     turmaId: primeiraTurma ? String(primeiraTurma.id) : "",
     moduloId: modulosDaPrimeiraTurma[0] ? String(modulosDaPrimeiraTurma[0].id) : "",
+    conteudoDidaticoId: "",
     titulo: "",
     descricao: "",
     tipoAvaliacao: OPCOES_TIPO_AVALIACAO[0].value,

@@ -87,6 +87,12 @@ public sealed class AvaliacaoConfiguration : IEntityTypeConfiguration<Avaliacao>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
+            .HasOne(a => a.ConteudoDidatico)
+            .WithMany()
+            .HasForeignKey(a => a.ConteudoDidaticoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
             .Property(a => a.NotaMaxima)
             .HasPrecision(6, 2);
 

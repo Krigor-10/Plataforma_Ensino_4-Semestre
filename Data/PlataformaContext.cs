@@ -18,6 +18,7 @@ public class PlataformaContext : DbContext
     public DbSet<Modulo> Modulos { get; set; }
     public DbSet<Turma> Turmas { get; set; }
     public DbSet<Matricula> Matriculas { get; set; }
+    public DbSet<Pagamento> Pagamentos { get; set; }
     public DbSet<ConteudoDidatico> ConteudosDidaticos { get; set; }
     public DbSet<QuestaoBanco> QuestoesBanco { get; set; }
     public DbSet<AlternativaQuestaoBanco> AlternativasQuestoesBanco { get; set; }

@@ -92,6 +92,7 @@ export const EMPTY_SNAPSHOT = {
   turmas: [],
   matriculas: [],
   pendentes: [],
+  pagamentos: [],
   progressos: {
     conteudos: [],
     modulos: [],

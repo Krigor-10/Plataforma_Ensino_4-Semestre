@@ -29,6 +29,7 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(avaliacao => avaliacao.Turma)
             .Include(avaliacao => avaliacao.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
+            .Include(avaliacao => avaliacao.ConteudoDidatico)
             .Include(avaliacao => avaliacao.Questoes)
             .OrderBy(avaliacao => avaliacao.Turma!.NomeTurma)
             .ThenBy(avaliacao => avaliacao.Modulo!.Titulo)
@@ -76,6 +77,7 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(avaliacao => avaliacao.Turma)
             .Include(avaliacao => avaliacao.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
+            .Include(avaliacao => avaliacao.ConteudoDidatico)
             .Include(avaliacao => avaliacao.Questoes)
             .OrderBy(avaliacao => avaliacao.DataAbertura ?? avaliacao.PublicadoEm ?? avaliacao.CriadoEm)
             .ThenBy(avaliacao => avaliacao.Turma!.NomeTurma)
@@ -116,11 +118,13 @@ public class AvaliacaoService : IAvaliacaoService
         var modulo = await ValidarModuloAsync(dto.ModuloId);
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
 
         var avaliacao = new Avaliacao
         {
             TurmaId = turma.Id,
-            ModuloId = modulo.Id
+            ModuloId = modulo.Id,
+            ConteudoDidaticoId = material?.Id
         };
         avaliacao.DefinirAutor(professorId);
 
@@ -141,9 +145,11 @@ public class AvaliacaoService : IAvaliacaoService
         var modulo = await ValidarModuloAsync(dto.ModuloId);
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
 
         avaliacao.TurmaId = turma.Id;
         avaliacao.ModuloId = modulo.Id;
+        avaliacao.ConteudoDidaticoId = material?.Id;
         AplicarDados(avaliacao, dto);
 
         _context.Avaliacoes.Update(avaliacao);
@@ -196,11 +202,6 @@ public class AvaliacaoService : IAvaliacaoService
         _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
         ValidarDadosQuestao(dto);
 
-        var proximaOrdem = await _context.QuestoesPublicadas
-            .Where(questao => questao.AvaliacaoId == avaliacaoId)
-            .Select(questao => (int?)questao.Ordem)
-            .MaxAsync() ?? 0;
-
         var questaoBanco = new QuestaoBanco
         {
             ProfessorAutorId = professorId,
@@ -220,21 +221,47 @@ public class AvaliacaoService : IAvaliacaoService
         await _context.QuestoesBanco.AddAsync(questaoBanco);
         await _context.SaveChangesAsync();
 
-        var questaoPublicada = new QuestaoPublicada
-        {
-            AvaliacaoId = avaliacaoId,
-            QuestaoBancoId = questaoBanco.Id,
-            Ordem = proximaOrdem + 1,
-            ContextoSnapshot = questaoBanco.Contexto,
-            EnunciadoSnapshot = questaoBanco.Enunciado,
-            TipoQuestao = questaoBanco.TipoQuestao,
-            ExplicacaoSnapshot = questaoBanco.ExplicacaoPosResposta,
-            Pontos = decimal.Round(dto.Pontos, 2, MidpointRounding.AwayFromZero),
-            Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas)
-        };
+        const int tentativasMaximas = 3;
+        QuestaoPublicada? questaoPublicada = null;
 
-        await _context.QuestoesPublicadas.AddAsync(questaoPublicada);
-        await _context.SaveChangesAsync();
+        for (var tentativa = 1; tentativa <= tentativasMaximas; tentativa++)
+        {
+            var proximaOrdem = await _context.QuestoesPublicadas
+                .Where(questao => questao.AvaliacaoId == avaliacaoId)
+                .Select(questao => (int?)questao.Ordem)
+                .MaxAsync() ?? 0;
+
+            questaoPublicada = new QuestaoPublicada
+            {
+                AvaliacaoId = avaliacaoId,
+                QuestaoBancoId = questaoBanco.Id,
+                Ordem = proximaOrdem + 1,
+                ContextoSnapshot = questaoBanco.Contexto,
+                EnunciadoSnapshot = questaoBanco.Enunciado,
+                TipoQuestao = questaoBanco.TipoQuestao,
+                ExplicacaoSnapshot = questaoBanco.ExplicacaoPosResposta,
+                Pontos = decimal.Round(dto.Pontos, 2, MidpointRounding.AwayFromZero),
+                Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas)
+            };
+
+            await _context.QuestoesPublicadas.AddAsync(questaoPublicada);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException) when (tentativa < tentativasMaximas)
+            {
+                _context.Entry(questaoPublicada).State = EntityState.Detached;
+                questaoPublicada = null;
+            }
+        }
+
+        if (questaoPublicada is null)
+        {
+            throw new InvalidOperationException("Nao foi possivel definir a ordem da questao agora. Tente novamente.");
+        }
 
         return await _context.QuestoesPublicadas
             .AsNoTracking()
@@ -383,6 +410,7 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(avaliacao => avaliacao.Turma)
             .Include(avaliacao => avaliacao.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
+            .Include(avaliacao => avaliacao.ConteudoDidatico)
             .Include(avaliacao => avaliacao.Questoes)
             .FirstOrDefaultAsync(avaliacao => avaliacao.Id == id);
     }
@@ -397,6 +425,7 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(item => item.Turma)
             .Include(item => item.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
+            .Include(item => item.ConteudoDidatico)
             .Include(item => item.Questoes)
                 .ThenInclude(questao => questao.Alternativas)
             .FirstOrDefaultAsync()
@@ -461,6 +490,32 @@ public class AvaliacaoService : IAvaliacaoService
         {
             throw new InvalidOperationException("O modulo selecionado nao pertence ao mesmo curso da turma informada.");
         }
+    }
+
+    /// <summary>
+    /// Vinculo opcional do quiz a um material especifico do modulo. Prova/Exercicio
+    /// costumam ficar so no nivel do modulo (conteudoDidaticoId null); Quiz pode
+    /// ser preso a um material, mas o material precisa pertencer ao mesmo
+    /// modulo/turma da avaliacao — nao confiamos so no que o frontend manda.
+    /// </summary>
+    private async Task<ConteudoDidatico?> ValidarMaterialAsync(int? conteudoDidaticoId, Turma turma, Modulo modulo)
+    {
+        if (!conteudoDidaticoId.HasValue)
+        {
+            return null;
+        }
+
+        var material = await _context.ConteudosDidaticos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == conteudoDidaticoId.Value)
+            ?? throw new KeyNotFoundException("Material nao encontrado.");
+
+        if (material.ModuloId != modulo.Id || material.TurmaId != turma.Id)
+        {
+            throw new InvalidOperationException("O material informado nao pertence ao modulo/turma da avaliacao.");
+        }
+
+        return material;
     }
 
     private static void AplicarDados(Avaliacao avaliacao, CriarAvaliacaoDto dto)
@@ -686,6 +741,8 @@ public class AvaliacaoService : IAvaliacaoService
             CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
             ModuloId = avaliacao.ModuloId,
             ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,
+            ConteudoDidaticoId = avaliacao.ConteudoDidaticoId,
+            ConteudoDidaticoTitulo = avaliacao.ConteudoDidatico?.Titulo ?? string.Empty,
             TipoAvaliacao = avaliacao.TipoAvaliacao,
             StatusPublicacao = avaliacao.StatusPublicacao,
             DataAbertura = avaliacao.DataAbertura,

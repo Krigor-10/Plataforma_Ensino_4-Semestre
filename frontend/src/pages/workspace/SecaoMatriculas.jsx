@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbClock, TbSearch, TbSend } from "react-icons/tb";
+import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
+import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatDate, formatGrade } from "../../lib/format.js";
+import { formatDate, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
+
+const PAGAMENTO_PENDENTE = 1;
 
 export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onRefresh, onSessionExpired, turmas, usuario }) {
   if (ehAluno) {
@@ -43,26 +46,38 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    data/courseCovers.js) - mapeamento por titulo do curso pra um asset
    estatico, com fallback generico, garantindo que as tres telas mostrem
    sempre a mesma imagem por curso. */
-function CartaoCursoMatricula({ curso, matricula, onCancelar, onReabrir, onSolicitar, processando, solicitando, temTurmaDisponivel = false }) {
+export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando, temTurmaDisponivel = false }) {
+  const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
+  const progresso = Math.round(Math.max(0, Math.min(matricula?.progresso ?? 0, 100)));
+  const rotuloEntrada = progresso >= 100 ? "Revisar curso" : progresso > 0 ? "Continuar curso" : "Iniciar curso";
+
   return (
     <li className="catalogo-card">
       <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
       <div className="catalogo-card__corpo">
         <div className="meus-cursos__titulo-linha">
           <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
-          {matricula ? <Insignia texto={matricula.status} /> : null}
+          {matricula && !compacto ? <Insignia texto={matricula.status} /> : null}
         </div>
-        <p className="catalogo-card__turma">{curso.descricao}</p>
+        {!compacto ? <p className="catalogo-card__turma">{curso.descricao}</p> : null}
 
         {matricula ? (
           <>
-            <p className="catalogo-card__data">
-              <TbClock aria-hidden="true" size={13} />
-              Solicitada em {formatDate(matricula.dataSolicitacao)}
-            </p>
+            {!compacto ? (
+              <p className="catalogo-card__data">
+                <TbClock aria-hidden="true" size={13} />
+                Solicitada em {formatDate(matricula.dataSolicitacao)}
+              </p>
+            ) : null}
+            {temPagamentoPendente ? (
+              <InlineMessage tone="warning">
+                Pagamento pendente: {formatMoney(matricula.pagamentoValor)}.
+              </InlineMessage>
+            ) : null}
+            {matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
             <footer className="catalogo-card__rodape-aluno">
-              <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span>
-              {matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
+              {!compacto ? <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span> : null}
+              {!compacto && matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
               {matricula.status === "Pendente" && onCancelar ? (
                 <Botao disabled={processando} onClick={onCancelar} tamanho="pequeno" variante="perigo">
                   {processando ? "Cancelando..." : "Cancelar solicitacao"}
@@ -71,6 +86,16 @@ function CartaoCursoMatricula({ curso, matricula, onCancelar, onReabrir, onSolic
               {matricula.status === "Rejeitada" && onReabrir ? (
                 <Botao disabled={processando} onClick={onReabrir} tamanho="pequeno" variante="primario">
                   {processando ? "Reabrindo..." : "Reabrir solicitacao"}
+                </Botao>
+              ) : null}
+              {temPagamentoPendente && onConfirmarPagamento ? (
+                <Botao disabled={pagando} onClick={onConfirmarPagamento} tamanho="pequeno" variante="primario">
+                  <TbCreditCard aria-hidden="true" size={14} /> {pagando ? "Confirmando..." : "Confirmar pagamento (simulado)"}
+                </Botao>
+              ) : null}
+              {matricula.status === "Aprovada" && onEntrarNoCurso ? (
+                <Botao onClick={onEntrarNoCurso} tamanho="pequeno" variante={progresso >= 100 ? "fantasma" : "primario"}>
+                  {rotuloEntrada} <TbArrowRight aria-hidden="true" size={14} />
                 </Botao>
               ) : null}
             </footer>
@@ -92,7 +117,7 @@ function CartaoCursoMatricula({ curso, matricula, onCancelar, onReabrir, onSolic
 }
 
 /* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
-export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onRefresh, onSessionExpired }) {
+export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onNavigate, onRefresh, onSessionExpired }) {
   const [matriculaProcessando, setMatriculaProcessando] = useState(null);
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
 
@@ -140,6 +165,26 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
     }
   }
 
+  async function confirmarPagamento(matricula) {
+    setMatriculaProcessando(matricula.id);
+    setMensagem({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
+      setMensagem({ tone: "success", message: "Pagamento confirmado." });
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagem({ tone: "error", message: err.message || "Nao foi possivel confirmar o pagamento agora." });
+    } finally {
+      setMatriculaProcessando(null);
+    }
+  }
+
   return (
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
@@ -164,7 +209,10 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
                 key={curso.id}
                 matricula={matricula}
                 onCancelar={() => cancelarMatricula(matricula)}
+                onConfirmarPagamento={() => confirmarPagamento(matricula)}
+                onEntrarNoCurso={onNavigate ? () => onNavigate(`/app/conteudos/${curso.id}`) : null}
                 onReabrir={() => reabrirMatricula(matricula)}
+                pagando={matriculaProcessando === matricula.id}
                 processando={matriculaProcessando === matricula.id}
               />
             );

@@ -1,0 +1,31 @@
+{
+  "name": "plataforma-ensino-desktop",
+  "version": "1.0.0",
+  "description": "App desktop do PlataformaEnsino, empacotando a SPA React existente via Electron.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.plataformaensino.desktop",
+    "productName": "PlataformaEnsino",
+    "files": [
+      "main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "mac": {
+      "target": "dmg"
+    }
+  }
+}

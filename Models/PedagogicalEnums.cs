@@ -66,3 +66,10 @@ public enum OrigemMarcoProgresso
     CursoAtualizado = 4,
     Recalculo = 5
 }
+
+public enum StatusPagamento
+{
+    Pendente = 1,
+    Pago = 2,
+    Cancelado = 3
+}

@@ -1,175 +1,181 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
-  <Class Name="PlataformaEnsino.API.Models.Admin">
-    <Position X="8.25" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Admin" Collapsed="true">
+    <Position X="0.75" Y="5.25" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>ABAAAgBAAAAAAAKAAAAAAAEAQAAAAAAAEAAAAAIAAAA=</HashCode>
+      <HashCode>AAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Models\Admin.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Aluno">
-    <Position X="13.5" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Aluno" Collapsed="true">
+    <Position X="0.75" Y="7.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAAAgAAEIAAAAAAAAECwAAAAAEAAIAAAAAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAgAAEAAAAAAAAAAAgAAAAAEAAAAAAAAAAAAAAAA=</HashCode>
       <FileName>Models\Aluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Coordenador">
-    <Position X="10" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Coordenador" Collapsed="true">
+    <Position X="0.75" Y="6" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ABBAAgAAAAAAAAKAAAAAAAAAQAAABAAAEAAAAAAAAAA=</HashCode>
+      <HashCode>AABAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAA=</HashCode>
       <FileName>Models\Coordenador.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Curso">
-    <Position X="8.75" Y="5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Curso" Collapsed="true">
+    <Position X="2.5" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAASAAAAAAABAAICAAAAQAAQAAAAgAAgQAAEAgAAABA=</HashCode>
+      <HashCode>AAASAAAAAAAFAAICAAAAQAAQAAAAgAAgQAAEAgAEABA=</HashCode>
       <FileName>Models\Curso.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Matricula">
-    <Position X="6.75" Y="5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Matricula" Collapsed="true">
+    <Position X="2.5" Y="7.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ADACAAAEAUAkAQIAAiAAAAAAMABAAAAACAAQIgABAAA=</HashCode>
+      <HashCode>CDACAAQEAUAkAQIAAiAAAAAAMABAAAAICAAQIgAFCAA=</HashCode>
       <FileName>Models\Matricula.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Modulo">
-    <Position X="12.25" Y="5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Modulo" Collapsed="true">
+    <Position X="2.5" Y="2" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAACAAAEAUAAAAAAAgAgAAAAcAAAgAAAAAAAAgAAABA=</HashCode>
+      <HashCode>AAACAAAEAUAAAAAAAgAgAAAAcAAAgAAAAAAAAgAEABA=</HashCode>
       <FileName>Models\Modulo.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Professor">
-    <Position X="11.75" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Professor" Collapsed="true">
+    <Position X="0.75" Y="6.75" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAAIIgQEAAAAAAAAAACiAABAIAAAAAAAAhAAAAAQAAA=</HashCode>
+      <HashCode>AAAAIgAEAAAAAAAAAACAAAAAIAAAAAAAAgAAAAAEAAA=</HashCode>
       <FileName>Models\Professor.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Turma">
-    <Position X="10.5" Y="5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Turma" Collapsed="true">
+    <Position X="2.5" Y="1.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAACAAAEAQAAAAAAAgAkgAAAEAAAAAAAAAhABAAAAAg=</HashCode>
+      <HashCode>AAACAAAEAQAAAAAAAgAggAAAEAAAAAAAAAhABAAEAAg=</HashCode>
       <FileName>Models\Turma.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="PlataformaEnsino.API.Models.Usuario">
-    <Position X="6.5" Y="0.5" Width="1.5" />
+    <Position X="0.75" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
     <TypeIdentifier>
-      <HashCode>CAACAgAAgCIAAAAEAAEwAICAAAAAAAAAAAAAAAGBAAo=</HashCode>
+      <HashCode>GAACAgAAgCIAAAAUAAEwAICAAYAAAAAAAAAAAAWBABo=</HashCode>
       <FileName>Models\Usuario.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.LancamentoNotaAluno">
-    <Position X="16" Y="0.75" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.LancamentoNotaAluno" Collapsed="true">
+    <Position X="2.5" Y="5.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>AAADAIIgEAAAAAAgABAAAARRAAAAgAAAAABACAIABAE=</HashCode>
+      <HashCode>AIADAIIgEAAAAAAgABAAAARRAAAAgAAACABACAIABAE=</HashCode>
       <FileName>Models\LancamentoNotaAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.MarcoProgressoAluno">
-    <Position X="21.25" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.MarcoProgressoAluno" Collapsed="true">
+    <Position X="9.5" Y="2" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAACAAIAEQAAIAAAAAAAAAQAEAAACAgAAAEACgBAAgA=</HashCode>
       <FileName>Models\MarcoProgressoAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.ProgressoConteudoAluno">
-    <Position X="21.25" Y="4.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.ProgressoConteudoAluno" Collapsed="true">
+    <Position X="7.75" Y="2" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAASAgIAEAAACMABAAAAAAQAAAAAAAAAAAAACAAAAAg=</HashCode>
       <FileName>Models\ProgressoConteudoAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.ProgressoCursoAluno">
-    <Position X="19.5" Y="6.75" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.ProgressoCursoAluno" Collapsed="true">
+    <Position X="6" Y="0.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAACAkIgEQAAAIAAIAAAAAACEAAAAAAAAAAABAAQAAA=</HashCode>
       <FileName>Models\ProgressoCursoAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.ProgressoModuloAluno">
-    <Position X="23" Y="8" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.ProgressoModuloAluno" Collapsed="true">
+    <Position X="4.25" Y="2" Width="1.5" />
     <TypeIdentifier>
       <HashCode>ACACAgIgEgAAAIAAIAAAAAQSAAAgAAAAAAAACAAAAAA=</HashCode>
       <FileName>Models\ProgressoModuloAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.QuestaoBanco">
-    <Position X="23" Y="3.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.QuestaoBanco" Collapsed="true">
+    <Position X="12" Y="0.5" Width="1.5" />
     <TypeIdentifier>
       <HashCode>ABADAAAgGAAQAAAAAAAIBAAIAIAAAAAAAAABAAQAAAU=</HashCode>
       <FileName>Models\QuestaoBanco.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.QuestaoPublicada">
-    <Position X="16" Y="8.25" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.QuestaoPublicada" Collapsed="true">
+    <Position X="13.75" Y="2" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAACAIAAAABQAAAgAAAEABBAAJAAgAAAAAAQAAIAAAA=</HashCode>
       <FileName>Models\QuestaoPublicada.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.RespostaAluno">
-    <Position X="17.75" Y="5.75" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.RespostaAluno" Collapsed="true">
+    <Position X="13.75" Y="3.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>CQACABAAAAAggAAAAAAAAAAQAgEAgAAAAAAAAAAAAAI=</HashCode>
+      <HashCode>CQACABAAAAAggAAAAAAAAAAQAoEAgAAAAAAAAABAAAI=</HashCode>
       <FileName>Models\RespostaAluno.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.TentativaAvaliacao">
-    <Position X="19.5" Y="3.25" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.TentativaAvaliacao" Collapsed="true">
+    <Position X="9.75" Y="5.25" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>gABiAIIAEAAAAAAgAAIAAABgAAAAAAAAAAgAAAAAAAA=</HashCode>
+      <HashCode>gABiAIIAEAAAAAAiAAIACABgAAAAAAAAQAgAAAAAAAA=</HashCode>
       <FileName>Models\TentativaAvaliacao.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.ConteudoDidatico">
-    <Position X="17.75" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.ConteudoDidatico" Collapsed="true">
+    <Position X="6" Y="2" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ABACAAAgAAABAAIAACCIAAQAAAAAiAgAAAAJCAMAgBE=</HashCode>
+      <HashCode>AJACAAAgAQABAAIAACCIAIQAAAAAiAgAAAAJCAMAgBE=</HashCode>
       <FileName>Models\ConteudoDidatico.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.Avaliacao">
-    <Position X="21.25" Y="8" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.Avaliacao" Collapsed="true">
+    <Position X="4.25" Y="0.5" Width="1.5" />
     <TypeIdentifier>
-      <HashCode>ABACAIAgAAAhAAIAACCAAAQAIAAAAAiAQAAtCAAAgBM=</HashCode>
+      <HashCode>ANACAIAgAAAhAAIAADCAAQQAIAAAAAiAQABtCAAAgBM=</HashCode>
       <FileName>Models\Avaliacao.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.AnexoQuestaoBanco">
-    <Position X="19.5" Y="0.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.AnexoQuestaoBanco" Collapsed="true">
+    <Position X="12" Y="1.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAACAAAAAAAAAAAAEACAAAAAAAAAgAAAAAAQAAIAABA=</HashCode>
       <FileName>Models\AnexoQuestaoBanco.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.AlternativaQuestaoPublicada">
-    <Position X="23" Y="0.75" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.AlternativaQuestaoPublicada" Collapsed="true">
+    <Position X="13.75" Y="2.75" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AQACgAAAAAAgAAAAAAIAAAAAAQEAgAAAAAAAAAAAAAA=</HashCode>
       <FileName>Models\AlternativaQuestaoPublicada.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="PlataformaEnsino.API.Models.AlternativaQuestaoBanco">
-    <Position X="16" Y="5.5" Width="1.5" />
+  <Class Name="PlataformaEnsino.API.Models.AlternativaQuestaoBanco" Collapsed="true">
+    <Position X="12" Y="2" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AQAChAAAAAAAAAAAAAAAAAAAAQAAgAAAAAAQAAIAAAA=</HashCode>
       <FileName>Models\AlternativaQuestaoBanco.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Enum Name="PlataformaEnsino.API.Models.StatusMatricula">
-    <Position X="14" Y="5" Width="1.5" />
+  <Enum Name="PlataformaEnsino.API.Models.StatusMatricula" Collapsed="true">
+    <Position X="12" Y="12" Width="1.5" />
     <TypeIdentifier>
       <HashCode>IAAAAAAQAAAAAAAACAAAAAAAAAAAAAAAAAAAAgAAAAA=</HashCode>
       <FileName>Models\StatusMatricula.cs</FileName>
     </TypeIdentifier>
   </Enum>
   <Enum Name="PlataformaEnsino.API.Models.TipoConteudoDidatico" Collapsed="true">
-    <Position X="12" Y="11" Width="1.5" />
+    <Position X="12" Y="11.25" Width="1.5" />
     <TypeIdentifier>
       <HashCode>AAAABAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAQAAAAAg=</HashCode>
       <FileName>Models\PedagogicalEnums.cs</FileName>

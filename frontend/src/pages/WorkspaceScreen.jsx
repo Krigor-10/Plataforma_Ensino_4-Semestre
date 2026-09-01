@@ -78,13 +78,14 @@ export default function WorkspaceScreen({
   const mostrarAcaoCriarAvaliacao = isProfessor && activeSection === "avaliacoes";
 
   useEffect(() => {
-    const canonicalPath = activeSection === "dashboard" ? "/app" : `/app/${activeSection}`;
+    const canonicalPath =
+      activeSection === "dashboard" ? "/app" : `/app/${activeSection}${route.param ? `/${route.param}` : ""}`;
     const currentPath = window.location.pathname || "/app";
 
     if (normalizePath(currentPath) !== canonicalPath) {
       onNavigate(canonicalPath, { replace: true });
     }
-  }, [activeSection, onNavigate]);
+  }, [activeSection, onNavigate, route.param]);
 
   useEffect(() => {
     if (!confirmacaoSessao) {
@@ -197,25 +198,39 @@ export default function WorkspaceScreen({
     return snapshot.modulos.filter((modulo) => idsCursosAcademicos.has(modulo.cursoId));
   }, [cursosDaSecaoCursos, isProfessor, role, snapshot.modulos]);
 
+  const pagamentoPorMatriculaId = useMemo(() => mapById(snapshot.pagamentos.map((pagamento) => ({ ...pagamento, id: pagamento.matriculaId }))), [snapshot.pagamentos]);
+  const progressoCursoPorMatriculaId = useMemo(
+    () => mapById((snapshot.progressos.cursos || []).map((progresso) => ({ ...progresso, id: progresso.matriculaId }))),
+    [snapshot.progressos.cursos]
+  );
+
   const matriculaRows = useMemo(
     () =>
-      snapshot.matriculas.map((matricula) => ({
-        id: matricula.id,
-        codigoRegistro: matricula.codigoRegistro,
-        alunoId: matricula.alunoId,
-        cursoId: matricula.cursoId,
-        turmaId: matricula.turmaId,
-        aluno: matricula.aluno?.nome || alunoById.get(matricula.alunoId)?.nome || `Aluno #${matricula.alunoId}`,
-        curso: matricula.curso?.titulo || cursoById.get(matricula.cursoId)?.titulo || `Curso #${matricula.cursoId}`,
-        turma:
-          matricula.turma?.nomeTurma ||
-          turmaById.get(matricula.turmaId)?.nomeTurma ||
-          "Aguardando turma",
-        notaFinal: matricula.notaFinal ?? 0,
-        status: normalizeStatus(matricula.status),
-        dataSolicitacao: matricula.dataSolicitacao
-      })),
-    [alunoById, cursoById, snapshot.matriculas, turmaById]
+      snapshot.matriculas.map((matricula) => {
+        const pagamento = pagamentoPorMatriculaId.get(matricula.id);
+        const progresso = progressoCursoPorMatriculaId.get(matricula.id);
+
+        return {
+          id: matricula.id,
+          codigoRegistro: matricula.codigoRegistro,
+          alunoId: matricula.alunoId,
+          cursoId: matricula.cursoId,
+          turmaId: matricula.turmaId,
+          aluno: matricula.aluno?.nome || alunoById.get(matricula.alunoId)?.nome || `Aluno #${matricula.alunoId}`,
+          curso: matricula.curso?.titulo || cursoById.get(matricula.cursoId)?.titulo || `Curso #${matricula.cursoId}`,
+          turma:
+            matricula.turma?.nomeTurma ||
+            turmaById.get(matricula.turmaId)?.nomeTurma ||
+            "Aguardando turma",
+          notaFinal: matricula.notaFinal ?? 0,
+          status: normalizeStatus(matricula.status),
+          dataSolicitacao: matricula.dataSolicitacao,
+          pagamentoStatus: pagamento?.status ?? null,
+          pagamentoValor: pagamento?.valor ?? null,
+          progresso: progresso?.percentualConclusao ?? 0
+        };
+      }),
+    [alunoById, cursoById, pagamentoPorMatriculaId, progressoCursoPorMatriculaId, snapshot.matriculas, turmaById]
   );
 
   const pendingRows = useMemo(
@@ -686,9 +701,11 @@ export default function WorkspaceScreen({
                 <SecaoConteudosAluno
                   avaliacoes={snapshot.avaliacoes}
                   conteudos={snapshot.conteudos}
+                  cursoIdSelecionado={route.param ? Number(route.param) : null}
                   cursos={snapshot.cursos}
                   matriculas={snapshot.matriculas}
                   modulos={snapshot.modulos}
+                  onNavigate={onNavigate}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
                   progressos={snapshot.progressos}
@@ -701,6 +718,7 @@ export default function WorkspaceScreen({
               isProfessor ? (
                 <SecaoAvaliacoesProfessor
                   avaliacoes={snapshot.avaliacoes}
+                  conteudos={snapshot.conteudos}
                   cursos={snapshot.cursos}
                   modulos={snapshot.modulos}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
@@ -734,6 +752,7 @@ export default function WorkspaceScreen({
               <SecaoMeusCursosMatriculados
                 cursos={snapshot.cursos}
                 linhasMatriculas={matriculaRows}
+                onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
               />

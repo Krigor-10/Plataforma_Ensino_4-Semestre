@@ -31,7 +31,8 @@ export function readRoute(pathname = window.location.pathname) {
   if (segments[0] === "app") {
     return {
       kind: "app",
-      section: segments[1] || "dashboard"
+      section: segments[1] || "dashboard",
+      param: segments[2] || null
     };
   }
 

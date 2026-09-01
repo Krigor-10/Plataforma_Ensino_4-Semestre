@@ -18,6 +18,7 @@ public class Avaliacao
     public int ProfessorAutorId { get; private set; }
     public int TurmaId { get; set; }
     public int ModuloId { get; set; }
+    public int? ConteudoDidaticoId { get; set; }
 
     public TipoAvaliacao TipoAvaliacao { get; set; } = TipoAvaliacao.Quiz;
     public StatusPublicacao StatusPublicacao { get; private set; } = StatusPublicacao.Rascunho;
@@ -43,6 +44,10 @@ public class Avaliacao
     [JsonIgnore]
     [ValidateNever]
     public Modulo? Modulo { get; set; }
+
+    [JsonIgnore]
+    [ValidateNever]
+    public ConteudoDidatico? ConteudoDidatico { get; set; }
 
     [JsonIgnore]
     [ValidateNever]

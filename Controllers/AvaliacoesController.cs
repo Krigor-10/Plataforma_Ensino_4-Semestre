@@ -212,6 +212,8 @@ public class AvaliacoesController : ControllerBase
             CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
             ModuloId = avaliacao.ModuloId,
             ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,
+            ConteudoDidaticoId = avaliacao.ConteudoDidaticoId,
+            ConteudoDidaticoTitulo = avaliacao.ConteudoDidatico?.Titulo ?? string.Empty,
             TipoAvaliacao = avaliacao.TipoAvaliacao,
             StatusPublicacao = avaliacao.StatusPublicacao,
             DataAbertura = avaliacao.DataAbertura,

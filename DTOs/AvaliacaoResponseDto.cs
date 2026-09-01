@@ -14,6 +14,8 @@ public class AvaliacaoResponseDto
     public string CursoTitulo { get; set; } = string.Empty;
     public int ModuloId { get; set; }
     public string ModuloTitulo { get; set; } = string.Empty;
+    public int? ConteudoDidaticoId { get; set; }
+    public string ConteudoDidaticoTitulo { get; set; } = string.Empty;
     public TipoAvaliacao TipoAvaliacao { get; set; }
     public StatusPublicacao StatusPublicacao { get; set; }
     public DateTime? DataAbertura { get; set; }

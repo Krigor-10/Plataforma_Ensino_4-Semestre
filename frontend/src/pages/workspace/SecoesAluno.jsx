@@ -25,6 +25,7 @@ import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
+import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
@@ -54,6 +55,42 @@ const ACADEMIC_ACCENTS = [
   { solid: "#06b6d4", border: "rgba(120, 170, 180, 0.34)", soft: "rgba(120, 170, 180, 0.07)" },
   { solid: "#d946ef", border: "rgba(173, 136, 180, 0.34)", soft: "rgba(173, 136, 180, 0.07)" }
 ];
+
+function CarrosselCursos({ ariaLabelIndicadores, ariaLabelNav, children, indicadorLabel, onIrPara, slide, total }) {
+  return (
+    <div className="carrossel-cursos">
+      {total > 1 ? (
+        <nav aria-label={ariaLabelNav} className="carrossel-cursos__nav">
+          <button aria-label="Curso anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => onIrPara(slide - 1)} type="button">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <div aria-label={ariaLabelIndicadores} className="carrossel-cursos__indicadores" role="tablist">
+            {Array.from({ length: total }, (_valor, indice) => (
+              <button
+                aria-label={indicadorLabel(indice)}
+                aria-selected={indice === slide}
+                className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
+                key={indice}
+                onClick={() => onIrPara(indice)}
+                role="tab"
+                type="button"
+              />
+            ))}
+          </div>
+          <button aria-label="Proximo curso" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => onIrPara(slide + 1)} type="button">
+            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </nav>
+      ) : null}
+
+      <div className="carrossel-cursos__janela">{children}</div>
+    </div>
+  );
+}
 
 export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matriculas, modulos = [], onNavigate, progressos = {}, turmas }) {
   const [slideAtual, setSlideAtual] = useState(0);
@@ -254,39 +291,16 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
 
   return (
     <div className="tela-progresso">
-      <div className="carrossel-cursos">
-        {total > 1 ? (
-          <nav aria-label="Navegacao entre cursos" className="carrossel-cursos__nav">
-            <button aria-label="Curso anterior" className="carrossel-cursos__seta" disabled={slideAtual === 0} onClick={() => irPara(slideAtual - 1)} type="button">
-              <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <div aria-label="Cursos matriculados" className="carrossel-cursos__indicadores" role="tablist">
-              {linhasMatriculasAprovadas.map((linha, indice) => (
-                <button
-                  aria-label={`Curso ${indice + 1}: ${linha.curso}`}
-                  aria-selected={indice === slideAtual}
-                  className={`carrossel-cursos__bolinha${indice === slideAtual ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                  key={linha.id}
-                  onClick={() => irPara(indice)}
-                  role="tab"
-                  type="button"
-                />
-              ))}
-            </div>
-            <button aria-label="Proximo curso" className="carrossel-cursos__seta" disabled={slideAtual === total - 1} onClick={() => irPara(slideAtual + 1)} type="button">
-              <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          </nav>
-        ) : null}
-
-        <div className="carrossel-cursos__janela">
-          {detalheCursoSelecionado ? <SlideProgressoCurso detalhe={detalheCursoSelecionado} onNavigate={onNavigate} /> : null}
-        </div>
-      </div>
+      <CarrosselCursos
+        ariaLabelIndicadores="Cursos matriculados"
+        ariaLabelNav="Navegacao entre cursos"
+        indicadorLabel={(indice) => `Curso ${indice + 1}: ${linhasMatriculasAprovadas[indice].curso}`}
+        onIrPara={irPara}
+        slide={slideAtual}
+        total={total}
+      >
+        {detalheCursoSelecionado ? <SlideProgressoCurso detalhe={detalheCursoSelecionado} onNavigate={onNavigate} /> : null}
+      </CarrosselCursos>
     </div>
   );
 }
@@ -1052,9 +1066,11 @@ export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }
 export function SecaoConteudosAluno({
   avaliacoes = [],
   conteudos,
+  cursoIdSelecionado = null,
   cursos = [],
   matriculas,
   modulos = [],
+  onNavigate,
   onRefresh,
   onSessionExpired,
   progressos = {},
@@ -1068,7 +1084,6 @@ export function SecaoConteudosAluno({
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [conteudosConcluidosLocais, setConteudosConcluidosLocais] = useState(() => new Set());
   const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState(null);
-  const [slideAtual, setSlideAtual] = useState(0);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const moduloPorId = useMemo(() => mapById(modulos), [modulos]);
@@ -1209,7 +1224,8 @@ export function SecaoConteudosAluno({
         concluido,
         progressoConteudo,
         progressoPercentual,
-        statusProgresso
+        statusProgresso,
+        quizzes: []
       });
 
       curso.modulos.set(modulo.id, modulo);
@@ -1230,7 +1246,15 @@ export function SecaoConteudosAluno({
           return;
         }
 
-        modulo.quizzes.push(avaliacao);
+        const material = avaliacao.conteudoDidaticoId
+          ? modulo.conteudos.find((conteudo) => conteudo.id === avaliacao.conteudoDidaticoId)
+          : null;
+
+        if (material) {
+          material.quizzes.push(avaliacao);
+        } else {
+          modulo.quizzes.push(avaliacao);
+        }
       });
 
     return [...cursosMapeados.values()].map((curso) => {
@@ -1249,14 +1273,12 @@ export function SecaoConteudosAluno({
 
           return (moduloA.titulo || "").localeCompare(moduloB.titulo || "", "pt-BR");
         });
-      const conteudosDoCurso = modulos.flatMap((modulo) => modulo.conteudos);
 
       return {
         ...curso,
         turmas: [...curso.turmas].filter(Boolean).sort((left, right) => left.localeCompare(right, "pt-BR")),
         progresso: curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0,
-        modulos,
-        proximoConteudo: conteudosDoCurso.find((conteudo) => !conteudo.concluido) || conteudosDoCurso[0] || null
+        modulos
       };
     });
   }, [
@@ -1306,11 +1328,17 @@ export function SecaoConteudosAluno({
     }
   }, [conteudoSelecionadoId, conteudosDaTrilha]);
 
-  const total = gruposConteudosPorCurso.length;
-  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+  const cursoAtivo = cursoIdSelecionado
+    ? gruposConteudosPorCurso.find((curso) => curso.id === cursoIdSelecionado) || null
+    : null;
+  const cursoNaoEncontrado = Boolean(cursoIdSelecionado) && gruposConteudosPorCurso.length > 0 && !cursoAtivo;
 
-  function irPara(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  function abrirListaConteudos() {
+    onNavigate?.("/app/conteudos");
+  }
+
+  function abrirCurso(cursoId) {
+    onNavigate?.(`/app/conteudos/${cursoId}`);
   }
 
   function selecionarConteudoAluno(conteudoId) {
@@ -1342,82 +1370,52 @@ export function SecaoConteudosAluno({
     }
   }
 
-  const resumoSubtitulo = `${matriculasAprovadas.length} matricula(s) ativa(s) - ${gruposConteudosPorCurso.length} curso(s) em trilha - ${formatPercent(calcularMediaGruposConteudo(gruposConteudosPorCurso))} de progresso geral`;
+  const resumoSubtitulo = "Escolha um curso para acessar suas atividades.";
 
   return (
     <div className="tela-conteudos-aluno">
-      <header className="cabecalho-pagina">
-        <div style={{ flex: 1 }}>
-          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h2 className="cabecalho-pagina__titulo">Conteudos</h2>
-            {total > 0 ? (
-              <select
-                aria-label="Navegar para curso"
-                className="campo__entrada barra-filtros__select"
-                onChange={(event) => irPara(Number(event.target.value))}
-                style={{ marginLeft: "auto", maxWidth: "240px" }}
-                value={slide}
-              >
-                {gruposConteudosPorCurso.map((curso, indice) => (
-                  <option key={curso.id} value={indice}>
-                    {curso.titulo}
-                  </option>
-                ))}
-              </select>
-            ) : null}
+      {!cursoAtivo ? (
+        <header className="cabecalho-pagina">
+          <div style={{ flex: 1 }}>
+            <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+              <h2 className="cabecalho-pagina__titulo">Conteudos</h2>
+            </div>
+            <p className="cabecalho-pagina__subtitulo">{resumoSubtitulo}</p>
           </div>
-          <p className="cabecalho-pagina__subtitulo">{resumoSubtitulo}</p>
-        </div>
-      </header>
+        </header>
+      ) : null}
 
       {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
       {mensagemQuiz.message ? <InlineMessage tone={mensagemQuiz.tone}>{mensagemQuiz.message}</InlineMessage> : null}
 
-      {total === 0 ? (
+      {gruposConteudosPorCurso.length === 0 ? (
         <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
+      ) : cursoNaoEncontrado ? (
+        <EmptyState message="Este curso nao foi encontrado na sua trilha. Volte para Conteudos e escolha outro." />
+      ) : cursoAtivo ? (
+        <SlideConteudosCurso
+          conteudoProcessando={conteudoProcessando}
+          conteudoSelecionadoId={conteudoSelecionadoId}
+          curso={cursoAtivo}
+          key={cursoAtivo.id}
+          onConcluir={marcarConteudoConcluido}
+          onIniciarQuiz={abrirConfirmacaoAvaliacao}
+          onSelecionar={selecionarConteudoAluno}
+          onVoltarConteudos={onNavigate ? abrirListaConteudos : null}
+          quizIndisponivel={carregandoQuestoes || enviandoRespostas}
+        />
       ) : (
-        <div className="carrossel-cursos">
-          {total > 1 ? (
-            <nav aria-label="Navegacao entre cursos" className="carrossel-cursos__nav">
-              <button aria-label="Curso anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <div aria-label="Cursos" className="carrossel-cursos__indicadores" role="tablist">
-                {gruposConteudosPorCurso.map((curso, indice) => (
-                  <button
-                    aria-label={`Curso ${indice + 1}: ${curso.titulo}`}
-                    aria-selected={indice === slide}
-                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                    key={curso.id}
-                    onClick={() => irPara(indice)}
-                    role="tab"
-                    type="button"
-                  />
-                ))}
-              </div>
-              <button aria-label="Proximo curso" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </nav>
-          ) : null}
-
-          <div className="carrossel-cursos__janela">
-            <SlideConteudosCurso
-              conteudoProcessando={conteudoProcessando}
-              conteudoSelecionadoId={conteudoSelecionadoId}
-              curso={gruposConteudosPorCurso[slide]}
-              key={gruposConteudosPorCurso[slide].id}
-              onConcluir={marcarConteudoConcluido}
-              onIniciarQuiz={abrirConfirmacaoAvaliacao}
-              onSelecionar={selecionarConteudoAluno}
-              quizIndisponivel={carregandoQuestoes || enviandoRespostas}
+        <ul aria-label="Cursos ativos" className="catalogo-grade" role="list">
+          {gruposConteudosPorCurso.map((curso) => (
+            <CartaoCursoMatricula
+              compacto
+              curso={curso}
+              key={curso.id}
+              matricula={{ status: "Aprovada", progresso: curso.progresso }}
+              onEntrarNoCurso={onNavigate ? () => abrirCurso(curso.id) : null}
             />
-          </div>
-        </div>
+          ))}
+        </ul>
       )}
 
       {modaisExecucaoAvaliacao}
@@ -1433,7 +1431,7 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   5: <TbPhoto aria-hidden="true" size={22} />
 };
 
-function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onIniciarQuiz, onSelecionar, quizIndisponivel }) {
+function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onIniciarQuiz, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
   const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
 
   const [modulosAbertos, setModulosAbertos] = useState(() => {
@@ -1454,47 +1452,42 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
     });
   }
 
+  const percentualCurso = Math.round(Math.max(0, Math.min(curso.progresso, 100)));
+
   return (
     <div className="conteudos-aluno">
-      <header className="conteudos-aluno__cabecalho">
-        <div className="conteudos-aluno__curso-info">
-          <h2 className="conteudos-aluno__curso-titulo">{curso.titulo}</h2>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">{formatPercent(curso.progresso)} de progresso</span>
-            <span className="conteudos-aluno__meta-chip">{curso.modulos.length} modulo{curso.modulos.length === 1 ? "" : "s"}</span>
-            <span className="conteudos-aluno__meta-chip">{curso.turmas.length ? curso.turmas.join(", ") : "Turma em definicao"}</span>
-          </div>
+      {onVoltarConteudos ? (
+        <button className="conteudos-aluno__voltar" onClick={onVoltarConteudos} type="button">
+          <TbArrowLeft aria-hidden="true" size={16} /> Voltar para Cursos
+        </button>
+      ) : null}
+
+      <header className="atividades-curso__cabecalho">
+        <h2 className="atividades-curso__titulo">{curso.titulo}</h2>
+        <div className="atividades-curso__progresso">
+          <span className="atividades-curso__progresso-texto">{percentualCurso}% concluido</span>
+          <BarraProgresso mostrarTexto={false} percentual={percentualCurso} />
         </div>
       </header>
-
-      {curso.proximoConteudo ? (
-        <div className="cartao-curso-ativo" style={{ marginBottom: "var(--espaco-md)" }}>
-          <div className="cartao-curso-ativo__info">
-            <strong className="cartao-curso-ativo__titulo">Continue de onde parou</strong>
-            <p className="cartao-curso-ativo__meta">{curso.proximoConteudo.titulo}</p>
-          </div>
-          <Botao onClick={() => onSelecionar(curso.proximoConteudo.id)} tamanho="pequeno" variante="primario">
-            Abrir
-          </Botao>
-        </div>
-      ) : null}
 
       {modulosVisiveis.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-md)" }}>
+        <div className="atividades-curso__lista-modulos">
           {modulosVisiveis.map((modulo, indiceModulo) => {
             const moduloAnterior = modulosVisiveis[indiceModulo - 1];
             const bloqueado = Boolean(moduloAnterior) && moduloAnterior.concluidos < moduloAnterior.conteudos.length;
             const estaAberto = !bloqueado && modulosAbertos.has(modulo.id);
             const percentualModulo = modulo.conteudos.length ? Math.round((modulo.concluidos / modulo.conteudos.length) * 100) : 0;
             const moduloConcluido = !bloqueado && modulo.concluidos === modulo.conteudos.length;
+            const idListaModulo = `conteudos-modulo-lista-${modulo.id}`;
 
             return (
-              <section className={`conteudos-modulo${bloqueado ? " conteudos-modulo--bloqueado" : ""}`} key={modulo.id}>
+              <section className={`conteudos-modulo${bloqueado ? " conteudos-modulo--bloqueado" : ""}`} id={`conteudos-modulo-${modulo.id}`} key={modulo.id}>
                 <header className="conteudos-modulo__cabecalho">
                   <h3 className="conteudos-modulo__cabecalho-wrapper">
                     <button
+                      aria-controls={idListaModulo}
                       aria-disabled={bloqueado}
                       aria-expanded={estaAberto}
                       className={`conteudos-modulo__toggle${bloqueado ? " conteudos-modulo__toggle--bloqueado" : ""}`}
@@ -1502,6 +1495,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                       type="button"
                     >
                       <div className="conteudos-modulo__info">
+                        <span className="conteudos-modulo__eyebrow">Modulo {String(indiceModulo + 1).padStart(2, "0")}</span>
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         {bloqueado ? (
                           <span className="conteudos-modulo__aviso-bloqueado">Conclua o modulo anterior para desbloquear</span>
@@ -1543,12 +1537,13 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                     <motion.div
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
+                      id={idListaModulo}
                       initial={{ height: 0, opacity: 0 }}
                       key={`lista-${modulo.id}`}
                       style={{ overflow: "hidden" }}
                       transition={{ duration: 0.28, ease: "easeInOut" }}
                     >
-                      <ul aria-label={`Conteudos de ${modulo.titulo}`} className="conteudos-modulo__lista" role="list">
+                      <ul aria-label={`Atividades de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
                         {modulo.conteudos.map((conteudo, indiceConteudo) => {
                           const itemBloqueado = indiceConteudo > 0 && !modulo.conteudos[indiceConteudo - 1].concluido;
                           const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
@@ -1557,47 +1552,36 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
 
                           return (
                             <li
-                              className={`cartao-conteudo${conteudo.concluido ? " cartao-conteudo--concluido" : ""}${itemBloqueado ? " cartao-conteudo--bloqueado" : ""}`}
+                              className={`atividades-curso__item${conteudo.concluido ? " atividades-curso__item--concluido" : ""}${itemBloqueado ? " atividades-curso__item--bloqueado" : ""}`}
                               key={conteudo.id}
-                              style={{ alignItems: "flex-start", flexDirection: "column" }}
                             >
-                              <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
-                                {conteudo.concluido && !itemBloqueado ? (
-                                  <motion.span
-                                    animate={{ scale: 1 }}
-                                    aria-label="Concluido"
-                                    className="cartao-conteudo__badge-check"
-                                    initial={{ scale: 0 }}
-                                    transition={{ type: "spring", stiffness: 300, damping: 18 }}
-                                  >
-                                    <TbCheck aria-hidden="true" size={11} />
-                                  </motion.span>
-                                ) : null}
+                              <div className="atividades-curso__linha">
                                 {itemBloqueado ? (
-                                  <span aria-label="Conteudo bloqueado" className="cartao-conteudo__icone-btn cartao-conteudo__icone-btn--bloqueado">
-                                    <TbLock aria-hidden="true" size={18} />
+                                  <span aria-label="Conteudo bloqueado" className="atividades-curso__icone atividades-curso__icone--bloqueado">
+                                    <TbLock aria-hidden="true" size={17} />
                                   </span>
                                 ) : (
                                   <button
                                     aria-expanded={conteudoAtivo}
                                     aria-label={`Ver ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
-                                    className="cartao-conteudo__icone-btn"
+                                    className="atividades-curso__icone"
                                     onClick={() => onSelecionar(conteudo.id)}
                                     type="button"
                                   >
-                                    {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size={18} />}
+                                    {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size={17} />}
                                   </button>
                                 )}
-                                <div className="cartao-conteudo__info">
-                                  <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
-                                  <p className="cartao-conteudo__modulo">{normalizeContentType(conteudo.tipoConteudo)}</p>
+                                <div className="atividades-curso__corpo">
+                                  <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
+                                  <p className="atividades-curso__meta">
+                                    <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
+                                    <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                    <Insignia texto={conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)} variante={conteudo.concluido ? "sucesso" : undefined} />
+                                  </p>
                                 </div>
-                                <div className="cartao-conteudo__meta">
-                                  <Insignia texto={conteudo.concluido ? "Concluido" : normalizeProgressStatus(conteudo.statusProgresso)} variante={conteudo.concluido ? "sucesso" : undefined} />
-                                </div>
-                                <div className="cartao-conteudo__acoes">
+                                <div className="atividades-curso__acoes">
                                   {acao ? (
-                                    <a href={acao.href} rel="noreferrer" style={{ color: "var(--cor-marca-clara)", fontSize: "0.82rem", fontWeight: 600 }} target="_blank">
+                                    <a className="atividades-curso__link" href={acao.href} rel="noreferrer" target="_blank">
                                       {acao.label}
                                     </a>
                                   ) : null}
@@ -1610,7 +1594,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                               </div>
 
                               {conteudoAtivo ? (
-                                <div style={{ color: "var(--cor-texto-suave)", fontSize: "0.85rem", padding: "var(--espaco-sm) 0 0 calc(38px + var(--espaco-md))" }}>
+                                <div className="atividades-curso__previa">
                                   <p>{obterPreviaConteudoAluno(conteudo)}</p>
                                   {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
                                   <span>
@@ -1618,33 +1602,68 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                   </span>
                                 </div>
                               ) : null}
+
+                              {!itemBloqueado && conteudo.quizzes.length ? (
+                                <ul aria-label={`Quiz de ${conteudo.titulo}`} className="atividades-curso__quizzes" role="list">
+                                  {conteudo.quizzes.map((quiz) => {
+                                    const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
+                                    const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
+
+                                    return (
+                                      <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-material-${quiz.id}`}>
+                                        <div className="atividades-curso__linha">
+                                          <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                                            <TbTrophy aria-hidden="true" size={17} />
+                                          </span>
+                                          <div className="atividades-curso__corpo">
+                                            <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
+                                            <p className="atividades-curso__meta">
+                                              <span>Quiz</span>
+                                              <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                              <StatusPill tone={quizConcluido ? "success" : disponibilidadeQuiz.tone}>
+                                                {quizConcluido ? "Concluido" : disponibilidadeQuiz.label}
+                                              </StatusPill>
+                                            </p>
+                                          </div>
+                                          <div className="atividades-curso__acoes">
+                                            {disponibilidadeQuiz.podeRealizar || quizConcluido ? (
+                                              <Botao
+                                                disabled={quizIndisponivel || (!disponibilidadeQuiz.podeRealizar && !quizConcluido)}
+                                                onClick={() => onIniciarQuiz(quiz)}
+                                                tamanho="pequeno"
+                                                variante={quizConcluido ? "fantasma" : "primario"}
+                                              >
+                                                {quizConcluido ? "Ver quiz" : "Fazer quiz"}
+                                              </Botao>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              ) : null}
                             </li>
                           );
                         })}
                         {modulo.quizzes.map((quiz) => {
                           const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
-                          const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
 
                           return (
-                            <li className={`cartao-conteudo${quizConcluido ? " cartao-conteudo--concluido" : ""}`} key={`quiz-${quiz.id}`}>
-                              <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)", width: "100%" }}>
-                                {quizConcluido ? (
-                                  <span aria-label="Quiz concluido" className="cartao-conteudo__badge-check">
-                                    <TbCheck aria-hidden="true" size={11} />
-                                  </span>
-                                ) : (
-                                  <span aria-hidden="true" className="cartao-conteudo__icone-btn">
-                                    <TbTrophy aria-hidden="true" size={18} />
-                                  </span>
-                                )}
-                                <div className="cartao-conteudo__info">
-                                  <strong className="cartao-conteudo__titulo">{quiz.titulo}</strong>
-                                  <p className="cartao-conteudo__modulo">Quiz - {quiz.totalQuestoes || 0} questao(oes)</p>
+                            <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-${quiz.id}`}>
+                              <div className="atividades-curso__linha">
+                                <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                                  <TbTrophy aria-hidden="true" size={17} />
+                                </span>
+                                <div className="atividades-curso__corpo">
+                                  <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
+                                  <p className="atividades-curso__meta">
+                                    <span>Quiz - {quiz.totalQuestoes || 0} questao(oes)</span>
+                                    <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                    <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
+                                  </p>
                                 </div>
-                                <div className="cartao-conteudo__meta">
-                                  <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
-                                </div>
-                                <div className="cartao-conteudo__acoes">
+                                <div className="atividades-curso__acoes">
                                   {disponibilidadeQuiz.podeRealizar ? (
                                     <Botao disabled={quizIndisponivel} onClick={() => onIniciarQuiz(quiz)} tamanho="pequeno" variante="fantasma">
                                       Iniciar quiz
@@ -1827,15 +1846,6 @@ function obterDisponibilidadeAvaliacao(avaliacao) {
     mensagem: "Avaliacao disponivel para resposta.",
     tone: "success"
   };
-}
-
-function calcularMediaGruposConteudo(gruposConteudosPorCurso) {
-  if (!gruposConteudosPorCurso.length) {
-    return 0;
-  }
-
-  const total = gruposConteudosPorCurso.reduce((soma, curso) => soma + Number(curso.progresso || 0), 0);
-  return total / gruposConteudosPorCurso.length;
 }
 
 function obterChaveModuloConteudo(cursoId, moduloId) {
