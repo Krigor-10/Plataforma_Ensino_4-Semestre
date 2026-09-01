@@ -12,6 +12,7 @@ import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./w
 import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./workspace/SecaoMatriculas.jsx";
 import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
 import { SecaoTurmas } from "./workspace/SecaoTurmas.jsx";
+import { SecaoTurmasProfessor } from "./workspace/SecaoTurmasProfessor.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
 import { DashboardAdmin } from "./workspace/DashboardAdmin.jsx";
 import { DashboardAluno } from "./workspace/DashboardAluno.jsx";
@@ -73,9 +74,10 @@ export default function WorkspaceScreen({
     (isManager
       ? false
       : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "cursos-matriculados", "certificados"].includes(activeSection)));
-  const emCursoDeConteudosDetalhe =
+  const ocultarHeroGenerico =
     (isStudent && activeSection === "conteudos" && Boolean(route.param)) ||
-    (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param));
+    (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
+    (isProfessor && activeSection === "turmas");
 
   useEffect(() => {
     const canonicalPath =
@@ -533,7 +535,7 @@ export default function WorkspaceScreen({
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
       >
-        {!isDashboard && !emCursoDeConteudosDetalhe ? (
+        {!isDashboard && !ocultarHeroGenerico ? (
           <header className="workspace-hero">
             <div className="workspace-hero__meta">
               <span className="eyebrow">Workspace React</span>
@@ -766,20 +768,24 @@ export default function WorkspaceScreen({
             ) : null}
 
             {activeSection === "turmas" ? (
-              <SecaoTurmas
-                alunos={snapshot.alunos}
-                cursoPorId={cursoByIdParaTurmas}
-                cursoEmFoco={cursoEmFocoPorSecao.turmas}
-                ehGestor={isManager}
-                ehProfessor={isProfessor}
-                matriculas={snapshot.matriculas}
-                onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
-                onRefresh={() => setRefreshKey((current) => current + 1)}
-                onSessionExpired={onSessionExpired}
-                professores={snapshot.professores}
-                professorPorId={professorById}
-                turmas={visibleTurmas}
-              />
+              isProfessor ? (
+                <SecaoTurmasProfessor cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
+              ) : (
+                <SecaoTurmas
+                  alunos={snapshot.alunos}
+                  cursoPorId={cursoByIdParaTurmas}
+                  cursoEmFoco={cursoEmFocoPorSecao.turmas}
+                  ehGestor={isManager}
+                  ehProfessor={false}
+                  matriculas={snapshot.matriculas}
+                  onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
+                  onRefresh={() => setRefreshKey((current) => current + 1)}
+                  onSessionExpired={onSessionExpired}
+                  professores={snapshot.professores}
+                  professorPorId={professorById}
+                  turmas={visibleTurmas}
+                />
+              )
             ) : null}
           </>
         ) : null}

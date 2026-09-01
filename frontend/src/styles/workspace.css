@@ -4063,7 +4063,7 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.02);
+    transform: scale(1.06);
   }
 }
 
@@ -4278,7 +4278,7 @@
 /* ------------------------------------------------------------
    TRILHA DO PROFESSOR — reordenar e painel de acoes do conteudo
    (SecaoConteudosProfessor.jsx). Reaproveita as mesmas classes
-   atividades-curso__*/conteudos-modulo__* da trilha do aluno.
+   atividades-curso__ e conteudos-modulo__ da trilha do aluno.
    ------------------------------------------------------------ */
 .atividades-curso__reordenar {
   display: inline-flex;
@@ -4329,6 +4329,8 @@
 .atividades-curso__adicionar {
   align-self: flex-start;
   margin: 0.5rem 0 0.75rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
 }
 
 .catalogo-card--acionavel {
@@ -4646,6 +4648,104 @@
   align-items: flex-end;
   flex-shrink: 0;
   gap: 1px;
+}
+
+/* ------------------------------------------------------------
+   TURMAS DO PROFESSOR — analise de desempenho por avaliacao
+   (SecaoTurmasProfessor.jsx).
+   ------------------------------------------------------------ */
+.turmas-professor__indicadores {
+  margin-top: var(--espaco-xl);
+}
+
+.turmas-professor__secao-avaliacoes {
+  margin-top: var(--espaco-xl);
+  overflow: hidden;
+}
+
+.turmas-professor__avaliacoes-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao-rapida);
+}
+
+.turmas-professor__avaliacoes-toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.turmas-professor__avaliacoes-toggle:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: -2px;
+}
+
+.turmas-professor__avaliacoes-chevron {
+  flex-shrink: 0;
+  color: var(--cor-texto-suave);
+  transition: transform var(--transicao-rapida);
+}
+
+.turmas-professor__avaliacoes-chevron--aberto {
+  transform: rotate(180deg);
+}
+
+.turmas-professor__avaliacoes-conteudo {
+  border-top: 1px solid var(--cor-borda);
+}
+
+.turmas-professor__avaliacoes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.turmas-professor__avaliacao {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.turmas-professor__avaliacao-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.turmas-professor__avaliacao-titulo {
+  font-size: 0.95rem;
+  color: var(--cor-texto-forte);
+}
+
+.turmas-professor__avaliacao-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-xs);
+}
+
+.turmas-professor__avaliacao-metricas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm) var(--espaco-md);
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+}
+
+.turmas-professor__avaliacao-metricas span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .texto-mudo {
@@ -5228,8 +5328,18 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--espaco-md);
+  row-gap: 0.15rem;
+}
+
+.conteudos-modulo__icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cor-marca-clara);
 }
 
 .conteudos-modulo__eyebrow {
@@ -5238,17 +5348,34 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--cor-marca-clara);
+  flex-shrink: 0;
 }
 
 .conteudos-modulo__titulo {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
+  flex: 1;
+  min-width: 8rem;
 }
 
 .conteudos-modulo__contagem {
   font-size: 0.78rem;
   color: var(--cor-texto-suave);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .conteudos-modulo__info {
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 0.3rem;
+  }
+
+  .conteudos-modulo__contagem {
+    white-space: normal;
+  }
 }
 
 .conteudos-modulo__barra {
@@ -6293,11 +6420,31 @@
   gap: var(--espaco-xs);
   padding: 0;
   overflow: hidden;
-  transition: border-color var(--transicao-normal);
+  transition: border-color var(--transicao-normal), transform var(--transicao-normal), box-shadow var(--transicao-normal);
 }
 
 .catalogo-card:hover {
   border-color: var(--cor-borda-forte);
+}
+
+/* Microinteracao sutil só em ponteiros com hover de verdade (mouse/trackpad) -
+   evita comportamento "preso" em telas de toque, que nao tem hover real. */
+@media (hover: hover) and (pointer: fine) {
+  .catalogo-card:hover {
+    transform: translateY(-2px) scale(1.015);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .catalogo-card {
+    transition: border-color var(--transicao-normal);
+  }
+
+  .catalogo-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 .catalogo-card__imagem {

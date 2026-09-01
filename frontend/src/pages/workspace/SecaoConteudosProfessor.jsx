@@ -9,6 +9,7 @@ import {
   TbEye,
   TbFile,
   TbFileText,
+  TbLayoutGrid,
   TbPencil,
   TbPhoto,
   TbPlayerPlay,
@@ -842,15 +843,20 @@ function TrilhaConteudosProfessor({
                       type="button"
                     >
                       <div className="conteudos-modulo__info">
+                        <span aria-hidden="true" className="conteudos-modulo__icone">
+                          <TbLayoutGrid size="1.15rem" />
+                        </span>
                         <span className="conteudos-modulo__eyebrow">Modulo {String(indiceModulo + 1).padStart(2, "0")}</span>
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         <span className="conteudos-modulo__contagem">
                           {itensDoModulo.length} conteudo{itensDoModulo.length === 1 ? "" : "s"} · {totalPublicadosModulo} publicado{totalPublicadosModulo === 1 ? "" : "s"}
                         </span>
                       </div>
-                      <span aria-hidden="true" className={`conteudos-modulo__chevron${estaAberto ? " conteudos-modulo__chevron--aberto" : ""}`}>
-                        ▾
-                      </span>
+                      <TbChevronDown
+                        aria-hidden="true"
+                        className={`conteudos-modulo__chevron${estaAberto ? " conteudos-modulo__chevron--aberto" : ""}`}
+                        size="1.1rem"
+                      />
                     </button>
                   </h3>
                 </header>
@@ -899,9 +905,11 @@ function TrilhaConteudosProfessor({
                                   <div className="atividades-curso__corpo">
                                     <span className="atividades-curso__item-titulo-linha">
                                       <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
-                                      <span aria-hidden="true" className={`atividades-curso__chevron${conteudoAtivo ? " atividades-curso__chevron--aberto" : ""}`}>
-                                        ▾
-                                      </span>
+                                      <TbChevronDown
+                                        aria-hidden="true"
+                                        className={`atividades-curso__chevron${conteudoAtivo ? " atividades-curso__chevron--aberto" : ""}`}
+                                        size="1rem"
+                                      />
                                     </span>
                                     <p className="atividades-curso__meta">
                                       <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
@@ -980,8 +988,8 @@ function TrilhaConteudosProfessor({
                         </ul>
                       )}
 
-                      <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="fantasma">
-                        <TbPlus aria-hidden="true" size={15} /> Adicionar conteudo
+                      <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="sucesso">
+                        <TbPlus aria-hidden="true" size={13} /> Adicionar conteudo
                       </Botao>
                     </motion.div>
                   ) : null}
@@ -1058,6 +1066,9 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
                 <header className="conteudos-modulo__cabecalho">
                   <div className="conteudos-modulo__cabecalho-wrapper">
                     <div className="conteudos-modulo__info">
+                      <span aria-hidden="true" className="conteudos-modulo__icone">
+                        <TbLayoutGrid size="1.15rem" />
+                      </span>
                       <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
                       <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                       <span className="conteudos-modulo__contagem">{itens.length} conteudo{itens.length === 1 ? "" : "s"}</span>

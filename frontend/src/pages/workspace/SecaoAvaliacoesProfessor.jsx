@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbDotsVertical, TbPencil, TbPlus, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbCheck, TbDotsVertical, TbPencil, TbPlus, TbTrophy, TbX } from "react-icons/tb";
 import { MdDelete, MdSave } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
@@ -11,7 +11,7 @@ import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
+import { formatGrade, normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
 
 const TIPO_QUIZ = "1";
 
@@ -78,6 +78,38 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   const [avaliacaoDetalhe, setAvaliacaoDetalhe] = useState(null);
   const [campoEditando, setCampoEditando] = useState(null);
   const [valorEditando, setValorEditando] = useState("");
+
+  /* Media de nota por avaliacao e informacao secundaria (nao existe no DTO de
+     /Avaliacoes) - reaproveita o endpoint de desempenho por turma ja usado em
+     SecaoTurmasProfessor.jsx em vez de criar uma nova agregacao no backend. */
+  const [desempenhoAvaliacoes, setDesempenhoAvaliacoes] = useState([]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarDesempenho() {
+      try {
+        const turmasComDesempenho = await apiRequest("/Turmas/desempenho");
+        if (ativo) {
+          setDesempenhoAvaliacoes(turmasComDesempenho.flatMap((turma) => turma.avaliacoes));
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+        }
+      }
+    }
+
+    carregarDesempenho();
+    return () => {
+      ativo = false;
+    };
+  }, [onSessionExpired]);
+
+  const mediaNotaPorAvaliacaoId = useMemo(
+    () => new Map(desempenhoAvaliacoes.map((item) => [item.avaliacaoId, item.mediaNota])),
+    [desempenhoAvaliacoes]
+  );
 
   // Assistente unificado (Dados Gerais + Questoes), fiel ao FormularioCriarAvaliacao do prototipo:
   // uma tela so com navegacao lateral por step, em vez de 2 modais separados.
@@ -198,6 +230,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         : [],
     [avaliacoes, cursoAtivo]
   );
+
 
   useEffect(() => {
     if (avaliacaoAssistenteId || dadosFormulario.turmaId || !cursoAtivo) {
@@ -761,18 +794,16 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   return (
     <div className="tela-avaliacoes">
       {!cursoAtivo ? (
-        <>
-          <GradeCursosProfessor
-            cursos={cursosDoProfessor.map(({ curso, totalAvaliacoes, totalPublicadas }) => ({
-              curso,
-              resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
-              rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
-              badge: totalAvaliacoes > 0 && totalPublicadas === totalAvaliacoes ? "Publicado" : "Rascunho"
-            }))}
-            mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
-            onSelecionar={abrirCurso}
-          />
-        </>
+        <GradeCursosProfessor
+          cursos={cursosDoProfessor.map(({ curso, totalAvaliacoes, totalPublicadas }) => ({
+            curso,
+            resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
+            rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
+            badge: totalAvaliacoes > 0 && totalPublicadas === totalAvaliacoes ? "Publicado" : "Rascunho"
+          }))}
+          mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
+          onSelecionar={abrirCurso}
+        />
       ) : (
         <>
           <nav aria-label="Navegacao das avaliacoes" className="atividades-curso__navegacao">
@@ -794,6 +825,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
           <SlideAvaliacoes
             avaliacoes={avaliacoesDoCursoAtivo}
+            mediaNotaPorAvaliacaoId={mediaNotaPorAvaliacaoId}
             menuAbertoId={menuAbertoId}
             onEditar={abrirEdicaoAvaliacao}
             onExcluir={(avaliacao) => {
@@ -1425,70 +1457,71 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   );
 }
 
-function SlideAvaliacoes({ avaliacoes, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
+/* Avaliacoes pertencem diretamente ao curso (via TurmaId) - lista plana, sem
+   passar por modulos/conteudos (avaliacoesDoCursoAtivo ja filtra por turma).
+   O card do curso (GradeCursosProfessor) continua sendo a porta de entrada;
+   isto so desenha o conteudo depois que um curso ja foi acessado, reaproveitando
+   o padrao visual dos itens de conteudo dentro de um modulo (atividades-curso__*)
+   - ver SecaoConteudosProfessor.jsx para o padrao original. */
+function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
   if (avaliacoes.length === 0) {
     return <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para este curso ainda.</p>;
   }
 
   return (
-    <div className="conteudos-aluno">
-      <ul aria-label="Avaliacoes do curso" className="lista-conteudos-completa" role="list">
-        {avaliacoes.map((avaliacao) => (
-          <li className="cartao-conteudo" key={avaliacao.id}>
-            <span aria-hidden="true" className="cartao-conteudo__icone">◈</span>
-            <div className="cartao-conteudo__info">
-              <strong className="cartao-conteudo__titulo">{avaliacao.titulo}</strong>
-              <p className="cartao-conteudo__modulo">
-                {avaliacao.moduloTitulo ? avaliacao.moduloTitulo : "Direto no curso"}
-                {" · "}
-                {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"}
-                {" · "}
-                {avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos}min` : "sem tempo limite"}
-                {" · "}
-                nota max. {formatDecimal(avaliacao.notaMaxima)}
+    <ul aria-label="Avaliacoes do curso" className="conteudos-modulo__lista atividades-curso__lista" role="list">
+      {avaliacoes.map((avaliacao) => (
+        <li className="atividades-curso__item" key={avaliacao.id}>
+          <div className="atividades-curso__linha">
+            <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+              <TbTrophy aria-hidden="true" size="1.5rem" />
+            </span>
+            <div className="atividades-curso__corpo">
+              <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
+              <p className="atividades-curso__meta">
+                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                <span>Media {formatGrade(mediaNotaPorAvaliacaoId.get(avaliacao.id))}</span>
               </p>
             </div>
-              <div className="cartao-conteudo__meta">
-                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
-              </div>
-              <div className="cartao-conteudo__acoes menu-contexto">
-                <button
-                  aria-expanded={menuAbertoId === avaliacao.id}
-                  aria-haspopup="true"
-                  aria-label={`Opcoes para ${avaliacao.titulo}`}
-                  className="menu-contexto__botao"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleMenu(avaliacao.id);
-                  }}
-                  type="button"
-                >
-                  <TbDotsVertical aria-hidden="true" size={18} />
-                </button>
-                {menuAbertoId === avaliacao.id ? (
-                  <ul className="menu-contexto__lista">
-                    <li>
-                      <button onClick={() => onVerDetalhes(avaliacao)} type="button">
-                        Ver detalhes
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => onEditar(avaliacao)} type="button">
-                        Editar
-                      </button>
-                    </li>
-                    <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
-                        Excluir
-                      </button>
-                    </li>
-                  </ul>
-                ) : null}
-              </div>
-            </li>
-          ))}
-      </ul>
-    </div>
+            <div className="atividades-curso__acoes menu-contexto">
+              <button
+                aria-expanded={menuAbertoId === avaliacao.id}
+                aria-haspopup="true"
+                aria-label={`Opcoes para ${avaliacao.titulo}`}
+                className="menu-contexto__botao"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleMenu(avaliacao.id);
+                }}
+                type="button"
+              >
+                <TbDotsVertical aria-hidden="true" size={18} />
+              </button>
+              {menuAbertoId === avaliacao.id ? (
+                <ul className="menu-contexto__lista">
+                  <li>
+                    <button onClick={() => onVerDetalhes(avaliacao)} type="button">
+                      Ver detalhes
+                    </button>
+                  </li>
+                  <li>
+                    <button onClick={() => onEditar(avaliacao)} type="button">
+                      Editar
+                    </button>
+                  </li>
+                  <li>
+                    <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
+                      Excluir
+                    </button>
+                  </li>
+                </ul>
+              ) : null}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

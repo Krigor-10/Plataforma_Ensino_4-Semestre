@@ -1,6 +1,8 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
+using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
 
@@ -140,6 +142,149 @@ public class TurmaService : ITurmaService
         {
             throw new InvalidOperationException("Nao e possivel excluir a turma pois ela possui matriculas vinculadas.");
         }
+    }
+
+    public async Task<IEnumerable<TurmaDesempenhoResponseDto>> ObterDesempenhoPorProfessorAsync(int professorId)
+        => await ObterDesempenhoInternoAsync(professorId, null);
+
+    public async Task<TurmaDesempenhoResponseDto> ObterDesempenhoPorTurmaAsync(int turmaId, int professorId)
+    {
+        var resultado = await ObterDesempenhoInternoAsync(professorId, turmaId);
+        return resultado.FirstOrDefault()
+            ?? throw new KeyNotFoundException("Turma nao encontrada.");
+    }
+
+    private async Task<IEnumerable<TurmaDesempenhoResponseDto>> ObterDesempenhoInternoAsync(int professorId, int? turmaIdFiltro)
+    {
+        var comparadorPtBr = StringComparer.Create(new CultureInfo("pt-BR"), false);
+
+        var turmas = await _context.Turmas
+            .AsNoTracking()
+            .Where(turma => turma.ProfessorId == professorId && (!turmaIdFiltro.HasValue || turma.Id == turmaIdFiltro.Value))
+            .Include(turma => turma.Curso)
+            .ToListAsync();
+
+        if (turmas.Count == 0)
+        {
+            return Enumerable.Empty<TurmaDesempenhoResponseDto>();
+        }
+
+        var turmaIds = turmas.Select(turma => turma.Id).ToList();
+
+        var matriculas = await _context.Matriculas
+            .AsNoTracking()
+            .Where(matricula => matricula.TurmaId.HasValue && turmaIds.Contains(matricula.TurmaId.Value))
+            .Include(matricula => matricula.Aluno)
+            .ToListAsync();
+        var matriculaIds = matriculas.Select(matricula => matricula.Id).ToList();
+        var matriculasPorTurmaId = matriculas
+            .GroupBy(matricula => matricula.TurmaId!.Value)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
+
+        var progressoPorMatriculaId = await _context.ProgressosCursosAlunos
+            .AsNoTracking()
+            .Where(progresso => matriculaIds.Contains(progresso.MatriculaId))
+            .ToDictionaryAsync(progresso => progresso.MatriculaId);
+
+        var avaliacoes = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao => turmaIds.Contains(avaliacao.TurmaId))
+            .ToListAsync();
+        var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
+        var avaliacoesPorTurmaId = avaliacoes
+            .GroupBy(avaliacao => avaliacao.TurmaId)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
+
+        var tentativasCorrigidas = await _context.TentativasAvaliacao
+            .AsNoTracking()
+            .Where(tentativa => avaliacaoIds.Contains(tentativa.AvaliacaoId) && tentativa.StatusTentativa == StatusTentativaAvaliacao.Corrigida)
+            .ToListAsync();
+
+        var estatisticasPorAvaliacaoId = tentativasCorrigidas
+            .GroupBy(tentativa => (tentativa.AvaliacaoId, tentativa.MatriculaId))
+            .Select(grupo => grupo.OrderByDescending(item => item.NotaBruta).First())
+            .GroupBy(tentativa => tentativa.AvaliacaoId)
+            .ToDictionary(
+                grupo => grupo.Key,
+                grupo => (Participantes: grupo.Count(), MediaNota: grupo.Average(item => item.NotaBruta)));
+
+        var resultado = new List<TurmaDesempenhoResponseDto>();
+
+        foreach (var turma in turmas)
+        {
+            var matriculasDaTurma = matriculasPorTurmaId.TryGetValue(turma.Id, out var listaMatriculas)
+                ? listaMatriculas
+                : new List<Matricula>();
+
+            var alunosDto = matriculasDaTurma
+                .Select(matricula => new AlunoDesempenhoResponseDto
+                {
+                    MatriculaId = matricula.Id,
+                    AlunoId = matricula.AlunoId,
+                    Nome = matricula.Aluno?.Nome ?? $"Aluno #{matricula.AlunoId}",
+                    Status = matricula.Status,
+                    NotaFinal = matricula.NotaFinal,
+                    PercentualConclusao = progressoPorMatriculaId.TryGetValue(matricula.Id, out var progresso)
+                        ? progresso.PercentualConclusao
+                        : 0
+                })
+                .OrderBy(aluno => aluno.Nome, comparadorPtBr)
+                .ToList();
+
+            var totalAlunos = alunosDto.Count;
+            var alunosComNota = alunosDto.Where(aluno => aluno.NotaFinal > 0).ToList();
+            var concluidos = alunosDto.Count(aluno => aluno.PercentualConclusao >= 100);
+
+            var avaliacoesDaTurma = avaliacoesPorTurmaId.TryGetValue(turma.Id, out var listaAvaliacoes)
+                ? listaAvaliacoes
+                : new List<Avaliacao>();
+
+            var avaliacoesDto = avaliacoesDaTurma
+                .Select(avaliacao =>
+                {
+                    var estatistica = estatisticasPorAvaliacaoId.TryGetValue(avaliacao.Id, out var valor)
+                        ? valor
+                        : (Participantes: 0, MediaNota: 0m);
+
+                    return new AvaliacaoDesempenhoResponseDto
+                    {
+                        AvaliacaoId = avaliacao.Id,
+                        Titulo = avaliacao.Titulo,
+                        TipoAvaliacao = avaliacao.TipoAvaliacao,
+                        StatusPublicacao = avaliacao.StatusPublicacao,
+                        TotalParticipantes = estatistica.Participantes,
+                        MediaNota = Math.Round(estatistica.MediaNota, 2),
+                        NotaMaxima = avaliacao.NotaMaxima,
+                        PercentualConclusao = totalAlunos > 0
+                            ? Math.Round((decimal)estatistica.Participantes / totalAlunos * 100, 1)
+                            : 0,
+                        PercentualAproveitamento = avaliacao.NotaMaxima > 0
+                            ? Math.Round(estatistica.MediaNota / avaliacao.NotaMaxima * 100, 1)
+                            : 0
+                    };
+                })
+                .OrderBy(avaliacao => avaliacao.Titulo, comparadorPtBr)
+                .ToList();
+
+            resultado.Add(new TurmaDesempenhoResponseDto
+            {
+                TurmaId = turma.Id,
+                NomeTurma = turma.NomeTurma,
+                CursoId = turma.CursoId,
+                CursoTitulo = turma.Curso?.Titulo ?? string.Empty,
+                TotalAlunos = totalAlunos,
+                AlunosAtivos = alunosDto.Count(aluno => aluno.Status == StatusMatricula.Aprovada),
+                ProgressoMedio = totalAlunos > 0 ? Math.Round(alunosDto.Average(aluno => aluno.PercentualConclusao), 1) : 0,
+                PercentualConclusao = totalAlunos > 0 ? Math.Round((decimal)concluidos / totalAlunos * 100, 1) : 0,
+                DesempenhoMedio = alunosComNota.Count > 0 ? Math.Round(alunosComNota.Average(aluno => aluno.NotaFinal), 2) : 0,
+                Alunos = alunosDto,
+                Avaliacoes = avaliacoesDto
+            });
+        }
+
+        return resultado
+            .OrderBy(turma => turma.CursoTitulo, comparadorPtBr)
+            .ToList();
     }
 
     private Task<string> GerarCodigoTurmaAsync() =>
