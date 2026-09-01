@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbSelector, TbX } from "react-icons/tb";
 import { MdGroups, MdSave, MdSchool } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
@@ -551,8 +551,8 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               <Botao disabled={salvando} onClick={() => setProfessorParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="primario">
-                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }

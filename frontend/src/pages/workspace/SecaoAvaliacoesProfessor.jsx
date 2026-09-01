@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbCheck, TbDotsVertical, TbPencil, TbPlus, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbCheck, TbDotsVertical, TbPencil, TbPlus, TbX } from "react-icons/tb";
 import { MdDelete, MdSave } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
 import Botao from "../../components/Botao.jsx";
+import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizePublicationStatus, parseApiDate } from "../../lib/format.js";
+
+const TIPO_QUIZ = "1";
 
 const OPCOES_TIPO_AVALIACAO = [
   { value: "1", label: "Quiz" },
@@ -63,15 +66,14 @@ function toIsoOrNull(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
-export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, modulos, onRefresh, onSessionExpired, solicitacaoNovaAvaliacao = 0, turmas, usuario }) {
-  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario([], []));
+export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onQuizIntentConsumido, onRefresh, onSessionExpired, quizIntent = null, turmas, usuario }) {
+  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario());
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
   const [mensagemExclusaoAvaliacao, setMensagemExclusaoAvaliacao] = useState("");
   const [questaoParaExcluir, setQuestaoParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
-  const [slideAtual, setSlideAtual] = useState(0);
 
   const [avaliacaoDetalhe, setAvaliacaoDetalhe] = useState(null);
   const [campoEditando, setCampoEditando] = useState(null);
@@ -154,13 +156,86 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     return agrupados;
   }, [conteudos]);
 
+  /* Um professor tem no maximo 1 turma por curso — mesma premissa usada na
+     Trilha de Conteudos (ver SecaoConteudosProfessor.jsx). */
+  const cursosDoProfessor = useMemo(() => {
+    const porCursoId = new Map();
+
+    turmasDoProfessor.forEach((turma) => {
+      if (porCursoId.has(turma.cursoId)) {
+        return;
+      }
+
+      const curso = cursoPorId.get(turma.cursoId);
+      if (!curso) {
+        return;
+      }
+
+      const avaliacoesDaTurma = avaliacoes.filter((avaliacao) => avaliacao.turmaId === turma.id);
+
+      porCursoId.set(turma.cursoId, {
+        curso,
+        turma,
+        totalAvaliacoes: avaliacoesDaTurma.length,
+        totalPublicadas: avaliacoesDaTurma.filter((avaliacao) => Number(avaliacao.statusPublicacao) === 2).length
+      });
+    });
+
+    return [...porCursoId.values()].sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
+  }, [avaliacoes, cursoPorId, turmasDoProfessor]);
+
+  const cursoAtivo = useMemo(
+    () => (cursoIdSelecionado ? cursosDoProfessor.find((entrada) => entrada.curso.id === cursoIdSelecionado) || null : null),
+    [cursoIdSelecionado, cursosDoProfessor]
+  );
+
+  const avaliacoesDoCursoAtivo = useMemo(
+    () =>
+      cursoAtivo
+        ? [...avaliacoes]
+            .filter((avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id)
+            .sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
+        : [],
+    [avaliacoes, cursoAtivo]
+  );
+
   useEffect(() => {
-    if (avaliacaoAssistenteId || dadosFormulario.turmaId || !turmasDoProfessor.length) {
+    if (avaliacaoAssistenteId || dadosFormulario.turmaId || !cursoAtivo) {
       return;
     }
 
-    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
-  }, [avaliacaoAssistenteId, dadosFormulario.turmaId, modulosDoProfessor, turmasDoProfessor]);
+    setDadosFormulario(criarEstadoInicialFormulario({ turmaId: String(cursoAtivo.turma.id) }));
+  }, [avaliacaoAssistenteId, cursoAtivo, dadosFormulario.turmaId]);
+
+  /* Vindo de "Adicionar/Editar quiz" na Trilha de Conteudos (SecaoConteudosProfessor) -
+     abre o assistente ja preenchido pro modulo/material daquele conteudo, ou em modo
+     edicao se ja existir um quiz vinculado. */
+  useEffect(() => {
+    if (!quizIntent || quizIntent.cursoId !== cursoIdSelecionado || !cursoAtivo || assistenteAberto) {
+      return;
+    }
+
+    if (quizIntent.avaliacaoId) {
+      const avaliacaoAlvo = avaliacoesDoCursoAtivo.find((avaliacao) => avaliacao.id === quizIntent.avaliacaoId);
+      if (avaliacaoAlvo) {
+        abrirEdicaoAvaliacao(avaliacaoAlvo);
+      }
+    } else {
+      setAvaliacaoAssistenteId(null);
+      setDadosFormulario(
+        criarEstadoInicialFormulario({
+          conteudoDidaticoId: String(quizIntent.conteudoDidaticoId),
+          moduloId: String(quizIntent.moduloId),
+          tipoAvaliacao: TIPO_QUIZ,
+          turmaId: String(cursoAtivo.turma.id)
+        })
+      );
+      setEtapaAtiva("dados");
+      setAssistenteAberto(true);
+    }
+
+    onQuizIntentConsumido?.();
+  }, [assistenteAberto, avaliacoesDoCursoAtivo, cursoAtivo, cursoIdSelecionado, onQuizIntentConsumido, quizIntent]);
 
   const turmaSelecionadaFormulario = useMemo(
     () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormulario.turmaId) || null,
@@ -175,13 +250,15 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     return modulosPorCursoId.get(turmaSelecionadaFormulario.cursoId) || [];
   }, [modulosPorCursoId, turmaSelecionadaFormulario]);
 
+  const ehQuiz = dadosFormulario.tipoAvaliacao === TIPO_QUIZ;
+
   const materiaisDisponiveis = useMemo(
     () => materiaisPorModuloId.get(Number(dadosFormulario.moduloId)) || [],
     [dadosFormulario.moduloId, materiaisPorModuloId]
   );
 
   useEffect(() => {
-    if (!turmaSelecionadaFormulario || avaliacaoAssistenteId) {
+    if (!turmaSelecionadaFormulario || avaliacaoAssistenteId || !ehQuiz) {
       return;
     }
 
@@ -194,7 +271,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     if (!hasCurrentModule && modulosDisponiveis[0]) {
       setDadosFormulario((current) => ({ ...current, conteudoDidaticoId: "", moduloId: String(modulosDisponiveis[0].id) }));
     }
-  }, [avaliacaoAssistenteId, dadosFormulario.moduloId, modulosDisponiveis, turmaSelecionadaFormulario]);
+  }, [avaliacaoAssistenteId, dadosFormulario.moduloId, ehQuiz, modulosDisponiveis, turmaSelecionadaFormulario]);
 
   useEffect(() => {
     if (!dadosFormulario.conteudoDidaticoId) {
@@ -210,38 +287,17 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     }
   }, [dadosFormulario.conteudoDidaticoId, materiaisDisponiveis]);
 
-  useEffect(() => {
-    if (solicitacaoNovaAvaliacao > 0) {
-      abrirFormularioNovaAvaliacao();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solicitacaoNovaAvaliacao]);
+  function abrirCurso(cursoId) {
+    onNavigate?.(`/app/avaliacoes/${cursoId}`);
+  }
 
-  const grupos = useMemo(
-    () =>
-      turmasDoProfessor.map((turma) => ({
-        turma,
-        curso: cursoPorId.get(turma.cursoId) || null,
-        itens: [...avaliacoes]
-          .filter((avaliacao) => avaliacao.turmaId === turma.id)
-          .sort((left, right) => {
-            const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
-            return moduloComparison !== 0 ? moduloComparison : (left.titulo || "").localeCompare(right.titulo || "", "pt-BR");
-          })
-      })),
-    [avaliacoes, cursoPorId, turmasDoProfessor]
-  );
-
-  const total = grupos.length;
-  const slide = Math.min(slideAtual, Math.max(0, total - 1));
-
-  function irPara(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  function voltarParaCursos() {
+    onNavigate?.("/app/avaliacoes");
   }
 
   function limparFormulario() {
     setAvaliacaoAssistenteId(null);
-    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
+    setDadosFormulario(criarEstadoInicialFormulario({ turmaId: cursoAtivo ? String(cursoAtivo.turma.id) : "" }));
     setMensagemFormulario({ tone: "", message: "" });
     setQuestoesAvaliacao([]);
     setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
@@ -267,18 +323,18 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
   function atualizarCampoFormulario(event) {
     const { name, value } = event.target;
 
-    if (name === "turmaId") {
-      const proximaTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
-      const proximosModulos = proximaTurma ? modulosPorCursoId.get(proximaTurma.cursoId) || [] : [];
+    if (name === "tipoAvaliacao") {
+      if (value !== TIPO_QUIZ) {
+        // Prova/Exercicio ficam soltos direto no curso — sem modulo, sem material.
+        setDadosFormulario((current) => ({ ...current, tipoAvaliacao: value, moduloId: "", conteudoDidaticoId: "" }));
+        return;
+      }
 
+      const primeiroModulo = modulosDisponiveis[0];
       setDadosFormulario((current) => ({
         ...current,
-        turmaId: value,
-        moduloId: proximosModulos.some((modulo) => String(modulo.id) === current.moduloId)
-          ? current.moduloId
-          : proximosModulos[0]
-            ? String(proximosModulos[0].id)
-            : ""
+        tipoAvaliacao: value,
+        moduloId: primeiroModulo ? String(primeiroModulo.id) : ""
       }));
       return;
     }
@@ -290,7 +346,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     setAvaliacaoAssistenteId(avaliacao.id);
     setDadosFormulario({
       turmaId: String(avaliacao.turmaId),
-      moduloId: String(avaliacao.moduloId),
+      moduloId: avaliacao.moduloId ? String(avaliacao.moduloId) : "",
       conteudoDidaticoId: avaliacao.conteudoDidaticoId ? String(avaliacao.conteudoDidaticoId) : "",
       titulo: avaliacao.titulo || "",
       descricao: avaliacao.descricao || "",
@@ -316,8 +372,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
       titulo: dadosFormulario.titulo.trim(),
       descricao: dadosFormulario.descricao.trim(),
       turmaId: Number(dadosFormulario.turmaId),
-      moduloId: Number(dadosFormulario.moduloId),
-      conteudoDidaticoId: dadosFormulario.conteudoDidaticoId ? Number(dadosFormulario.conteudoDidaticoId) : null,
+      moduloId: ehQuiz && dadosFormulario.moduloId ? Number(dadosFormulario.moduloId) : null,
+      conteudoDidaticoId: ehQuiz && dadosFormulario.conteudoDidaticoId ? Number(dadosFormulario.conteudoDidaticoId) : null,
       tipoAvaliacao: Number(dadosFormulario.tipoAvaliacao),
       statusPublicacao: Number(dadosFormulario.statusPublicacao),
       dataAbertura: toIsoOrNull(dadosFormulario.dataAbertura),
@@ -331,12 +387,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
   }
 
   function validarDadosGerais(dadosEnvio) {
-    if (!turmasDoProfessor.length) {
-      return "Seu perfil ainda nao possui turmas para avaliacao.";
-    }
-
-    if (!modulosDisponiveis.length) {
-      return "Nao existem modulos disponiveis para a turma selecionada.";
+    if (!cursoAtivo) {
+      return "Selecione um curso antes de criar a avaliacao.";
     }
 
     if (!dadosEnvio.titulo) {
@@ -344,11 +396,15 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
     }
 
     if (!dadosEnvio.turmaId) {
-      return "Selecione a turma que vai receber a avaliacao.";
+      return "Nao foi possivel identificar a turma deste curso.";
     }
 
-    if (!dadosEnvio.moduloId) {
-      return "Selecione um modulo para organizar a avaliacao.";
+    if (ehQuiz && !modulosDisponiveis.length) {
+      return "Este curso ainda nao tem modulos cadastrados para organizar o quiz.";
+    }
+
+    if (ehQuiz && !dadosEnvio.moduloId) {
+      return "Selecione um modulo para organizar o quiz.";
     }
 
     if (!Number.isInteger(dadosEnvio.tentativasPermitidas) || dadosEnvio.tentativasPermitidas <= 0) {
@@ -704,92 +760,51 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
 
   return (
     <div className="tela-avaliacoes">
-      <header className="cabecalho-pagina">
-        <div style={{ flex: 1 }}>
-          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h2 className="cabecalho-pagina__titulo">Avaliacoes</h2>
-            {total > 0 ? (
-              <select
-                aria-label="Navegar para turma"
-                className="campo__entrada barra-filtros__select"
-                onChange={(event) => irPara(Number(event.target.value))}
-                style={{ marginLeft: "auto", maxWidth: "240px" }}
-                value={slide}
-              >
-                {grupos.map(({ turma }, indice) => (
-                  <option key={turma.id} value={indice}>
-                    {turma.nomeTurma}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {turmasDoProfessor.length ? (
-              <>
-                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
-                <Botao onClick={abrirFormularioNovaAvaliacao} variante="primario">
-                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                    <TbPlus aria-hidden="true" size={18} />
-                  </motion.span>{" "}
-                  Nova avaliacao
-                </Botao>
-              </>
-            ) : null}
-          </div>
-          <p className="cabecalho-pagina__subtitulo">{avaliacoes.length} {avaliacoes.length === 1 ? "avaliacao" : "avaliacoes"} cadastrada{avaliacoes.length === 1 ? "" : "s"}</p>
-        </div>
-      </header>
-
-      {total === 0 ? (
-        <p className="texto-vazio texto-vazio--central" role="status">
-          Seu usuario ainda nao possui turmas atribuidas.
-        </p>
+      {!cursoAtivo ? (
+        <>
+          <GradeCursosProfessor
+            cursos={cursosDoProfessor.map(({ curso, totalAvaliacoes, totalPublicadas }) => ({
+              curso,
+              resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
+              rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
+              badge: totalAvaliacoes > 0 && totalPublicadas === totalAvaliacoes ? "Publicado" : "Rascunho"
+            }))}
+            mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
+            onSelecionar={abrirCurso}
+          />
+        </>
       ) : (
-        <div className="carrossel-cursos">
-          {total > 1 ? (
-            <nav aria-label="Navegacao entre turmas" className="carrossel-cursos__nav">
-              <button aria-label="Turma anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <div aria-label="Turmas" className="carrossel-cursos__indicadores" role="tablist">
-                {grupos.map(({ turma }, indice) => (
-                  <button
-                    aria-label={`Turma ${indice + 1}: ${turma.nomeTurma}`}
-                    aria-selected={indice === slide}
-                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                    key={turma.id}
-                    onClick={() => irPara(indice)}
-                    role="tab"
-                    type="button"
-                  />
-                ))}
-              </div>
-              <button aria-label="Proxima turma" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </nav>
-          ) : null}
+        <>
+          <nav aria-label="Navegacao das avaliacoes" className="atividades-curso__navegacao">
+            <button className="atividades-curso__voltar" onClick={voltarParaCursos} type="button">
+              <TbArrowLeft aria-hidden="true" size={22} />
+              Voltar para Avaliacoes
+            </button>
+          </nav>
 
-          <div className="carrossel-cursos__janela">
-            <SlideAvaliacoes
-              curso={grupos[slide].curso}
-              itens={grupos[slide].itens}
-              menuAbertoId={menuAbertoId}
-              onEditar={abrirEdicaoAvaliacao}
-              onExcluir={(avaliacao) => {
-                setAvaliacaoParaExcluir(avaliacao);
-                setMensagemExclusaoAvaliacao("");
-                setMenuAbertoId(null);
-              }}
-              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
-              onVerDetalhes={abrirDetalheAvaliacao}
-              turma={grupos[slide].turma}
-            />
-          </div>
-        </div>
+          <header className="atividades-curso__cabecalho">
+            <h2 className="atividades-curso__titulo">{cursoAtivo.curso.titulo}</h2>
+            <Botao onClick={abrirFormularioNovaAvaliacao} variante="primario">
+              <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                <TbPlus aria-hidden="true" size={18} />
+              </motion.span>{" "}
+              Nova avaliacao
+            </Botao>
+          </header>
+
+          <SlideAvaliacoes
+            avaliacoes={avaliacoesDoCursoAtivo}
+            menuAbertoId={menuAbertoId}
+            onEditar={abrirEdicaoAvaliacao}
+            onExcluir={(avaliacao) => {
+              setAvaliacaoParaExcluir(avaliacao);
+              setMensagemExclusaoAvaliacao("");
+              setMenuAbertoId(null);
+            }}
+            onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+            onVerDetalhes={abrirDetalheAvaliacao}
+          />
+        </>
       )}
 
       {avaliacaoDetalhe ? (
@@ -851,7 +866,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
 
             <div className="lista-detalhes__item">
               <dt>Modulo</dt>
-              <dd>{avaliacaoDetalhe.moduloTitulo}</dd>
+              <dd>{avaliacaoDetalhe.moduloTitulo || "Direto no curso"}</dd>
             </div>
 
             <div className="lista-detalhes__item lista-detalhes__item--com-acao">
@@ -1007,8 +1022,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
               <Botao disabled={salvando} onClick={() => setAvaliacaoParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusaoAvaliacao} variante="primario">
-                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvando} onClick={confirmarExclusaoAvaliacao} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }
@@ -1113,35 +1128,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
                     <form className="criar-avaliacao__secao-corpo" id="form-avaliacao-dados" onSubmit={salvarDadosGerais}>
                       <div className="grade-3">
                         <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-turma">Turma *</label>
-                          <select className="campo__entrada" disabled={salvando} id="avaliacao-turma" name="turmaId" onChange={atualizarCampoFormulario} value={dadosFormulario.turmaId}>
-                            {turmasDoProfessor.map((turma) => (
-                              <option key={turma.id} value={turma.id}>
-                                {turma.nomeTurma}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-modulo">Modulo *</label>
-                          <select
-                            className="campo__entrada"
-                            disabled={salvando || !modulosDisponiveis.length}
-                            id="avaliacao-modulo"
-                            key={dadosFormulario.turmaId || "sem-turma"}
-                            name="moduloId"
-                            onChange={atualizarCampoFormulario}
-                            value={dadosFormulario.moduloId}
-                          >
-                            {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
-                            {modulosDisponiveis.map((modulo) => (
-                              <option key={modulo.id} value={modulo.id}>
-                                {modulo.titulo}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="campo">
                           <label className="campo__rotulo" htmlFor="avaliacao-tipo">Tipo *</label>
                           <select className="campo__entrada" disabled={salvando} id="avaliacao-tipo" name="tipoAvaliacao" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoAvaliacao}>
                             {OPCOES_TIPO_AVALIACAO.map((opcao) => (
@@ -1151,29 +1137,57 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
                             ))}
                           </select>
                         </div>
+                        {ehQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor="avaliacao-modulo">Modulo *</label>
+                            <select
+                              className="campo__entrada"
+                              disabled={salvando || !modulosDisponiveis.length}
+                              id="avaliacao-modulo"
+                              name="moduloId"
+                              onChange={atualizarCampoFormulario}
+                              value={dadosFormulario.moduloId}
+                            >
+                              {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
+                              {modulosDisponiveis.map((modulo) => (
+                                <option key={modulo.id} value={modulo.id}>
+                                  {modulo.titulo}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
                       </div>
 
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-material">Material (opcional)</label>
-                        <select
-                          className="campo__entrada"
-                          disabled={salvando || !materiaisDisponiveis.length}
-                          id="avaliacao-material"
-                          name="conteudoDidaticoId"
-                          onChange={atualizarCampoFormulario}
-                          value={dadosFormulario.conteudoDidaticoId}
-                        >
-                          <option value="">Nenhum - vale para o modulo inteiro</option>
-                          {materiaisDisponiveis.map((material) => (
-                            <option key={material.id} value={material.id}>
-                              {material.titulo}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="campo__ajuda">
-                          Vincule o quiz a um material especifico pra ele aparecer dentro desse material em Conteudos, em vez de solto no modulo.
-                        </p>
-                      </div>
+                      {!ehQuiz ? (
+                        <InlineMessage tone="info">
+                          Esta avaliacao fica vinculada direto ao curso <strong>{cursoAtivo?.curso.titulo}</strong>, sem modulo — o aluno a ve na tela geral de Avaliacoes dele.
+                        </InlineMessage>
+                      ) : null}
+
+                      {ehQuiz ? (
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-material">Material (opcional)</label>
+                          <select
+                            className="campo__entrada"
+                            disabled={salvando || !materiaisDisponiveis.length}
+                            id="avaliacao-material"
+                            name="conteudoDidaticoId"
+                            onChange={atualizarCampoFormulario}
+                            value={dadosFormulario.conteudoDidaticoId}
+                          >
+                            <option value="">Nenhum - vale para o modulo inteiro</option>
+                            {materiaisDisponiveis.map((material) => (
+                              <option key={material.id} value={material.id}>
+                                {material.titulo}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="campo__ajuda">
+                            Vincule o quiz a um material especifico pra ele aparecer dentro desse material em Conteudos, em vez de solto no modulo.
+                          </p>
+                        </div>
+                      ) : null}
 
                       <div className="campo">
                         <label className="campo__rotulo" htmlFor="avaliacao-titulo">Titulo *</label>
@@ -1396,8 +1410,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
               <Botao disabled={salvandoQuestao} onClick={() => setQuestaoParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvandoQuestao} onClick={confirmarExclusaoQuestao} variante="primario">
-                {salvandoQuestao ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvandoQuestao} onClick={confirmarExclusaoQuestao} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvandoQuestao ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }
@@ -1411,38 +1425,29 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursos, m
   );
 }
 
-function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes, turma }) {
+function SlideAvaliacoes({ avaliacoes, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
+  if (avaliacoes.length === 0) {
+    return <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para este curso ainda.</p>;
+  }
+
   return (
     <div className="conteudos-aluno">
-      <header className="conteudos-aluno__cabecalho">
-        <div className="conteudos-aluno__curso-info">
-          <h2 className="conteudos-aluno__curso-titulo">{turma.nomeTurma}</h2>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
-              {itens.length} {itens.length === 1 ? "avaliacao" : "avaliacoes"}
-            </span>
-            {curso ? <span className="conteudos-aluno__meta-chip">{curso.titulo}</span> : null}
-          </div>
-        </div>
-      </header>
-
-      {itens.length === 0 ? (
-        <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para esta turma.</p>
-      ) : (
-        <ul aria-label={`Avaliacoes de ${turma.nomeTurma}`} className="lista-conteudos-completa" role="list">
-          {itens.map((avaliacao) => (
-            <li className="cartao-conteudo" key={avaliacao.id}>
-              <span aria-hidden="true" className="cartao-conteudo__icone">◈</span>
-              <div className="cartao-conteudo__info">
-                <strong className="cartao-conteudo__titulo">{avaliacao.titulo}</strong>
-                <p className="cartao-conteudo__modulo">
-                  {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"}
-                  {" - "}
-                  {avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos}min` : "sem tempo limite"}
-                  {" - "}
-                  nota max. {formatDecimal(avaliacao.notaMaxima)}
-                </p>
-              </div>
+      <ul aria-label="Avaliacoes do curso" className="lista-conteudos-completa" role="list">
+        {avaliacoes.map((avaliacao) => (
+          <li className="cartao-conteudo" key={avaliacao.id}>
+            <span aria-hidden="true" className="cartao-conteudo__icone">◈</span>
+            <div className="cartao-conteudo__info">
+              <strong className="cartao-conteudo__titulo">{avaliacao.titulo}</strong>
+              <p className="cartao-conteudo__modulo">
+                {avaliacao.moduloTitulo ? avaliacao.moduloTitulo : "Direto no curso"}
+                {" · "}
+                {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"}
+                {" · "}
+                {avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos}min` : "sem tempo limite"}
+                {" · "}
+                nota max. {formatDecimal(avaliacao.notaMaxima)}
+              </p>
+            </div>
               <div className="cartao-conteudo__meta">
                 <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
               </div>
@@ -1482,19 +1487,15 @@ function SlideAvaliacoes({ curso, itens, menuAbertoId, onEditar, onExcluir, onTo
               </div>
             </li>
           ))}
-        </ul>
-      )}
+      </ul>
     </div>
   );
 }
 
-function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {
-  const primeiraTurma = turmas[0] || null;
-  const modulosDaPrimeiraTurma = primeiraTurma ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId) : [];
-
+function criarEstadoInicialFormulario(overrides = {}) {
   return {
-    turmaId: primeiraTurma ? String(primeiraTurma.id) : "",
-    moduloId: modulosDaPrimeiraTurma[0] ? String(modulosDaPrimeiraTurma[0].id) : "",
+    turmaId: "",
+    moduloId: "",
     conteudoDidaticoId: "",
     titulo: "",
     descricao: "",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend } from "react-icons/tb";
+import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend, TbUser, TbUsers } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -69,12 +69,24 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                 Solicitada em {formatDate(matricula.dataSolicitacao)}
               </p>
             ) : null}
+            {!compacto && matricula.turma ? (
+              <p className="catalogo-card__data">
+                <TbUsers aria-hidden="true" size={13} />
+                {matricula.turma}
+              </p>
+            ) : null}
+            {!compacto && matricula.professor ? (
+              <p className="catalogo-card__data">
+                <TbUser aria-hidden="true" size={13} />
+                Professor {matricula.professor}
+              </p>
+            ) : null}
             {temPagamentoPendente ? (
               <InlineMessage tone="warning">
                 Pagamento pendente: {formatMoney(matricula.pagamentoValor)}.
               </InlineMessage>
             ) : null}
-            {matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
+            {compacto && matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
             <footer className="catalogo-card__rodape-aluno">
               {!compacto ? <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span> : null}
               {!compacto && matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
@@ -89,7 +101,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                 </Botao>
               ) : null}
               {temPagamentoPendente && onConfirmarPagamento ? (
-                <Botao disabled={pagando} onClick={onConfirmarPagamento} tamanho="pequeno" variante="primario">
+                <Botao disabled={pagando} onClick={onConfirmarPagamento} tamanho="pequeno" variante="sucesso">
                   <TbCreditCard aria-hidden="true" size={14} /> {pagando ? "Confirmando..." : "Confirmar pagamento (simulado)"}
                 </Botao>
               ) : null}
@@ -117,7 +129,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
 }
 
 /* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
-export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onNavigate, onRefresh, onSessionExpired }) {
+export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onRefresh, onSessionExpired }) {
   const [matriculaProcessando, setMatriculaProcessando] = useState(null);
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
 
@@ -210,7 +222,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
                 matricula={matricula}
                 onCancelar={() => cancelarMatricula(matricula)}
                 onConfirmarPagamento={() => confirmarPagamento(matricula)}
-                onEntrarNoCurso={onNavigate ? () => onNavigate(`/app/conteudos/${curso.id}`) : null}
                 onReabrir={() => reabrirMatricula(matricula)}
                 pagando={matriculaProcessando === matricula.id}
                 processando={matriculaProcessando === matricula.id}

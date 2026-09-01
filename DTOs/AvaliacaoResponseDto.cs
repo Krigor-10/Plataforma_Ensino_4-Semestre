@@ -12,7 +12,7 @@ public class AvaliacaoResponseDto
     public string TurmaNome { get; set; } = string.Empty;
     public int CursoId { get; set; }
     public string CursoTitulo { get; set; } = string.Empty;
-    public int ModuloId { get; set; }
+    public int? ModuloId { get; set; }
     public string ModuloTitulo { get; set; } = string.Empty;
     public int? ConteudoDidaticoId { get; set; }
     public string ConteudoDidaticoTitulo { get; set; } = string.Empty;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbChalkboard, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
+import { TbChalkboard, TbCheck, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
 import { MdGroups, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -560,8 +560,8 @@ export function SecaoTurmas({
               <Botao disabled={excluindoTurma} onClick={() => setTurmaParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={excluindoTurma} onClick={confirmarExclusaoTurma} variante="primario">
-                {excluindoTurma ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={excluindoTurma} onClick={confirmarExclusaoTurma} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {excluindoTurma ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }

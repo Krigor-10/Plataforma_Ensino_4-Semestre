@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
+import { TbX } from "react-icons/tb";
 import Botao from "../components/Botao.jsx";
 import { SIGNUP_INITIAL_STATE } from "../data/appConfig.js";
 import { formatCep, onlyDigits } from "../lib/format.js";
@@ -468,8 +469,8 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
 
             <footer className="formulario-cadastro__rodape">
               {abaAtual === 0 ? (
-                <Botao variante="fantasma" onClick={() => onNavigate("/")} type="button">
-                  Cancelar
+                <Botao variante="perigo" onClick={() => onNavigate("/")} type="button">
+                  <TbX aria-hidden="true" size={15} /> Cancelar
                 </Botao>
               ) : (
                 <Botao variante="fantasma" onClick={() => setAbaAtual(0)} type="button">

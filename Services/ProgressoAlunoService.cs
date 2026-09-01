@@ -157,7 +157,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
         await _context.SaveChangesAsync();
 
-        await RecalcularMediaModuloAsync(matricula, avaliacao.ModuloId, now);
+        if (avaliacao.ModuloId.HasValue)
+        {
+            await RecalcularMediaModuloAsync(matricula, avaliacao.ModuloId.Value, now);
+        }
+
         await RecalcularMediaCursoAsync(matricula, now);
         await _context.SaveChangesAsync();
     }
@@ -198,13 +202,14 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
     private async Task RecalcularMediaCursoAsync(Matricula matricula, DateTime now)
     {
+        // TurmaId ja garante o curso certo (uma turma pertence a um unico curso) —
+        // nao filtra mais por Modulo.CursoId porque avaliacoes tipo Prova/Exercicio
+        // podem ficar soltas direto no curso, sem modulo (ModuloId null).
         var avaliacoesCurso = await _context.Avaliacoes
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
-                avaliacao.TurmaId == matricula.TurmaId &&
-                avaliacao.Modulo != null &&
-                avaliacao.Modulo.CursoId == matricula.CursoId)
+                avaliacao.TurmaId == matricula.TurmaId)
             .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
             .ToListAsync();
 

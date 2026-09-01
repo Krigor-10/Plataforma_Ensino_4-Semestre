@@ -8,7 +8,7 @@ public class LancamentoNotaAluno
     public int Id { get; set; }
     public int MatriculaId { get; set; }
     public int AvaliacaoId { get; set; }
-    public int ModuloId { get; set; }
+    public int? ModuloId { get; set; }
     public int? TentativaAvaliacaoId { get; set; }
     public int? ProfessorResponsavelId { get; set; }
     public decimal NotaOficial { get; private set; }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbDotsVertical, TbFileText, TbPlus, TbStack, TbX } from "react-icons/tb";
+import { TbCheck, TbDotsVertical, TbFileText, TbPlus, TbStack, TbX } from "react-icons/tb";
 import { MdLayers, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -444,8 +444,8 @@ export function SecaoModulos({
               <Botao disabled={salvando} onClick={() => setModuloParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
-                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvando} onClick={confirmarExclusao} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }

@@ -4015,28 +4015,62 @@
   gap: var(--espaco-md);
 }
 
-.conteudos-aluno__voltar {
+.atividades-curso__navegacao {
+  display: flex;
+}
+
+.atividades-curso__voltar {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   align-self: flex-start;
   background: none;
   border: none;
-  padding: 0.35rem 0.15rem;
-  font-size: 0.85rem;
+  outline: none;
+  box-shadow: none;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.6rem 0.6rem 0.25rem;
+  margin-left: -0.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: var(--cor-texto-suave);
+  color: var(--cor-marca-clara);
   cursor: pointer;
   border-radius: var(--raio-sm);
+  transform-origin: left center;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: transform 0.15s ease;
 }
 
-.conteudos-aluno__voltar:hover {
-  color: var(--cor-marca-clara);
+.atividades-curso__voltar:focus-visible,
+.atividades-curso__voltar:active {
+  outline: none;
+  box-shadow: none;
 }
 
-.conteudos-aluno__voltar:focus-visible {
-  outline: 2px solid var(--cor-marca-clara);
-  outline-offset: 2px;
+/* Pulsacao sutil só em ponteiros com hover de verdade (mouse/trackpad) -
+   evita que o toque em telas mobile fique "preso" num estado de animacao
+   continua, ja que touch nao tem hover real. */
+@media (hover: hover) and (pointer: fine) {
+  .atividades-curso__voltar:hover {
+    animation: atividades-curso-voltar-pulso 1.8s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
+@keyframes atividades-curso-voltar-pulso {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atividades-curso__voltar:hover {
+    animation: none;
+  }
 }
 
 /* ------------------------------------------------------------
@@ -4047,8 +4081,12 @@
    ------------------------------------------------------------ */
 .atividades-curso__cabecalho {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 1.5rem;
+  row-gap: 0.4rem;
 }
 
 .atividades-curso__titulo {
@@ -4056,13 +4094,15 @@
   font-weight: 800;
   line-height: 1.2;
   color: var(--cor-texto-forte);
+  margin: 0;
 }
 
 .atividades-curso__progresso {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  max-width: 22rem;
+  flex: 1 1 12rem;
+  max-width: 14rem;
 }
 
 .atividades-curso__progresso-texto {
@@ -4108,14 +4148,36 @@
   display: flex;
   align-items: flex-start;
   gap: var(--espaco-md);
+  border-radius: var(--raio-md);
+  transition: background-color var(--transicao-rapida);
+}
+
+.atividades-curso__linha[role="button"] {
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+}
+
+.atividades-curso__linha[role="button"]:hover {
+  background-color: var(--cor-fundo-elevado);
+}
+
+.atividades-curso__linha[role="button"]:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.atividades-curso__linha--ativa {
+  background-color: var(--cor-fundo-elevado);
 }
 
 .atividades-curso__icone {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex-shrink: 0;
   background: var(--cor-fundo-elevado);
   border: 1px solid var(--cor-borda);
@@ -4125,7 +4187,8 @@
   transition: border-color var(--transicao-rapida), color var(--transicao-rapida);
 }
 
-button.atividades-curso__icone:hover {
+.atividades-curso__linha[role="button"]:hover .atividades-curso__icone,
+.atividades-curso__linha--ativa .atividades-curso__icone {
   border-color: var(--cor-marca-clara);
   color: var(--cor-marca-clara);
 }
@@ -4150,6 +4213,12 @@ button.atividades-curso__icone:hover {
   padding-top: 0.15rem;
 }
 
+.atividades-curso__item-titulo-linha {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .atividades-curso__item-titulo {
   font-size: 0.92rem;
   font-weight: 600;
@@ -4158,8 +4227,18 @@ button.atividades-curso__icone:hover {
 
 .atividades-curso__item--concluido .atividades-curso__item-titulo {
   color: var(--cor-texto-suave);
-  text-decoration: line-through;
-  opacity: 0.8;
+}
+
+.atividades-curso__chevron {
+  font-size: 0.95rem;
+  color: var(--cor-texto-suave);
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform var(--transicao-rapida);
+}
+
+.atividades-curso__chevron--aberto {
+  transform: rotate(180deg);
 }
 
 .atividades-curso__item--bloqueado {
@@ -4187,6 +4266,79 @@ button.atividades-curso__icone:hover {
   padding-top: 0.15rem;
 }
 
+.atividades-curso__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cor-sucesso);
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+/* ------------------------------------------------------------
+   TRILHA DO PROFESSOR — reordenar e painel de acoes do conteudo
+   (SecaoConteudosProfessor.jsx). Reaproveita as mesmas classes
+   atividades-curso__*/conteudos-modulo__* da trilha do aluno.
+   ------------------------------------------------------------ */
+.atividades-curso__reordenar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida), color var(--transicao-rapida), opacity var(--transicao-rapida);
+}
+
+.atividades-curso__reordenar:hover:not(:disabled) {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.atividades-curso__reordenar:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.atividades-curso__painel-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 0.4rem;
+}
+
+.atividades-curso__publicar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.atividades-curso__publicar-rotulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.atividades-curso__adicionar {
+  align-self: flex-start;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.catalogo-card--acionavel {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
 .atividades-curso__link {
   color: var(--cor-marca-clara);
   font-size: 0.82rem;
@@ -4204,7 +4356,7 @@ button.atividades-curso__icone:hover {
   gap: 0.3rem;
   color: var(--cor-texto-suave);
   font-size: 0.85rem;
-  padding-left: calc(2rem + var(--espaco-md));
+  padding-left: calc(2.5rem + var(--espaco-md));
 }
 
 @media (max-width: 30rem) {
@@ -4214,7 +4366,7 @@ button.atividades-curso__icone:hover {
 
   .atividades-curso__acoes {
     width: 100%;
-    padding-left: calc(2rem + var(--espaco-md));
+    padding-left: calc(2.5rem + var(--espaco-md));
   }
 }
 

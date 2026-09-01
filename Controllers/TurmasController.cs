@@ -83,7 +83,8 @@ public class TurmasController : ControllerBase
             NomeTurma = t.NomeTurma,
             DataCriacao = t.DataCriacao,
             CursoId = t.CursoId,
-            ProfessorId = t.ProfessorId
+            ProfessorId = t.ProfessorId,
+            ProfessorNome = t.ProfessorResponsavel?.Nome
         });
 
         return Ok(response);

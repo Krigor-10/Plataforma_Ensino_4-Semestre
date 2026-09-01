@@ -17,7 +17,7 @@ public class Avaliacao
 
     public int ProfessorAutorId { get; private set; }
     public int TurmaId { get; set; }
-    public int ModuloId { get; set; }
+    public int? ModuloId { get; set; }
     public int? ConteudoDidaticoId { get; set; }
 
     public TipoAvaliacao TipoAvaliacao { get; set; } = TipoAvaliacao.Quiz;

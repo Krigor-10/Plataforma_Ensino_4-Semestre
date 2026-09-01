@@ -1,8 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbDotsVertical, TbExternalLink, TbFile, TbFileText, TbPhoto, TbPlayerPlay, TbPlus, TbX } from "react-icons/tb";
-import { MdSave } from "react-icons/md";
+import {
+  TbArrowLeft,
+  TbCheck,
+  TbChevronDown,
+  TbChevronUp,
+  TbExternalLink,
+  TbEye,
+  TbFile,
+  TbFileText,
+  TbPencil,
+  TbPhoto,
+  TbPlayerPlay,
+  TbPlus,
+  TbTrophy,
+  TbX
+} from "react-icons/tb";
+import { MdDelete, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
@@ -40,44 +56,38 @@ const ICONE_TIPO_CONTEUDO_GRANDE = {
   5: <TbPhoto aria-hidden="true" size={32} />
 };
 
+const ICONE_TIPO_CONTEUDO_LINHA = {
+  1: <TbFileText aria-hidden="true" size="1.5rem" />,
+  2: <TbFile aria-hidden="true" size="1.5rem" />,
+  3: <TbPlayerPlay aria-hidden="true" size="1.5rem" />,
+  4: <TbExternalLink aria-hidden="true" size="1.5rem" />,
+  5: <TbPhoto aria-hidden="true" size="1.5rem" />
+};
+
 const ACEITA_ARQUIVO_POR_TIPO = {
   2: ".pdf,application/pdf",
   3: ".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime",
   5: ".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
 };
 
-export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0, cursos, modulos, onRefresh, onSessionExpired, turmas, usuario }) {
-  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario([], []));
+const STATUS_PUBLICADO = 2;
+const STATUS_RASCUNHO = 1;
+
+/* Trilha de Conteudos do professor: mesmo padrao Card do curso -> Modulos -> Conteudos
+   usado na experiencia do aluno (SlideConteudosCurso em SecoesAluno.jsx), reaproveitando
+   as classes CSS atividades-curso__* e conteudos-modulo__*, so trocando as acoes de
+   "Concluir" por gerenciamento (editar, publicar/despublicar, excluir, reordenar). */
+export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSelecionado = null, cursos, modulos, onGerenciarQuiz, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
+  const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario());
   const [conteudoEmEdicaoId, setConteudoEmEdicaoId] = useState(null);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [conteudoParaExcluir, setConteudoParaExcluir] = useState(null);
-  const [menuAbertoId, setMenuAbertoId] = useState(null);
-  const [slideAtual, setSlideAtual] = useState(0);
+  const [acaoEmAndamentoId, setAcaoEmAndamentoId] = useState(null);
+  const [mensagemLista, setMensagemLista] = useState({ tone: "", message: "" });
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
   const [nomeArquivoSelecionado, setNomeArquivoSelecionado] = useState("");
-
-  useEffect(() => {
-    if (menuAbertoId === null) {
-      return undefined;
-    }
-
-    function fechar(event) {
-      if (event.type === "keydown" && event.key !== "Escape") {
-        return;
-      }
-
-      setMenuAbertoId(null);
-    }
-
-    document.addEventListener("click", fechar);
-    document.addEventListener("keydown", fechar);
-    return () => {
-      document.removeEventListener("click", fechar);
-      document.removeEventListener("keydown", fechar);
-    };
-  }, [menuAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
@@ -96,11 +106,8 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
     () =>
       [...modulos]
         .filter((modulo) => turmasDoProfessor.some((turma) => turma.cursoId === modulo.cursoId))
-        .sort((left, right) => {
-          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
-          return courseComparison !== 0 ? courseComparison : left.titulo.localeCompare(right.titulo, "pt-BR");
-        }),
-    [cursoPorId, modulos, turmasDoProfessor]
+        .sort((left, right) => new Date(left.dataCriacao || 0).getTime() - new Date(right.dataCriacao || 0).getTime()),
+    [modulos, turmasDoProfessor]
   );
 
   const modulosPorCursoId = useMemo(() => {
@@ -113,78 +120,55 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
     return agrupados;
   }, [modulosDoProfessor]);
 
-  useEffect(() => {
-    if (conteudoEmEdicaoId || dadosFormulario.turmaId || !turmasDoProfessor.length) {
-      return;
-    }
+  /* Um professor tem no maximo 1 turma por curso - a turma resolvida aqui e a fonte
+     unica usada pra montar o card do curso e pra pre-preencher turmaId no formulario. */
+  const cursosDoProfessor = useMemo(() => {
+    const porCursoId = new Map();
 
-    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
-  }, [conteudoEmEdicaoId, dadosFormulario.turmaId, modulosDoProfessor, turmasDoProfessor]);
+    turmasDoProfessor.forEach((turma) => {
+      if (porCursoId.has(turma.cursoId)) {
+        return;
+      }
 
-  const turmaSelecionadaFormulario = useMemo(
-    () => turmasDoProfessor.find((turma) => String(turma.id) === dadosFormulario.turmaId) || null,
-    [dadosFormulario.turmaId, turmasDoProfessor]
-  );
+      const curso = cursoPorId.get(turma.cursoId);
+      if (!curso) {
+        return;
+      }
 
-  const modulosDisponiveis = useMemo(() => {
-    if (!turmaSelecionadaFormulario) {
-      return [];
-    }
+      const conteudosDaTurma = conteudos.filter((conteudo) => conteudo.turmaId === turma.id);
 
-    return modulosPorCursoId.get(turmaSelecionadaFormulario.cursoId) || [];
-  }, [modulosPorCursoId, turmaSelecionadaFormulario]);
-
-  useEffect(() => {
-    if (!turmaSelecionadaFormulario || conteudoEmEdicaoId) {
-      return;
-    }
-
-    if (!modulosDisponiveis.length && dadosFormulario.moduloId) {
-      setDadosFormulario((current) => ({ ...current, moduloId: "" }));
-      return;
-    }
-
-    const hasCurrentModule = modulosDisponiveis.some((modulo) => String(modulo.id) === dadosFormulario.moduloId);
-    if (!hasCurrentModule && modulosDisponiveis[0]) {
-      setDadosFormulario((current) => ({ ...current, moduloId: String(modulosDisponiveis[0].id) }));
-    }
-  }, [modulosDisponiveis, conteudoEmEdicaoId, dadosFormulario.moduloId, turmaSelecionadaFormulario]);
-
-  useEffect(() => {
-    if (solicitacaoNovoConteudo > 0) {
-      abrirFormularioNovoConteudo();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [solicitacaoNovoConteudo]);
-
-  const grupos = useMemo(
-    () =>
-      turmasDoProfessor.map((turma) => ({
+      porCursoId.set(turma.cursoId, {
+        curso,
         turma,
-        curso: cursoPorId.get(turma.cursoId) || null,
-        itens: [...conteudos]
-          .filter((conteudo) => conteudo.turmaId === turma.id)
-          .sort((left, right) => {
-            const moduloComparison = (left.moduloTitulo || "").localeCompare(right.moduloTitulo || "", "pt-BR");
-            if (moduloComparison !== 0) {
-              return moduloComparison;
-            }
+        totalModulos: (modulosPorCursoId.get(turma.cursoId) || []).length,
+        totalConteudos: conteudosDaTurma.length,
+        totalPublicados: conteudosDaTurma.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length
+      });
+    });
 
-            if ((left.ordemExibicao ?? 0) !== (right.ordemExibicao ?? 0)) {
-              return (left.ordemExibicao ?? 0) - (right.ordemExibicao ?? 0);
-            }
+    return [...porCursoId.values()].sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
+  }, [conteudos, cursoPorId, modulosPorCursoId, turmasDoProfessor]);
 
-            return (left.titulo || "").localeCompare(right.titulo || "", "pt-BR");
-          })
-      })),
-    [conteudos, cursoPorId, turmasDoProfessor]
+  const cursoAtivo = useMemo(
+    () => (cursoIdSelecionado ? cursosDoProfessor.find((entrada) => entrada.curso.id === cursoIdSelecionado) || null : null),
+    [cursoIdSelecionado, cursosDoProfessor]
   );
 
-  const total = grupos.length;
-  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+  const modulosDisponiveis = useMemo(
+    () => (cursoAtivo ? modulosPorCursoId.get(cursoAtivo.curso.id) || [] : []),
+    [cursoAtivo, modulosPorCursoId]
+  );
 
-  function irPara(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  useEffect(() => {
+    setMensagemLista({ tone: "", message: "" });
+  }, [cursoIdSelecionado]);
+
+  function abrirCurso(cursoId) {
+    onNavigate?.(`/app/conteudos/${cursoId}`);
+  }
+
+  function voltarParaCursos() {
+    onNavigate?.("/app/conteudos");
   }
 
   const tipoConteudoSelecionado = Number(dadosFormulario.tipoConteudo || OPCOES_TIPO_CONTEUDO[0].value);
@@ -194,13 +178,27 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
 
   function limparFormulario() {
     setConteudoEmEdicaoId(null);
-    setDadosFormulario(criarEstadoInicialFormulario(turmasDoProfessor, modulosDoProfessor));
+    setDadosFormulario(criarEstadoInicialFormulario());
     setMensagemFormulario({ tone: "", message: "" });
     setNomeArquivoSelecionado("");
   }
 
-  function abrirFormularioNovoConteudo() {
-    limparFormulario();
+  function abrirFormularioNovoConteudo(moduloIdAlvo) {
+    if (!cursoAtivo) {
+      return;
+    }
+
+    const conteudosDoModuloAlvo = conteudos.filter((conteudo) => conteudo.moduloId === moduloIdAlvo);
+
+    setConteudoEmEdicaoId(null);
+    setDadosFormulario({
+      ...criarEstadoInicialFormulario(),
+      turmaId: String(cursoAtivo.turma.id),
+      moduloId: String(moduloIdAlvo),
+      ordemExibicao: String(conteudosDoModuloAlvo.length)
+    });
+    setMensagemFormulario({ tone: "", message: "" });
+    setNomeArquivoSelecionado("");
     setFormularioAberto(true);
   }
 
@@ -215,23 +213,6 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
 
   function atualizarCampoFormulario(event) {
     const { name, value } = event.target;
-
-    if (name === "turmaId") {
-      const proximaTurma = turmasDoProfessor.find((turma) => String(turma.id) === value) || null;
-      const proximosModulos = proximaTurma ? modulosPorCursoId.get(proximaTurma.cursoId) || [] : [];
-
-      setDadosFormulario((current) => ({
-        ...current,
-        turmaId: value,
-        moduloId: proximosModulos.some((modulo) => String(modulo.id) === current.moduloId)
-          ? current.moduloId
-          : proximosModulos[0]
-            ? String(proximosModulos[0].id)
-            : ""
-      }));
-      return;
-    }
-
     setDadosFormulario((current) => ({ ...current, [name]: value }));
   }
 
@@ -253,7 +234,6 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
     setMensagemFormulario({ tone: "", message: "" });
     setNomeArquivoSelecionado(conteudo.arquivoUrl ? nomeArquivoDaUrl(conteudo.arquivoUrl) : "");
     setFormularioAberto(true);
-    setMenuAbertoId(null);
   }
 
   async function enviarArquivoConteudo(event) {
@@ -304,28 +284,13 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
       pesoProgresso: Number(dadosFormulario.pesoProgresso)
     };
 
-    if (!turmasDoProfessor.length) {
-      setMensagemFormulario({ tone: "error", message: "Seu perfil ainda nao possui turmas para publicacao." });
-      return;
-    }
-
-    if (!modulosDisponiveis.length) {
-      setMensagemFormulario({ tone: "error", message: "Nao existem modulos disponiveis para a turma selecionada." });
-      return;
-    }
-
     if (!tituloNormalizado) {
       setMensagemFormulario({ tone: "error", message: "Informe o titulo do conteudo antes de salvar." });
       return;
     }
 
-    if (!dadosEnvio.turmaId) {
-      setMensagemFormulario({ tone: "error", message: "Selecione a turma que vai receber o conteudo." });
-      return;
-    }
-
-    if (!dadosEnvio.moduloId) {
-      setMensagemFormulario({ tone: "error", message: "Selecione um modulo para organizar a publicacao." });
+    if (!dadosEnvio.turmaId || !dadosEnvio.moduloId) {
+      setMensagemFormulario({ tone: "error", message: "Nao foi possivel identificar a turma ou o modulo deste conteudo." });
       return;
     }
 
@@ -413,92 +378,108 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
     }
   }
 
+  async function alternarPublicacao(conteudo) {
+    const proximoStatus = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO ? STATUS_RASCUNHO : STATUS_PUBLICADO;
+
+    setAcaoEmAndamentoId(conteudo.id);
+    setMensagemLista({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, {
+        method: "PUT",
+        body: JSON.stringify(montarPayloadConteudo(conteudo, { statusPublicacao: proximoStatus }))
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setMensagemLista({ tone: "error", message: err.message || "Nao foi possivel atualizar o status agora." });
+    } finally {
+      setAcaoEmAndamentoId(null);
+    }
+  }
+
+  async function reordenarConteudo(conteudo, listaDoModulo, direcao) {
+    const indiceAtual = listaDoModulo.findIndex((item) => item.id === conteudo.id);
+    const indiceAlvo = indiceAtual + direcao;
+
+    if (indiceAtual === -1 || indiceAlvo < 0 || indiceAlvo >= listaDoModulo.length) {
+      return;
+    }
+
+    const vizinho = listaDoModulo[indiceAlvo];
+
+    setAcaoEmAndamentoId(conteudo.id);
+    setMensagemLista({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, {
+        method: "PUT",
+        body: JSON.stringify(montarPayloadConteudo(conteudo, { ordemExibicao: vizinho.ordemExibicao }))
+      });
+      await apiRequest(`/ConteudosDidaticos/${vizinho.id}`, {
+        method: "PUT",
+        body: JSON.stringify(montarPayloadConteudo(vizinho, { ordemExibicao: conteudo.ordemExibicao }))
+      });
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setMensagemLista({ tone: "error", message: err.message || "Nao foi possivel reordenar o conteudo agora." });
+    } finally {
+      setAcaoEmAndamentoId(null);
+    }
+  }
+
+  function gerenciarQuizConteudo(conteudo, quizVinculado) {
+    if (!cursoAtivo) {
+      return;
+    }
+
+    onGerenciarQuiz?.({
+      avaliacaoId: quizVinculado?.id ?? null,
+      conteudoDidaticoId: conteudo.id,
+      cursoId: cursoAtivo.curso.id,
+      moduloId: conteudo.moduloId,
+      turmaId: cursoAtivo.turma.id
+    });
+  }
+
   return (
     <div className="tela-conteudos">
-      <header className="cabecalho-pagina">
-        <div style={{ flex: 1 }}>
-          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h2 className="cabecalho-pagina__titulo">Conteudos</h2>
-            {total > 0 ? (
-              <select
-                aria-label="Navegar para turma"
-                className="campo__entrada barra-filtros__select"
-                onChange={(event) => irPara(Number(event.target.value))}
-                style={{ marginLeft: "auto", maxWidth: "240px" }}
-                value={slide}
-              >
-                {grupos.map(({ turma }, indice) => (
-                  <option key={turma.id} value={indice}>
-                    {turma.nomeTurma}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {turmasDoProfessor.length ? (
-              <>
-                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
-                <Botao onClick={abrirFormularioNovoConteudo} variante="primario">
-                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                    <TbPlus aria-hidden="true" size={18} />
-                  </motion.span>{" "}
-                  Novo conteudo
-                </Botao>
-              </>
-            ) : null}
-          </div>
-          <p className="cabecalho-pagina__subtitulo">{conteudos.length} conteudo{conteudos.length === 1 ? "" : "s"} publicado{conteudos.length === 1 ? "" : "s"}</p>
-        </div>
-      </header>
-
-      {total === 0 ? (
-        <p className="texto-vazio texto-vazio--central" role="status">
-          Seu usuario ainda nao possui turmas atribuidas.
-        </p>
+      {!cursoAtivo ? (
+        <GradeCursosProfessor
+          cursos={cursosDoProfessor.map(({ curso, totalConteudos, totalModulos, totalPublicados }) => ({
+            curso,
+            resumo: `${totalModulos} modulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteudo${totalConteudos === 1 ? "" : "s"}`,
+            rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`,
+            badge: totalConteudos > 0 && totalPublicados === totalConteudos ? "Publicado" : "Rascunho"
+          }))}
+          mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
+          onSelecionar={abrirCurso}
+        />
       ) : (
-        <div className="carrossel-cursos">
-          {total > 1 ? (
-            <nav aria-label="Navegacao entre turmas" className="carrossel-cursos__nav">
-              <button aria-label="Turma anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irPara(slide - 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-              <div aria-label="Turmas" className="carrossel-cursos__indicadores" role="tablist">
-                {grupos.map(({ turma }, indice) => (
-                  <button
-                    aria-label={`Turma ${indice + 1}: ${turma.nomeTurma}`}
-                    aria-selected={indice === slide}
-                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                    key={turma.id}
-                    onClick={() => irPara(indice)}
-                    role="tab"
-                    type="button"
-                  />
-                ))}
-              </div>
-              <button aria-label="Proxima turma" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irPara(slide + 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </nav>
-          ) : null}
-
-          <div className="carrossel-cursos__janela">
-            <SlideConteudos
-              curso={grupos[slide].curso}
-              itens={grupos[slide].itens}
-              menuAbertoId={menuAbertoId}
-              onEditar={abrirEdicaoConteudo}
-              onExcluir={(conteudo) => {
-                setConteudoParaExcluir(conteudo);
-                setMenuAbertoId(null);
-              }}
-              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
-              turma={grupos[slide].turma}
-            />
-          </div>
-        </div>
+        <TrilhaConteudosProfessor
+          acaoEmAndamentoId={acaoEmAndamentoId}
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoAtivo={cursoAtivo}
+          mensagemLista={mensagemLista}
+          modulosDoCurso={modulosDisponiveis}
+          onAbrirEdicao={abrirEdicaoConteudo}
+          onAlternarPublicacao={alternarPublicacao}
+          onExcluir={(conteudo) => setConteudoParaExcluir(conteudo)}
+          onGerenciarQuiz={gerenciarQuizConteudo}
+          onNovoConteudo={abrirFormularioNovoConteudo}
+          onReordenar={reordenarConteudo}
+          onVoltar={onNavigate ? voltarParaCursos : null}
+        />
       )}
 
       {conteudoParaExcluir ? (
@@ -510,8 +491,8 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
               <Botao disabled={salvando} onClick={() => setConteudoParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusao} variante="primario">
-                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvando} onClick={confirmarExclusao} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }
@@ -527,312 +508,619 @@ export function SecaoConteudosProfessor({ conteudos, solicitacaoNovoConteudo = 0
           onFechar={fecharFormulario}
           titulo={conteudoEmEdicaoId ? "Editar conteudo" : "Novo conteudo"}
           rodape={
-            turmasDoProfessor.length && modulosDoProfessor.length ? (
-              <footer className="modal-rodape">
-                <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                  <TbX aria-hidden="true" size={15} /> Cancelar
-                </Botao>
-                <Botao disabled={salvando || enviandoArquivo || !modulosDisponiveis.length} form="form-conteudo" type="submit" variante="primario">
-                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
-                </Botao>
-              </footer>
-            ) : null
+            <footer className="modal-rodape">
+              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvando || enviandoArquivo} form="form-conteudo" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
+              </Botao>
+            </footer>
           }
         >
-          {!turmasDoProfessor.length ? (
-            <InlineMessage tone="info">Seu usuario ainda nao possui turmas atribuidas.</InlineMessage>
-          ) : !modulosDoProfessor.length ? (
-            <InlineMessage tone="info">Suas turmas ainda nao tem modulos cadastrados nos cursos correspondentes.</InlineMessage>
-          ) : (
-            <form className="formulario-modal" id="form-conteudo" onSubmit={salvarConteudoDidatico}>
-              <div className="formulario-perfil__grade">
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-turma">Turma *</label>
-                  <select
-                    className="campo__entrada"
-                    disabled={salvando}
-                    id="conteudo-turma"
-                    name="turmaId"
-                    onChange={atualizarCampoFormulario}
-                    value={dadosFormulario.turmaId}
-                  >
-                    {turmasDoProfessor.map((turma) => (
-                      <option key={turma.id} value={turma.id}>
-                        {turma.nomeTurma}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <form className="formulario-modal" id="form-conteudo" onSubmit={salvarConteudoDidatico}>
+            {cursoAtivo ? (
+              <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                Curso: <strong>{cursoAtivo.curso.titulo}</strong>
+              </p>
+            ) : null}
 
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-modulo">Modulo *</label>
-                  <select
-                    className="campo__entrada"
-                    disabled={salvando || !modulosDisponiveis.length}
-                    id="conteudo-modulo"
-                    key={dadosFormulario.turmaId || "sem-turma"}
-                    name="moduloId"
-                    onChange={atualizarCampoFormulario}
-                    value={dadosFormulario.moduloId}
-                  >
-                    {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
-                    {modulosDisponiveis.map((modulo) => (
-                      <option key={modulo.id} value={modulo.id}>
-                        {modulo.titulo}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="conteudo-modulo">Modulo *</label>
+              <select
+                className="campo__entrada"
+                disabled={salvando}
+                id="conteudo-modulo"
+                name="moduloId"
+                onChange={atualizarCampoFormulario}
+                value={dadosFormulario.moduloId}
+              >
+                {modulosDisponiveis.map((modulo) => (
+                  <option key={modulo.id} value={modulo.id}>
+                    {modulo.titulo}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="novo-cont__preview">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  className="novo-cont__icone"
+                  exit={{ scale: 0.5, opacity: 0, rotate: 20 }}
+                  initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
+                  key={dadosFormulario.tipoConteudo}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                >
+                  {ICONE_TIPO_CONTEUDO_GRANDE[Number(dadosFormulario.tipoConteudo)] || <TbFileText aria-hidden="true" size={32} />}
+                </motion.span>
+              </AnimatePresence>
+              <p className="novo-cont__preview-label">
+                {OPCOES_TIPO_CONTEUDO.find((opcao) => opcao.value === dadosFormulario.tipoConteudo)?.label || "Tipo"}
+              </p>
+            </div>
+
+            <div className="campo">
+              <span className="campo__rotulo">Tipo de conteudo *</span>
+              <div aria-label="Tipo de conteudo" className="anexo-selector" role="group">
+                {OPCOES_TIPO_CONTEUDO.map((opcao) => {
+                  const ativo = dadosFormulario.tipoConteudo === opcao.value;
+                  return (
+                    <button
+                      aria-pressed={ativo}
+                      className={`anexo-clip${ativo ? " anexo-clip--ativo" : ""}`}
+                      disabled={salvando}
+                      key={opcao.value}
+                      onClick={() => setDadosFormulario((current) => ({ ...current, tipoConteudo: opcao.value }))}
+                      type="button"
+                    >
+                      <span className="anexo-clip__icone">{ICONE_TIPO_CONTEUDO[Number(opcao.value)]}</span>
+                      <span className="anexo-clip__label">{opcao.label}</span>
+                      {ativo ? <span aria-hidden="true" className="anexo-clip__check">✓</span> : null}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="novo-cont__preview">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    className="novo-cont__icone"
-                    exit={{ scale: 0.5, opacity: 0, rotate: 20 }}
-                    initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
-                    key={dadosFormulario.tipoConteudo}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
-                    {ICONE_TIPO_CONTEUDO_GRANDE[Number(dadosFormulario.tipoConteudo)] || <TbFileText aria-hidden="true" size={32} />}
-                  </motion.span>
-                </AnimatePresence>
-                <p className="novo-cont__preview-label">
-                  {OPCOES_TIPO_CONTEUDO.find((opcao) => opcao.value === dadosFormulario.tipoConteudo)?.label || "Tipo"}
-                </p>
-              </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="conteudo-status">Status *</label>
+              <select className="campo__entrada" disabled={salvando} id="conteudo-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
+                {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
+                  <option key={opcao.value} value={opcao.value}>
+                    {opcao.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="conteudo-titulo">Titulo *</label>
+              <input
+                className="campo__entrada"
+                disabled={salvando}
+                id="conteudo-titulo"
+                maxLength={180}
+                name="titulo"
+                onChange={atualizarCampoFormulario}
+                placeholder="Ex.: Aula 01 - Panorama do modulo"
+                type="text"
+                value={dadosFormulario.titulo}
+              />
+            </div>
+
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="conteudo-descricao">Descricao curta</label>
+              <textarea
+                className="campo__entrada"
+                disabled={salvando}
+                id="conteudo-descricao"
+                maxLength={500}
+                name="descricao"
+                onChange={atualizarCampoFormulario}
+                placeholder="Explique rapidamente o objetivo desse material."
+                value={dadosFormulario.descricao}
+              />
+            </div>
+
+            {exigeTexto ? (
               <div className="campo">
-                <span className="campo__rotulo">Tipo de conteudo *</span>
-                <div aria-label="Tipo de conteudo" className="anexo-selector" role="group">
-                  {OPCOES_TIPO_CONTEUDO.map((opcao) => {
-                    const ativo = dadosFormulario.tipoConteudo === opcao.value;
-                    return (
-                      <button
-                        aria-pressed={ativo}
-                        className={`anexo-clip${ativo ? " anexo-clip--ativo" : ""}`}
-                        disabled={salvando}
-                        key={opcao.value}
-                        onClick={() => setDadosFormulario((current) => ({ ...current, tipoConteudo: opcao.value }))}
-                        type="button"
-                      >
-                        <span className="anexo-clip__icone">{ICONE_TIPO_CONTEUDO[Number(opcao.value)]}</span>
-                        <span className="anexo-clip__label">{opcao.label}</span>
-                        {ativo ? <span aria-hidden="true" className="anexo-clip__check">✓</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-status">Status *</label>
-                <select className="campo__entrada" disabled={salvando} id="conteudo-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
-                  {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
-                    <option key={opcao.value} value={opcao.value}>
-                      {opcao.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-titulo">Titulo *</label>
-                <input
-                  className="campo__entrada"
-                  disabled={salvando}
-                  id="conteudo-titulo"
-                  maxLength={180}
-                  name="titulo"
-                  onChange={atualizarCampoFormulario}
-                  placeholder="Ex.: Aula 01 - Panorama do modulo"
-                  type="text"
-                  value={dadosFormulario.titulo}
-                />
-              </div>
-
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="conteudo-descricao">Descricao curta</label>
+                <label className="campo__rotulo" htmlFor="conteudo-corpo">Corpo do texto *</label>
                 <textarea
                   className="campo__entrada"
                   disabled={salvando}
-                  id="conteudo-descricao"
-                  maxLength={500}
-                  name="descricao"
+                  id="conteudo-corpo"
+                  name="corpoTexto"
                   onChange={atualizarCampoFormulario}
-                  placeholder="Explique rapidamente o objetivo desse material."
-                  value={dadosFormulario.descricao}
+                  placeholder="Escreva aqui o material principal."
+                  value={dadosFormulario.corpoTexto}
                 />
               </div>
+            ) : null}
 
-              {exigeTexto ? (
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-corpo">Corpo do texto *</label>
-                  <textarea
-                    className="campo__entrada"
-                    disabled={salvando}
-                    id="conteudo-corpo"
-                    name="corpoTexto"
-                    onChange={atualizarCampoFormulario}
-                    placeholder="Escreva aqui o material principal."
-                    value={dadosFormulario.corpoTexto}
-                  />
-                </div>
-              ) : null}
-
-              {exigeUpload ? (
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-arquivo">
-                    {tipoConteudoSelecionado === 5 ? "Imagem *" : tipoConteudoSelecionado === 3 ? "Arquivo de video *" : "Arquivo PDF *"}
-                  </label>
-                  <input
-                    accept={ACEITA_ARQUIVO_POR_TIPO[tipoConteudoSelecionado]}
-                    className="campo__entrada"
-                    disabled={salvando || enviandoArquivo}
-                    id="conteudo-arquivo"
-                    onChange={enviarArquivoConteudo}
-                    type="file"
-                  />
-                  {enviandoArquivo ? (
-                    <p className="campo__ajuda">Enviando arquivo...</p>
-                  ) : dadosFormulario.arquivoUrl ? (
-                    <p className="campo__ajuda">
-                      Arquivo atual: {nomeArquivoSelecionado || nomeArquivoDaUrl(dadosFormulario.arquivoUrl)}
-                      {tipoConteudoSelecionado === 5 ? (
-                        <img alt="" className="novo-cont__miniatura" src={resolverUrlArquivo(dadosFormulario.arquivoUrl)} />
-                      ) : null}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {exigeUrlRecurso ? (
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-link">URL do recurso *</label>
-                  <input
-                    className="campo__entrada"
-                    disabled={salvando}
-                    id="conteudo-link"
-                    name="linkUrl"
-                    onChange={atualizarCampoFormulario}
-                    placeholder="https://..."
-                    type="url"
-                    value={dadosFormulario.linkUrl}
-                  />
-                </div>
-              ) : null}
-
-              <div className="formulario-perfil__grade">
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-ordem">Ordem de exibicao</label>
-                  <input
-                    className="campo__entrada"
-                    disabled={salvando}
-                    id="conteudo-ordem"
-                    min="0"
-                    name="ordemExibicao"
-                    onChange={atualizarCampoFormulario}
-                    type="number"
-                    value={dadosFormulario.ordemExibicao}
-                  />
-                </div>
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="conteudo-peso">Peso de progresso</label>
-                  <input
-                    className="campo__entrada"
-                    disabled={salvando}
-                    id="conteudo-peso"
-                    min="0.01"
-                    name="pesoProgresso"
-                    onChange={atualizarCampoFormulario}
-                    step="0.01"
-                    type="number"
-                    value={dadosFormulario.pesoProgresso}
-                  />
-                </div>
+            {exigeUpload ? (
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-arquivo">
+                  {tipoConteudoSelecionado === 5 ? "Imagem *" : tipoConteudoSelecionado === 3 ? "Arquivo de video *" : "Arquivo PDF *"}
+                </label>
+                <input
+                  accept={ACEITA_ARQUIVO_POR_TIPO[tipoConteudoSelecionado]}
+                  className="campo__entrada"
+                  disabled={salvando || enviandoArquivo}
+                  id="conteudo-arquivo"
+                  onChange={enviarArquivoConteudo}
+                  type="file"
+                />
+                {enviandoArquivo ? (
+                  <p className="campo__ajuda">Enviando arquivo...</p>
+                ) : dadosFormulario.arquivoUrl ? (
+                  <p className="campo__ajuda">
+                    Arquivo atual: {nomeArquivoSelecionado || nomeArquivoDaUrl(dadosFormulario.arquivoUrl)}
+                    {tipoConteudoSelecionado === 5 ? (
+                      <img alt="" className="novo-cont__miniatura" src={resolverUrlArquivo(dadosFormulario.arquivoUrl)} />
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
+            ) : null}
 
-              {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-            </form>
-          )}
+            {exigeUrlRecurso ? (
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-link">URL do recurso *</label>
+                <input
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-link"
+                  name="linkUrl"
+                  onChange={atualizarCampoFormulario}
+                  placeholder="https://..."
+                  type="url"
+                  value={dadosFormulario.linkUrl}
+                />
+              </div>
+            ) : null}
+
+            <div className="formulario-perfil__grade">
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-ordem">Ordem de exibicao</label>
+                <input
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-ordem"
+                  min="0"
+                  name="ordemExibicao"
+                  onChange={atualizarCampoFormulario}
+                  type="number"
+                  value={dadosFormulario.ordemExibicao}
+                />
+              </div>
+              <div className="campo">
+                <label className="campo__rotulo" htmlFor="conteudo-peso">Peso de progresso</label>
+                <input
+                  className="campo__entrada"
+                  disabled={salvando}
+                  id="conteudo-peso"
+                  min="0.01"
+                  name="pesoProgresso"
+                  onChange={atualizarCampoFormulario}
+                  step="0.01"
+                  type="number"
+                  value={dadosFormulario.pesoProgresso}
+                />
+              </div>
+            </div>
+
+            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
+          </form>
         </Modal>
       ) : null}
     </div>
   );
 }
 
-function SlideConteudos({ curso, itens, menuAbertoId, onEditar, onExcluir, onToggleMenu, turma }) {
+function TrilhaConteudosProfessor({
+  acaoEmAndamentoId,
+  avaliacoes,
+  conteudos,
+  cursoAtivo,
+  mensagemLista,
+  modulosDoCurso,
+  onAbrirEdicao,
+  onAlternarPublicacao,
+  onExcluir,
+  onGerenciarQuiz,
+  onNovoConteudo,
+  onReordenar,
+  onVoltar
+}) {
+  const [previaAberta, setPreviaAberta] = useState(false);
+
+  const conteudosDoCurso = useMemo(
+    () => conteudos.filter((conteudo) => conteudo.turmaId === cursoAtivo.turma.id),
+    [conteudos, cursoAtivo.turma.id]
+  );
+
+  const quizzesDoCurso = useMemo(
+    () => avaliacoes.filter((avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id && Number(avaliacao.tipoAvaliacao) === 1),
+    [avaliacoes, cursoAtivo.turma.id]
+  );
+
+  const quizPorConteudoId = useMemo(() => {
+    const mapa = new Map();
+    quizzesDoCurso.forEach((quiz) => {
+      if (quiz.conteudoDidaticoId) {
+        mapa.set(quiz.conteudoDidaticoId, quiz);
+      }
+    });
+    return mapa;
+  }, [quizzesDoCurso]);
+
+  const quizzesPorModuloId = useMemo(() => {
+    const agrupados = new Map();
+    quizzesDoCurso.forEach((quiz) => {
+      if (quiz.conteudoDidaticoId || !quiz.moduloId) {
+        return;
+      }
+      const atuais = agrupados.get(quiz.moduloId) || [];
+      atuais.push(quiz);
+      agrupados.set(quiz.moduloId, atuais);
+    });
+    return agrupados;
+  }, [quizzesDoCurso]);
+
+  const conteudosPorModuloId = useMemo(() => {
+    const agrupados = new Map();
+    conteudosDoCurso.forEach((conteudo) => {
+      const atuais = agrupados.get(conteudo.moduloId) || [];
+      atuais.push(conteudo);
+      agrupados.set(conteudo.moduloId, atuais);
+    });
+    agrupados.forEach((lista) =>
+      lista.sort((left, right) => (left.ordemExibicao ?? 0) - (right.ordemExibicao ?? 0) || (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
+    );
+    return agrupados;
+  }, [conteudosDoCurso]);
+
+  const [moduloAberto, setModuloAberto] = useState(() => modulosDoCurso[0]?.id ?? null);
+  const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState(null);
+
+  function alternarModulo(moduloId) {
+    setModuloAberto((atual) => (atual === moduloId ? null : moduloId));
+  }
+
+  function alternarConteudo(conteudoId) {
+    setConteudoSelecionadoId((atual) => (atual === conteudoId ? null : conteudoId));
+  }
+
+  const percentualPublicado = conteudosDoCurso.length
+    ? Math.round((conteudosDoCurso.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length / conteudosDoCurso.length) * 100)
+    : 0;
+
   return (
     <div className="conteudos-aluno">
-      <header className="conteudos-aluno__cabecalho">
-        <div className="conteudos-aluno__curso-info">
-          <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)" }}>
-            <div aria-hidden="true" className="cartao-progresso-aluno__avatar conteudos-aluno__avatar-desktop">
-              <TbFileText size={20} />
-            </div>
-            <h2 className="conteudos-aluno__curso-titulo">{turma.nomeTurma}</h2>
-          </div>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
-              {itens.length} conteudo{itens.length !== 1 ? "s" : ""}
-            </span>
-            {curso ? <span className="conteudos-aluno__meta-chip">{curso.titulo}</span> : null}
-          </div>
+      {onVoltar ? (
+        <nav aria-label="Navegacao da trilha de conteudos" className="atividades-curso__navegacao">
+          <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
+            <TbArrowLeft aria-hidden="true" size={22} />
+            Voltar para Conteudos
+          </button>
+        </nav>
+      ) : null}
+
+      <header className="atividades-curso__cabecalho">
+        <h2 className="atividades-curso__titulo">{cursoAtivo.curso.titulo}</h2>
+        <div className="atividades-curso__progresso">
+          <span className="atividades-curso__progresso-texto">{percentualPublicado}% publicado</span>
+          <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">
+            <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
+          </Botao>
         </div>
       </header>
 
-      {itens.length === 0 ? (
-        <p className="texto-vazio" role="status">Nenhum conteudo publicado para esta turma.</p>
+      {mensagemLista.message ? <InlineMessage tone={mensagemLista.tone}>{mensagemLista.message}</InlineMessage> : null}
+
+      {modulosDoCurso.length === 0 ? (
+        <p className="texto-vazio" role="status">Este curso ainda nao tem modulos cadastrados.</p>
       ) : (
-        <ul aria-label={`Conteudos de ${turma.nomeTurma}`} className="lista-conteudos-completa" role="list">
-          {itens.map((conteudo) => (
-            <li className="cartao-conteudo" key={conteudo.id}>
-              <span aria-hidden="true" className="cartao-conteudo__icone">
-                {ICONE_TIPO_CONTEUDO[Number(conteudo.tipoConteudo)] || <TbFileText size={22} />}
-              </span>
-              <div className="cartao-conteudo__info">
-                <strong className="cartao-conteudo__titulo">{conteudo.titulo}</strong>
-                <p className="cartao-conteudo__modulo">{conteudo.moduloTitulo || "Sem modulo"}</p>
-              </div>
-              <div className="cartao-conteudo__meta">
-                <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
-                <span className="cartao-conteudo__duracao">{normalizeContentType(conteudo.tipoConteudo)}</span>
-              </div>
-              <div className="cartao-conteudo__acoes menu-contexto">
-                <button
-                  aria-expanded={menuAbertoId === conteudo.id}
-                  aria-haspopup="true"
-                  aria-label={`Opcoes para ${conteudo.titulo}`}
-                  className="menu-contexto__botao"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleMenu(conteudo.id);
-                  }}
-                  type="button"
-                >
-                  <TbDotsVertical aria-hidden="true" size={18} />
-                </button>
-                {menuAbertoId === conteudo.id ? (
-                  <ul className="menu-contexto__lista">
-                    <li>
-                      <button onClick={() => onEditar(conteudo)} type="button">
-                        Editar
-                      </button>
-                    </li>
-                    <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(conteudo)} type="button">
-                        Excluir
-                      </button>
-                    </li>
-                  </ul>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="atividades-curso__lista-modulos">
+          {modulosDoCurso.map((modulo, indiceModulo) => {
+            const itensDoModulo = conteudosPorModuloId.get(modulo.id) || [];
+            const estaAberto = moduloAberto === modulo.id;
+            const idListaModulo = `conteudos-modulo-professor-lista-${modulo.id}`;
+            const totalPublicadosModulo = itensDoModulo.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length;
+
+            return (
+              <section className="conteudos-modulo" id={`conteudos-modulo-professor-${modulo.id}`} key={modulo.id}>
+                <header className="conteudos-modulo__cabecalho">
+                  <h3 className="conteudos-modulo__cabecalho-wrapper">
+                    <button
+                      aria-controls={idListaModulo}
+                      aria-expanded={estaAberto}
+                      className="conteudos-modulo__toggle"
+                      onClick={() => alternarModulo(modulo.id)}
+                      type="button"
+                    >
+                      <div className="conteudos-modulo__info">
+                        <span className="conteudos-modulo__eyebrow">Modulo {String(indiceModulo + 1).padStart(2, "0")}</span>
+                        <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
+                        <span className="conteudos-modulo__contagem">
+                          {itensDoModulo.length} conteudo{itensDoModulo.length === 1 ? "" : "s"} · {totalPublicadosModulo} publicado{totalPublicadosModulo === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <span aria-hidden="true" className={`conteudos-modulo__chevron${estaAberto ? " conteudos-modulo__chevron--aberto" : ""}`}>
+                        ▾
+                      </span>
+                    </button>
+                  </h3>
+                </header>
+
+                <AnimatePresence initial={false}>
+                  {estaAberto ? (
+                    <motion.div
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      id={idListaModulo}
+                      initial={{ height: 0, opacity: 0 }}
+                      key={`lista-professor-${modulo.id}`}
+                      style={{ overflow: "hidden" }}
+                      transition={{ duration: 0.28, ease: "easeInOut" }}
+                    >
+                      {itensDoModulo.length === 0 ? (
+                        <p className="texto-vazio" role="status">Nenhum conteudo neste modulo ainda.</p>
+                      ) : (
+                        <ul aria-label={`Conteudos de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
+                          {itensDoModulo.map((conteudo, indiceConteudo) => {
+                            const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
+                            const processando = acaoEmAndamentoId === conteudo.id;
+                            const publicado = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO;
+                            const quizVinculado = quizPorConteudoId.get(conteudo.id) || null;
+
+                            return (
+                              <li className="atividades-curso__item" key={conteudo.id}>
+                                <div
+                                  aria-expanded={conteudoAtivo}
+                                  aria-label={`Gerenciar ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
+                                  className={`atividades-curso__linha${conteudoAtivo ? " atividades-curso__linha--ativa" : ""}`}
+                                  onClick={() => alternarConteudo(conteudo.id)}
+                                  onKeyDown={(event) => {
+                                    if (event.key !== "Enter" && event.key !== " ") {
+                                      return;
+                                    }
+                                    event.preventDefault();
+                                    alternarConteudo(conteudo.id);
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
+                                >
+                                  <span aria-hidden="true" className="atividades-curso__icone">
+                                    {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.5rem" />}
+                                  </span>
+                                  <div className="atividades-curso__corpo">
+                                    <span className="atividades-curso__item-titulo-linha">
+                                      <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
+                                      <span aria-hidden="true" className={`atividades-curso__chevron${conteudoAtivo ? " atividades-curso__chevron--aberto" : ""}`}>
+                                        ▾
+                                      </span>
+                                    </span>
+                                    <p className="atividades-curso__meta">
+                                      <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
+                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                      <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
+                                    </p>
+                                  </div>
+                                  <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
+                                    <button
+                                      aria-label={`Mover ${conteudo.titulo} para cima`}
+                                      className="atividades-curso__reordenar"
+                                      disabled={processando || indiceConteudo === 0}
+                                      onClick={() => onReordenar(conteudo, itensDoModulo, -1)}
+                                      type="button"
+                                    >
+                                      <TbChevronUp aria-hidden="true" size="1.1rem" />
+                                    </button>
+                                    <button
+                                      aria-label={`Mover ${conteudo.titulo} para baixo`}
+                                      className="atividades-curso__reordenar"
+                                      disabled={processando || indiceConteudo === itensDoModulo.length - 1}
+                                      onClick={() => onReordenar(conteudo, itensDoModulo, 1)}
+                                      type="button"
+                                    >
+                                      <TbChevronDown aria-hidden="true" size="1.1rem" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <AnimatePresence initial={false}>
+                                  {conteudoAtivo ? (
+                                    <motion.div
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      initial={{ height: 0, opacity: 0 }}
+                                      key={`acoes-conteudo-${conteudo.id}`}
+                                      style={{ overflow: "hidden" }}
+                                      transition={{ duration: 0.22, ease: "easeInOut" }}
+                                    >
+                                      <div className="atividades-curso__previa atividades-curso__previa--acoes">
+                                        {conteudo.descricao ? <p>{conteudo.descricao}</p> : null}
+                                        <div className="atividades-curso__painel-acoes">
+                                          <Botao onClick={() => onAbrirEdicao(conteudo)} tamanho="pequeno" variante="fantasma">
+                                            <TbPencil aria-hidden="true" size={15} /> Editar conteudo
+                                          </Botao>
+                                          <Botao onClick={() => onGerenciarQuiz(conteudo, quizVinculado)} tamanho="pequeno" variante="fantasma">
+                                            <TbTrophy aria-hidden="true" size={15} /> {quizVinculado ? "Editar quiz" : "Adicionar quiz"}
+                                          </Botao>
+                                          <div className="atividades-curso__publicar">
+                                            <span className="atividades-curso__publicar-rotulo">{publicado ? "Publicado" : "Rascunho"}</span>
+                                            <button
+                                              aria-checked={publicado}
+                                              aria-label={publicado ? "Publicado - clique para voltar a rascunho" : "Rascunho - clique para publicar"}
+                                              className={`switch-ativo${publicado ? " switch-ativo--ativo" : ""}`}
+                                              disabled={processando}
+                                              onClick={() => onAlternarPublicacao(conteudo)}
+                                              role="switch"
+                                              type="button"
+                                            >
+                                              <TbX aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--esq" size={10} />
+                                              <span aria-hidden="true" className="switch-ativo__thumb" />
+                                              <TbCheck aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--dir" size={10} />
+                                            </button>
+                                          </div>
+                                          <Botao onClick={() => onExcluir(conteudo)} tamanho="pequeno" variante="perigo">
+                                            <MdDelete aria-hidden="true" size={15} /> Excluir
+                                          </Botao>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  ) : null}
+                                </AnimatePresence>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="fantasma">
+                        <TbPlus aria-hidden="true" size={15} /> Adicionar conteudo
+                      </Botao>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </section>
+            );
+          })}
+        </div>
       )}
+
+      {previaAberta ? (
+        <PreviaTrilhaAluno
+          conteudosPorModuloId={conteudosPorModuloId}
+          cursoTitulo={cursoAtivo.curso.titulo}
+          modulosDoCurso={modulosDoCurso}
+          onFechar={() => setPreviaAberta(false)}
+          quizPorConteudoId={quizPorConteudoId}
+          quizzesPorModuloId={quizzesPorModuloId}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/* Pre-visualizacao estrutural de como o aluno ve a trilha: reaproveita as MESMAS classes
+   CSS atividades-curso__ / conteudos-modulo__ pra ficar visualmente identica ao que o
+   aluno realmente ve, mas sem tocar no componente SlideConteudosCurso (SecoesAluno.jsx) -
+   evita qualquer risco de regressao na experiencia real do aluno. Deliberadamente sem
+   progresso/bloqueio de modulo e sem acoes (Concluir/Fazer quiz), so a estrutura de
+   modulos/conteudos/quizzes JA PUBLICADOS (rascunho fica de fora, igual o aluno ve). */
+function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, onFechar, quizPorConteudoId, quizzesPorModuloId }) {
+  const modulosVisiveis = useMemo(() => {
+    return modulosDoCurso
+      .map((modulo, indice) => {
+        const itens = (conteudosPorModuloId.get(modulo.id) || []).filter(
+          (conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO
+        );
+        const quizzesDoModulo = (quizzesPorModuloId.get(modulo.id) || []).filter(
+          (quiz) => Number(quiz.statusPublicacao) === STATUS_PUBLICADO
+        );
+        return { indice, itens, modulo, quizzesDoModulo };
+      })
+      .filter(({ itens, quizzesDoModulo }) => itens.length > 0 || quizzesDoModulo.length > 0);
+  }, [conteudosPorModuloId, modulosDoCurso, quizzesPorModuloId]);
+
+  return (
+    <Modal
+      className="modal-caixa--avaliacao"
+      onFechar={onFechar}
+      titulo="Visualizar como aluno"
+      rodape={
+        <footer className="modal-rodape">
+          <Botao onClick={onFechar} variante="perigo">
+            <TbX aria-hidden="true" size={15} /> Fechar
+          </Botao>
+        </footer>
+      }
+    >
+      <div className="conteudos-aluno">
+        <InlineMessage tone="info">
+          Pre-visualizacao estrutural: mostra so o conteudo publicado, sem dados de progresso de nenhum aluno.
+        </InlineMessage>
+
+        <header className="atividades-curso__cabecalho">
+          <h2 className="atividades-curso__titulo">{cursoTitulo}</h2>
+        </header>
+
+        {modulosVisiveis.length === 0 ? (
+          <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
+        ) : (
+          <div className="atividades-curso__lista-modulos">
+            {modulosVisiveis.map(({ indice, itens, modulo, quizzesDoModulo }) => (
+              <section className="conteudos-modulo" key={modulo.id}>
+                <header className="conteudos-modulo__cabecalho">
+                  <div className="conteudos-modulo__cabecalho-wrapper">
+                    <div className="conteudos-modulo__info">
+                      <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                      <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
+                      <span className="conteudos-modulo__contagem">{itens.length} conteudo{itens.length === 1 ? "" : "s"}</span>
+                    </div>
+                  </div>
+                </header>
+
+                <ul aria-label={`Conteudos de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
+                  {itens.map((conteudo) => {
+                    const quizVinculado = quizPorConteudoId.get(conteudo.id) || null;
+
+                    return (
+                      <li className="atividades-curso__item" key={conteudo.id}>
+                        <div className="atividades-curso__linha">
+                          <span aria-hidden="true" className="atividades-curso__icone">
+                            {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.5rem" />}
+                          </span>
+                          <div className="atividades-curso__corpo">
+                            <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
+                            <p className="atividades-curso__meta">
+                              <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {quizVinculado ? (
+                          <ul aria-label={`Quiz de ${conteudo.titulo}`} className="atividades-curso__quizzes" role="list">
+                            <li className="atividades-curso__item atividades-curso__item--quiz">
+                              <div className="atividades-curso__linha">
+                                <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                                  <TbTrophy aria-hidden="true" size="1.5rem" />
+                                </span>
+                                <div className="atividades-curso__corpo">
+                                  <strong className="atividades-curso__item-titulo">{quizVinculado.titulo}</strong>
+                                  <p className="atividades-curso__meta"><span>Quiz</span></p>
+                                </div>
+                              </div>
+                            </li>
+                          </ul>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                  {quizzesDoModulo.map((quiz) => (
+                    <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-modulo-${quiz.id}`}>
+                      <div className="atividades-curso__linha">
+                        <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                          <TbTrophy aria-hidden="true" size="1.5rem" />
+                        </span>
+                        <div className="atividades-curso__corpo">
+                          <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
+                          <p className="atividades-curso__meta"><span>Quiz</span></p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 
@@ -845,13 +1133,27 @@ function nomeArquivoDaUrl(url) {
   return partes[partes.length - 1] || url;
 }
 
-function criarEstadoInicialFormulario(turmas, modulos, overrides = {}) {
-  const primeiraTurma = turmas[0] || null;
-  const modulosDaPrimeiraTurma = primeiraTurma ? modulos.filter((modulo) => modulo.cursoId === primeiraTurma.cursoId) : [];
-
+function montarPayloadConteudo(conteudo, overrides = {}) {
   return {
-    turmaId: primeiraTurma ? String(primeiraTurma.id) : "",
-    moduloId: modulosDaPrimeiraTurma[0] ? String(modulosDaPrimeiraTurma[0].id) : "",
+    titulo: conteudo.titulo,
+    descricao: conteudo.descricao || "",
+    tipoConteudo: Number(conteudo.tipoConteudo),
+    corpoTexto: conteudo.corpoTexto || "",
+    arquivoUrl: conteudo.arquivoUrl || "",
+    linkUrl: conteudo.linkUrl || "",
+    turmaId: conteudo.turmaId,
+    moduloId: conteudo.moduloId,
+    statusPublicacao: Number(conteudo.statusPublicacao),
+    ordemExibicao: conteudo.ordemExibicao ?? 0,
+    pesoProgresso: conteudo.pesoProgresso ?? 1,
+    ...overrides
+  };
+}
+
+function criarEstadoInicialFormulario(overrides = {}) {
+  return {
+    turmaId: "",
+    moduloId: "",
     titulo: "",
     descricao: "",
     tipoConteudo: OPCOES_TIPO_CONTEUDO[0].value,

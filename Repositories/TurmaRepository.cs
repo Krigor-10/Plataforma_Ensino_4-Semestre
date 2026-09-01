@@ -25,4 +25,11 @@ public class TurmaRepository : GenericRepository<Turma>, ITurmaRepository
             .ThenBy(turma => turma.NomeTurma)
             .ToListAsync();
     }
+
+    public async Task<List<Turma>> ObterTodosComProfessorAsync()
+    {
+        return await Context.Turmas
+            .Include(turma => turma.ProfessorResponsavel)
+            .ToListAsync();
+    }
 }

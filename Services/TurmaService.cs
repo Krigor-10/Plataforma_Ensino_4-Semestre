@@ -74,7 +74,7 @@ public class TurmaService : ITurmaService
 
     public async Task<IEnumerable<Turma>> ListarTurmasAsync()
     {
-        return await _turmaRepository.ObterTodosAsync();
+        return await _turmaRepository.ObterTodosComProfessorAsync();
     }
 
     public async Task<IEnumerable<Turma>> ListarTurmasPorProfessorAsync(int professorId)

@@ -16,7 +16,7 @@ public class CriarAvaliacaoDto
     public int TurmaId { get; set; }
 
     [Range(1, int.MaxValue)]
-    public int ModuloId { get; set; }
+    public int? ModuloId { get; set; }
 
     public int? ConteudoDidaticoId { get; set; }
 

@@ -135,18 +135,18 @@ export function getSectionMeta(section, role) {
       description: "Organizacao dos modulos por curso para sustentar conteudos, avaliacoes e progresso."
     },
     conteudos: {
-      title: role === "Professor" ? "Publicacao de conteudos" : "Trilha de conteudos",
+      title: "Trilha de conteudos",
       description:
         role === "Professor"
-          ? "Espaco do professor para montar materiais por turma e modulo."
-          : "Materiais publicados para o seu percurso, organizados por turma e modulo."
+          ? "Escolha um curso para estruturar e gerenciar materiais por modulo."
+          : "Materiais, quizzes e progresso organizados por curso."
     },
     avaliacoes: {
       title: role === "Aluno" ? "Realizar avaliacao" : "Avaliacoes",
       description:
         role === "Aluno"
           ? "Avaliacoes publicadas pelos professores para as suas turmas aprovadas."
-          : "Area do professor para preparar provas, quizzes e exercicios por turma e modulo."
+          : "Escolha um curso para preparar provas, quizzes e exercicios."
     },
     matriculas: {
       title: role === "Aluno" ? "Catalogo de Cursos" : "Fluxo de matriculas",

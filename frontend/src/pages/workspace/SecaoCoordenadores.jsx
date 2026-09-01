@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -541,8 +541,8 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="primario">
-                {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
               </Botao>
             </footer>
           }
