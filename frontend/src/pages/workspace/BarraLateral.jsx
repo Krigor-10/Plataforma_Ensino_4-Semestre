@@ -114,14 +114,15 @@ export default function BarraLateral({
 
   const itensMenu = sections;
 
-  /* Monta a lista de renderização com grupos injetados (só vira grupo com 2+ filhos visíveis) */
+  /* Monta a lista de renderização com grupos injetados (vira grupo com 1+ filho visivel,
+     entao "Gestao" continua aparecendo mesmo quando o papel so tem acesso a Professores) */
   const renderItens = (() => {
     const gruposVisiveis = {};
     for (const [chave, def] of Object.entries(GRUPOS_DEF)) {
       const filhosVisiveis = def.filhos
         .map((f) => itensMenu.find((i) => i.key === f))
         .filter(Boolean);
-      if (filhosVisiveis.length >= 2) {
+      if (filhosVisiveis.length >= 1) {
         gruposVisiveis[chave] = { ...def, filhosVisiveis };
       }
     }
@@ -188,11 +189,10 @@ export default function BarraLateral({
               if (item.tipo === "grupo") {
                 const { Icone, chave, rotulo, filhosVisiveis } = item;
                 const aberto = expandidos.has(chave);
-                const filhoAtivo = filhosVisiveis.some((f) => f.key === secaoAtual);
                 return (
                   <li key={chave}>
                     <button
-                      className={`sidebar__item sidebar__grupo-btn${filhoAtivo && !aberto ? " sidebar__item--ativo" : ""}${filhoAtivo ? " sidebar__grupo-btn--filho-ativo" : ""}`}
+                      className="sidebar__item sidebar__grupo-btn"
                       onClick={() => alternarGrupo(chave)}
                       aria-expanded={aberto}
                       aria-controls={`sidebar-grupo-${chave}`}

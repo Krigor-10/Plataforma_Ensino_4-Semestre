@@ -2,14 +2,14 @@ export const MANAGER_ROLES = new Set(["Admin", "Coordenador"]);
 
 export const APP_SECTIONS = [
   { key: "dashboard", label: "Dashboard", roles: ["Admin", "Coordenador", "Professor", "Aluno"] },
-  { key: "alunos", label: "Alunos", roles: ["Admin", "Coordenador"] },
+  { key: "alunos", label: "Alunos", roles: ["Admin"] },
   { key: "professores", label: "Professores", roles: ["Admin", "Coordenador"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
   { key: "modulos", label: "Modulos", roles: ["Admin", "Coordenador"] },
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
-  { key: "matriculas", label: "Matriculas", roles: ["Admin", "Coordenador", "Aluno"] },
+  { key: "matriculas", label: "Matriculas", roles: ["Admin", "Aluno"] },
   { key: "turmas", label: "Turmas", roles: ["Admin", "Coordenador", "Professor"] },
   { key: "meus-cursos", label: "Progresso", roles: ["Aluno"] },
   { key: "cursos-matriculados", label: "Meus Cursos", roles: ["Aluno"], showInSidebar: false },
@@ -156,8 +156,11 @@ export function getSectionMeta(section, role) {
           : "Acompanhamento das solicitacoes e do status academico."
     },
     turmas: {
-      title: "Mapa de turmas",
-      description: "Turmas organizadas para atribuicao e acompanhamento dentro do produto."
+      title: role === "Professor" ? "Progresso" : "Mapa de turmas",
+      description:
+        role === "Professor"
+          ? "Acompanhe o desempenho dos seus cursos e avaliacoes."
+          : "Turmas organizadas para atribuicao e acompanhamento dentro do produto."
     },
     certificados: {
       title: "Meus certificados",

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbChalkboard, TbCheck, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbChalkboard, TbCheck, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
 import { MdGroups, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
@@ -32,7 +33,7 @@ export function SecaoTurmas({
   onRefresh,
   onSessionExpired
 }) {
-  const [slideAtual, setSlideAtual] = useState(0);
+  const [turmaSelecionadaId, setTurmaSelecionadaId] = useState(null);
   const [buscaAluno, setBuscaAluno] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("todos");
   const [formularioCriacaoAberto, setFormularioCriacaoAberto] = useState(false);
@@ -163,7 +164,10 @@ export function SecaoTurmas({
   }, [filtroProfessor, turmas]);
 
   const total = turmasFiltradas.length;
-  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+  const turmaSelecionada = useMemo(
+    () => turmasFiltradas.find((turma) => turma.id === turmaSelecionadaId) || null,
+    [turmaSelecionadaId, turmasFiltradas]
+  );
   const cursoEmFocoId = Number(cursoEmFoco?.cursoId || 0);
 
   useEffect(() => {
@@ -171,10 +175,10 @@ export function SecaoTurmas({
       return;
     }
 
-    const indice = turmasFiltradas.findIndex((turma) => Number(turma.cursoId) === cursoEmFocoId);
+    const turmaDoCurso = turmasFiltradas.find((turma) => Number(turma.cursoId) === cursoEmFocoId);
 
-    if (indice >= 0) {
-      setSlideAtual(indice);
+    if (turmaDoCurso) {
+      setTurmaSelecionadaId(turmaDoCurso.id);
     }
 
     onCursoEmFocoAplicado?.();
@@ -183,10 +187,14 @@ export function SecaoTurmas({
 
   useEffect(() => {
     setBuscaAluno("");
-  }, [slide]);
+  }, [turmaSelecionadaId]);
 
-  function irParaSlide(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  function selecionarTurma(turmaId) {
+    setTurmaSelecionadaId(turmaId);
+  }
+
+  function voltarParaLista() {
+    setTurmaSelecionadaId(null);
   }
 
   function abrirFormularioCriacao() {
@@ -343,7 +351,7 @@ export function SecaoTurmas({
       await apiRequest(`/Turmas/${turmaParaExcluir.id}`, { method: "DELETE" });
 
       setTurmaParaExcluir(null);
-      setSlideAtual(0);
+      setTurmaSelecionadaId(null);
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -359,130 +367,95 @@ export function SecaoTurmas({
 
   return (
     <div className="tela-turmas">
-      <header className="cabecalho-pagina">
-        <div style={{ flex: 1 }}>
-          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h2 className="cabecalho-pagina__titulo">Turmas</h2>
-            {total > 0 ? (
-              <label className="visualmente-oculto" htmlFor="filtro-turma">Selecionar turma</label>
-            ) : null}
-            {total > 0 ? (
-              <select
-                className="campo__entrada barra-filtros__select"
-                id="filtro-turma"
-                onChange={(event) => irParaSlide(Number(event.target.value))}
-                style={{ maxWidth: "220px" }}
-                value={slide}
-              >
-                {turmasFiltradas.map((turma, indice) => (
-                  <option key={turma.id} value={indice}>
-                    {turma.nomeTurma}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            {ehGestor ? (
-              <select
-                aria-label="Filtrar turmas por professor"
-                className="campo__entrada barra-filtros__select"
-                onChange={(event) => {
-                  setFiltroProfessor(event.target.value);
-                  setSlideAtual(0);
-                }}
-                style={{ maxWidth: "200px" }}
-                value={filtroProfessor}
-              >
-                <option value="todos">Todos os professores</option>
-                <option value="sem-professor">Sem professor</option>
-                {professoresOrdenados.map((professor) => (
-                  <option key={professor.id} value={professor.id}>
-                    {professor.nome}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <div className="campo-busca campo-busca--compacta">
-              <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
-              <label className="visualmente-oculto" htmlFor="busca-aluno-turma">Buscar aluno</label>
-              <input
-                className="campo__entrada"
-                id="busca-aluno-turma"
-                onChange={(event) => setBuscaAluno(event.target.value)}
-                placeholder="Buscar aluno..."
-                type="search"
-                value={buscaAluno}
-              />
-            </div>
-            {podeGerenciarTurmas ? (
-              <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} title={motivoCriacaoBloqueada || undefined} variante="primario">
-                <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                  <TbPlus aria-hidden="true" size={18} />
-                </motion.span>{" "}
-                Nova turma
-              </Botao>
-            ) : null}
-          </div>
-          <p className="cabecalho-pagina__subtitulo">
-            {ehProfessor ? `${total} turma${total !== 1 ? "s" : ""} sob sua responsabilidade` : `${total} turma${total !== 1 ? "s" : ""} cadastrada${total !== 1 ? "s" : ""}`}
-          </p>
-        </div>
-      </header>
-
-      {podeGerenciarTurmas && motivoCriacaoBloqueada ? <InlineMessage tone="info">{motivoCriacaoBloqueada}</InlineMessage> : null}
-
-      {total === 0 ? (
-        <p className="texto-vazio texto-vazio--central" role="status">Nenhuma turma encontrada.</p>
-      ) : (
-        <div className="carrossel-cursos">
-          {total > 1 ? (
-            <nav aria-label="Navegacao entre turmas" className="carrossel-cursos__nav">
-              <button aria-label="Turma anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => irParaSlide(slide - 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-
-              <div aria-label="Turmas" className="carrossel-cursos__indicadores" role="tablist">
-                {turmasFiltradas.map((turma, indice) => (
-                  <button
-                    aria-label={`Turma ${indice + 1}: ${turma.nomeTurma}`}
-                    aria-selected={indice === slide}
-                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                    key={turma.id}
-                    onClick={() => irParaSlide(indice)}
-                    role="tab"
-                    type="button"
-                  />
-                ))}
+      {!turmaSelecionada ? (
+        <>
+          <header className="cabecalho-pagina">
+            <div style={{ flex: 1 }}>
+              <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
+                <h2 className="cabecalho-pagina__titulo">Turmas</h2>
+                {ehGestor ? (
+                  <select
+                    aria-label="Filtrar turmas por professor"
+                    className="campo__entrada barra-filtros__select"
+                    onChange={(event) => setFiltroProfessor(event.target.value)}
+                    value={filtroProfessor}
+                  >
+                    <option value="todos">Todos os professores</option>
+                    <option value="sem-professor">Sem professor</option>
+                    {professoresOrdenados.map((professor) => (
+                      <option key={professor.id} value={professor.id}>
+                        {professor.nome}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                {podeGerenciarTurmas ? (
+                  <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} title={motivoCriacaoBloqueada || undefined} variante="primario">
+                    <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                      <TbPlus aria-hidden="true" size={18} />
+                    </motion.span>{" "}
+                    Nova turma
+                  </Botao>
+                ) : null}
               </div>
+              <p className="cabecalho-pagina__subtitulo">
+                {ehProfessor ? `${total} turma${total !== 1 ? "s" : ""} sob sua responsabilidade` : `${total} turma${total !== 1 ? "s" : ""} cadastrada${total !== 1 ? "s" : ""}`}
+              </p>
+            </div>
+          </header>
 
-              <button aria-label="Proxima turma" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => irParaSlide(slide + 1)} type="button">
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </nav>
-          ) : null}
+          {podeGerenciarTurmas && motivoCriacaoBloqueada ? <InlineMessage tone="info">{motivoCriacaoBloqueada}</InlineMessage> : null}
 
-          <div className="carrossel-cursos__janela">
-            <SlideTurma
-              alunos={alunosPorTurma.get(Number(turmasFiltradas[slide].id)) || []}
-              busca={buscaAluno}
-              cursoTitulo={cursoPorId.get(turmasFiltradas[slide].cursoId)?.titulo || `Curso #${turmasFiltradas[slide].cursoId}`}
-              menuAberto={menuAberto}
-              onAtribuirProfessor={podeAtribuirProfessor ? () => abrirAtribuicaoProfessor(turmasFiltradas[slide]) : null}
-              onEditarNome={podeGerenciarTurmas ? () => abrirEdicaoNomeTurma(turmasFiltradas[slide]) : null}
-              onExcluirTurma={podeGerenciarTurmas ? () => abrirExclusaoTurma(turmasFiltradas[slide]) : null}
-              onToggleMenu={() => setMenuAberto((atual) => !atual)}
-              professorNome={
-                turmasFiltradas[slide].professorId
-                  ? professorPorId.get(turmasFiltradas[slide].professorId)?.nome || `Professor #${turmasFiltradas[slide].professorId}`
-                  : "Sem professor"
+          <GradeCursosProfessor
+            cursos={turmasFiltradas.map((turma) => {
+              const alunosDaTurma = alunosPorTurma.get(Number(turma.id)) || [];
+              const aprovados = alunosDaTurma.filter((aluno) => aluno.status === "Aprovada").length;
+
+              return {
+                curso: cursoPorId.get(turma.cursoId) || { id: turma.cursoId, titulo: turma.nomeTurma, descricao: "" },
+                resumo: `${alunosDaTurma.length} aluno${alunosDaTurma.length === 1 ? "" : "s"} matriculado${alunosDaTurma.length === 1 ? "" : "s"}`,
+                rodapeEsquerda: turma.professorId
+                  ? professorPorId.get(turma.professorId)?.nome || `Professor #${turma.professorId}`
+                  : "Sem professor",
+                badge: `${aprovados} aprovado${aprovados === 1 ? "" : "s"}`
+              };
+            })}
+            mensagemVazia="Nenhuma turma encontrada."
+            onSelecionar={(cursoId) => {
+              const turma = turmasFiltradas.find((entrada) => entrada.cursoId === cursoId);
+              if (turma) {
+                selecionarTurma(turma.id);
               }
-              turma={turmasFiltradas[slide]}
-            />
-          </div>
-        </div>
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <nav aria-label="Navegacao das turmas" className="atividades-curso__navegacao">
+            <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
+              <TbArrowLeft aria-hidden="true" size={22} />
+              Voltar para Turmas
+            </button>
+          </nav>
+
+          <SlideTurma
+            alunos={alunosPorTurma.get(Number(turmaSelecionada.id)) || []}
+            busca={buscaAluno}
+            cursoTitulo={cursoPorId.get(turmaSelecionada.cursoId)?.titulo || `Curso #${turmaSelecionada.cursoId}`}
+            menuAberto={menuAberto}
+            onAtribuirProfessor={podeAtribuirProfessor ? () => abrirAtribuicaoProfessor(turmaSelecionada) : null}
+            onBuscaChange={setBuscaAluno}
+            onEditarNome={podeGerenciarTurmas ? () => abrirEdicaoNomeTurma(turmaSelecionada) : null}
+            onExcluirTurma={podeGerenciarTurmas ? () => abrirExclusaoTurma(turmaSelecionada) : null}
+            onToggleMenu={() => setMenuAberto((atual) => !atual)}
+            professorNome={
+              turmaSelecionada.professorId
+                ? professorPorId.get(turmaSelecionada.professorId)?.nome || `Professor #${turmaSelecionada.professorId}`
+                : "Sem professor"
+            }
+            turma={turmaSelecionada}
+          />
+        </>
       )}
 
       {turmaAtribuindo ? (
@@ -625,7 +598,7 @@ export function SecaoTurmas({
   );
 }
 
-function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfessor, onEditarNome, onExcluirTurma, onToggleMenu, professorNome, turma }) {
+function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfessor, onBuscaChange, onEditarNome, onExcluirTurma, onToggleMenu, professorNome, turma }) {
   const alunosFiltrados = busca.trim()
     ? alunos.filter((aluno) => aluno.nome.toLowerCase().includes(busca.toLowerCase()))
     : alunos;
@@ -728,6 +701,21 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
           ) : null}
         </div>
       </header>
+
+      {alunos.length > 0 ? (
+        <div className="campo-busca campo-busca--compacta slide-alunos__busca">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+          <label className="visualmente-oculto" htmlFor="busca-aluno-turma">Buscar aluno</label>
+          <input
+            className="campo__entrada"
+            id="busca-aluno-turma"
+            onChange={(event) => onBuscaChange(event.target.value)}
+            placeholder="Buscar aluno..."
+            type="search"
+            value={busca}
+          />
+        </div>
+      ) : null}
 
       {alunos.length === 0 ? (
         <p className="texto-vazio">Nenhum aluno matriculado nesta turma.</p>

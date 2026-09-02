@@ -342,6 +342,12 @@
   width: min(13.75rem, 100%);
 }
 
+/* Select de filtro nas barras de acao das telas de gestao (Alunos, Cursos,
+   Modulos, Turmas) — evita repetir style inline com px em cada arquivo. */
+.barra-filtros__select {
+  max-width: min(13.75rem, 100%);
+}
+
 .campo-busca__icone {
   color: var(--cor-texto-mudo);
   left: 0.625rem;

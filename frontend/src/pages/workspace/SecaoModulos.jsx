@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
-import { TbCheck, TbDotsVertical, TbFileText, TbPlus, TbStack, TbX } from "react-icons/tb";
+import { AnimatePresence, motion } from "framer-motion";
+import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbFileText, TbLayoutGrid, TbPlus, TbStack, TbX } from "react-icons/tb";
 import { MdLayers, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Modal from "../../components/Modal.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
@@ -27,13 +28,12 @@ export function SecaoModulos({
   turmas = []
 }) {
   const podeGerenciar = ehAdmin || ehCoordenador;
-  const [slideAtual, setSlideAtual] = useState(0);
+  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
   const [moduloEmEdicaoId, setModuloEmEdicaoId] = useState(null);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
-  const [moduloDetalheId, setModuloDetalheId] = useState(null);
   const [moduloParaExcluir, setModuloParaExcluir] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
 
@@ -58,7 +58,6 @@ export function SecaoModulos({
     };
   }, [menuAbertoId]);
 
-  const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const alunoPorId = useMemo(() => mapById(alunos), [alunos]);
   const professorPorId = useMemo(() => mapById(professores), [professores]);
   const cursosOrdenados = useMemo(
@@ -149,7 +148,10 @@ export function SecaoModulos({
   );
 
   const total = grupos.length;
-  const slide = Math.min(slideAtual, Math.max(0, total - 1));
+  const grupoSelecionado = useMemo(
+    () => grupos.find((grupo) => Number(grupo.curso.id) === cursoSelecionadoId) || null,
+    [cursoSelecionadoId, grupos]
+  );
   const cursoEmFocoId = Number(cursoEmFoco?.cursoId || 0);
 
   useEffect(() => {
@@ -157,31 +159,27 @@ export function SecaoModulos({
       return;
     }
 
-    const indice = grupos.findIndex((grupo) => Number(grupo.curso.id) === cursoEmFocoId);
+    const grupoDoCurso = grupos.find((grupo) => Number(grupo.curso.id) === cursoEmFocoId);
 
-    if (indice >= 0) {
-      setSlideAtual(indice);
+    if (grupoDoCurso) {
+      setCursoSelecionadoId(cursoEmFocoId);
     }
 
     onCursoEmFocoAplicado?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cursoEmFocoId]);
 
-  const moduloDetalhe = useMemo(() => modulos.find((modulo) => modulo.id === moduloDetalheId) || null, [moduloDetalheId, modulos]);
+  function selecionarCurso(cursoId) {
+    setCursoSelecionadoId(cursoId);
+  }
 
-  useEffect(() => {
-    if (moduloDetalheId && !moduloDetalhe) {
-      setModuloDetalheId(null);
-    }
-  }, [moduloDetalhe, moduloDetalheId]);
-
-  function irPara(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, total - 1)));
+  function voltarParaLista() {
+    setCursoSelecionadoId(null);
   }
 
   function abrirFormularioNovoModulo() {
     setModuloEmEdicaoId(null);
-    setDadosFormulario({ cursoId: String(grupos[slide]?.curso.id || cursosOrdenados[0]?.id || ""), titulo: "" });
+    setDadosFormulario({ cursoId: String(grupoSelecionado?.curso.id || cursosOrdenados[0]?.id || ""), titulo: "" });
     setMensagemFormulario({ tone: "", message: "" });
     setFormularioAberto(true);
   }
@@ -259,11 +257,6 @@ export function SecaoModulos({
     try {
       await apiRequest(`/Modulos/${moduloParaExcluir.id}`, { method: "DELETE" });
       setModuloParaExcluir(null);
-
-      if (moduloDetalheId === moduloParaExcluir.id) {
-        setModuloDetalheId(null);
-      }
-
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -280,160 +273,58 @@ export function SecaoModulos({
 
   return (
     <div className="tela-modulos">
-      <header className="cabecalho-pagina">
-        <div style={{ flex: 1 }}>
-          <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-            <h2 className="cabecalho-pagina__titulo">Modulos</h2>
-            {total > 0 ? (
-              <>
-                <label className="visualmente-oculto" htmlFor="filtro-modulo-curso">Selecionar curso</label>
-                <select
-                  aria-label="Navegar para curso"
-                  className="campo__entrada barra-filtros__select"
-                  id="filtro-modulo-curso"
-                  onChange={(event) => irPara(Number(event.target.value))}
-                  style={{ marginLeft: "auto", maxWidth: "220px" }}
-                  value={slide}
-                >
-                  {grupos.map(({ curso }, indice) => (
-                    <option key={curso.id} value={indice}>
-                      {curso.titulo}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : null}
-            {cursosOrdenados.length && podeGerenciar ? (
-              <>
-                <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
-                <Botao onClick={abrirFormularioNovoModulo} variante="primario">
-                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                    <TbPlus aria-hidden="true" size={18} />
-                  </motion.span>{" "}
-                  Novo modulo
-                </Botao>
-              </>
-            ) : null}
-          </div>
-          <p className="cabecalho-pagina__subtitulo">
-            {modulos.length} modulo{modulos.length === 1 ? "" : "s"} cadastrado{modulos.length === 1 ? "" : "s"}
-          </p>
-        </div>
-      </header>
+      {!grupoSelecionado ? (
+        <>
+          <header className="cabecalho-pagina">
+            <div>
+              <h2 className="cabecalho-pagina__titulo">Modulos</h2>
+              <p className="cabecalho-pagina__subtitulo">
+                {modulos.length} modulo{modulos.length === 1 ? "" : "s"} cadastrado{modulos.length === 1 ? "" : "s"}
+              </p>
+            </div>
+          </header>
 
-      {total === 0 ? (
-        <p className="texto-vazio texto-vazio--central" role="status">
-          Cadastre um curso antes de criar modulos.
-        </p>
-      ) : (
-        <div className="carrossel-cursos">
-          {total > 1 ? (
-            <nav aria-label="Navegacao entre cursos" className="carrossel-cursos__nav">
-              <button
-                aria-label="Curso anterior"
-                className="carrossel-cursos__seta"
-                disabled={slide === 0}
-                onClick={() => irPara(slide - 1)}
-                type="button"
-              >
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </button>
-
-              <div aria-label="Cursos" className="carrossel-cursos__indicadores" role="tablist">
-                {grupos.map(({ curso }, indice) => (
-                  <button
-                    aria-label={`Curso ${indice + 1}: ${curso.titulo}`}
-                    aria-selected={indice === slide}
-                    className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                    key={curso.id}
-                    onClick={() => irPara(indice)}
-                    role="tab"
-                    type="button"
-                  />
-                ))}
-              </div>
-
-              <button
-                aria-label="Proximo curso"
-                className="carrossel-cursos__seta"
-                disabled={slide === total - 1}
-                onClick={() => irPara(slide + 1)}
-                type="button"
-              >
-                <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            </nav>
-          ) : null}
-
-          <div className="carrossel-cursos__janela">
-            <SlideCurso
-              alunosAtivos={alunosAtivosPorCurso.get(Number(grupos[slide].curso.id)) || 0}
-              curso={grupos[slide].curso}
-              itens={grupos[slide].itens}
-              menuAbertoId={menuAbertoId}
-              onExcluir={setModuloParaExcluir}
-              onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
-              onVerDetalhes={setModuloDetalheId}
-              podeGerenciar={podeGerenciar}
+          {total === 0 ? (
+            <p className="texto-vazio texto-vazio--central" role="status">
+              Cadastre um curso antes de criar modulos.
+            </p>
+          ) : (
+            <GradeCursosProfessor
+              cursos={grupos.map(({ curso, itens }) => ({
+                curso,
+                resumo: `${itens.length} modulo${itens.length === 1 ? "" : "s"}`,
+                rodapeEsquerda: `${alunosAtivosPorCurso.get(Number(curso.id)) || 0} aluno${
+                  (alunosAtivosPorCurso.get(Number(curso.id)) || 0) === 1 ? "" : "s"
+                } ativo${(alunosAtivosPorCurso.get(Number(curso.id)) || 0) === 1 ? "" : "s"}`,
+                badge: curso.codigoRegistro || undefined
+              }))}
+              mensagemVazia="Nenhum curso encontrado."
+              onSelecionar={selecionarCurso}
             />
-          </div>
-        </div>
-      )}
+          )}
+        </>
+      ) : (
+        <>
+          <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
+            <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
+              <TbArrowLeft aria-hidden="true" size={22} />
+              Voltar para Modulos
+            </button>
+          </nav>
 
-      {moduloDetalhe ? (
-        <Modal
-          onFechar={() => setModuloDetalheId(null)}
-          titulo={moduloDetalhe.titulo}
-          rodape={
-            <footer className="modal-rodape">
-              <Botao onClick={() => setModuloDetalheId(null)} style={{ marginRight: podeGerenciar ? "auto" : 0 }} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Fechar
-              </Botao>
-              {podeGerenciar ? (
-                <Botao
-                  onClick={() => {
-                    setModuloDetalheId(null);
-                    abrirEdicaoModulo(moduloDetalhe);
-                  }}
-                  variante="primario"
-                >
-                  Editar titulo
-                </Botao>
-              ) : null}
-            </footer>
-          }
-        >
-          <dl className="lista-detalhes">
-            <div className="lista-detalhes__item">
-              <dt>Codigo do modulo</dt>
-              <dd>{moduloDetalhe.codigoRegistro || "Sem codigo"}</dd>
-            </div>
-            <div className="lista-detalhes__item">
-              <dt>Curso</dt>
-              <dd>{cursoPorId.get(moduloDetalhe.cursoId)?.titulo || `Curso #${moduloDetalhe.cursoId}`}</dd>
-            </div>
-            <div className="lista-detalhes__item">
-              <dt>Professor(es) do curso</dt>
-              <dd>
-                {(professoresPorCurso.get(Number(moduloDetalhe.cursoId)) || []).map((professor) => professor.nome).join(", ") ||
-                  "Sem professor vinculado"}
-              </dd>
-            </div>
-            <div className="lista-detalhes__item">
-              <dt>Alunos ativos no curso</dt>
-              <dd>{alunosAtivosPorCurso.get(Number(moduloDetalhe.cursoId)) || 0}</dd>
-            </div>
-            <div className="lista-detalhes__item">
-              <dt>Criado em</dt>
-              <dd>{formatDate(moduloDetalhe.dataCriacao)}</dd>
-            </div>
-          </dl>
-        </Modal>
-      ) : null}
+          <SlideCurso
+            alunosAtivos={alunosAtivosPorCurso.get(Number(grupoSelecionado.curso.id)) || 0}
+            curso={grupoSelecionado.curso}
+            itens={grupoSelecionado.itens}
+            menuAbertoId={menuAbertoId}
+            onEditar={podeGerenciar ? abrirEdicaoModulo : null}
+            onExcluir={podeGerenciar ? setModuloParaExcluir : null}
+            onNovoModulo={podeGerenciar ? abrirFormularioNovoModulo : null}
+            onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+            professoresPorCurso={professoresPorCurso}
+          />
+        </>
+      )}
 
       {moduloParaExcluir ? (
         <Modal
@@ -508,7 +399,15 @@ export function SecaoModulos({
   );
 }
 
-function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onToggleMenu, onVerDetalhes, podeGerenciar }) {
+function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcluir, onNovoModulo, onToggleMenu, professoresPorCurso }) {
+  const [moduloAbertoId, setModuloAbertoId] = useState(null);
+  const professoresDoCurso =
+    (professoresPorCurso.get(Number(curso.id)) || []).map((professor) => professor.nome).join(", ") || "Sem professor vinculado";
+
+  function alternarModulo(moduloId) {
+    setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
+  }
+
   return (
     <div className="conteudos-aluno">
       <header className="conteudos-aluno__cabecalho">
@@ -531,64 +430,121 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onExcluir, onTog
             {curso.codigoRegistro ? <span className="conteudos-aluno__meta-chip">{curso.codigoRegistro}</span> : null}
           </div>
         </div>
+
+        {onNovoModulo ? (
+          <Botao onClick={onNovoModulo} tamanho="pequeno" variante="primario">
+            <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+              <TbPlus aria-hidden="true" size={16} />
+            </motion.span>{" "}
+            Novo modulo
+          </Botao>
+        ) : null}
       </header>
 
       {itens.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum modulo cadastrado neste curso.</p>
       ) : (
-        <ul aria-label={`Modulos de ${curso.titulo}`} className="lista-aproveitamento" role="list">
-          {itens.map((modulo, indice) => (
-            <li className="item-aproveitamento" key={modulo.id}>
-              <span aria-hidden="true" className="item-aproveitamento__num">
-                {indice + 1}
-              </span>
-              <div className="item-aproveitamento__info">
-                <span className="item-aproveitamento__titulo">
-                  {modulo.titulo}
-                  <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.78rem", marginLeft: "0.5rem" }}>
-                    {modulo.codigoRegistro}
-                  </span>
-                </span>
-              </div>
-              <div className="item-aproveitamento__badges">
-                <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                  {formatDate(modulo.dataCriacao)}
-                </span>
-              </div>
-              <div className="menu-contexto">
-                <button
-                  aria-expanded={menuAbertoId === modulo.id}
-                  aria-haspopup="true"
-                  aria-label={`Opcoes para ${modulo.titulo}`}
-                  className="menu-contexto__botao"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleMenu(modulo.id);
-                  }}
-                  type="button"
-                >
-                  <TbDotsVertical aria-hidden="true" size={16} />
-                </button>
-                {menuAbertoId === modulo.id ? (
-                  <ul className="menu-contexto__lista">
-                    <li>
-                      <button onClick={() => onVerDetalhes(modulo.id)} type="button">
-                        Ver detalhes
+        <div className="atividades-curso__lista-modulos">
+          {itens.map((modulo, indice) => {
+            const aberto = moduloAbertoId === modulo.id;
+            const idDetalhe = `modulo-detalhe-${modulo.id}`;
+
+            return (
+              <section className="conteudos-modulo" key={modulo.id}>
+                <header className="conteudos-modulo__cabecalho">
+                  <h3 className="conteudos-modulo__cabecalho-wrapper">
+                    <button
+                      aria-controls={idDetalhe}
+                      aria-expanded={aberto}
+                      className="conteudos-modulo__toggle"
+                      onClick={() => alternarModulo(modulo.id)}
+                      type="button"
+                    >
+                      <div className="conteudos-modulo__info">
+                        <span aria-hidden="true" className="conteudos-modulo__icone">
+                          <TbLayoutGrid size="1.4rem" />
+                        </span>
+                        <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                        <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
+                        <span className="conteudos-modulo__contagem">{modulo.codigoRegistro || "Sem codigo"}</span>
+                      </div>
+                      <TbChevronDown
+                        aria-hidden="true"
+                        className={`conteudos-modulo__chevron${aberto ? " conteudos-modulo__chevron--aberto" : ""}`}
+                        size="1.1rem"
+                      />
+                    </button>
+                  </h3>
+
+                  {onEditar || onExcluir ? (
+                    <div className="menu-contexto">
+                      <button
+                        aria-expanded={menuAbertoId === modulo.id}
+                        aria-haspopup="true"
+                        aria-label={`Opcoes para ${modulo.titulo}`}
+                        className="menu-contexto__botao"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onToggleMenu(modulo.id);
+                        }}
+                        type="button"
+                      >
+                        <TbDotsVertical aria-hidden="true" size={18} />
                       </button>
-                    </li>
-                    {podeGerenciar ? (
-                      <li>
-                        <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} type="button">
-                          Excluir
-                        </button>
-                      </li>
-                    ) : null}
-                  </ul>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
+                      {menuAbertoId === modulo.id ? (
+                        <ul className="menu-contexto__lista">
+                          {onEditar ? (
+                            <li>
+                              <button onClick={() => onEditar(modulo)} type="button">
+                                Editar
+                              </button>
+                            </li>
+                          ) : null}
+                          {onExcluir ? (
+                            <li>
+                              <button className="menu-item--perigo" onClick={() => onExcluir(modulo)} type="button">
+                                Excluir
+                              </button>
+                            </li>
+                          ) : null}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </header>
+
+                <AnimatePresence initial={false}>
+                  {aberto ? (
+                    <motion.div
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      id={idDetalhe}
+                      initial={{ height: 0, opacity: 0 }}
+                      key={`detalhe-modulo-${modulo.id}`}
+                      style={{ overflow: "hidden" }}
+                      transition={{ duration: 0.24, ease: "easeInOut" }}
+                    >
+                      <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                        <div className="lista-detalhes__item">
+                          <dt>Professor(es) do curso</dt>
+                          <dd>{professoresDoCurso}</dd>
+                        </div>
+                        <div className="lista-detalhes__item">
+                          <dt>Alunos ativos no curso</dt>
+                          <dd>{alunosAtivos}</dd>
+                        </div>
+                        <div className="lista-detalhes__item">
+                          <dt>Criado em</dt>
+                          <dd>{formatDate(modulo.dataCriacao)}</dd>
+                        </div>
+                      </dl>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </section>
+            );
+          })}
+        </div>
       )}
     </div>
   );

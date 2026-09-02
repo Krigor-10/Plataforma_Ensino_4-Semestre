@@ -55,9 +55,17 @@ export default function WorkspaceScreen({
 
   const sections = useMemo(
     () =>
-      APP_SECTIONS.filter((section) => section.roles.includes(role)).map((section) =>
-        section.key === "matriculas" && role === "Aluno" ? { ...section, label: "Catalogo de Cursos" } : section
-      ),
+      APP_SECTIONS.filter((section) => section.roles.includes(role)).map((section) => {
+        if (section.key === "matriculas" && role === "Aluno") {
+          return { ...section, label: "Catalogo de Cursos" };
+        }
+
+        if (section.key === "turmas" && role === "Professor") {
+          return { ...section, label: "Progresso" };
+        }
+
+        return section;
+      }),
     [role]
   );
   const navSections = useMemo(

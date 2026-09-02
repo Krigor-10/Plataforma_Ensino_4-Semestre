@@ -429,10 +429,9 @@ export function SecaoCursos({
         <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
           <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
           <select
-            className="campo__entrada"
+            className="campo__entrada barra-filtros__select"
             id="filtro-coordenador"
             onChange={(event) => setFiltroCoordenador(event.target.value)}
-            style={{ maxWidth: "220px" }}
             value={filtroCoordenador}
           >
             <option value="todos">Todos os coordenadores</option>
@@ -460,11 +459,10 @@ export function SecaoCursos({
           </label>
           <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir</label>
           <select
-            className="campo__entrada"
+            className="campo__entrada barra-filtros__select"
             disabled={salvando || !coordenadoresOrdenados.length}
             id="coordenador-atribuir"
             onChange={(event) => setCoordenadorSelecionado(event.target.value)}
-            style={{ maxWidth: "220px" }}
             value={coordenadorSelecionado}
           >
             <option value="">Selecionar coordenador</option>

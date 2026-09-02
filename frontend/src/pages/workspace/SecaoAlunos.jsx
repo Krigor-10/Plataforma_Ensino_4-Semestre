@@ -166,12 +166,11 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
       <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
         <select
           aria-label="Filtrar alunos por status"
-          className="campo__entrada"
+          className="campo__entrada barra-filtros__select"
           onChange={(event) => {
             setFiltroStatus(event.target.value);
             setPagina(1);
           }}
-          style={{ maxWidth: "180px" }}
           value={filtroStatus}
         >
           <option value="todos">Todos os status</option>

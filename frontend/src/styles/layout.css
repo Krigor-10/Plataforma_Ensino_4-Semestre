@@ -944,12 +944,6 @@
   width: 100%;
 }
 
-.sidebar__grupo-btn--filho-ativo .sidebar__item-icone {
-  background: rgba(123, 47, 247, 0.18);
-  border-color: rgba(123, 47, 247, 0.28);
-  color: var(--cor-marca-clara);
-}
-
 .sidebar__grupo-chevron {
   margin-left: auto;
   flex-shrink: 0;

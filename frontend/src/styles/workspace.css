@@ -3951,12 +3951,6 @@
   color: var(--cor-texto-forte);
 }
 
-.lista-aproveitamento .item-aproveitamento:last-child .menu-contexto__lista,
-.lista-aproveitamento .item-aproveitamento:nth-last-child(2) .menu-contexto__lista {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
 /* ------------------------------------------------------------
    CARROSSEL (Modulos / Turmas)
    ------------------------------------------------------------ */
@@ -4277,6 +4271,31 @@
 
 .tela-conteudos .atividades-curso__item--editavel:has(.atividades-curso__linha--ativa) {
   border-color: var(--cor-borda-forte);
+}
+
+/* Mesmo padrao de cartao com borda, reaplicado nos MODULOS da tela Modulos
+   (Admin/Coordenador) — substitui a antiga modal "Ver detalhes" por
+   expansao inline. .conteudos-modulo aqui nao e compartilhada com nenhuma
+   outra lista dentro de .tela-modulos, entao nao precisa de modificador. */
+.tela-modulos .conteudos-modulo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0 var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tela-modulos .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-modulos .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-bottom-color: var(--cor-borda-forte);
+}
+
+.tela-modulos .atividades-curso__lista-modulos > .conteudos-modulo:last-child .menu-contexto__lista,
+.tela-modulos .atividades-curso__lista-modulos > .conteudos-modulo:nth-last-child(2) .menu-contexto__lista {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 /* Mesmo padrao de cartao com borda das Avaliacoes do professor, reaplicado
@@ -4709,75 +4728,12 @@
 }
 
 /* ------------------------------------------------------------
-   MODULOS — lista "aproveitamento" dentro do slide
-   ------------------------------------------------------------ */
-.lista-aproveitamento {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-sm);
-  list-style: none;
-  margin-bottom: var(--espaco-md);
-}
-
-.item-aproveitamento {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-md);
-  padding: var(--espaco-md) var(--espaco-lg);
-  background: var(--cor-cartao);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  transition: border-color var(--transicao-rapida);
-}
-
-.item-aproveitamento:hover {
-  border-color: var(--cor-borda-forte);
-}
-
-.item-aproveitamento__num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(123, 47, 247, 0.12);
-  border: 1px solid rgba(123, 47, 247, 0.25);
-  color: var(--cor-marca-clara);
-  font-size: 0.78rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.item-aproveitamento__info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.item-aproveitamento__titulo {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--cor-texto-forte);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.item-aproveitamento__badges {
-  display: flex;
-  gap: var(--espaco-sm);
-  align-items: center;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-/* ------------------------------------------------------------
    TURMAS — lista de alunos dentro do slide
    ------------------------------------------------------------ */
+.slide-alunos__busca {
+  margin: var(--espaco-md) 0 var(--espaco-sm);
+}
+
 .slide-alunos__lista {
   list-style: none;
   display: flex;

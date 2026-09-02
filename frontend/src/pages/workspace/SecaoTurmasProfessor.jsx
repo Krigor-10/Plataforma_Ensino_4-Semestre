@@ -130,7 +130,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
         <>
           <header className="cabecalho-pagina">
             <div>
-              <h2 className="cabecalho-pagina__titulo">Turmas</h2>
+              <h2 className="cabecalho-pagina__titulo">Progresso</h2>
               <p className="cabecalho-pagina__subtitulo">Analise de desempenho dos cursos e avaliacoes.</p>
             </div>
           </header>
