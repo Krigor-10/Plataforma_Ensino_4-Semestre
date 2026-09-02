@@ -3741,99 +3741,6 @@
 }
 
 /* ------------------------------------------------------------
-   CARROSSEL (Modulos / Turmas)
-   ------------------------------------------------------------ */
-.carrossel-cursos {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-md);
-}
-
-.carrossel-cursos__nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--espaco-lg);
-}
-
-.carrossel-cursos__seta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-texto-suave);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-}
-
-.carrossel-cursos__seta svg {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2.2;
-  display: block;
-}
-
-.carrossel-cursos__seta:hover:not(:disabled) {
-  background: var(--cor-marca);
-  color: #fff;
-  transform: scale(1.1);
-  box-shadow: 0 4px 16px rgba(123, 47, 247, 0.4);
-}
-
-.carrossel-cursos__seta:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.carrossel-cursos__seta:disabled {
-  opacity: 0.25;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.carrossel-cursos__indicadores {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.carrossel-cursos__bolinha {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: var(--cor-borda);
-  padding: 0;
-  cursor: pointer;
-  transition: background var(--transicao-rapida), transform var(--transicao-rapida);
-}
-
-.carrossel-cursos__bolinha--ativa {
-  background: var(--cor-marca);
-  transform: scale(1.3);
-}
-
-.carrossel-cursos__janela {
-  border-radius: var(--raio-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-lg);
-}
-
-@media (max-width: 600px) {
-  .carrossel-cursos__seta {
-    width: 44px;
-    height: 44px;
-    font-size: 0.85rem;
-  }
-}
-
-/* ------------------------------------------------------------
    CABECALHO DE SLIDE (Modulos / Turmas) — mesmo padrao visual
    usado na trilha do aluno
    ------------------------------------------------------------ */
@@ -4090,18 +3997,21 @@
 /* Mesmo padrao de cartao com borda, reaplicado nos MODULOS da tela Progresso
    do Coordenador (Curso -> Modulos -> Materiais/Avaliacoes, sem nenhuma acao
    administrativa — so leitura). */
-.tela-progresso-coordenador .conteudos-modulo {
+.tela-progresso-coordenador .conteudos-modulo,
+.tela-progresso .conteudos-modulo {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
   padding: 0 var(--espaco-md);
   background: rgba(255, 255, 255, 0.015);
 }
 
-.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
+.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child,
+.tela-progresso .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
   border-bottom: 1px solid var(--cor-borda);
 }
 
-.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]),
+.tela-progresso .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
   border-bottom-color: var(--cor-borda-forte);
 }
 
@@ -6522,144 +6432,6 @@
   margin-bottom: var(--espaco-md);
   padding-bottom: var(--espaco-sm);
   border-bottom: 1px solid var(--cor-borda);
-}
-
-.trilha-modulos {
-  list-style: none;
-  margin: 0 0 var(--espaco-xl);
-  padding: 0;
-}
-
-.passo-modulo {
-  display: flex;
-  gap: var(--espaco-md);
-}
-
-.passo-modulo__esquerda {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  width: 36px;
-}
-
-.passo-modulo__indicador {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid var(--cor-borda-forte);
-  background: var(--cor-cartao);
-  color: var(--cor-texto-mudo);
-  font-size: 0.82rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background var(--transicao-normal), border-color var(--transicao-normal), box-shadow var(--transicao-normal);
-}
-
-.passo-modulo--concluido .passo-modulo__indicador {
-  background: var(--cor-sucesso);
-  border-color: var(--cor-sucesso);
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15);
-}
-
-.passo-modulo--andamento .passo-modulo__indicador {
-  background: rgba(123, 47, 247, 0.15);
-  border-color: var(--cor-marca);
-  color: var(--cor-marca-clara);
-  box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.12);
-}
-
-.passo-modulo__linha {
-  width: 2px;
-  flex: 1;
-  min-height: var(--espaco-lg);
-  background: var(--cor-borda);
-  margin: 4px 0;
-  border-radius: 2px;
-}
-
-.passo-modulo--concluido .passo-modulo__linha {
-  background: linear-gradient(180deg, var(--cor-sucesso), var(--cor-borda));
-}
-
-.passo-modulo__corpo {
-  flex: 1;
-  padding-bottom: var(--espaco-lg);
-  min-width: 0;
-}
-
-.passo-modulo__cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
-  margin-bottom: var(--espaco-sm);
-  min-height: 36px;
-}
-
-.passo-modulo__titulo {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--cor-texto-forte);
-}
-
-.passo-modulo--concluido .passo-modulo__titulo {
-  color: var(--cor-texto-suave);
-}
-
-.passo-modulo__itens {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  list-style: none;
-  margin: var(--espaco-sm) 0 0;
-  padding: 0;
-}
-
-.passo-modulo__item {
-  align-items: center;
-  border-radius: var(--raio-sm);
-  color: var(--cor-texto-mudo);
-  display: flex;
-  font-size: 0.81rem;
-  gap: var(--espaco-sm);
-  padding: 4px 6px;
-}
-
-.passo-modulo__item--feito {
-  color: var(--cor-texto-forte);
-}
-
-.passo-modulo__item-icone {
-  color: var(--cor-texto-mudo);
-  flex-shrink: 0;
-  font-size: 0.72rem;
-  width: 14px;
-  text-align: center;
-}
-
-.passo-modulo__item--feito .passo-modulo__item-icone {
-  color: var(--cor-sucesso);
-}
-
-.passo-modulo__item-titulo {
-  flex: 1;
-}
-
-.passo-modulo__item-meta {
-  font-size: 0.74rem;
-  color: var(--cor-texto-mudo);
-  white-space: nowrap;
-}
-
-.passo-modulo__item--avaliacao {
-  border-top: 1px solid var(--cor-borda);
-  margin-top: 4px;
-  padding-top: 6px;
 }
 
 /* Cartao compacto de certificado — link para Certificados */

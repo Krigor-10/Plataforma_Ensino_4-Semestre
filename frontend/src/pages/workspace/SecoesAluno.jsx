@@ -4,10 +4,13 @@ import {
   TbAlertTriangle,
   TbArrowLeft,
   TbArrowRight,
+  TbAward,
   TbCertificate,
+  TbChartBar,
   TbCheck,
   TbChevronDown,
   TbChevronUp,
+  TbCircleCheck,
   TbClock,
   TbFile,
   TbFileText,
@@ -23,6 +26,7 @@ import {
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
+import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -57,44 +61,22 @@ const ACADEMIC_ACCENTS = [
   { solid: "#d946ef", border: "rgba(173, 136, 180, 0.34)", soft: "rgba(173, 136, 180, 0.07)" }
 ];
 
-function CarrosselCursos({ ariaLabelIndicadores, ariaLabelNav, children, indicadorLabel, onIrPara, slide, total }) {
-  return (
-    <div className="carrossel-cursos">
-      {total > 1 ? (
-        <nav aria-label={ariaLabelNav} className="carrossel-cursos__nav">
-          <button aria-label="Curso anterior" className="carrossel-cursos__seta" disabled={slide === 0} onClick={() => onIrPara(slide - 1)} type="button">
-            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <div aria-label={ariaLabelIndicadores} className="carrossel-cursos__indicadores" role="tablist">
-            {Array.from({ length: total }, (_valor, indice) => (
-              <button
-                aria-label={indicadorLabel(indice)}
-                aria-selected={indice === slide}
-                className={`carrossel-cursos__bolinha${indice === slide ? " carrossel-cursos__bolinha--ativa" : ""}`}
-                key={indice}
-                onClick={() => onIrPara(indice)}
-                role="tab"
-                type="button"
-              />
-            ))}
-          </div>
-          <button aria-label="Proximo curso" className="carrossel-cursos__seta" disabled={slide === total - 1} onClick={() => onIrPara(slide + 1)} type="button">
-            <svg fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        </nav>
-      ) : null}
+const ICONE_TIPO_CONTEUDO_PROGRESSO = {
+  1: <TbFileText aria-hidden="true" size="1.75rem" />,
+  2: <TbFile aria-hidden="true" size="1.75rem" />,
+  3: <TbPlayerPlay aria-hidden="true" size="1.75rem" />,
+  4: <TbExternalLink aria-hidden="true" size="1.75rem" />,
+  5: <TbPhoto aria-hidden="true" size="1.75rem" />
+};
 
-      <div className="carrossel-cursos__janela">{children}</div>
-    </div>
-  );
-}
-
+/* PROGRESSO DO ALUNO — mesmo layout/componentes da tela Progresso do
+   Coordenador (SecaoDesempenhoCoordenador.jsx): grade de cards pra escolher
+   o curso, depois atividades-curso__cabecalho + grade-estatisticas +
+   accordion de modulos (conteudos-modulo), so que com KPIs e status na
+   perspectiva do proprio aluno (progresso/nota) em vez de metricas
+   agregadas de turma. Substitui o carrossel anterior. */
 export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matriculas, modulos = [], onNavigate, progressos = {}, turmas }) {
-  const [slideAtual, setSlideAtual] = useState(0);
+  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const modulosPorCursoId = useMemo(() => agruparModulosPorCurso(modulos), [modulos]);
@@ -173,16 +155,13 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
     [cursoPorId, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorTurma, turmaPorId]
   );
 
-  useEffect(() => {
-    if (slideAtual > linhasMatriculasAprovadas.length - 1) {
-      setSlideAtual(Math.max(0, linhasMatriculasAprovadas.length - 1));
-    }
-  }, [linhasMatriculasAprovadas, slideAtual]);
-
-  const matriculaAtual = linhasMatriculasAprovadas[slideAtual] || null;
+  const linhaSelecionada = useMemo(
+    () => linhasMatriculasAprovadas.find((linha) => Number(linha.cursoId) === cursoSelecionadoId) || null,
+    [cursoSelecionadoId, linhasMatriculasAprovadas]
+  );
 
   const detalheCursoSelecionado = useMemo(() => {
-    const linha = matriculaAtual;
+    const linha = linhaSelecionada;
     if (!linha) {
       return null;
     }
@@ -268,14 +247,18 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
   }, [
     avaliacoes,
     conteudos,
-    matriculaAtual,
+    linhaSelecionada,
     modulosPorCursoId,
     progressoConteudoPorConteudoId,
     progressoModuloPorChave
   ]);
 
-  function irPara(indice) {
-    setSlideAtual(Math.max(0, Math.min(indice, linhasMatriculasAprovadas.length - 1)));
+  function selecionarCurso(cursoId) {
+    setCursoSelecionadoId(Number(cursoId));
+  }
+
+  function voltarParaLista() {
+    setCursoSelecionadoId(null);
   }
 
   if (!linhasMatriculasAprovadas.length) {
@@ -288,137 +271,198 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
     );
   }
 
-  const total = linhasMatriculasAprovadas.length;
-
   return (
     <div className="tela-progresso">
-      <CarrosselCursos
-        ariaLabelIndicadores="Cursos matriculados"
-        ariaLabelNav="Navegacao entre cursos"
-        indicadorLabel={(indice) => `Curso ${indice + 1}: ${linhasMatriculasAprovadas[indice].curso}`}
-        onIrPara={irPara}
-        slide={slideAtual}
-        total={total}
-      >
-        {detalheCursoSelecionado ? <SlideProgressoCurso detalhe={detalheCursoSelecionado} onNavigate={onNavigate} /> : null}
-      </CarrosselCursos>
+      {!detalheCursoSelecionado ? (
+        <GradeCursosProfessor
+          cursos={linhasMatriculasAprovadas.map((linha) => ({
+            curso: cursoPorId.get(linha.cursoId) || { id: linha.cursoId, titulo: linha.curso, descricao: "" },
+            resumo: `${linha.modulos} modulo${linha.modulos === 1 ? "" : "s"}`,
+            rodapeEsquerda: linha.turma,
+            badge: `${Math.round(Math.max(0, Math.min(linha.progresso, 100)))}% concluido`
+          }))}
+          mensagemVazia="Assim que uma matricula for aprovada, os seus cursos ativos vao aparecer aqui."
+          onSelecionar={selecionarCurso}
+        />
+      ) : (
+        <DetalheProgressoCurso detalhe={detalheCursoSelecionado} onNavigate={onNavigate} onVoltar={voltarParaLista} />
+      )}
     </div>
   );
 }
 
-function SlideProgressoCurso({ detalhe, onNavigate }) {
+function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
+  const [moduloAbertoId, setModuloAbertoId] = useState(null);
   const percentual = Math.round(Math.max(0, Math.min(detalhe.progresso, 100)));
-  const circunferencia = 2 * Math.PI * 50;
   const modulosComConteudo = detalhe.modulos.filter((modulo) => modulo.conteudos.length > 0);
   const modulosConcluidos = modulosComConteudo.filter((modulo) => modulo.progresso >= 100).length;
+  const totalConteudos = detalhe.modulos.reduce((total, modulo) => total + modulo.conteudos.length, 0);
+  const conteudosConcluidos = detalhe.modulos.reduce(
+    (total, modulo) => total + modulo.conteudos.filter((conteudo) => conteudo.concluido).length,
+    0
+  );
   const certificadoDesbloqueado = percentual >= 100;
 
+  function alternarModulo(moduloId) {
+    setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
+  }
+
   return (
-    <>
-      <header className="conteudos-aluno__cabecalho" aria-label="Visao geral do curso">
-        <div className="conteudos-aluno__curso-info">
-          <h2 className="conteudos-aluno__curso-titulo">{detalhe.curso}</h2>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip">{detalhe.turma}</span>
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
-              <TbLayoutGrid aria-hidden="true" size={12} />
-              {modulosConcluidos}/{modulosComConteudo.length} modulos
-            </span>
-          </div>
-        </div>
-        <div className="conteudos-aluno__progresso-geral">
-          <div aria-label={`${percentual} por cento concluido`} className="anel-progresso">
-            <svg className="anel-progresso__svg" viewBox="0 0 120 120" aria-hidden="true">
-              <circle className="anel-progresso__trilha" cx="60" cy="60" r="50" />
-              <circle
-                className="anel-progresso__arco"
-                cx="60"
-                cy="60"
-                r="50"
-                stroke="var(--cor-marca-clara)"
-                style={{ strokeDasharray: circunferencia, strokeDashoffset: circunferencia * (1 - percentual / 100) }}
-              />
-            </svg>
-            <span aria-hidden="true" className="anel-progresso__texto">{percentual}%</span>
-          </div>
+    <div className="conteudos-aluno">
+      <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
+        <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
+          <TbArrowLeft aria-hidden="true" size={22} />
+          Voltar para Progresso
+        </button>
+      </nav>
+
+      <header className="atividades-curso__cabecalho">
+        <div>
+          <h2 className="atividades-curso__titulo">{detalhe.curso}</h2>
+          <p className="atividades-curso__subtitulo">{detalhe.turma}</p>
         </div>
       </header>
 
-      <section aria-labelledby="titulo-aproveitamento">
-        <h3 className="secao-progresso__titulo" id="titulo-aproveitamento">Aproveitamento</h3>
-        {detalhe.modulos.length ? (
-          <ol aria-label="Jornada por modulo" className="trilha-modulos">
-            {detalhe.modulos.map((modulo, indice) => {
-              const moduloSemConteudo = modulo.conteudos.length === 0;
-              const concluido = !moduloSemConteudo && modulo.progresso >= 100;
-              const emAndamento = !moduloSemConteudo && modulo.progresso > 0 && !concluido;
+      <div className="grade-estatisticas">
+        <CartaoEstatistica icone={<TbChartBar size={22} />} rotulo="Progresso" valor={`${percentual}%`} />
+        <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbLayoutGrid size={22} />} rotulo="Modulos concluidos" valor={`${modulosConcluidos}/${modulosComConteudo.length}`} />
+        <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbCircleCheck size={22} />} rotulo="Conteudos concluidos" valor={`${conteudosConcluidos}/${totalConteudos}`} />
+        <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbAward size={22} />} rotulo="Nota final" valor={formatGrade(detalhe.notaFinal)} />
+      </div>
 
-              return (
-                <li
-                  className={`passo-modulo${concluido ? " passo-modulo--concluido" : emAndamento ? " passo-modulo--andamento" : ""}`}
-                  key={modulo.id}
-                >
-                  <div className="passo-modulo__esquerda">
-                    <div aria-hidden="true" className="passo-modulo__indicador">
-                      {concluido ? <TbCheck size={16} /> : indice + 1}
-                    </div>
-                    <div aria-hidden="true" className="passo-modulo__linha" />
-                  </div>
-                  <div className="passo-modulo__corpo">
-                    <div className="passo-modulo__cabecalho">
-                      <span className="passo-modulo__titulo">{modulo.titulo}</span>
-                      <Insignia
-                        texto={
-                          moduloSemConteudo
-                            ? "Aguardando conteudos"
-                            : concluido
-                              ? "Concluido"
-                              : emAndamento
-                                ? `${Math.round(modulo.progresso)}%`
-                                : "Nao iniciado"
-                        }
-                        variante={moduloSemConteudo ? "neutro" : concluido ? "sucesso" : emAndamento ? "info" : "neutro"}
+      {detalhe.modulos.length === 0 ? (
+        <EmptyState message="Este curso ainda nao possui modulos publicados para a sua turma." />
+      ) : (
+        <div className="atividades-curso__lista-modulos">
+          {detalhe.modulos.map((modulo, indice) => {
+            const aberto = moduloAbertoId === modulo.id;
+            const idDetalhe = `progresso-modulo-detalhe-${modulo.id}`;
+            const moduloSemConteudo = modulo.conteudos.length === 0;
+            const concluidoModulo = !moduloSemConteudo && modulo.progresso >= 100;
+            const emAndamentoModulo = !moduloSemConteudo && modulo.progresso > 0 && !concluidoModulo;
+            const statusModulo = moduloSemConteudo
+              ? "Aguardando conteudos"
+              : concluidoModulo
+                ? "Concluido"
+                : emAndamentoModulo
+                  ? "Em andamento"
+                  : "Nao iniciado";
+            const totalItensModulo = modulo.conteudos.length + modulo.avaliacoes.length;
+            const concluidosModulo = modulo.conteudos.filter((conteudo) => conteudo.concluido).length;
+
+            return (
+              <section className="conteudos-modulo" key={modulo.id}>
+                <header className="conteudos-modulo__cabecalho">
+                  <h3 className="conteudos-modulo__cabecalho-wrapper">
+                    <button
+                      aria-controls={idDetalhe}
+                      aria-expanded={aberto}
+                      className="conteudos-modulo__toggle"
+                      onClick={() => alternarModulo(modulo.id)}
+                      type="button"
+                    >
+                      <div className="conteudos-modulo__info">
+                        <span aria-hidden="true" className="conteudos-modulo__icone">
+                          <TbLayoutGrid size="1.4rem" />
+                        </span>
+                        <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                        <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
+                        <span className="conteudos-modulo__contagem">
+                          {totalItensModulo} item{totalItensModulo === 1 ? "" : "s"} · {statusModulo}
+                        </span>
+                      </div>
+                      <TbChevronDown
+                        aria-hidden="true"
+                        className={`conteudos-modulo__chevron${aberto ? " conteudos-modulo__chevron--aberto" : ""}`}
+                        size="1.1rem"
                       />
-                    </div>
+                    </button>
+                  </h3>
+                </header>
 
-                    {modulo.conteudos.length ? (
-                      <ul className="passo-modulo__itens" role="list">
-                        {modulo.conteudos.map((conteudo) => (
-                          <li className={`passo-modulo__item${conteudo.concluido ? " passo-modulo__item--feito" : ""}`} key={conteudo.id}>
-                            <span aria-hidden="true" className="passo-modulo__item-icone">{conteudo.concluido ? "✓" : "○"}</span>
-                            <span className="passo-modulo__item-titulo">{conteudo.titulo}</span>
-                            <span className="passo-modulo__item-meta">{normalizeContentType(conteudo.tipoConteudo)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="texto-vazio">Nenhum conteudo publicado neste modulo.</p>
-                    )}
+                <AnimatePresence initial={false}>
+                  {aberto ? (
+                    <motion.div
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      id={idDetalhe}
+                      initial={{ height: 0, opacity: 0 }}
+                      key={`detalhe-progresso-modulo-${modulo.id}`}
+                      style={{ overflow: "hidden" }}
+                      transition={{ duration: 0.24, ease: "easeInOut" }}
+                    >
+                      <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                        <div className="lista-detalhes__item">
+                          <dt>Progresso</dt>
+                          <dd>{formatPercent(modulo.progresso)}</dd>
+                        </div>
+                        <div className="lista-detalhes__item">
+                          <dt>Conteudos concluidos</dt>
+                          <dd>{concluidosModulo}/{modulo.conteudos.length}</dd>
+                        </div>
+                        <div className="lista-detalhes__item">
+                          <dt>Status</dt>
+                          <dd>
+                            <Insignia
+                              texto={statusModulo}
+                              variante={moduloSemConteudo ? "neutro" : concluidoModulo ? "sucesso" : emAndamentoModulo ? "info" : "neutro"}
+                            />
+                          </dd>
+                        </div>
+                      </dl>
 
-                    {modulo.avaliacoes.length
-                      ? modulo.avaliacoes.map((avaliacao) => {
-                          const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+                      {totalItensModulo === 0 ? (
+                        <p className="texto-vazio" role="status">Nenhum conteudo publicado neste modulo.</p>
+                      ) : (
+                        <ul aria-label={`Conteudos de ${modulo.titulo}`} className="atividades-curso__lista" role="list">
+                          {modulo.conteudos.map((conteudo) => (
+                            <li className="atividades-curso__item" key={`conteudo-${conteudo.id}`}>
+                              <div className="atividades-curso__linha">
+                                <span aria-hidden="true" className="atividades-curso__icone">
+                                  {ICONE_TIPO_CONTEUDO_PROGRESSO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
+                                </span>
+                                <div className="atividades-curso__corpo">
+                                  <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
+                                  <p className="atividades-curso__meta">
+                                    <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
+                                  </p>
+                                </div>
+                                <div className="atividades-curso__metrica">
+                                  <Insignia texto={conteudo.concluido ? "Concluido" : "Pendente"} variante={conteudo.concluido ? "sucesso" : "neutro"} />
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                          {modulo.avaliacoes.map((avaliacao) => {
+                            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
 
-                          return (
-                            <ul className="passo-modulo__itens" key={avaliacao.id} role="list">
-                              <li className="passo-modulo__item passo-modulo__item--avaliacao">
-                                <span aria-hidden="true" className="passo-modulo__item-icone">○</span>
-                                <span className="passo-modulo__item-titulo">{avaliacao.titulo}</span>
-                                <span className="passo-modulo__item-meta">{disponibilidade.label}</span>
+                            return (
+                              <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-${avaliacao.id}`}>
+                                <div className="atividades-curso__linha">
+                                  <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                                    <TbTrophy aria-hidden="true" size="1.75rem" />
+                                  </span>
+                                  <div className="atividades-curso__corpo">
+                                    <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
+                                    <p className="atividades-curso__meta">
+                                      <span>Avaliacao</span>
+                                    </p>
+                                  </div>
+                                  <div className="atividades-curso__metrica">{disponibilidade.label}</div>
+                                </div>
                               </li>
-                            </ul>
-                          );
-                        })
-                      : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <EmptyState message="Este curso ainda nao possui modulos publicados para a sua turma." />
-        )}
-      </section>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </section>
+            );
+          })}
+        </div>
+      )}
 
       {certificadoDesbloqueado ? (
         <div aria-label="Certificado disponivel" className="cartao-certificado-link cartao-certificado-link--desbloqueado" role="status">
@@ -452,7 +496,7 @@ function SlideProgressoCurso({ detalhe, onNavigate }) {
           ) : null}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
