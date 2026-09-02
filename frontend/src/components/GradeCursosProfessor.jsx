@@ -19,7 +19,6 @@ export default function GradeCursosProfessor({ cursos, mensagemVazia, onSelecion
             <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
             <div className="catalogo-card__corpo">
               <strong className="catalogo-card__titulo">{curso.titulo}</strong>
-              <p className="catalogo-card__turma">{curso.descricao}</p>
               <p className="catalogo-card__data">{resumo}</p>
               <footer className="catalogo-card__rodape-aluno">
                 <span className="catalogo-card__codigo">{rodapeEsquerda}</span>
