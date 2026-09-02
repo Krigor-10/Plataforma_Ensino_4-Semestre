@@ -3641,173 +3641,6 @@
   flex-shrink: 0;
 }
 
-.desempenho-cursos-cabecalho {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-lg);
-  padding: var(--espaco-xs) var(--espaco-lg) var(--espaco-sm);
-  margin-bottom: var(--espaco-xs);
-  border-bottom: 1px solid var(--cor-borda);
-}
-
-.desempenho-cursos-cabecalho__col {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--cor-texto-forte);
-}
-
-.desempenho-cursos-cabecalho__col--checkbox { width: 40px; flex-shrink: 0; }
-.desempenho-cursos-cabecalho__col--avatar { width: 40px; flex-shrink: 0; }
-.desempenho-cursos-cabecalho__col--identidade { flex: 2; min-width: 0; }
-.desempenho-cursos-cabecalho__col--turma { flex: 1.5; min-width: 0; }
-.desempenho-cursos-cabecalho__col--alunos { flex: 1.2; min-width: 100px; }
-.desempenho-cursos-cabecalho__col--metricas { flex: 1; }
-.desempenho-cursos-cabecalho__col--acoes { width: 36px; flex-shrink: 0; }
-
-.desempenho-cursos {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-md);
-}
-
-.desempenho-curso-item {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-lg);
-  background: var(--cor-cartao);
-  border: 1px solid var(--cor-borda);
-  border-left: 3px solid var(--cor-marca);
-  border-radius: var(--raio-md);
-  padding: var(--espaco-md) var(--espaco-lg);
-  transition: border-color var(--transicao-rapida);
-}
-
-.desempenho-curso-item:hover {
-  border-color: rgba(123, 47, 247, 0.35);
-}
-
-.desempenho-curso-item--selecionado {
-  background: rgba(123, 47, 247, 0.07);
-  border-color: rgba(123, 47, 247, 0.4);
-}
-
-.desempenho-curso-item__checkbox {
-  width: 40px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.desempenho-curso-item__identidade {
-  flex: 2;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.desempenho-curso-item__cabecalho {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-sm);
-}
-
-.desempenho-curso-item__titulo {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--cor-texto-forte);
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.desempenho-curso-item__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-sm);
-}
-
-.desempenho-curso-item__codigo {
-  font-size: 0.72rem;
-  color: var(--cor-texto-suave);
-  font-family: monospace;
-}
-
-.desempenho-curso-item__turma {
-  flex: 1.5;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.desempenho-curso-item__turma-nome {
-  font-size: var(--texto-sm);
-  font-weight: 600;
-  color: var(--cor-texto-forte);
-}
-
-.desempenho-curso-item__professor {
-  font-size: var(--texto-xs);
-  color: var(--cor-texto-suave);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.desempenho-curso-item__sem-turma {
-  font-size: var(--texto-sm);
-  color: var(--cor-texto-suave);
-  font-style: italic;
-}
-
-.desempenho-curso-item__alunos {
-  flex: 1.2;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 100px;
-}
-
-.desempenho-curso-item__alunos-num {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--cor-texto-forte);
-}
-
-.desempenho-metrica__rotulo {
-  font-size: 0.7rem;
-  color: var(--cor-texto-suave);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.desempenho-curso-item__metricas {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.desempenho-metrica {
-  font-size: var(--texto-sm);
-  color: var(--cor-texto-suave);
-}
-
-.desempenho-metrica strong {
-  color: var(--cor-texto-forte);
-  font-weight: 600;
-}
-
 .dado-rotulo {
   display: none;
 }
@@ -3834,50 +3667,6 @@
 
   .cursos-kpi__valor {
     font-size: 1.4rem;
-  }
-
-  .desempenho-cursos-cabecalho {
-    display: none;
-  }
-
-  .desempenho-curso-item {
-    flex-wrap: wrap;
-    gap: var(--espaco-xs) var(--espaco-sm);
-    padding: var(--espaco-sm) var(--espaco-md);
-    align-items: flex-start;
-    position: relative;
-  }
-
-  .desempenho-curso-item__identidade {
-    flex: 1 1 100%;
-    padding-right: 2.5rem;
-  }
-
-  .desempenho-curso-item__titulo {
-    white-space: normal;
-    font-size: 0.9rem;
-  }
-
-  .desempenho-curso-item__turma {
-    flex: 1 1 100%;
-    font-size: 0.8rem;
-  }
-
-  .desempenho-curso-item__alunos {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  .desempenho-curso-item__metricas {
-    flex: 1 1 auto;
-    flex-direction: row;
-    gap: var(--espaco-md);
-  }
-
-  .desempenho-curso-item > .menu-contexto {
-    position: absolute;
-    top: var(--espaco-sm);
-    right: var(--espaco-sm);
   }
 }
 
@@ -6598,6 +6387,7 @@
 }
 
 .catalogo-card {
+  position: relative;
   background: var(--cor-cartao);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-lg);
@@ -6607,6 +6397,27 @@
   padding: 0;
   overflow: hidden;
   transition: border-color var(--transicao-normal), transform var(--transicao-normal), box-shadow var(--transicao-normal);
+}
+
+.catalogo-card__selecao {
+  position: absolute;
+  top: var(--espaco-sm);
+  left: var(--espaco-sm);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: rgba(10, 10, 20, 0.55);
+  border-radius: var(--raio-sm);
+  backdrop-filter: blur(2px);
+}
+
+.catalogo-card__selecao input[type="checkbox"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  cursor: pointer;
 }
 
 .catalogo-card:hover {

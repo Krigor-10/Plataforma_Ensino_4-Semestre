@@ -15,12 +15,18 @@ public class CursosController : ControllerBase
     private readonly ICursoService _cursoService;
     private readonly IArmazenamentoArquivoService _armazenamentoService;
     private readonly ICursoDesempenhoService _cursoDesempenhoService;
+    private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
 
-    public CursosController(ICursoService cursoService, IArmazenamentoArquivoService armazenamentoService, ICursoDesempenhoService cursoDesempenhoService)
+    public CursosController(
+        ICursoService cursoService,
+        IArmazenamentoArquivoService armazenamentoService,
+        ICursoDesempenhoService cursoDesempenhoService,
+        ICursoAutorizacaoService cursoAutorizacaoService)
     {
         _cursoService = cursoService;
         _cursoDesempenhoService = cursoDesempenhoService;
         _armazenamentoService = armazenamentoService;
+        _cursoAutorizacaoService = cursoAutorizacaoService;
     }
 
     [HttpPost]
@@ -69,6 +75,11 @@ public class CursosController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> AtualizarCurso(int id, [FromBody] AtualizarCursoDto dto)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         var curso = await _cursoService.AtualizarCursoAsync(id, dto);
         return Ok(curso);
     }
@@ -91,6 +102,11 @@ public class CursosController : ControllerBase
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> EnviarImagemCurso(int id, [FromForm] IFormFile imagem)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         var imagemUrl = await _armazenamentoService.SalvarArquivoAsync(
             imagem,
             "cursos",
@@ -132,4 +148,7 @@ public class CursosController : ControllerBase
     private int? ObterProfessorId() => User.ObterUsuarioId();
 
     private int? ObterCoordenadorId() => User.ObterUsuarioId();
+
+    private ObjectResult MensagemAcessoNegado() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Voce nao tem permissao para gerenciar este curso." });
 }

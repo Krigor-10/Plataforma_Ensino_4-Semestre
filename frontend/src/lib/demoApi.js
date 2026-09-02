@@ -654,7 +654,14 @@ function assignClassProfessor(classId, professorIdPayload) {
 function listModules() {
   requireManager();
   const db = readDemoDb();
-  return clone(db.modulos).sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  return clone(db.modulos)
+    .map((modulo) => ({
+      ...modulo,
+      totalConteudos: db.conteudos.filter((conteudo) => conteudo.moduloId === modulo.id).length,
+      totalAvaliacoes: (db.avaliacoes || []).filter((avaliacao) => avaliacao.moduloId === modulo.id).length
+    }))
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
 }
 
 function listTeacherModules() {

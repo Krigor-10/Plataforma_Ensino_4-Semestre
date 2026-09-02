@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
@@ -13,17 +14,24 @@ namespace PlataformaEnsino.API.Controllers;
 public class ModulosController : ControllerBase
 {
     private readonly IModuloService _moduloService;
+    private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
 
-    public ModulosController(IModuloService moduloService)
+    public ModulosController(IModuloService moduloService, ICursoAutorizacaoService cursoAutorizacaoService)
     {
         _moduloService = moduloService;
+        _cursoAutorizacaoService = cursoAutorizacaoService;
     }
 
     [HttpGet]
     public async Task<IActionResult> ListarModulos()
     {
-        var modulos = await _moduloService.ListarModulosAsync();
-        return Ok(modulos.Select(MapResponse));
+        var modulos = (await _moduloService.ListarModulosAsync()).ToList();
+        var moduloIds = modulos.Select(modulo => modulo.Id);
+
+        var totalConteudosPorModulo = await _moduloService.ContarConteudosPorModuloAsync(moduloIds);
+        var totalAvaliacoesPorModulo = await _moduloService.ContarAvaliacoesPorModuloAsync(moduloIds);
+
+        return Ok(modulos.Select(modulo => MapResponse(modulo, totalConteudosPorModulo, totalAvaliacoesPorModulo)));
     }
 
     [HttpGet("meus")]
@@ -37,7 +45,7 @@ public class ModulosController : ControllerBase
         }
 
         var modulos = await _moduloService.ListarModulosPorProfessorAsync(professorId.Value);
-        return Ok(modulos.Select(MapResponse));
+        return Ok(modulos.Select(modulo => MapResponse(modulo)));
     }
 
     [HttpGet("aluno/{alunoId:int}")]
@@ -50,7 +58,7 @@ public class ModulosController : ControllerBase
         }
 
         var modulos = await _moduloService.ListarModulosPorAlunoAsync(alunoId);
-        return Ok(modulos.Select(MapResponse));
+        return Ok(modulos.Select(modulo => MapResponse(modulo)));
     }
 
     [HttpGet("{id:int}")]
@@ -64,7 +72,7 @@ public class ModulosController : ControllerBase
     public async Task<IActionResult> ListarPorCurso(int cursoId)
     {
         var modulos = await _moduloService.ListarModulosPorCursoAsync(cursoId);
-        return Ok(modulos.Select(MapResponse));
+        return Ok(modulos.Select(modulo => MapResponse(modulo)));
     }
 
     [HttpPost]
@@ -74,6 +82,11 @@ public class ModulosController : ControllerBase
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, dto.CursoId))
+        {
+            return MensagemAcessoNegado();
         }
 
         var modulo = new Modulo
@@ -95,6 +108,11 @@ public class ModulosController : ControllerBase
             return BadRequest(ModelState);
         }
 
+        if (!await _cursoAutorizacaoService.PodeGerenciarModuloAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         var modulo = await _moduloService.AtualizarModuloAsync(id, dto.Titulo);
         return Ok(MapResponse(modulo));
     }
@@ -103,11 +121,19 @@ public class ModulosController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> ExcluirModulo(int id)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarModuloAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         await _moduloService.ExcluirModuloAsync(id);
         return NoContent();
     }
 
-    private static ModuloResponseDto MapResponse(Modulo modulo)
+    private static ModuloResponseDto MapResponse(
+        Modulo modulo,
+        IReadOnlyDictionary<int, int>? totalConteudosPorModulo = null,
+        IReadOnlyDictionary<int, int>? totalAvaliacoesPorModulo = null)
     {
         return new ModuloResponseDto
         {
@@ -115,11 +141,16 @@ public class ModulosController : ControllerBase
             CodigoRegistro = modulo.CodigoRegistro,
             Titulo = modulo.Titulo,
             CursoId = modulo.CursoId,
-            DataCriacao = modulo.DataCriacao
+            DataCriacao = modulo.DataCriacao,
+            TotalConteudos = totalConteudosPorModulo?.GetValueOrDefault(modulo.Id) ?? 0,
+            TotalAvaliacoes = totalAvaliacoesPorModulo?.GetValueOrDefault(modulo.Id) ?? 0
         };
     }
 
     private int? ObterProfessorId() => User.ObterUsuarioId();
 
     private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
+
+    private ObjectResult MensagemAcessoNegado() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Voce nao tem permissao para gerenciar este modulo." });
 }

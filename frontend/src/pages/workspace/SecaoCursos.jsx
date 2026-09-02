@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbDotsVertical, TbSearch, TbX } from "react-icons/tb";
-import { MdGroups, MdLayers, MdMenuBook, MdSave, MdSchool } from "react-icons/md";
+import { TbArrowLeft, TbAward, TbCamera, TbEdit, TbLayoutGrid, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { MdAttachMoney, MdGroups, MdLayers, MdMenuBook, MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
@@ -8,7 +8,8 @@ import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { mapById } from "../../lib/dashboard.js";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
-import { siglas } from "../../lib/format.js";
+import { formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
+import { getCourseCover } from "../../data/courseCovers.js";
 
 function normalizarBusca(valor) {
   return String(valor ?? "")
@@ -18,6 +19,10 @@ function normalizarBusca(valor) {
     .trim();
 }
 
+/* CURSOS — grade de cards (mesmo padrao catalogo-card/catalogo-grade usado em
+   Progresso/Conteudos/Avaliacoes). Clicar num card abre a visao gerencial do
+   curso (alunos matriculados, media geral, estrutura, acoes administrativas)
+   em vez de um menu de contexto solto no card. */
 export function SecaoCursos({
   coordenadores = [],
   cursos,
@@ -38,7 +43,7 @@ export function SecaoCursos({
   const [buscaCurso, setBuscaCurso] = useState("");
   const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
   const [salvando, setSalvando] = useState(false);
-  const [menuAberto, setMenuAberto] = useState(null);
+  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [cursoParaImagem, setCursoParaImagem] = useState(null);
   const [arquivoImagemSelecionado, setArquivoImagemSelecionado] = useState(null);
   const [previewImagem, setPreviewImagem] = useState("");
@@ -48,27 +53,6 @@ export function SecaoCursos({
   const [dadosEdicaoCurso, setDadosEdicaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
   const [mensagemEdicao, setMensagemEdicao] = useState({ tone: "", message: "" });
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
-
-  useEffect(() => {
-    if (menuAberto === null) {
-      return undefined;
-    }
-
-    function fechar(event) {
-      if (event.type === "keydown" && event.key !== "Escape") {
-        return;
-      }
-
-      setMenuAberto(null);
-    }
-
-    document.addEventListener("click", fechar);
-    document.addEventListener("keydown", fechar);
-    return () => {
-      document.removeEventListener("click", fechar);
-      document.removeEventListener("keydown", fechar);
-    };
-  }, [menuAberto]);
 
   const coordenadoresOrdenados = useMemo(
     () => [...coordenadores].sort((left, right) => String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR")),
@@ -90,7 +74,9 @@ export function SecaoCursos({
   }, [turmas]);
 
   const resumoPorCursoId = useMemo(() => {
-    const resumoInicial = new Map(cursos.map((curso) => [curso.id, { modulos: 0, turmas: 0, matriculas: 0 }]));
+    const resumoInicial = new Map(
+      cursos.map((curso) => [curso.id, { modulos: 0, turmas: 0, matriculas: 0, alunosMatriculados: 0, somaNotas: 0, notasContadas: 0 }])
+    );
 
     modulos.forEach((modulo) => {
       const resumo = resumoInicial.get(modulo.cursoId);
@@ -111,13 +97,29 @@ export function SecaoCursos({
     matriculas.forEach((matricula) => {
       const resumo = resumoInicial.get(matricula.cursoId);
 
-      if (resumo) {
-        resumo.matriculas += 1;
+      if (!resumo) {
+        return;
+      }
+
+      resumo.matriculas += 1;
+
+      if (normalizeStatus(matricula.status) === "Aprovada") {
+        resumo.alunosMatriculados += 1;
+
+        if (Number(matricula.notaFinal) > 0) {
+          resumo.somaNotas += Number(matricula.notaFinal);
+          resumo.notasContadas += 1;
+        }
       }
     });
 
     return resumoInicial;
   }, [cursos, matriculas, modulos, turmas]);
+
+  function mediaDoCurso(resumo) {
+    return resumo.notasContadas > 0 ? resumo.somaNotas / resumo.notasContadas : 0;
+  }
+
   const termoBusca = useMemo(() => normalizarBusca(buscaCurso), [buscaCurso]);
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
@@ -136,7 +138,7 @@ export function SecaoCursos({
     return proximosCursos.filter((curso) => {
       const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
       const coordenacao = coordenador?.nome || (curso.coordenadorId ? `Usuario #${curso.coordenadorId}` : "Nao atribuida");
-      const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, turmas: 0, matriculas: 0 };
+      const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, matriculas: 0 };
       const campos = [
         curso.codigoRegistro,
         curso.titulo,
@@ -165,6 +167,19 @@ export function SecaoCursos({
       return proximos.size === atuais.size ? atuais : proximos;
     });
   }, [idsCursos]);
+
+  const cursoSelecionado = useMemo(
+    () => cursos.find((curso) => curso.id === cursoSelecionadoId) || null,
+    [cursoSelecionadoId, cursos]
+  );
+
+  function abrirDetalheCurso(curso) {
+    setCursoSelecionadoId(curso.id);
+  }
+
+  function voltarParaListaCursos() {
+    setCursoSelecionadoId(null);
+  }
 
   function alternarCurso(curso) {
     if (!ehAdmin || salvando) {
@@ -253,12 +268,10 @@ export function SecaoCursos({
   }
 
   function abrirSecaoRelacionada(section, curso) {
-    setMenuAberto(null);
     onAbrirSecaoCurso?.(section, curso);
   }
 
   function abrirModalEdicao(curso) {
-    setMenuAberto(null);
     setCursoParaEditar(curso);
     setDadosEdicaoCurso({
       titulo: curso.titulo || "",
@@ -324,7 +337,6 @@ export function SecaoCursos({
   }
 
   function abrirModalImagem(curso) {
-    setMenuAberto(null);
     setCursoParaImagem(curso);
     setArquivoImagemSelecionado(null);
     setPreviewImagem(curso.imagemUrl || "");
@@ -390,239 +402,8 @@ export function SecaoCursos({
   const totalMatriculas = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.matriculas || 0), 0);
   const totalModulos = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.modulos || 0), 0);
 
-  return (
-    <div className="tela-cursos">
-      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
-        <div>
-          <h2 className="cabecalho-pagina__titulo">Cursos</h2>
-          <p className="cabecalho-pagina__subtitulo">
-            {ehCoordenador
-              ? "Cursos ativos vinculados a sua coordenacao."
-              : ehAdmin
-                ? `${cursos.length} curso${cursos.length === 1 ? "" : "s"} cadastrado${cursos.length === 1 ? "" : "s"}`
-                : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
-          </p>
-        </div>
-        <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
-        <div className="campo-busca campo-busca--cabecalho">
-          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
-          <input
-            className="campo__entrada"
-            id="busca-cursos"
-            onChange={(event) => setBuscaCurso(event.target.value)}
-            placeholder="Pesquisar cursos"
-            type="search"
-            value={buscaCurso}
-          />
-        </div>
-      </header>
-
-      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-lg)" }}>
-        <div className="grade-estatisticas">
-          <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos listados" valor={cursosFiltrados.length} />
-          <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdLayers size={22} />} rotulo="Modulos no total" valor={totalModulos} />
-          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<MdGroups size={22} />} rotulo="Matriculas no total" valor={totalMatriculas} />
-        </div>
-      </section>
-
-      {ehAdmin ? (
-        <div className="barra-filtros">
-          <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
-          <select
-            className="campo__entrada barra-filtros__select"
-            id="filtro-coordenador"
-            onChange={(event) => setFiltroCoordenador(event.target.value)}
-            value={filtroCoordenador}
-          >
-            <option value="todos">Todos os coordenadores</option>
-            <option value="aguardando">Aguardando coordenador</option>
-            {coordenadoresOrdenados.map((coordenador) => (
-              <option key={coordenador.id} value={coordenador.id}>
-                {coordenador.nome}
-              </option>
-            ))}
-          </select>
-          <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
-            Limpar filtros
-          </Botao>
-
-          <span aria-hidden="true" className="divisor-vertical" />
-
-          <label style={{ alignItems: "center", color: "var(--cor-texto-suave)", display: "flex", fontSize: "0.82rem", gap: "6px" }}>
-            <input
-              checked={todosCursosSelecionados}
-              disabled={salvando || !cursosFiltrados.length}
-              onChange={alternarTodosCursos}
-              type="checkbox"
-            />
-            Selecionar cursos
-          </label>
-          <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir</label>
-          <select
-            className="campo__entrada barra-filtros__select"
-            disabled={salvando || !coordenadoresOrdenados.length}
-            id="coordenador-atribuir"
-            onChange={(event) => setCoordenadorSelecionado(event.target.value)}
-            value={coordenadorSelecionado}
-          >
-            <option value="">Selecionar coordenador</option>
-            <option value="0">Aguardando coordenador</option>
-            {coordenadoresOrdenados.map((coordenador) => (
-              <option key={coordenador.id} value={coordenador.id}>
-                {coordenador.nome}
-              </option>
-            ))}
-          </select>
-          <Botao disabled={salvando} onClick={atribuirCoordenador} tamanho="pequeno" variante="primario">
-            {salvando ? "Salvando..." : "Atribuir coordenador"}
-          </Botao>
-          <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.8rem", marginLeft: "auto" }}>
-            {quantidadeSelecionada
-              ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s selecionados" : " selecionado"}`
-              : `${cursosFiltrados.length} de ${cursos.length} curso${cursos.length === 1 ? "" : "s"}`}
-          </p>
-        </div>
-      ) : null}
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
-
-      {cursosFiltrados.length === 0 ? (
-        <p className="texto-vazio texto-vazio--central" role="status">
-          {temFiltroAtivo ? "Nenhum curso encontrado com os filtros aplicados." : ehCoordenador ? "Nenhum curso ativo sob sua coordenacao." : "Nenhum curso encontrado."}
-        </p>
-      ) : (
-        <>
-          <div className="desempenho-cursos-cabecalho" aria-hidden="true">
-            {ehAdmin ? <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--checkbox" /> : null}
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--avatar" />
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--identidade">
-              <MdMenuBook size={13} /> Curso
-            </span>
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--turma">
-              <MdGroups size={13} /> Turma / Professor
-            </span>
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--alunos">
-              <MdSchool size={13} /> Matriculas
-            </span>
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--metricas">Estrutura</span>
-            <span className="desempenho-cursos-cabecalho__col desempenho-cursos-cabecalho__col--acoes" />
-          </div>
-
-          <ul aria-label="Cursos" className="desempenho-cursos" role="list">
-            {cursosFiltrados.map((curso) => {
-              const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, turmas: 0, matriculas: 0 };
-              const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
-              const turmaPadrao = turmaPorCursoId.get(curso.id) || null;
-              const professorNome = turmaPadrao?.professorId ? professorPorId.get(turmaPadrao.professorId)?.nome : null;
-              const selecionado = cursosSelecionados.has(curso.id);
-
-              return (
-                <li
-                  className={`desempenho-curso-item${selecionado ? " desempenho-curso-item--selecionado" : ""}`}
-                  key={curso.id}
-                >
-                  {ehAdmin ? (
-                    <div className="desempenho-curso-item__checkbox">
-                      <input
-                        aria-label={`Selecionar ${curso.titulo}`}
-                        checked={selecionado}
-                        disabled={salvando}
-                        onChange={() => alternarCurso(curso)}
-                        type="checkbox"
-                      />
-                    </div>
-                  ) : null}
-
-                  <div aria-hidden="true" className="cartao-progresso-aluno__avatar">
-                    {siglas(curso.titulo)}
-                  </div>
-
-                  <div className="desempenho-curso-item__identidade">
-                    <div className="desempenho-curso-item__cabecalho">
-                      <h3 className="desempenho-curso-item__titulo">{curso.titulo}</h3>
-                    </div>
-                    <div className="desempenho-curso-item__meta">
-                      <span className="desempenho-curso-item__codigo">{curso.codigoRegistro || "Sem codigo"}</span>
-                    </div>
-                  </div>
-
-                  <div className="desempenho-curso-item__turma">
-                    <span aria-hidden="true" className="dado-rotulo">Turma / Professor</span>
-                    {turmaPadrao ? (
-                      <>
-                        <span className="desempenho-curso-item__turma-nome">{turmaPadrao.nomeTurma}</span>
-                        <span className="desempenho-curso-item__professor">{professorNome || "Sem professor"}</span>
-                      </>
-                    ) : (
-                      <span className="desempenho-curso-item__sem-turma">Sem turma padrao</span>
-                    )}
-                  </div>
-
-                  <div className="desempenho-curso-item__alunos">
-                    <span aria-hidden="true" className="dado-rotulo">Matriculas</span>
-                    <span className="desempenho-curso-item__alunos-num">{resumo.matriculas}</span>
-                  </div>
-
-                  <div className="desempenho-curso-item__metricas">
-                    <span aria-hidden="true" className="dado-rotulo">Estrutura / Coordenacao</span>
-                    <span className="desempenho-metrica">
-                      <strong>{resumo.modulos}</strong> modulo{resumo.modulos === 1 ? "" : "s"}
-                    </span>
-                    <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} />
-                  </div>
-
-                  <div className="menu-contexto">
-                    <button
-                      aria-expanded={menuAberto === curso.id}
-                      aria-haspopup="true"
-                      aria-label={`Opcoes para ${curso.titulo}`}
-                      className="menu-contexto__botao"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setMenuAberto((atual) => (atual === curso.id ? null : curso.id));
-                      }}
-                      type="button"
-                    >
-                      <TbDotsVertical aria-hidden="true" size={18} />
-                    </button>
-                    {menuAberto === curso.id ? (
-                      <ul className="menu-contexto__lista">
-                        {!ehProfessor ? (
-                          <li>
-                            <button onClick={() => abrirSecaoRelacionada("modulos", curso)} type="button">
-                              Ver modulos
-                            </button>
-                          </li>
-                        ) : null}
-                        <li>
-                          <button onClick={() => abrirSecaoRelacionada("turmas", curso)} type="button">
-                            Ver turma padrao
-                          </button>
-                        </li>
-                        {ehAdmin || ehCoordenador ? (
-                          <>
-                            <li>
-                              <button onClick={() => abrirModalEdicao(curso)} type="button">
-                                Editar curso
-                              </button>
-                            </li>
-                            <li>
-                              <button onClick={() => abrirModalImagem(curso)} type="button">
-                                Alterar foto de capa
-                              </button>
-                            </li>
-                          </>
-                        ) : null}
-                      </ul>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
-
+  const modaisComuns = (
+    <>
       {cursoParaEditar ? (
         <Modal
           onFechar={fecharModalEdicao}
@@ -691,6 +472,228 @@ export function SecaoCursos({
           {mensagemImagem.message ? <InlineMessage tone={mensagemImagem.tone}>{mensagemImagem.message}</InlineMessage> : null}
         </Modal>
       ) : null}
+    </>
+  );
+
+  if (cursoSelecionado) {
+    const resumo = resumoPorCursoId.get(cursoSelecionado.id) || { modulos: 0, alunosMatriculados: 0, notasContadas: 0 };
+    const media = mediaDoCurso(resumo);
+    const coordenador = cursoSelecionado.coordenadorId ? coordenadorPorId.get(cursoSelecionado.coordenadorId) : null;
+    const turmaPadrao = turmaPorCursoId.get(cursoSelecionado.id) || null;
+    const professorNome = turmaPadrao?.professorId ? professorPorId.get(turmaPadrao.professorId)?.nome : null;
+
+    return (
+      <div className="tela-cursos">
+        <div className="conteudos-aluno">
+          <nav aria-label="Navegacao dos cursos" className="atividades-curso__navegacao">
+            <button className="atividades-curso__voltar" onClick={voltarParaListaCursos} type="button">
+              <TbArrowLeft aria-hidden="true" size={22} />
+              Voltar para Cursos
+            </button>
+          </nav>
+
+          <header className="atividades-curso__cabecalho">
+            <div>
+              <h2 className="atividades-curso__titulo">{cursoSelecionado.titulo}</h2>
+              <p className="atividades-curso__subtitulo">
+                {cursoSelecionado.codigoRegistro || "Sem codigo"}
+                {coordenador ? ` · Coordenacao: ${coordenador.nome}` : cursoSelecionado.coordenadorId ? "" : " · Aguardando coordenador"}
+              </p>
+            </div>
+          </header>
+
+          {cursoSelecionado.descricao ? <p className="texto-vazio">{cursoSelecionado.descricao}</p> : null}
+
+          <div className="grade-estatisticas">
+            <CartaoEstatistica icone={<TbUsers size={22} />} rotulo="Alunos matriculados" valor={resumo.alunosMatriculados} />
+            <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={22} />} rotulo="Media geral" valor={formatGrade(media)} />
+            <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbLayoutGrid size={22} />} rotulo="Modulos" valor={resumo.modulos} />
+            <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbUserCheck size={22} />} rotulo="Turma / Professor" valor={professorNome || turmaPadrao?.nomeTurma || "Sem turma"} />
+            <CartaoEstatistica icone={<MdAttachMoney size={22} />} rotulo="Valor do curso" valor={formatMoney(cursoSelecionado.preco)} />
+          </div>
+
+          <section aria-label="Acoes do curso" className="painel-secao">
+            <div className="painel-secao__conteudo" style={{ display: "flex", flexWrap: "wrap", gap: "var(--espaco-sm)" }}>
+              {!ehProfessor ? (
+                <Botao onClick={() => abrirSecaoRelacionada("modulos", cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                  <TbLayoutGrid aria-hidden="true" size={16} /> Ver modulos
+                </Botao>
+              ) : null}
+              <Botao onClick={() => abrirSecaoRelacionada("turmas", cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                <TbUsers aria-hidden="true" size={16} /> Ver turma padrao
+              </Botao>
+              {ehAdmin || ehCoordenador ? (
+                <>
+                  <Botao onClick={() => abrirModalEdicao(cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                    <TbEdit aria-hidden="true" size={16} /> Editar curso
+                  </Botao>
+                  <Botao onClick={() => abrirModalImagem(cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                    <TbCamera aria-hidden="true" size={16} /> Alterar foto de capa
+                  </Botao>
+                </>
+              ) : null}
+            </div>
+          </section>
+        </div>
+
+        {modaisComuns}
+      </div>
+    );
+  }
+
+  return (
+    <div className="tela-cursos">
+      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
+        <div>
+          <h2 className="cabecalho-pagina__titulo">Cursos</h2>
+          <p className="cabecalho-pagina__subtitulo">
+            {ehCoordenador
+              ? "Cursos ativos vinculados a sua coordenacao."
+              : ehAdmin
+                ? `${cursos.length} curso${cursos.length === 1 ? "" : "s"} cadastrado${cursos.length === 1 ? "" : "s"}`
+                : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
+          </p>
+        </div>
+        <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
+        <div className="campo-busca campo-busca--cabecalho">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+          <input
+            className="campo__entrada"
+            id="busca-cursos"
+            onChange={(event) => setBuscaCurso(event.target.value)}
+            placeholder="Pesquisar cursos"
+            type="search"
+            value={buscaCurso}
+          />
+        </div>
+      </header>
+
+      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-lg)" }}>
+        <div className="grade-estatisticas">
+          <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos listados" valor={cursosFiltrados.length} />
+          <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdLayers size={22} />} rotulo="Modulos no total" valor={totalModulos} />
+          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<MdGroups size={22} />} rotulo="Matriculas no total" valor={totalMatriculas} />
+        </div>
+      </section>
+
+      {ehAdmin ? (
+        <div className="barra-filtros">
+          <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
+          <select
+            className="campo__entrada barra-filtros__select"
+            id="filtro-coordenador"
+            onChange={(event) => setFiltroCoordenador(event.target.value)}
+            value={filtroCoordenador}
+          >
+            <option value="todos">Todos os coordenadores</option>
+            <option value="aguardando">Aguardando coordenador</option>
+            {coordenadoresOrdenados.map((coordenador) => (
+              <option key={coordenador.id} value={coordenador.id}>
+                {coordenador.nome}
+              </option>
+            ))}
+          </select>
+          <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+            Limpar filtros
+          </Botao>
+
+          <span aria-hidden="true" className="divisor-vertical" />
+
+          <label className="barra-filtros__checkbox-selecao">
+            <input
+              checked={todosCursosSelecionados}
+              disabled={salvando || !cursosFiltrados.length}
+              onChange={alternarTodosCursos}
+              type="checkbox"
+            />
+            Selecionar cursos
+          </label>
+          <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir</label>
+          <select
+            className="campo__entrada barra-filtros__select"
+            disabled={salvando || !coordenadoresOrdenados.length}
+            id="coordenador-atribuir"
+            onChange={(event) => setCoordenadorSelecionado(event.target.value)}
+            value={coordenadorSelecionado}
+          >
+            <option value="">Selecionar coordenador</option>
+            <option value="0">Aguardando coordenador</option>
+            {coordenadoresOrdenados.map((coordenador) => (
+              <option key={coordenador.id} value={coordenador.id}>
+                {coordenador.nome}
+              </option>
+            ))}
+          </select>
+          <Botao disabled={salvando} onClick={atribuirCoordenador} tamanho="pequeno" variante="primario">
+            {salvando ? "Salvando..." : "Atribuir coordenador"}
+          </Botao>
+          <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.8rem", marginLeft: "auto" }}>
+            {quantidadeSelecionada
+              ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s selecionados" : " selecionado"}`
+              : `${cursosFiltrados.length} de ${cursos.length} curso${cursos.length === 1 ? "" : "s"}`}
+          </p>
+        </div>
+      ) : null}
+
+      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
+      {cursosFiltrados.length === 0 ? (
+        <p className="texto-vazio texto-vazio--central" role="status">
+          {temFiltroAtivo ? "Nenhum curso encontrado com os filtros aplicados." : ehCoordenador ? "Nenhum curso ativo sob sua coordenacao." : "Nenhum curso encontrado."}
+        </p>
+      ) : (
+        <ul aria-label="Cursos" className="catalogo-grade" role="list">
+          {cursosFiltrados.map((curso) => {
+            const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, alunosMatriculados: 0, notasContadas: 0 };
+            const media = mediaDoCurso(resumo);
+            const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
+            const selecionado = cursosSelecionados.has(curso.id);
+
+            return (
+              <li key={curso.id}>
+                <button
+                  className="catalogo-card catalogo-card--acionavel"
+                  onClick={() => abrirDetalheCurso(curso)}
+                  type="button"
+                >
+                  {ehAdmin ? (
+                    <span
+                      className="catalogo-card__selecao"
+                      onClick={(event) => event.stopPropagation()}
+                      role="presentation"
+                    >
+                      <input
+                        aria-label={`Selecionar ${curso.titulo}`}
+                        checked={selecionado}
+                        disabled={salvando}
+                        onChange={() => alternarCurso(curso)}
+                        onClick={(event) => event.stopPropagation()}
+                        type="checkbox"
+                      />
+                    </span>
+                  ) : null}
+                  <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
+                  <div className="catalogo-card__corpo">
+                    <div className="meus-cursos__titulo-linha">
+                      <strong className="catalogo-card__titulo">{curso.titulo}</strong>
+                      <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} />
+                    </div>
+                    <p className="catalogo-card__data">
+                      {resumo.alunosMatriculados} aluno{resumo.alunosMatriculados === 1 ? "" : "s"} · {resumo.modulos} modulo{resumo.modulos === 1 ? "" : "s"}
+                    </p>
+                    <footer className="catalogo-card__rodape-aluno">
+                      <span className="catalogo-card__codigo">{curso.codigoRegistro || "Sem codigo"}</span>
+                      <Insignia texto={`Media ${formatGrade(media)}`} />
+                    </footer>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {modaisComuns}
     </div>
   );
 }

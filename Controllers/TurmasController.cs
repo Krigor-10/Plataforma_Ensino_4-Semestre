@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
@@ -14,10 +15,12 @@ namespace PlataformaEnsino.API.Controllers;
 public class TurmasController : ControllerBase
 {
     private readonly ITurmaService _turmaService;
+    private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
 
-    public TurmasController(ITurmaService turmaService)
+    public TurmasController(ITurmaService turmaService, ICursoAutorizacaoService cursoAutorizacaoService)
     {
         _turmaService = turmaService;
+        _cursoAutorizacaoService = cursoAutorizacaoService;
     }
 
     [HttpPost]
@@ -27,6 +30,11 @@ public class TurmasController : ControllerBase
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
+        }
+
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, dto.CursoId))
+        {
+            return MensagemAcessoNegado();
         }
 
         var turma = new Turma
@@ -151,6 +159,11 @@ public class TurmasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> AtribuirProfessor(int id, [FromBody] int professorId)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarTurmaAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         await _turmaService.AtribuirProfessorAsync(id, professorId);
         return Ok(new { mensagem = "Professor atribuido a turma com sucesso." });
     }
@@ -159,6 +172,11 @@ public class TurmasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> AtualizarNome(int id, [FromBody] string nomeTurma)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarTurmaAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         var turma = await _turmaService.AtualizarNomeTurmaAsync(id, nomeTurma);
 
         var response = new TurmaResponseDto
@@ -178,11 +196,19 @@ public class TurmasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> ExcluirTurma(int id)
     {
+        if (!await _cursoAutorizacaoService.PodeGerenciarTurmaAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         await _turmaService.ExcluirTurmaAsync(id);
         return NoContent();
     }
 
     private int? ObterProfessorId() => User.ObterUsuarioId();
+
+    private ObjectResult MensagemAcessoNegado() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Voce nao tem permissao para gerenciar esta turma." });
 
     private static byte[] GerarExcelDesempenho(TurmaDesempenhoResponseDto desempenho)
     {

@@ -104,6 +104,30 @@ public class ModuloService : IModuloService
         await _moduloRepository.SalvarAlteracoesAsync();
     }
 
+    public async Task<Dictionary<int, int>> ContarConteudosPorModuloAsync(IEnumerable<int> moduloIds)
+    {
+        var ids = moduloIds.Distinct().ToList();
+
+        return await _context.ConteudosDidaticos
+            .AsNoTracking()
+            .Where(conteudo => ids.Contains(conteudo.ModuloId))
+            .GroupBy(conteudo => conteudo.ModuloId)
+            .Select(grupo => new { ModuloId = grupo.Key, Total = grupo.Count() })
+            .ToDictionaryAsync(item => item.ModuloId, item => item.Total);
+    }
+
+    public async Task<Dictionary<int, int>> ContarAvaliacoesPorModuloAsync(IEnumerable<int> moduloIds)
+    {
+        var ids = moduloIds.Distinct().ToList();
+
+        return await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao => avaliacao.ModuloId.HasValue && ids.Contains(avaliacao.ModuloId.Value))
+            .GroupBy(avaliacao => avaliacao.ModuloId!.Value)
+            .Select(grupo => new { ModuloId = grupo.Key, Total = grupo.Count() })
+            .ToDictionaryAsync(item => item.ModuloId, item => item.Total);
+    }
+
     private async Task ValidarCursoAsync(int cursoId)
     {
         _ = await _cursoRepository.ObterPorIdAsync(cursoId)

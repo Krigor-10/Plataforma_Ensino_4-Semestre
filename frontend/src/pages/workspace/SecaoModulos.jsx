@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbFileText, TbLayoutGrid, TbPlus, TbStack, TbX } from "react-icons/tb";
-import { MdLayers, MdSave } from "react-icons/md";
+import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUsers, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Modal from "../../components/Modal.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
@@ -35,6 +36,7 @@ export function SecaoModulos({
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [moduloParaExcluir, setModuloParaExcluir] = useState(null);
+  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [menuAbertoId, setMenuAbertoId] = useState(null);
 
   useEffect(() => {
@@ -247,12 +249,19 @@ export function SecaoModulos({
     }
   }
 
+  function abrirExclusaoModulo(modulo) {
+    setModuloParaExcluir(modulo);
+    setMensagemExclusao("");
+    setMenuAbertoId(null);
+  }
+
   async function confirmarExclusao() {
     if (!moduloParaExcluir) {
       return;
     }
 
     setSalvando(true);
+    setMensagemExclusao("");
 
     try {
       await apiRequest(`/Modulos/${moduloParaExcluir.id}`, { method: "DELETE" });
@@ -264,8 +273,7 @@ export function SecaoModulos({
         return;
       }
 
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir o modulo agora." });
-      setModuloParaExcluir(null);
+      setMensagemExclusao(err.message || "Nao foi possivel excluir o modulo agora.");
     } finally {
       setSalvando(false);
     }
@@ -304,26 +312,18 @@ export function SecaoModulos({
           )}
         </>
       ) : (
-        <>
-          <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Modulos
-            </button>
-          </nav>
-
-          <SlideCurso
-            alunosAtivos={alunosAtivosPorCurso.get(Number(grupoSelecionado.curso.id)) || 0}
-            curso={grupoSelecionado.curso}
-            itens={grupoSelecionado.itens}
-            menuAbertoId={menuAbertoId}
-            onEditar={podeGerenciar ? abrirEdicaoModulo : null}
-            onExcluir={podeGerenciar ? setModuloParaExcluir : null}
-            onNovoModulo={podeGerenciar ? abrirFormularioNovoModulo : null}
-            onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
-            professoresPorCurso={professoresPorCurso}
-          />
-        </>
+        <SlideCurso
+          alunosAtivos={alunosAtivosPorCurso.get(Number(grupoSelecionado.curso.id)) || 0}
+          curso={grupoSelecionado.curso}
+          itens={grupoSelecionado.itens}
+          menuAbertoId={menuAbertoId}
+          onEditar={podeGerenciar ? abrirEdicaoModulo : null}
+          onExcluir={podeGerenciar ? abrirExclusaoModulo : null}
+          onNovoModulo={podeGerenciar ? abrirFormularioNovoModulo : null}
+          onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
+          onVoltar={voltarParaLista}
+          professoresPorCurso={professoresPorCurso}
+        />
       )}
 
       {moduloParaExcluir ? (
@@ -344,6 +344,7 @@ export function SecaoModulos({
           <p className="texto-confirmacao-exclusao">
             Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
+          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
       ) : null}
 
@@ -399,7 +400,23 @@ export function SecaoModulos({
   );
 }
 
-function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcluir, onNovoModulo, onToggleMenu, professoresPorCurso }) {
+/* Cabecalho + accordion de modulos no mesmo padrao de Curso->Modulos usado em
+   Progresso (SecaoDesempenhoCoordenador) e na Trilha de Conteudos do Professor
+   (SecaoConteudosProfessor): nav com "Voltar" no topo, cabecalho simples
+   (atividades-curso__cabecalho) e cartoes de estatistica pro contexto do
+   curso, evitando repetir professor/alunos dentro de cada modulo. */
+function SlideCurso({
+  alunosAtivos,
+  curso,
+  itens,
+  menuAbertoId,
+  onEditar,
+  onExcluir,
+  onNovoModulo,
+  onToggleMenu,
+  onVoltar,
+  professoresPorCurso
+}) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
   const professoresDoCurso =
     (professoresPorCurso.get(Number(curso.id)) || []).map((professor) => professor.nome).join(", ") || "Sem professor vinculado";
@@ -410,25 +427,17 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcl
 
   return (
     <div className="conteudos-aluno">
-      <header className="conteudos-aluno__cabecalho">
-        <div className="conteudos-aluno__curso-info">
-          <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)" }}>
-            <div aria-hidden="true" className="cartao-progresso-aluno__avatar conteudos-aluno__avatar-desktop">
-              <MdLayers size={20} />
-            </div>
-            <h2 className="conteudos-aluno__curso-titulo">{curso.titulo}</h2>
-          </div>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
-              <TbStack aria-hidden="true" size={12} />
-              {itens.length} modulo{itens.length !== 1 ? "s" : ""}
-            </span>
-            <span className="conteudos-aluno__meta-chip">
-              <TbFileText aria-hidden="true" size={12} />
-              {alunosAtivos} aluno{alunosAtivos !== 1 ? "s" : ""} ativo{alunosAtivos !== 1 ? "s" : ""}
-            </span>
-            {curso.codigoRegistro ? <span className="conteudos-aluno__meta-chip">{curso.codigoRegistro}</span> : null}
-          </div>
+      <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
+        <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
+          <TbArrowLeft aria-hidden="true" size={22} />
+          Voltar para Modulos
+        </button>
+      </nav>
+
+      <header className="atividades-curso__cabecalho">
+        <div>
+          <h2 className="atividades-curso__titulo">{curso.titulo}</h2>
+          <p className="atividades-curso__subtitulo">{professoresDoCurso}</p>
         </div>
 
         {onNovoModulo ? (
@@ -441,6 +450,11 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcl
         ) : null}
       </header>
 
+      <div className="grade-estatisticas">
+        <CartaoEstatistica icone={<TbLayoutGrid size={22} />} rotulo="Modulos" valor={itens.length} />
+        <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbUsers size={22} />} rotulo="Alunos ativos" valor={alunosAtivos} />
+      </div>
+
       {itens.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum modulo cadastrado neste curso.</p>
       ) : (
@@ -448,6 +462,8 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcl
           {itens.map((modulo, indice) => {
             const aberto = moduloAbertoId === modulo.id;
             const idDetalhe = `modulo-detalhe-${modulo.id}`;
+            const totalConteudos = modulo.totalConteudos ?? 0;
+            const totalAvaliacoes = modulo.totalAvaliacoes ?? 0;
 
             return (
               <section className="conteudos-modulo" key={modulo.id}>
@@ -466,7 +482,9 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcl
                         </span>
                         <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
-                        <span className="conteudos-modulo__contagem">{modulo.codigoRegistro || "Sem codigo"}</span>
+                        <span className="conteudos-modulo__contagem">
+                          {totalConteudos} conteudo{totalConteudos === 1 ? "" : "s"} · {totalAvaliacoes} avaliacao{totalAvaliacoes === 1 ? "" : "es"}
+                        </span>
                       </div>
                       <TbChevronDown
                         aria-hidden="true"
@@ -526,12 +544,16 @@ function SlideCurso({ alunosAtivos, curso, itens, menuAbertoId, onEditar, onExcl
                     >
                       <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
                         <div className="lista-detalhes__item">
-                          <dt>Professor(es) do curso</dt>
-                          <dd>{professoresDoCurso}</dd>
+                          <dt>Codigo</dt>
+                          <dd>{modulo.codigoRegistro || "Sem codigo"}</dd>
                         </div>
                         <div className="lista-detalhes__item">
-                          <dt>Alunos ativos no curso</dt>
-                          <dd>{alunosAtivos}</dd>
+                          <dt>Conteudos</dt>
+                          <dd>{totalConteudos}</dd>
+                        </div>
+                        <div className="lista-detalhes__item">
+                          <dt>Avaliacoes</dt>
+                          <dd>{totalAvaliacoes}</dd>
                         </div>
                         <div className="lista-detalhes__item">
                           <dt>Criado em</dt>

@@ -65,6 +65,7 @@ builder.Services.AddScoped<IAlunoService, AlunoService>();
 builder.Services.AddScoped<IProfessorService, ProfessorService>();
 builder.Services.AddScoped<ICoordenadorService, CoordenadorService>();
 builder.Services.AddScoped<ICursoService, CursoService>();
+builder.Services.AddScoped<ICursoAutorizacaoService, CursoAutorizacaoService>();
 builder.Services.AddScoped<IMatriculaService, MatriculaService>();
 builder.Services.AddScoped<IPagamentoService, PagamentoService>();
 builder.Services.AddScoped<IModuloService, ModuloService>();

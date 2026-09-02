@@ -7,4 +7,6 @@ public class ModuloResponseDto
     public string Titulo { get; set; } = string.Empty;
     public int CursoId { get; set; }
     public DateTime DataCriacao { get; set; }
+    public int TotalConteudos { get; set; }
+    public int TotalAvaliacoes { get; set; }
 }
