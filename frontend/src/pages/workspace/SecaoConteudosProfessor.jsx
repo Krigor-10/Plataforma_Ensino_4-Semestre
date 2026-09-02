@@ -952,7 +952,7 @@ function TrilhaConteudosProfessor({
                                       <div className="atividades-curso__previa atividades-curso__previa--acoes">
                                         {conteudo.descricao ? <p>{conteudo.descricao}</p> : null}
                                         <div className="atividades-curso__painel-acoes">
-                                          <Botao onClick={() => onAbrirEdicao(conteudo)} tamanho="pequeno" variante="fantasma">
+                                          <Botao onClick={() => onAbrirEdicao(conteudo)} tamanho="pequeno" variante="secundario">
                                             <TbPencil aria-hidden="true" size={15} /> Editar conteudo
                                           </Botao>
                                           <Botao onClick={() => onGerenciarQuiz(conteudo, quizVinculado)} tamanho="pequeno" variante="fantasma">

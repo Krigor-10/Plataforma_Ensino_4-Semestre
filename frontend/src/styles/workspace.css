@@ -4468,6 +4468,25 @@
   padding-top: 0.4rem;
 }
 
+/* "Editar conteudo" usa variante secundario pra ter um pouco mais de peso
+   que "Adicionar quiz" (fantasma), mas o tom padrao do secundario e forte
+   demais aqui — suaviza especificamente dentro do painel de acoes do
+   conteudo, sem alterar o .botao--secundario usado em outras telas. */
+.atividades-curso__painel-acoes .botao--secundario {
+  background: rgba(123, 47, 247, 0.08);
+  border-color: rgba(123, 47, 247, 0.22);
+}
+
+.atividades-curso__painel-acoes .botao--secundario:hover:not(:disabled) {
+  background: rgba(123, 47, 247, 0.14);
+  border-color: rgba(123, 47, 247, 0.32);
+  box-shadow: none;
+}
+
+.atividades-curso__painel-acoes .botao--secundario:active:not(:disabled) {
+  background: rgba(123, 47, 247, 0.1);
+}
+
 .atividades-curso__publicar {
   display: inline-flex;
   align-items: center;
@@ -5795,7 +5814,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espaco-md);
-  padding-top: var(--espaco-lg);
+  padding: var(--espaco-md) var(--espaco-xl) var(--espaco-xl);
+  border-top: 1px solid var(--cor-borda);
 }
 
 .criar-avaliacao__rodape-direita {
