@@ -70,6 +70,7 @@ builder.Services.AddScoped<IPagamentoService, PagamentoService>();
 builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
+builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoService>();
 builder.Services.AddScoped<ICertificadoService, CertificadoService>();

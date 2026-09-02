@@ -14,10 +14,12 @@ public class CursosController : ControllerBase
 {
     private readonly ICursoService _cursoService;
     private readonly IArmazenamentoArquivoService _armazenamentoService;
+    private readonly ICursoDesempenhoService _cursoDesempenhoService;
 
-    public CursosController(ICursoService cursoService, IArmazenamentoArquivoService armazenamentoService)
+    public CursosController(ICursoService cursoService, IArmazenamentoArquivoService armazenamentoService, ICursoDesempenhoService cursoDesempenhoService)
     {
         _cursoService = cursoService;
+        _cursoDesempenhoService = cursoDesempenhoService;
         _armazenamentoService = armazenamentoService;
     }
 
@@ -99,5 +101,35 @@ public class CursosController : ControllerBase
         return Ok(cursoAtualizado);
     }
 
+    [HttpGet("desempenho")]
+    [Authorize(Roles = "Coordenador")]
+    public async Task<IActionResult> ListarDesempenho()
+    {
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        var desempenho = await _cursoDesempenhoService.ObterDesempenhoPorCoordenadorAsync(coordenadorId.Value);
+        return Ok(desempenho);
+    }
+
+    [HttpGet("{id:int}/desempenho")]
+    [Authorize(Roles = "Coordenador")]
+    public async Task<IActionResult> ObterDesempenhoPorCurso(int id)
+    {
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        var desempenho = await _cursoDesempenhoService.ObterDesempenhoPorCursoAsync(id, coordenadorId.Value);
+        return Ok(desempenho);
+    }
+
     private int? ObterProfessorId() => User.ObterUsuarioId();
+
+    private int? ObterCoordenadorId() => User.ObterUsuarioId();
 }
