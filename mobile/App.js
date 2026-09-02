@@ -24,6 +24,14 @@ export default function App() {
     setSession(novaSessao);
   }
 
+  function handleUsuarioAtualizado(usuarioAtualizado) {
+    setSession((atual) => {
+      const proximaSessao = { ...atual, user: { ...atual.user, ...usuarioAtualizado } };
+      persistSession(proximaSessao);
+      return proximaSessao;
+    });
+  }
+
   async function handleLogout() {
     if (session.refreshToken) {
       apiRequest("/Auth/logout", {
@@ -50,7 +58,13 @@ export default function App() {
       <NavigationContainer>
         {session.user ? (
           session.user.tipoUsuario === "Aluno" ? (
-            <AlunoWorkspace onLogout={handleLogout} onSessionExpired={handleLogout} token={session.token} usuario={session.user} />
+            <AlunoWorkspace
+              onLogout={handleLogout}
+              onSessionExpired={handleLogout}
+              onUsuarioAtualizado={handleUsuarioAtualizado}
+              token={session.token}
+              usuario={session.user}
+            />
           ) : (
             <HomeScreen onLogout={handleLogout} usuario={session.user} />
           )

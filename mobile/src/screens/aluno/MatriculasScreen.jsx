@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
-import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
+import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
 import { cores } from "../../lib/theme.js";
 
 const COR_STATUS = {
@@ -10,6 +10,8 @@ const COR_STATUS = {
   Rejeitada: cores.erro,
   Cancelada: cores.textoSuave
 };
+
+const PAGAMENTO_PENDENTE = 1;
 
 function agruparPorCursoMaisRelevante(matriculas) {
   const prioridade = { Aprovada: 3, Pendente: 2, Rejeitada: 1, Cancelada: 1 };
@@ -41,6 +43,11 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
   }, [snapshot.turmas]);
 
   const matriculaPorCursoId = useMemo(() => agruparPorCursoMaisRelevante(snapshot.matriculas), [snapshot.matriculas]);
+
+  const pagamentoPorMatriculaId = useMemo(
+    () => new Map((snapshot.pagamentos || []).map((pagamento) => [pagamento.matriculaId, pagamento])),
+    [snapshot.pagamentos]
+  );
 
   const cursosMatriculados = useMemo(
     () => snapshot.cursos.filter((curso) => matriculaPorCursoId.has(curso.id)),
@@ -97,6 +104,25 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
     }
   }
 
+  async function confirmarPagamento(matricula) {
+    setProcessando(matricula.id);
+    setMensagem("");
+
+    try {
+      await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
+      setMensagem("Pagamento confirmado.");
+      await onRecarregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      setMensagem(err.message || "Nao foi possivel confirmar o pagamento agora.");
+    } finally {
+      setProcessando(null);
+    }
+  }
+
   async function reabrir(matricula) {
     setProcessando(matricula.id);
     setMensagem("");
@@ -145,6 +171,9 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
             : cursosMatriculados.map((curso) => {
                 const matricula = matriculaPorCursoId.get(curso.id);
                 const status = normalizeStatus(matricula.status);
+                const pagamento = pagamentoPorMatriculaId.get(matricula.id);
+                const temPagamentoPendente = status === "Aprovada" && pagamento?.status === PAGAMENTO_PENDENTE;
+
                 return (
                   <View key={curso.id} style={estilos.cartao}>
                     <View style={estilos.cartaoTopo}>
@@ -154,6 +183,19 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                     <Text style={estilos.cartaoMeta}>{curso.descricao}</Text>
                     <Text style={estilos.cartaoMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
                     {status === "Aprovada" ? <Text style={estilos.cartaoMeta}>Nota final: {formatGrade(matricula.notaFinal)}</Text> : null}
+
+                    {temPagamentoPendente ? (
+                      <>
+                        <Text style={estilos.pagamentoPendente}>Pagamento pendente: {formatMoney(pagamento.valor)}</Text>
+                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoPrimario}>
+                          {processando === matricula.id ? (
+                            <ActivityIndicator color={cores.texto} />
+                          ) : (
+                            <Text style={estilos.botaoPrimarioTexto}>Confirmar pagamento (simulado)</Text>
+                          )}
+                        </TouchableOpacity>
+                      </>
+                    ) : null}
 
                     {status === "Pendente" ? (
                       <TouchableOpacity disabled={processando === matricula.id} onPress={() => cancelar(matricula)} style={estilos.botaoPerigo}>
@@ -206,6 +248,7 @@ const estilos = StyleSheet.create({
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1, marginRight: 10 },
   status: { fontWeight: "700", fontSize: 12 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 4 },
+  pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: 12, marginTop: 8 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },

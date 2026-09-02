@@ -6,6 +6,9 @@ import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
 import MatriculasScreen from "./MatriculasScreen.jsx";
+import CertificadosScreen from "./CertificadosScreen.jsx";
+import PerfilScreen from "./PerfilScreen.jsx";
+import NotificacoesScreen from "./NotificacoesScreen.jsx";
 import { ApiError } from "../../lib/api.js";
 import { EMPTY_SNAPSHOT, loadAlunoSnapshot } from "../../lib/dashboard.js";
 import { cores } from "../../lib/theme.js";
@@ -15,10 +18,11 @@ const ABAS = [
   { chave: "conteudos", rotulo: "Conteudos" },
   { chave: "avaliacoes", rotulo: "Avaliacoes" },
   { chave: "progresso", rotulo: "Progresso" },
-  { chave: "matriculas", rotulo: "Matriculas" }
+  { chave: "matriculas", rotulo: "Matriculas" },
+  { chave: "certificados", rotulo: "Certificados" }
 ];
 
-export default function AlunoWorkspace({ onLogout, onSessionExpired, token, usuario }) {
+export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, token, usuario }) {
   const [abaAtiva, setAbaAtiva] = useState("inicio");
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   const [carregando, setCarregando] = useState(true);
@@ -63,7 +67,27 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, token, usua
         ) : (
           <>
             {abaAtiva === "inicio" ? (
-              <HomeScreen onLogout={onLogout} onSessionExpired={onSessionExpired} usuario={usuario} />
+              <HomeScreen
+                onAbrirNotificacoes={() => setAbaAtiva("notificacoes")}
+                onAbrirPerfil={() => setAbaAtiva("perfil")}
+                onLogout={onLogout}
+                onSessionExpired={onSessionExpired}
+                usuario={usuario}
+              />
+            ) : null}
+            {abaAtiva === "perfil" ? (
+              <PerfilScreen
+                onSessionExpired={onSessionExpired}
+                onUsuarioAtualizado={onUsuarioAtualizado}
+                onVoltar={() => setAbaAtiva("inicio")}
+                usuario={usuario}
+              />
+            ) : null}
+            {abaAtiva === "notificacoes" ? (
+              <NotificacoesScreen
+                onSessionExpired={onSessionExpired}
+                onVoltar={() => setAbaAtiva("inicio")}
+              />
             ) : null}
             {abaAtiva === "conteudos" ? (
               <ConteudosScreen onRecarregar={recarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} token={token} />
@@ -74,6 +98,9 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, token, usua
             {abaAtiva === "progresso" ? <ProgressoScreen snapshot={snapshot} /> : null}
             {abaAtiva === "matriculas" ? (
               <MatriculasScreen onRecarregar={recarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} usuario={usuario} />
+            ) : null}
+            {abaAtiva === "certificados" ? (
+              <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />
             ) : null}
           </>
         )}
@@ -106,7 +133,7 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.fundoCartao,
     paddingTop: 10
   },
-  tabItem: { flex: 1, alignItems: "center" },
-  tabTexto: { color: cores.textoSuave, fontSize: 11, fontWeight: "600" },
+  tabItem: { flex: 1, alignItems: "center", paddingHorizontal: 2 },
+  tabTexto: { color: cores.textoSuave, fontSize: 10, fontWeight: "600", textAlign: "center" },
   tabTextoAtivo: { color: cores.destaque }
 });

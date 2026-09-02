@@ -20,6 +20,13 @@ export function formatGrade(value) {
   return Number(value ?? 0).toFixed(1);
 }
 
+export function formatMoney(value) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  }).format(Number(value || 0));
+}
+
 export function formatScore(value) {
   return Number(value ?? 0).toFixed(1);
 }
@@ -53,4 +60,18 @@ export function normalizeEvaluationType(type) {
 export function normalizeQuestionType(type) {
   const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa" };
   return typeof type === "number" ? labels[type] || "Questao" : type || "Questao";
+}
+
+export function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+export function formatCep(value) {
+  const digits = onlyDigits(value);
+
+  if (digits.length !== 8) {
+    return String(value || "").trim();
+  }
+
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }

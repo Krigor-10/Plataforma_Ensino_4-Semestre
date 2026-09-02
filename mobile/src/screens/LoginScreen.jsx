@@ -13,10 +13,15 @@ import {
 import { apiRequest } from "../lib/api.js";
 
 export default function LoginScreen({ onLogin }) {
+  const [modo, setModo] = useState("login");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+
+  const [emailRecuperacao, setEmailRecuperacao] = useState("");
+  const [enviandoRecuperacao, setEnviandoRecuperacao] = useState(false);
+  const [mensagemRecuperacao, setMensagemRecuperacao] = useState("");
 
   async function entrar() {
     setCarregando(true);
@@ -34,6 +39,71 @@ export default function LoginScreen({ onLogin }) {
     } finally {
       setCarregando(false);
     }
+  }
+
+  function abrirRecuperacao() {
+    setModo("esqueci");
+    setEmailRecuperacao(email);
+    setMensagemRecuperacao("");
+  }
+
+  async function enviarRecuperacao() {
+    setEnviandoRecuperacao(true);
+    setMensagemRecuperacao("");
+
+    try {
+      const resposta = await apiRequest("/Auth/esqueci-senha", {
+        method: "POST",
+        body: JSON.stringify({ email: emailRecuperacao.trim() })
+      });
+
+      setMensagemRecuperacao(
+        resposta.mensagem || "Se o e-mail informado estiver cadastrado, enviaremos as instrucoes de recuperacao."
+      );
+    } catch (err) {
+      setMensagemRecuperacao(err.message || "Nao foi possivel processar a solicitacao agora.");
+    } finally {
+      setEnviandoRecuperacao(false);
+    }
+  }
+
+  if (modo === "esqueci") {
+    return (
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+        <ScrollView contentContainerStyle={styles.conteudo} keyboardShouldPersistTaps="handled">
+          <Text style={styles.logo}>
+            Ed<Text style={styles.logoDestaque}>Tech</Text>
+          </Text>
+          <Text style={styles.subtitulo}>
+            Informe o e-mail cadastrado. Se ele existir na base, enviaremos um link para redefinir sua senha (abra o
+            link no navegador).
+          </Text>
+
+          <View style={styles.campo}>
+            <Text style={styles.rotulo}>E-mail</Text>
+            <TextInput
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onChangeText={setEmailRecuperacao}
+              placeholder="seu.email@exemplo.com"
+              placeholderTextColor="#6d6478"
+              style={styles.entrada}
+              value={emailRecuperacao}
+            />
+          </View>
+
+          {mensagemRecuperacao ? <Text style={styles.mensagemInfo}>{mensagemRecuperacao}</Text> : null}
+
+          <TouchableOpacity disabled={enviandoRecuperacao} onPress={enviarRecuperacao} style={styles.botao}>
+            {enviandoRecuperacao ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Enviar instrucoes</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => setModo("login")} style={styles.linkVoltar}>
+            <Text style={styles.linkVoltarTexto}>{"< Voltar para o login"}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
   }
 
   return (
@@ -79,6 +149,10 @@ export default function LoginScreen({ onLogin }) {
 
         <TouchableOpacity disabled={carregando} onPress={entrar} style={styles.botao}>
           {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Abrir painel</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={abrirRecuperacao} style={styles.linkEsqueciSenha}>
+          <Text style={styles.linkEsqueciSenhaTexto}>Esqueci minha senha</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -143,5 +217,26 @@ const styles = StyleSheet.create({
   botaoTexto: {
     color: "#fff",
     fontWeight: "700"
+  },
+  linkEsqueciSenha: {
+    marginTop: 16,
+    alignItems: "center"
+  },
+  linkEsqueciSenhaTexto: {
+    color: "#a89fb3",
+    fontSize: 13
+  },
+  mensagemInfo: {
+    color: "#7b2ff7",
+    marginBottom: 12,
+    textAlign: "center"
+  },
+  linkVoltar: {
+    marginTop: 20,
+    alignItems: "center"
+  },
+  linkVoltarTexto: {
+    color: "#a89fb3",
+    fontSize: 13
   }
 });

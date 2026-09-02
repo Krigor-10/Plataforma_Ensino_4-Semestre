@@ -3,10 +3,11 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiRequest, ApiError } from "../lib/api.js";
 
-export default function HomeScreen({ onLogout, onSessionExpired, usuario }) {
+export default function HomeScreen({ onAbrirNotificacoes, onAbrirPerfil, onLogout, onSessionExpired, usuario }) {
   const [cursos, setCursos] = useState([]);
   const [status, setStatus] = useState("loading");
   const [erro, setErro] = useState("");
+  const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
 
   // Ref em vez de dependencia direta: onSessionExpired vem do App raiz sem
@@ -45,6 +46,29 @@ export default function HomeScreen({ onLogout, onSessionExpired, usuario }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!onAbrirNotificacoes) {
+      return;
+    }
+
+    let ignore = false;
+
+    // Falha aqui e silenciosa de proposito (mesmo criterio do web): o badge
+    // de notificacao nao e critico o suficiente pra interromper a tela.
+    apiRequest("/Notificacoes/nao-lidas/contagem")
+      .then((resposta) => {
+        if (!ignore) {
+          setNotificacoesNaoLidas(resposta?.total || 0);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      ignore = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so verifica presenca do prop no mount, nao precisa refazer a busca se a referencia mudar
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
       <View style={styles.cabecalho}>
@@ -52,9 +76,26 @@ export default function HomeScreen({ onLogout, onSessionExpired, usuario }) {
           <Text style={styles.saudacao}>Ola, {usuario.nome}</Text>
           <Text style={styles.perfil}>{usuario.tipoUsuario}</Text>
         </View>
-        <TouchableOpacity onPress={onLogout}>
-          <Text style={styles.sair}>Sair</Text>
-        </TouchableOpacity>
+        <View style={styles.acoesCabecalho}>
+          {onAbrirNotificacoes ? (
+            <TouchableOpacity onPress={onAbrirNotificacoes} style={styles.notificacoesBotao}>
+              <Text style={styles.perfilLink}>Notificacoes</Text>
+              {notificacoesNaoLidas > 0 ? (
+                <View style={styles.notificacoesBadge}>
+                  <Text style={styles.notificacoesBadgeTexto}>{notificacoesNaoLidas > 9 ? "9+" : notificacoesNaoLidas}</Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+          {onAbrirPerfil ? (
+            <TouchableOpacity onPress={onAbrirPerfil}>
+              <Text style={styles.perfilLink}>Perfil</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={onLogout}>
+            <Text style={styles.sair}>Sair</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={styles.tituloSecao}>Cursos disponiveis</Text>
@@ -101,6 +142,34 @@ const styles = StyleSheet.create({
   perfil: {
     color: "#a89fb3",
     marginTop: 2
+  },
+  acoesCabecalho: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16
+  },
+  perfilLink: {
+    color: "#a89fb3",
+    fontWeight: "600"
+  },
+  notificacoesBotao: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5
+  },
+  notificacoesBadge: {
+    backgroundColor: "#f87171",
+    borderRadius: 999,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  notificacoesBadgeTexto: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "700"
   },
   sair: {
     color: "#f87171",
