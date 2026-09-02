@@ -85,6 +85,7 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
   const [salvando, setSalvando] = useState(false);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [conteudoParaExcluir, setConteudoParaExcluir] = useState(null);
+  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [acaoEmAndamentoId, setAcaoEmAndamentoId] = useState(null);
   const [mensagemLista, setMensagemLista] = useState({ tone: "", message: "" });
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
@@ -201,6 +202,11 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
     setMensagemFormulario({ tone: "", message: "" });
     setNomeArquivoSelecionado("");
     setFormularioAberto(true);
+  }
+
+  function abrirExclusaoConteudo(conteudo) {
+    setConteudoParaExcluir(conteudo);
+    setMensagemExclusao("");
   }
 
   function fecharFormulario() {
@@ -356,6 +362,7 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
     }
 
     setSalvando(true);
+    setMensagemExclusao("");
 
     try {
       await apiRequest(`/ConteudosDidaticos/${conteudoParaExcluir.id}`, { method: "DELETE" });
@@ -372,8 +379,7 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
         return;
       }
 
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel excluir o conteudo agora." });
-      setConteudoParaExcluir(null);
+      setMensagemExclusao(err.message || "Nao foi possivel excluir o conteudo agora.");
     } finally {
       setSalvando(false);
     }
@@ -475,7 +481,7 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
           modulosDoCurso={modulosDisponiveis}
           onAbrirEdicao={abrirEdicaoConteudo}
           onAlternarPublicacao={alternarPublicacao}
-          onExcluir={(conteudo) => setConteudoParaExcluir(conteudo)}
+          onExcluir={abrirExclusaoConteudo}
           onGerenciarQuiz={gerenciarQuizConteudo}
           onNovoConteudo={abrirFormularioNovoConteudo}
           onReordenar={reordenarConteudo}
@@ -501,6 +507,7 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
           <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir o conteudo <strong>{conteudoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
+          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
       ) : null}
 

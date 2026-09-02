@@ -550,7 +550,7 @@ export function SecaoCursos({
             {ehCoordenador
               ? "Cursos ativos vinculados a sua coordenacao."
               : ehAdmin
-                ? `${cursos.length} curso${cursos.length === 1 ? "" : "s"} cadastrado${cursos.length === 1 ? "" : "s"}`
+                ? "Todos os cursos cadastrados na plataforma."
                 : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
           </p>
         </div>

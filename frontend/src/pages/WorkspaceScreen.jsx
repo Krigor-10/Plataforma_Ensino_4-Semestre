@@ -83,11 +83,22 @@ export default function WorkspaceScreen({
     (isManager
       ? false
       : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "cursos-matriculados", "certificados"].includes(activeSection)));
+  // Secoes que sempre renderizam seu proprio cabecalho.cabecalho-pagina (titulo +
+  // subtitulo) — mostrar o hero generico ali so duplicaria o titulo da pagina.
+  const SECOES_COM_CABECALHO_PROPRIO = [
+    "cursos",
+    "modulos",
+    "turmas",
+    "alunos",
+    "professores",
+    "coordenadores",
+    "matriculas",
+    "cursos-matriculados"
+  ];
   const ocultarHeroGenerico =
     (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
     (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
-    (isProfessor && activeSection === "turmas") ||
-    (role === "Coordenador" && activeSection === "turmas");
+    SECOES_COM_CABECALHO_PROPRIO.includes(activeSection);
 
   useEffect(() => {
     const canonicalPath =
@@ -548,7 +559,6 @@ export default function WorkspaceScreen({
         {!isDashboard && !ocultarHeroGenerico ? (
           <header className="workspace-hero">
             <div className="workspace-hero__meta">
-              <span className="eyebrow">Workspace React</span>
               <h1>{sectionMeta.title}</h1>
               <p>{sectionMeta.description}</p>
             </div>
