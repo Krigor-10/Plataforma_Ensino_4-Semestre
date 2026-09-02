@@ -75,7 +75,7 @@ export default function WorkspaceScreen({
       ? false
       : !isProfessor && activeSection !== "conteudos" && !(isStudent && ["avaliacoes", "matriculas", "meus-cursos", "cursos-matriculados", "certificados"].includes(activeSection)));
   const ocultarHeroGenerico =
-    (isStudent && activeSection === "conteudos" && Boolean(route.param)) ||
+    (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
     (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
     (isProfessor && activeSection === "turmas");
 
@@ -730,6 +730,9 @@ export default function WorkspaceScreen({
               ) : isStudent ? (
                 <SecaoAvaliacoesAluno
                   avaliacoes={snapshot.avaliacoes}
+                  cursoIdSelecionado={route.param ? Number(route.param) : null}
+                  cursos={snapshot.cursos}
+                  onNavigate={onNavigate}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
                 />

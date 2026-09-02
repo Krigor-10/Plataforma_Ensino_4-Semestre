@@ -832,7 +832,7 @@ function TrilhaConteudosProfessor({
             const totalPublicadosModulo = itensDoModulo.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length;
 
             return (
-              <section className="conteudos-modulo" id={`conteudos-modulo-professor-${modulo.id}`} key={modulo.id}>
+              <section className="conteudos-modulo conteudos-modulo--editavel" id={`conteudos-modulo-professor-${modulo.id}`} key={modulo.id}>
                 <header className="conteudos-modulo__cabecalho">
                   <h3 className="conteudos-modulo__cabecalho-wrapper">
                     <button
@@ -883,7 +883,7 @@ function TrilhaConteudosProfessor({
                             const quizVinculado = quizPorConteudoId.get(conteudo.id) || null;
 
                             return (
-                              <li className="atividades-curso__item" key={conteudo.id}>
+                              <li className="atividades-curso__item atividades-curso__item--editavel" key={conteudo.id}>
                                 <div
                                   aria-expanded={conteudoAtivo}
                                   aria-label={`Gerenciar ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}

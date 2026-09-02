@@ -23,6 +23,7 @@ import {
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
+import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
@@ -956,109 +957,214 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   return { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem, modaisExecucaoAvaliacao: modais, setMensagem };
 }
 
-export function SecaoAvaliacoesAluno({ avaliacoes, onRefresh, onSessionExpired }) {
+/* Mesmo fluxo/padrao visual da tela de Avaliacoes do professor (cursos em
+   card -> accordion de avaliacoes do curso, sem hierarquia de modulos), so que
+   com as acoes do aluno (Realizar avaliacao) em vez das de gerenciamento. Ver
+   SecaoAvaliacoesProfessor.jsx para o padrao original. Avaliacoes ja vem
+   pre-filtradas pra turmas aprovadas do aluno (endpoint /Avaliacoes/aluno). */
+export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cursos = [], onNavigate, onRefresh, onSessionExpired }) {
   const { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
     onRefresh,
     onSessionExpired
   });
+  const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
 
-  const avaliacoesOrdenadas = useMemo(
-    () =>
-      [...avaliacoes].sort((avaliacaoA, avaliacaoB) => {
-        const cursoA = avaliacaoA.cursoTitulo || "";
-        const cursoB = avaliacaoB.cursoTitulo || "";
-        const comparacaoCurso = cursoA.localeCompare(cursoB, "pt-BR");
+  const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
-        if (comparacaoCurso !== 0) {
-          return comparacaoCurso;
-        }
+  const cursosComAvaliacao = useMemo(() => {
+    const agrupados = new Map();
+    avaliacoes.forEach((avaliacao) => {
+      if (!avaliacao.cursoId) {
+        return;
+      }
 
-        const aberturaA = timestampFromApiDate(avaliacaoA.dataAbertura || avaliacaoA.publicadoEm);
-        const aberturaB = timestampFromApiDate(avaliacaoB.dataAbertura || avaliacaoB.publicadoEm);
-        return aberturaA - aberturaB;
-      }),
-    [avaliacoes]
+      const atual = agrupados.get(avaliacao.cursoId) || {
+        cursoId: avaliacao.cursoId,
+        cursoTitulo: avaliacao.cursoTitulo || `Curso #${avaliacao.cursoId}`,
+        total: 0,
+        disponiveis: 0
+      };
+
+      atual.total += 1;
+      if (obterDisponibilidadeAvaliacao(avaliacao).podeRealizar) {
+        atual.disponiveis += 1;
+      }
+
+      agrupados.set(avaliacao.cursoId, atual);
+    });
+
+    return [...agrupados.values()].sort((left, right) => left.cursoTitulo.localeCompare(right.cursoTitulo, "pt-BR"));
+  }, [avaliacoes]);
+
+  const cursoAtivo = useMemo(
+    () => (cursoIdSelecionado ? cursosComAvaliacao.find((entrada) => entrada.cursoId === cursoIdSelecionado) || null : null),
+    [cursoIdSelecionado, cursosComAvaliacao]
   );
 
+  const avaliacoesDoCursoAtivo = useMemo(
+    () =>
+      cursoAtivo
+        ? [...avaliacoes]
+            .filter((avaliacao) => avaliacao.cursoId === cursoAtivo.cursoId)
+            .sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
+        : [],
+    [avaliacoes, cursoAtivo]
+  );
+
+  function abrirCurso(cursoId) {
+    setAvaliacaoAbertaId(null);
+    onNavigate?.(`/app/avaliacoes/${cursoId}`);
+  }
+
+  function voltarParaCursos() {
+    onNavigate?.("/app/avaliacoes");
+  }
+
+  function alternarAvaliacao(avaliacaoId) {
+    setAvaliacaoAbertaId((atual) => (atual === avaliacaoId ? null : avaliacaoId));
+  }
+
   return (
-    <div className="tela-avaliacoes-aluno">
-      <header className="cabecalho-pagina">
-        <div>
-          <h2 className="cabecalho-pagina__titulo">Realizar avaliacao</h2>
-          <p className="cabecalho-pagina__subtitulo">Somente avaliacoes publicadas para as suas turmas aprovadas aparecem aqui.</p>
-        </div>
-      </header>
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
-
-      {avaliacoesOrdenadas.length === 0 ? (
-        <EmptyState message="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui." />
+    <div className="tela-avaliacoes tela-avaliacoes-aluno">
+      {!cursoAtivo ? (
+        <GradeCursosProfessor
+          cursos={cursosComAvaliacao.map(({ cursoId, cursoTitulo, disponiveis, total }) => ({
+            curso: cursoPorId.get(cursoId) || { id: cursoId, titulo: cursoTitulo, descricao: "" },
+            resumo: `${total} avaliaca${total === 1 ? "o" : "oes"}`,
+            rodapeEsquerda: `${disponiveis} disponivel${disponiveis === 1 ? "" : "eis"}`,
+            badge: disponiveis > 0 ? "Disponivel" : "Sem pendencias"
+          }))}
+          mensagemVazia="Quando um professor publicar uma avaliacao para sua turma, ela aparecera aqui."
+          onSelecionar={abrirCurso}
+        />
       ) : (
-        <ul aria-label="Avaliacoes disponiveis" className="grade-avaliacoes" role="list">
-          {avaliacoesOrdenadas.map((avaliacao) => {
-            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+        <>
+          <nav aria-label="Navegacao das avaliacoes" className="atividades-curso__navegacao">
+            <button className="atividades-curso__voltar" onClick={voltarParaCursos} type="button">
+              <TbArrowLeft aria-hidden="true" size={22} />
+              Voltar para Avaliacoes
+            </button>
+          </nav>
 
-            return (
-              <li
-                className={`cartao-avaliacao${disponibilidade.podeRealizar ? " cartao-avaliacao--disponivel" : " cartao-avaliacao--bloqueado"}`}
-                key={avaliacao.id}
-              >
-                <div className="cartao-avaliacao__topo">
-                  <span className="cartao-avaliacao__titulo">{avaliacao.titulo}</span>
-                  <StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill>
-                </div>
-                <div className="cartao-avaliacao__corpo">
-                  <dl className="cartao-avaliacao__meta">
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Turma</dt>
-                      <dd>{avaliacao.turmaNome || `Turma #${avaliacao.turmaId}`}</dd>
+          <header className="atividades-curso__cabecalho">
+            <div>
+              <h2 className="atividades-curso__titulo">Avaliacoes</h2>
+              <p className="atividades-curso__subtitulo">{cursoAtivo.cursoTitulo}</p>
+            </div>
+          </header>
+
+          {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
+          <ListaAvaliacoesAluno
+            avaliacaoAbertaId={avaliacaoAbertaId}
+            avaliacoes={avaliacoesDoCursoAtivo}
+            onAlternar={alternarAvaliacao}
+            onRealizarAvaliacao={abrirConfirmacaoAvaliacao}
+            processando={carregandoQuestoes || enviandoRespostas}
+          />
+        </>
+      )}
+
+      {modaisExecucaoAvaliacao}
+    </div>
+  );
+}
+
+function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRealizarAvaliacao, processando }) {
+  if (avaliacoes.length === 0) {
+    return <p className="texto-vazio" role="status">Nenhuma avaliacao cadastrada para este curso ainda.</p>;
+  }
+
+  return (
+    <div className="atividades-curso__lista-modulos">
+      {avaliacoes.map((avaliacao, indice) => {
+        const aberta = avaliacaoAbertaId === avaliacao.id;
+        const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+        const idDetalhe = `avaliacao-aluno-detalhe-${avaliacao.id}`;
+        const temNota = avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
+
+        return (
+          <section className="conteudos-modulo" key={avaliacao.id}>
+            <header className="conteudos-modulo__cabecalho">
+              <h3 className="conteudos-modulo__cabecalho-wrapper">
+                <button
+                  aria-controls={idDetalhe}
+                  aria-expanded={aberta}
+                  className="conteudos-modulo__toggle"
+                  onClick={() => onAlternar(avaliacao.id)}
+                  type="button"
+                >
+                  <div className="conteudos-modulo__info">
+                    <span aria-hidden="true" className="conteudos-modulo__icone">
+                      <TbTrophy size="1.4rem" />
+                    </span>
+                    <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
+                    <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
+                    <span className="conteudos-modulo__contagem">
+                      {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"} · {disponibilidade.label}
+                    </span>
+                  </div>
+                  <TbChevronDown
+                    aria-hidden="true"
+                    className={`conteudos-modulo__chevron${aberta ? " conteudos-modulo__chevron--aberto" : ""}`}
+                    size="1.1rem"
+                  />
+                </button>
+              </h3>
+            </header>
+
+            <AnimatePresence initial={false}>
+              {aberta ? (
+                <motion.div
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  id={idDetalhe}
+                  initial={{ height: 0, opacity: 0 }}
+                  key={`detalhe-avaliacao-aluno-${avaliacao.id}`}
+                  style={{ overflow: "hidden" }}
+                  transition={{ duration: 0.24, ease: "easeInOut" }}
+                >
+                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                    <div className="lista-detalhes__item">
+                      <dt>Status</dt>
+                      <dd><StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill></dd>
                     </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Modulo</dt>
-                      <dd>{avaliacao.moduloTitulo || "-"}</dd>
+                    <div className="lista-detalhes__item">
+                      <dt>Questoes</dt>
+                      <dd>{avaliacao.totalQuestoes || 0}</dd>
                     </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>Tipo</dt>
-                      <dd>{normalizeEvaluationType(avaliacao.tipoAvaliacao)}</dd>
-                    </div>
-                    <div className="cartao-avaliacao__meta-item">
+                    <div className="lista-detalhes__item">
                       <dt>Tentativas</dt>
                       <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
                     </div>
-                    <div className="cartao-avaliacao__meta-item">
-                      <dt>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? "Ultima nota" : "Questoes"}</dt>
-                      <dd>{avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? formatScore(avaliacao.ultimaNota) : avaliacao.totalQuestoes || 0}</dd>
+                    <div className="lista-detalhes__item">
+                      <dt>{temNota ? "Ultima nota" : "Nota maxima"}</dt>
+                      <dd>{temNota ? formatScore(avaliacao.ultimaNota) : formatGrade(avaliacao.notaMaxima)}</dd>
                     </div>
                   </dl>
-                  <div className="cartao-avaliacao__rodape">
+
+                  <div className="atividades-curso__acoes-aluno">
                     {disponibilidade.podeRealizar ? (
-                      <motion.div
-                        style={{ display: "inline-block" }}
-                        transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                        whileHover={{ scale: 1.06 }}
-                        whileTap={{ scale: 0.96 }}
+                      <Botao
+                        className="atividades-curso__botao-iniciar"
+                        disabled={processando}
+                        onClick={() => onRealizarAvaliacao(avaliacao)}
+                        tamanho="pequeno"
+                        variante="primario"
                       >
-                        <Botao
-                          disabled={carregandoQuestoes || enviandoRespostas}
-                          onClick={() => abrirConfirmacaoAvaliacao(avaliacao)}
-                          tamanho="pequeno"
-                          variante="primario"
-                        >
-                          Realizar avaliacao
-                        </Botao>
-                      </motion.div>
+                        <TbPlayerPlay aria-hidden="true" size={14} />
+                        Iniciar avaliacao
+                      </Botao>
                     ) : (
                       <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
                     )}
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {modaisExecucaoAvaliacao}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </section>
+        );
+      })}
     </div>
   );
 }

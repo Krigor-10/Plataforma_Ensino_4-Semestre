@@ -792,7 +792,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   }
 
   return (
-    <div className="tela-avaliacoes">
+    <div className="tela-avaliacoes tela-avaliacoes-professor">
       {!cursoAtivo ? (
         <GradeCursosProfessor
           cursos={cursosDoProfessor.map(({ curso, totalAvaliacoes, totalPublicadas }) => ({

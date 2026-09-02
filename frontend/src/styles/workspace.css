@@ -3445,6 +3445,24 @@
   }
 }
 
+/* Area de acao do aluno dentro do accordion de avaliacao (Iniciar avaliacao
+   ou mensagem de bloqueio), abaixo da lista de detalhes inline. */
+.atividades-curso__acoes-aluno {
+  align-items: center;
+  display: flex;
+  margin-top: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+/* Botao "Iniciar avaliacao" mais compacto que o padrao .botao--pequeno,
+   pra nao competir visualmente com a linha do accordion. */
+.atividades-curso__botao-iniciar {
+  min-height: 1.85rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  gap: 0.35rem;
+}
+
 .lista-detalhes__item--com-acao > div {
   display: flex;
   flex-direction: column;
@@ -4124,6 +4142,64 @@
   margin: 0;
 }
 
+/* Curso como contexto abaixo do titulo principal (usado na tela Avaliacoes
+   do aluno, onde o cabecalho mostra "Avaliacoes" + nome do curso). */
+.atividades-curso__subtitulo {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--cor-texto-suave);
+  margin: 0.35rem 0 0;
+}
+
+/* Espacamento entre o botao Voltar e o cabecalho, exclusivo da tela
+   Avaliacoes do ALUNO (o professor reaproveita .atividades-curso__navegacao
+   sem essa margem, entao a regra fica escopada a .tela-avaliacoes-aluno). */
+.tela-avaliacoes-aluno .atividades-curso__navegacao {
+  margin-bottom: var(--espaco-lg);
+}
+
+/* Cada avaliacao do ALUNO vira uma unidade visual com borda propria (cartao
+   fechado: cabecalho + detalhes + botao Iniciar), diferente do padrao "linha
+   com divisor inferior" usado no professor e em Conteudos, que reaproveitam
+   a mesma classe base .conteudos-modulo. O espacamento entre cartoes continua
+   vindo do gap do container (.atividades-curso__lista-modulos). */
+.tela-avaliacoes-aluno .conteudos-modulo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0 var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+/* .atividades-curso__lista-modulos > .conteudos-modulo:last-child remove o
+   border-bottom (pensado pra lista com divisorias); aqui cada cartao e
+   independente, entao o ultimo tambem precisa da borda completa — inclusive
+   no destaque de expandido, que sem isso perderia so o traco de baixo. */
+.tela-avaliacoes-aluno .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-avaliacoes-aluno .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-bottom-color: var(--cor-borda-forte);
+}
+
+/* Mesmo padrao de cartao com borda da tela Avaliacoes do aluno, reaplicado na
+   tela Avaliacoes do PROFESSOR (dentro do curso selecionado) pra manter a
+   mesma linguagem visual entre as duas telas. */
+.tela-avaliacoes-professor .conteudos-modulo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0 var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tela-avaliacoes-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-avaliacoes-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-bottom-color: var(--cor-borda-forte);
+}
+
 .atividades-curso__progresso {
   display: flex;
   flex-direction: column;
@@ -4179,6 +4255,48 @@
 
 .atividades-curso__quizzes .atividades-curso__item:last-child {
   border-bottom: none;
+}
+
+/* Mesmo padrao de cartao com borda das Avaliacoes, reaplicado em CADA
+   CONTEUDO editavel da tela Conteudos do PROFESSOR (o item com role="button"
+   que expande pra mostrar Editar/Quiz/Publicar/Excluir). Modificador
+   ".atividades-curso__item--editavel" (em vez de so ".tela-conteudos
+   .atividades-curso__item") evita pegar as linhas de quiz estaticas,
+   nao-expansiveis, do modal "Visualizar como aluno", que reaproveita a
+   mesma classe base .atividades-curso__item mas sem essa interacao. */
+.tela-conteudos .atividades-curso__item--editavel {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0.6rem var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tela-conteudos .atividades-curso__lista > .atividades-curso__item--editavel:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-conteudos .atividades-curso__item--editavel:has(.atividades-curso__linha--ativa) {
+  border-color: var(--cor-borda-forte);
+}
+
+/* Mesmo padrao de cartao com borda das Avaliacoes do professor, reaplicado
+   em CADA MODULO da tela Conteudos do PROFESSOR (o container externo da
+   estrutura Modulo -> Conteudos). Modificador ".conteudos-modulo--editavel"
+   evita pegar os modulos estaticos, nao-expansiveis, do modal "Visualizar
+   como aluno", que reaproveita a mesma classe base .conteudos-modulo. */
+.tela-conteudos .conteudos-modulo--editavel {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0 var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tela-conteudos .atividades-curso__lista-modulos > .conteudos-modulo--editavel:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-conteudos .atividades-curso__lista-modulos > .conteudos-modulo--editavel:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-bottom-color: var(--cor-borda-forte);
 }
 
 .atividades-curso__linha {
