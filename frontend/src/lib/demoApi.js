@@ -40,6 +40,8 @@ export async function demoRequest(endpoint, options = {}) {
       return markAllNotificationsAsRead();
     case path === "/Cursos" && method === "GET":
       return listCourses();
+    case path === "/Cursos/desempenho" && method === "GET":
+      return listCoordinatorCourseDesempenho();
     case path === "/Cursos/meus" && method === "GET":
       return listTeacherCourses();
     case /^\/Cursos\/\d+\/coordenador$/.test(path) && method === "PUT":
@@ -64,6 +66,8 @@ export async function demoRequest(endpoint, options = {}) {
       return createClass(payload);
     case path === "/Turmas/minhas" && method === "GET":
       return listTeacherClasses();
+    case path === "/Turmas/desempenho" && method === "GET":
+      return listTeacherTurmaDesempenho();
     case /^\/Turmas\/\d+\/professor$/.test(path) && method === "PUT":
       return assignClassProfessor(getClassProfessorActionId(path), payload);
     case path === "/Modulos" && method === "GET":
@@ -90,6 +94,10 @@ export async function demoRequest(endpoint, options = {}) {
       return approveEnrollment(getEnrollmentActionId(path), payload);
     case /^\/Matriculas\/\d+\/rejeitar$/.test(path) && method === "PUT":
       return rejectEnrollment(getEnrollmentActionId(path));
+    case path === "/Pagamentos/aluno" && method === "GET":
+      return listStudentPayments();
+    case /^\/Pagamentos\/\d+\/confirmar$/.test(path) && method === "POST":
+      return confirmarPagamentoDemo(getPagamentoConfirmActionId(path));
     case /^\/Certificados\/matricula\/\d+\/emitir$/.test(path) && method === "POST":
       return emitirCertificadoDemo(getCertificadoMatriculaId(path));
     case path === "/Certificados/meus" && method === "GET":
@@ -779,6 +787,62 @@ function listStudentEnrollments(studentId) {
   );
 }
 
+function listStudentPayments() {
+  const user = requireAuthenticatedUser();
+  const db = readDemoDb();
+  ensurePagamentosCollection(db);
+
+  const matriculaIds = new Set(
+    db.matriculas.filter((matricula) => matricula.alunoId === user.id).map((matricula) => matricula.id)
+  );
+
+  return db.pagamentos
+    .filter((pagamento) => matriculaIds.has(pagamento.matriculaId))
+    .map((pagamento) => hydratePayment(db, pagamento));
+}
+
+function confirmarPagamentoDemo(matriculaId) {
+  const user = requireAuthenticatedUser();
+  const db = readDemoDb();
+  ensurePagamentosCollection(db);
+
+  const matricula = db.matriculas.find((item) => item.id === matriculaId);
+  if (!matricula || matricula.alunoId !== user.id) {
+    throw new DemoApiError("Matricula demo nao encontrada para este aluno.", 404);
+  }
+
+  const pagamento = db.pagamentos.find((item) => item.matriculaId === matriculaId);
+  if (!pagamento) {
+    throw new DemoApiError("Nao ha cobranca pendente para esta matricula.", 404);
+  }
+
+  if (pagamento.status !== 1) {
+    throw new DemoApiError("Este pagamento ja foi processado.", 422);
+  }
+
+  pagamento.status = 2; // Pago
+  pagamento.pagoEm = new Date().toISOString();
+  saveDemoDb(db);
+
+  return hydratePayment(db, pagamento);
+}
+
+function hydratePayment(db, pagamento) {
+  const matricula = db.matriculas.find((item) => item.id === pagamento.matriculaId);
+  const curso = matricula ? db.cursos.find((item) => item.id === matricula.cursoId) : null;
+
+  return {
+    id: pagamento.id,
+    matriculaId: pagamento.matriculaId,
+    cursoId: curso?.id ?? null,
+    cursoTitulo: curso?.titulo ?? "",
+    valor: pagamento.valor,
+    status: pagamento.status,
+    criadoEm: pagamento.criadoEm,
+    pagoEm: pagamento.pagoEm ?? null
+  };
+}
+
 function approveEnrollment(enrollmentId, turmaIdPayload) {
   requireManager();
 
@@ -1039,6 +1103,273 @@ function listTeacherEvaluations() {
     db,
     db.avaliacoes.filter((avaliacao) => teacherTurmaIds.has(avaliacao.turmaId))
   );
+}
+
+function listTeacherTurmaDesempenho() {
+  const user = requireProfessor();
+  const db = readDemoDb();
+  ensureEvaluationCollections(db);
+  ensureAttemptCollections(db);
+  ensureProgressCollections(db);
+
+  const turmasDoProfessor = db.turmas.filter((turma) => turma.professorId === user.id);
+  const cursoById = new Map(db.cursos.map((curso) => [curso.id, curso]));
+  const alunoById = new Map(db.alunos.map((aluno) => [aluno.id, aluno]));
+  const progressoCursoPorMatriculaId = new Map(
+    db.progressos.cursos.map((progresso) => [progresso.matriculaId, progresso])
+  );
+
+  return turmasDoProfessor
+    .map((turma) => montarTurmaDesempenhoDemo(db, turma, cursoById, alunoById, progressoCursoPorMatriculaId))
+    .sort((left, right) => left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR"));
+}
+
+function montarTurmaDesempenhoDemo(db, turma, cursoById, alunoById, progressoCursoPorMatriculaId) {
+  const curso = cursoById.get(turma.cursoId);
+  const matriculasDaTurma = db.matriculas.filter((matricula) => matricula.turmaId === turma.id);
+  const totalAlunos = matriculasDaTurma.length;
+  const alunosAtivos = matriculasDaTurma.filter((matricula) => Number(matricula.status) === 1).length;
+  const alunosComNota = matriculasDaTurma.filter((matricula) => Number(matricula.notaFinal) > 0);
+
+  const progressosPercentuais = matriculasDaTurma.map(
+    (matricula) => Number(progressoCursoPorMatriculaId.get(matricula.id)?.percentualConclusao) || 0
+  );
+  const concluidos = progressosPercentuais.filter((percentual) => percentual >= 100).length;
+
+  const alunosDto = matriculasDaTurma
+    .map((matricula) => ({
+      matriculaId: matricula.id,
+      alunoId: matricula.alunoId,
+      nome: alunoById.get(matricula.alunoId)?.nome || "Aluno",
+      status: matricula.status,
+      notaFinal: Number(matricula.notaFinal) || 0,
+      percentualConclusao: Number(progressoCursoPorMatriculaId.get(matricula.id)?.percentualConclusao) || 0
+    }))
+    .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"));
+
+  const avaliacoesDaTurma = db.avaliacoes.filter((avaliacao) => avaliacao.turmaId === turma.id);
+  const estatisticasPorAvaliacaoId = computeEstatisticasPorAvaliacaoDemo(
+    db,
+    avaliacoesDaTurma.map((avaliacao) => avaliacao.id)
+  );
+
+  const avaliacoesDto = avaliacoesDaTurma
+    .map((avaliacao) => montarAvaliacaoDesempenhoDemo(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  return {
+    turmaId: turma.id,
+    nomeTurma: turma.nomeTurma,
+    cursoId: turma.cursoId,
+    cursoTitulo: curso?.titulo || "",
+    totalAlunos,
+    alunosAtivos,
+    progressoMedio: totalAlunos > 0 ? roundDemoNumber(progressosPercentuais.reduce((soma, item) => soma + item, 0) / totalAlunos) : 0,
+    percentualConclusao: totalAlunos > 0 ? calculateDemoPercent(concluidos, totalAlunos) : 0,
+    desempenhoMedio: alunosComNota.length > 0
+      ? roundDemoNumber(alunosComNota.reduce((soma, matricula) => soma + Number(matricula.notaFinal), 0) / alunosComNota.length)
+      : 0,
+    alunos: alunosDto,
+    avaliacoes: avaliacoesDto
+  };
+}
+
+function listCoordinatorCourseDesempenho() {
+  const user = requireRole("Coordenador");
+  const db = readDemoDb();
+  ensureEvaluationCollections(db);
+  ensureAttemptCollections(db);
+  ensureProgressCollections(db);
+
+  const cursosDoCoordenador = db.cursos.filter((curso) => curso.coordenadorId === user.id);
+  const cursoIds = new Set(cursosDoCoordenador.map((curso) => curso.id));
+  const turmasDosCursos = db.turmas.filter((turma) => cursoIds.has(turma.cursoId));
+  const turmaIds = new Set(turmasDosCursos.map((turma) => turma.id));
+
+  const professorNomePorCursoId = new Map(
+    turmasDosCursos.map((turma) => [
+      turma.cursoId,
+      db.professores.find((professor) => professor.id === turma.professorId)?.nome || null
+    ])
+  );
+
+  const avaliacoesRelevantes = db.avaliacoes.filter((avaliacao) => turmaIds.has(avaliacao.turmaId));
+  const estatisticasPorAvaliacaoId = computeEstatisticasPorAvaliacaoDemo(
+    db,
+    avaliacoesRelevantes.map((avaliacao) => avaliacao.id)
+  );
+
+  const progressoCursoPorMatriculaId = new Map(
+    db.progressos.cursos.map((progresso) => [progresso.matriculaId, progresso])
+  );
+  const progressoModuloPorChave = new Map(
+    db.progressos.modulos.map((progresso) => [`${progresso.matriculaId}:${progresso.moduloId}`, progresso])
+  );
+  const progressoConteudoPorChave = new Map(
+    db.progressos.conteudos.map((progresso) => [`${progresso.matriculaId}:${progresso.conteudoDidaticoId}`, progresso])
+  );
+
+  return cursosDoCoordenador
+    .map((curso) =>
+      montarCursoDesempenhoDemo(db, curso, {
+        turmaIdsDoCurso: new Set(turmasDosCursos.filter((turma) => turma.cursoId === curso.id).map((turma) => turma.id)),
+        professorNome: professorNomePorCursoId.get(curso.id) || null,
+        estatisticasPorAvaliacaoId,
+        progressoCursoPorMatriculaId,
+        progressoModuloPorChave,
+        progressoConteudoPorChave
+      })
+    )
+    .sort((left, right) => left.cursoTitulo.localeCompare(right.cursoTitulo, "pt-BR"));
+}
+
+function montarCursoDesempenhoDemo(db, curso, contexto) {
+  const {
+    turmaIdsDoCurso,
+    professorNome,
+    estatisticasPorAvaliacaoId,
+    progressoCursoPorMatriculaId,
+    progressoModuloPorChave,
+    progressoConteudoPorChave
+  } = contexto;
+
+  const matriculasDoCurso = db.matriculas.filter((matricula) => matricula.cursoId === curso.id);
+  const totalAlunos = matriculasDoCurso.length;
+  const alunosAtivos = matriculasDoCurso.filter((matricula) => Number(matricula.status) === 1).length;
+  const alunosComNota = matriculasDoCurso.filter((matricula) => Number(matricula.notaFinal) > 0);
+
+  const progressosCurso = matriculasDoCurso.map(
+    (matricula) => Number(progressoCursoPorMatriculaId.get(matricula.id)?.percentualConclusao) || 0
+  );
+  const concluidosNoCurso = progressosCurso.filter((percentual) => percentual >= 100).length;
+
+  const modulosDto = db.modulos
+    .filter((modulo) => modulo.cursoId === curso.id)
+    .map((modulo) =>
+      montarModuloDesempenhoDemo(db, modulo, matriculasDoCurso, totalAlunos, {
+        estatisticasPorAvaliacaoId,
+        progressoModuloPorChave,
+        progressoConteudoPorChave
+      })
+    )
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  const avaliacoesSemModulo = db.avaliacoes
+    .filter((avaliacao) => turmaIdsDoCurso.has(avaliacao.turmaId) && !avaliacao.moduloId)
+    .map((avaliacao) => montarAvaliacaoDesempenhoDemo(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  return {
+    cursoId: curso.id,
+    cursoTitulo: curso.titulo,
+    professorNome,
+    totalAlunos,
+    alunosAtivos,
+    progressoMedio: totalAlunos > 0 ? roundDemoNumber(progressosCurso.reduce((soma, item) => soma + item, 0) / totalAlunos) : 0,
+    percentualConclusao: totalAlunos > 0 ? calculateDemoPercent(concluidosNoCurso, totalAlunos) : 0,
+    desempenhoMedio: alunosComNota.length > 0
+      ? roundDemoNumber(alunosComNota.reduce((soma, matricula) => soma + Number(matricula.notaFinal), 0) / alunosComNota.length)
+      : 0,
+    modulos: modulosDto,
+    avaliacoesSemModulo
+  };
+}
+
+function montarModuloDesempenhoDemo(db, modulo, matriculasDoCurso, totalAlunos, contexto) {
+  const { estatisticasPorAvaliacaoId, progressoModuloPorChave, progressoConteudoPorChave } = contexto;
+
+  const progressosModulo = matriculasDoCurso.map(
+    (matricula) => Number(progressoModuloPorChave.get(`${matricula.id}:${modulo.id}`)?.percentualConclusao) || 0
+  );
+  const concluidosNoModulo = progressosModulo.filter((percentual) => percentual >= 100).length;
+  const mediasModulo = matriculasDoCurso
+    .map((matricula) => Number(progressoModuloPorChave.get(`${matricula.id}:${modulo.id}`)?.mediaModulo) || 0)
+    .filter((media) => media > 0);
+
+  const materiaisDto = db.conteudos
+    .filter((material) => material.moduloId === modulo.id)
+    .map((material) => {
+      const progressosMaterial = matriculasDoCurso.map(
+        (matricula) => progressoConteudoPorChave.get(`${matricula.id}:${material.id}`)
+      );
+      const alunosConcluiram = progressosMaterial.filter((progresso) => Number(progresso?.statusProgresso) === 3).length;
+      const percentualConclusao = totalAlunos > 0
+        ? roundDemoNumber(
+            progressosMaterial.reduce((soma, progresso) => soma + (Number(progresso?.percentualConclusao) || 0), 0) / totalAlunos
+          )
+        : 0;
+
+      return {
+        conteudoDidaticoId: material.id,
+        titulo: material.titulo,
+        tipoConteudo: material.tipoConteudo,
+        statusPublicacao: material.statusPublicacao,
+        alunosConcluiram,
+        percentualConclusao
+      };
+    })
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  const avaliacoesDto = db.avaliacoes
+    .filter((avaliacao) => avaliacao.moduloId === modulo.id)
+    .map((avaliacao) => montarAvaliacaoDesempenhoDemo(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+
+  return {
+    moduloId: modulo.id,
+    titulo: modulo.titulo,
+    totalMateriais: materiaisDto.length,
+    progressoMedio: totalAlunos > 0 ? roundDemoNumber(progressosModulo.reduce((soma, item) => soma + item, 0) / totalAlunos) : 0,
+    percentualConclusao: totalAlunos > 0 ? calculateDemoPercent(concluidosNoModulo, totalAlunos) : 0,
+    desempenhoMedio: mediasModulo.length > 0 ? roundDemoNumber(mediasModulo.reduce((soma, item) => soma + item, 0) / mediasModulo.length) : 0,
+    materiais: materiaisDto,
+    avaliacoes: avaliacoesDto
+  };
+}
+
+function computeEstatisticasPorAvaliacaoDemo(db, avaliacaoIds) {
+  const idsRelevantes = new Set(avaliacaoIds);
+  const melhorTentativaPorChave = new Map();
+
+  for (const tentativa of db.tentativasAvaliacao) {
+    if (!idsRelevantes.has(tentativa.avaliacaoId) || Number(tentativa.statusTentativa) !== 3) {
+      continue;
+    }
+
+    const chave = `${tentativa.avaliacaoId}:${tentativa.matriculaId}`;
+    const atual = melhorTentativaPorChave.get(chave);
+    if (!atual || Number(tentativa.notaBruta) > Number(atual.notaBruta)) {
+      melhorTentativaPorChave.set(chave, tentativa);
+    }
+  }
+
+  const estatisticas = new Map();
+  for (const tentativa of melhorTentativaPorChave.values()) {
+    const atual = estatisticas.get(tentativa.avaliacaoId) || { participantes: 0, somaNotas: 0 };
+    atual.participantes += 1;
+    atual.somaNotas += Number(tentativa.notaBruta) || 0;
+    estatisticas.set(tentativa.avaliacaoId, atual);
+  }
+
+  return estatisticas;
+}
+
+function montarAvaliacaoDesempenhoDemo(avaliacao, totalAlunos, estatisticasPorAvaliacaoId) {
+  const estatistica = estatisticasPorAvaliacaoId.get(avaliacao.id) || { participantes: 0, somaNotas: 0 };
+  const mediaNota = estatistica.participantes > 0 ? estatistica.somaNotas / estatistica.participantes : 0;
+  const notaMaxima = Number(avaliacao.notaMaxima) || 10;
+
+  return {
+    avaliacaoId: avaliacao.id,
+    titulo: avaliacao.titulo,
+    tipoAvaliacao: avaliacao.tipoAvaliacao,
+    statusPublicacao: avaliacao.statusPublicacao,
+    totalParticipantes: estatistica.participantes,
+    mediaNota: roundDemoNumber(mediaNota),
+    notaMaxima,
+    percentualConclusao: totalAlunos > 0 ? calculateDemoPercent(estatistica.participantes, totalAlunos) : 0,
+    percentualAproveitamento: notaMaxima > 0 ? calculateDemoPercent(mediaNota, notaMaxima) : 0
+  };
 }
 
 function listStudentContents(studentId) {
@@ -2005,6 +2336,21 @@ function ensureEvaluationCollections(db) {
   db.avaliacoes ||= [];
 }
 
+function ensurePagamentosCollection(db) {
+  db.pagamentos ||= [];
+
+  if (!db.pagamentos.some((item) => item.id === 1)) {
+    db.pagamentos.push({
+      id: 1,
+      matriculaId: 501,
+      valor: 189.9,
+      status: 1, // Pendente
+      criadoEm: "2026-03-08T13:25:00.000Z",
+      pagoEm: null
+    });
+  }
+}
+
 function ensureQuestionCollections(db) {
   db.questoesBanco ||= [];
   db.questoesAvaliacao ||= [];
@@ -2363,6 +2709,7 @@ function readDemoDb() {
         ensureAttemptCollections(parsed);
         ensurePresentationEvaluation(parsed);
         ensureRegistrationCodes(parsed);
+        ensurePagamentosCollection(parsed);
         saveDemoDb(parsed);
         return parsed;
       }
@@ -2377,6 +2724,7 @@ function readDemoDb() {
   ensureAttemptCollections(initialDb);
   ensurePresentationEvaluation(initialDb);
   ensureRegistrationCodes(initialDb);
+  ensurePagamentosCollection(initialDb);
   saveDemoDb(initialDb);
   return initialDb;
 }
@@ -2894,6 +3242,17 @@ function getCertificadoVerificarCodigo(path) {
 
 function getEnrollmentActionId(path) {
   const match = String(path).match(/^\/Matriculas\/(\d+)\/(?:aprovar|rejeitar)$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getPagamentoConfirmActionId(path) {
+  const match = String(path).match(/^\/Pagamentos\/(\d+)\/confirmar$/);
   const id = Number(match?.[1]);
 
   if (!Number.isInteger(id)) {

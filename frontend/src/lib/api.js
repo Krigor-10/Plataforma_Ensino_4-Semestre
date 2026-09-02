@@ -55,6 +55,10 @@ export async function baixarArquivo(endpoint) {
   return { blob, nomeArquivo };
 }
 
+/* Cobre os formatos usuais de Content-Disposition (filename e filename* com
+   UTF-8''). Variacoes menos comuns (aspas ausentes, charset diferente) caem
+   no fallback "arquivo" sem erro — aceitavel aqui porque so afeta o nome
+   sugerido pro download, nunca o conteudo do arquivo em si. */
 function extrairNomeArquivo(cabecalhoDisposicao) {
   const correspondencia = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cabecalhoDisposicao || "");
   return correspondencia ? decodeURIComponent(correspondencia[1]) : "arquivo";

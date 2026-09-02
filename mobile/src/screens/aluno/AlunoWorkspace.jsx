@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import HomeScreen from "../HomeScreen.jsx";
@@ -6,6 +6,7 @@ import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
 import MatriculasScreen from "./MatriculasScreen.jsx";
+import { ApiError } from "../../lib/api.js";
 import { EMPTY_SNAPSHOT, loadAlunoSnapshot } from "../../lib/dashboard.js";
 import { cores } from "../../lib/theme.js";
 
@@ -24,12 +25,24 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, token, usua
   const [erro, setErro] = useState("");
   const insets = useSafeAreaInsets();
 
+  // Ref em vez de dependencia direta: onSessionExpired e recriada a cada
+  // render do App raiz (nao usa useCallback la), entao inclui-la nas
+  // dependencias de recarregar faria o useEffect de carregamento inicial
+  // (abaixo) refazer a busca a cada render em vez de so no mount.
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onSessionExpiredRef.current = onSessionExpired;
+
   const recarregar = useCallback(async () => {
     try {
       const proximoSnapshot = await loadAlunoSnapshot(usuario);
       setSnapshot(proximoSnapshot);
       setErro("");
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpiredRef.current?.();
+        return;
+      }
+
       setErro(err.message || "Nao foi possivel carregar seus dados agora.");
     } finally {
       setCarregando(false);
@@ -49,7 +62,9 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, token, usua
           <Text style={estilos.erro}>{erro}</Text>
         ) : (
           <>
-            {abaAtiva === "inicio" ? <HomeScreen onLogout={onLogout} usuario={usuario} /> : null}
+            {abaAtiva === "inicio" ? (
+              <HomeScreen onLogout={onLogout} onSessionExpired={onSessionExpired} usuario={usuario} />
+            ) : null}
             {abaAtiva === "conteudos" ? (
               <ConteudosScreen onRecarregar={recarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} token={token} />
             ) : null}

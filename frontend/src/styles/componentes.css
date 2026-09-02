@@ -180,6 +180,7 @@
 .botao--pequeno {
   padding: 0.38rem 0.9rem;
   font-size: 0.8rem;
+  min-height: 2.75rem;
 }
 
 .botao--grande {

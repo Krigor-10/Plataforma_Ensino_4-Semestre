@@ -11,6 +11,8 @@ import { corPorTipo } from "./BarraLateral.jsx";
 
 const variantePorTipo = { Aluno: "marca", Professor: "info", Coordenador: "aviso", Admin: "erro" };
 
+/* eslint-disable react-hooks/rules-of-hooks -- hook nomeado em portugues ("usar" = "use"); o plugin so
+   reconhece o prefixo "use" em ingles, entao trata isto como funcao comum chamando hooks. */
 function usarTemaClaro() {
   const [temaClaro, setTemaClaro] = useState(() => localStorage.getItem("coderyse-tema") === "claro");
 
@@ -21,6 +23,7 @@ function usarTemaClaro() {
 
   return [temaClaro, setTemaClaro];
 }
+/* eslint-enable react-hooks/rules-of-hooks */
 
 function estadoFormularioPerfilInicial(usuario) {
   return {

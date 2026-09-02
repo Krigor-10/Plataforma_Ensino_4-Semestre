@@ -49,13 +49,21 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var cursoIds = cursos.Select(curso => curso.Id).ToList();
 
-        var professorNomePorCursoId = (await _context.Turmas
+        var turmasDosCursos = await _context.Turmas
             .AsNoTracking()
             .Where(turma => cursoIds.Contains(turma.CursoId))
             .Include(turma => turma.ProfessorResponsavel)
-            .ToListAsync())
+            .ToListAsync();
+
+        var professorNomePorCursoId = turmasDosCursos
             .GroupBy(turma => turma.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.First().ProfessorResponsavel?.Nome);
+
+        var turmaIdsPorCursoId = turmasDosCursos
+            .GroupBy(turma => turma.CursoId)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.Select(turma => turma.Id).ToHashSet());
+
+        var turmaIds = turmasDosCursos.Select(turma => turma.Id).ToList();
 
         var matriculas = await _context.Matriculas
             .AsNoTracking()
@@ -105,11 +113,20 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var avaliacoes = await _context.Avaliacoes
             .AsNoTracking()
-            .Where(avaliacao => avaliacao.ModuloId.HasValue && moduloIds.Contains(avaliacao.ModuloId.Value))
+            .Where(avaliacao =>
+                (avaliacao.ModuloId.HasValue && moduloIds.Contains(avaliacao.ModuloId.Value)) ||
+                (!avaliacao.ModuloId.HasValue && turmaIds.Contains(avaliacao.TurmaId)))
             .ToListAsync();
         var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
         var avaliacoesPorModuloId = avaliacoes
+            .Where(avaliacao => avaliacao.ModuloId.HasValue)
             .GroupBy(avaliacao => avaliacao.ModuloId!.Value)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
+
+        // Prova/Exercicio podem ficar soltos direto no curso (sem modulo) — ver AvaliacaoService.ValidarModuloAsync.
+        var avaliacoesSemModuloPorTurmaId = avaliacoes
+            .Where(avaliacao => !avaliacao.ModuloId.HasValue)
+            .GroupBy(avaliacao => avaliacao.TurmaId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
 
         var tentativasCorrigidas = await _context.TentativasAvaliacao
@@ -159,6 +176,14 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 .OrderBy(modulo => modulo.Titulo, comparadorPtBr)
                 .ToList();
 
+            var avaliacoesSemModuloDoCurso = (turmaIdsPorCursoId.TryGetValue(curso.Id, out var turmaIdsDoCurso)
+                    ? turmaIdsDoCurso
+                    : new HashSet<int>())
+                .SelectMany(turmaId => avaliacoesSemModuloPorTurmaId.TryGetValue(turmaId, out var lista) ? lista : new List<Avaliacao>())
+                .Select(avaliacao => MontarAvaliacaoDto(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
+                .OrderBy(avaliacao => avaliacao.Titulo, comparadorPtBr)
+                .ToList();
+
             resultado.Add(new CursoDesempenhoResponseDto
             {
                 CursoId = curso.Id,
@@ -169,7 +194,8 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 ProgressoMedio = totalAlunos > 0 ? Math.Round(progressosCursoDoCurso.Average(), 1) : 0,
                 PercentualConclusao = totalAlunos > 0 ? Math.Round((decimal)concluidosNoCurso / totalAlunos * 100, 1) : 0,
                 DesempenhoMedio = alunosComNota.Count > 0 ? Math.Round(alunosComNota.Average(matricula => matricula.NotaFinal), 2) : 0,
-                Modulos = modulosDto
+                Modulos = modulosDto,
+                AvaliacoesSemModulo = avaliacoesSemModuloDoCurso
             });
         }
 
@@ -233,29 +259,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
             : new List<Avaliacao>();
 
         var avaliacoesDto = avaliacoesDoModulo
-            .Select(avaliacao =>
-            {
-                var estatistica = estatisticasPorAvaliacaoId.TryGetValue(avaliacao.Id, out var valor)
-                    ? valor
-                    : (Participantes: 0, MediaNota: 0m);
-
-                return new AvaliacaoDesempenhoResponseDto
-                {
-                    AvaliacaoId = avaliacao.Id,
-                    Titulo = avaliacao.Titulo,
-                    TipoAvaliacao = avaliacao.TipoAvaliacao,
-                    StatusPublicacao = avaliacao.StatusPublicacao,
-                    TotalParticipantes = estatistica.Participantes,
-                    MediaNota = Math.Round(estatistica.MediaNota, 2),
-                    NotaMaxima = avaliacao.NotaMaxima,
-                    PercentualConclusao = totalAlunos > 0
-                        ? Math.Round((decimal)estatistica.Participantes / totalAlunos * 100, 1)
-                        : 0,
-                    PercentualAproveitamento = avaliacao.NotaMaxima > 0
-                        ? Math.Round(estatistica.MediaNota / avaliacao.NotaMaxima * 100, 1)
-                        : 0
-                };
-            })
+            .Select(avaliacao => MontarAvaliacaoDto(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
             .OrderBy(avaliacao => avaliacao.Titulo, comparadorPtBr)
             .ToList();
 
@@ -269,6 +273,33 @@ public class CursoDesempenhoService : ICursoDesempenhoService
             DesempenhoMedio = progressosComMedia.Count > 0 ? Math.Round(progressosComMedia.Average(progresso => progresso.MediaModulo), 2) : 0,
             Materiais = materiaisDto,
             Avaliacoes = avaliacoesDto
+        };
+    }
+
+    private static AvaliacaoDesempenhoResponseDto MontarAvaliacaoDto(
+        Avaliacao avaliacao,
+        int totalAlunos,
+        Dictionary<int, (int Participantes, decimal MediaNota)> estatisticasPorAvaliacaoId)
+    {
+        var estatistica = estatisticasPorAvaliacaoId.TryGetValue(avaliacao.Id, out var valor)
+            ? valor
+            : (Participantes: 0, MediaNota: 0m);
+
+        return new AvaliacaoDesempenhoResponseDto
+        {
+            AvaliacaoId = avaliacao.Id,
+            Titulo = avaliacao.Titulo,
+            TipoAvaliacao = avaliacao.TipoAvaliacao,
+            StatusPublicacao = avaliacao.StatusPublicacao,
+            TotalParticipantes = estatistica.Participantes,
+            MediaNota = Math.Round(estatistica.MediaNota, 2),
+            NotaMaxima = avaliacao.NotaMaxima,
+            PercentualConclusao = totalAlunos > 0
+                ? Math.Round((decimal)estatistica.Participantes / totalAlunos * 100, 1)
+                : 0,
+            PercentualAproveitamento = avaliacao.NotaMaxima > 0
+                ? Math.Round(estatistica.MediaNota / avaliacao.NotaMaxima * 100, 1)
+                : 0
         };
     }
 }

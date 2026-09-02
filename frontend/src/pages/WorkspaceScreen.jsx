@@ -784,14 +784,18 @@ export default function WorkspaceScreen({
               isProfessor ? (
                 <SecaoTurmasProfessor cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
               ) : role === "Coordenador" ? (
-                <SecaoDesempenhoCoordenador cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
+                <SecaoDesempenhoCoordenador
+                  cursoEmFoco={cursoEmFocoPorSecao.turmas}
+                  cursoPorId={cursoByIdParaTurmas}
+                  onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
+                  onSessionExpired={onSessionExpired}
+                />
               ) : (
                 <SecaoTurmas
                   alunos={snapshot.alunos}
                   cursoPorId={cursoByIdParaTurmas}
                   cursoEmFoco={cursoEmFocoPorSecao.turmas}
                   ehGestor={isManager}
-                  ehProfessor={false}
                   matriculas={snapshot.matriculas}
                   onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
                   onRefresh={() => setRefreshKey((current) => current + 1)}

@@ -11,6 +11,7 @@ import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
 import WorkspaceScreen from "./pages/WorkspaceScreen.jsx";
 import { createDemoSession, disableDemoMode, enableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
 import { apiRequest } from "./lib/api.js";
+import { applyPageMetadata } from "./lib/pageMetadata.js";
 import { navigate, readRoute } from "./lib/router.js";
 import { clearSession, persistSession, readSession } from "./lib/session.js";
 
@@ -36,6 +37,10 @@ export default function App() {
     window.addEventListener("popstate", syncRoute);
     return () => window.removeEventListener("popstate", syncRoute);
   }, []);
+
+  useEffect(() => {
+    applyPageMetadata(route.kind);
+  }, [route.kind]);
 
   useEffect(() => {
     if (sessionReady && route.kind === "app" && !session.user) {

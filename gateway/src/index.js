@@ -24,7 +24,21 @@ app.use(
   createProxyMiddleware({
     target: DOTNET_API_URL,
     changeOrigin: true,
-    pathFilter: ["/api", "/uploads"]
+    pathFilter: ["/api", "/uploads"],
+    on: {
+      // Sem isso, uma falha no upstream (.NET fora do ar, timeout) vaza o
+      // erro cru do http-proxy-middleware (stack trace/detalhe interno) pro
+      // cliente em vez de uma resposta JSON padrao como o resto da API.
+      error: (err, req, res) => {
+        console.error(`Erro ao repassar ${req.method} ${req.url} para ${DOTNET_API_URL}:`, err.message);
+
+        if (!res.headersSent) {
+          res.writeHead(502, { "Content-Type": "application/json" });
+        }
+
+        res.end(JSON.stringify({ erro: "Nao foi possivel se comunicar com a API no momento.", status: 502 }));
+      }
+    }
   })
 );
 

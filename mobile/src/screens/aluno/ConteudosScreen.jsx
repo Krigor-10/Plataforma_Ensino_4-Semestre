@@ -126,35 +126,49 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
               {aberto ? (
                 <View style={estilos.itensLista}>
                   {modulo.conteudos.map((conteudo) => (
-                    <View key={conteudo.id} style={[estilos.item, conteudo.concluido ? estilos.itemConcluido : null]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[estilos.itemTitulo, conteudo.concluido ? estilos.itemTituloConcluido : null]}>{conteudo.titulo}</Text>
-                        <Text style={estilos.itemMeta}>{normalizeContentType(conteudo.tipoConteudo)}</Text>
-                      </View>
-                      {conteudo.bloqueado ? (
-                        <Text style={estilos.itemIcone}>🔒</Text>
-                      ) : conteudo.concluido ? (
-                        <Text style={estilos.itemStatusOk}>Concluido</Text>
-                      ) : (
-                        <View style={estilos.itemAcoes}>
-                          {conteudo.arquivoUrl || conteudo.linkUrl ? (
-                            <TouchableOpacity onPress={() => abrirConteudo(conteudo)} style={estilos.botaoSecundario}>
-                              <Text style={estilos.botaoSecundarioTexto}>Abrir</Text>
+                    <View key={conteudo.id}>
+                      <View style={[estilos.item, conteudo.concluido ? estilos.itemConcluido : null]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[estilos.itemTitulo, conteudo.concluido ? estilos.itemTituloConcluido : null]}>{conteudo.titulo}</Text>
+                          <Text style={estilos.itemMeta}>{normalizeContentType(conteudo.tipoConteudo)}</Text>
+                        </View>
+                        {conteudo.bloqueado ? (
+                          <Text style={estilos.itemIcone}>🔒</Text>
+                        ) : conteudo.concluido ? (
+                          <Text style={estilos.itemStatusOk}>Concluido</Text>
+                        ) : (
+                          <View style={estilos.itemAcoes}>
+                            {conteudo.arquivoUrl || conteudo.linkUrl ? (
+                              <TouchableOpacity onPress={() => abrirConteudo(conteudo)} style={estilos.botaoSecundario}>
+                                <Text style={estilos.botaoSecundarioTexto}>Abrir</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                            <TouchableOpacity
+                              disabled={conteudoProcessando === conteudo.id}
+                              onPress={() => marcarConcluido(conteudo.id)}
+                              style={estilos.botaoSecundario}
+                            >
+                              {conteudoProcessando === conteudo.id ? (
+                                <ActivityIndicator color={cores.destaque} size="small" />
+                              ) : (
+                                <Text style={estilos.botaoSecundarioTexto}>Concluir</Text>
+                              )}
                             </TouchableOpacity>
-                          ) : null}
-                          <TouchableOpacity
-                            disabled={conteudoProcessando === conteudo.id}
-                            onPress={() => marcarConcluido(conteudo.id)}
-                            style={estilos.botaoSecundario}
-                          >
-                            {conteudoProcessando === conteudo.id ? (
-                              <ActivityIndicator color={cores.destaque} size="small" />
-                            ) : (
-                              <Text style={estilos.botaoSecundarioTexto}>Concluir</Text>
-                            )}
+                          </View>
+                        )}
+                      </View>
+
+                      {(conteudo.quizzes || []).map((quiz) => (
+                        <View key={`quiz-${quiz.id}`} style={estilos.itemQuizAninhado}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={estilos.itemTitulo}>🏆 {quiz.titulo}</Text>
+                            <Text style={estilos.itemMeta}>Quiz deste material - {quiz.totalQuestoes || 0} questao(oes)</Text>
+                          </View>
+                          <TouchableOpacity onPress={() => setQuizSelecionado(quiz)} style={estilos.botaoSecundario}>
+                            <Text style={estilos.botaoSecundarioTexto}>Iniciar quiz</Text>
                           </TouchableOpacity>
                         </View>
-                      )}
+                      ))}
                     </View>
                   ))}
 
@@ -210,6 +224,16 @@ const estilos = StyleSheet.create({
   moduloIcone: { color: cores.textoSuave, fontSize: 18, marginLeft: 8 },
   itensLista: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
   item: { flexDirection: "row", alignItems: "center", backgroundColor: cores.fundo, borderRadius: 10, padding: 12, gap: 10 },
+  itemQuizAninhado: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: cores.fundo,
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
+    marginTop: 8,
+    marginLeft: 16
+  },
   itemConcluido: { opacity: 0.65 },
   itemTitulo: { color: cores.texto, fontWeight: "600" },
   itemTituloConcluido: { textDecorationLine: "line-through" },

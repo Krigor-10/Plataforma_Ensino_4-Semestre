@@ -34,5 +34,10 @@ export default defineConfig({
     outDir: resolve(currentDir, "../wwwroot"),
     assetsDir: "assets/react",
     emptyOutDir: true
+  },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./src/test/setup.js"]
   }
 });

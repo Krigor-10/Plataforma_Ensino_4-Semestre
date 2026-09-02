@@ -43,7 +43,7 @@ const ICONE_TIPO_MATERIAL = {
    (GET /Cursos/desempenho), que ja escopa por coordenador autenticado.
    "Turma" nao aparece em lugar nenhum desta tela — e so uma abstracao interna
    do backend, 1:1 com o curso na pratica. */
-export function SecaoDesempenhoCoordenador({ cursoPorId, onSessionExpired }) {
+export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmFocoAplicado, onSessionExpired }) {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [cursosDesempenho, setCursosDesempenho] = useState([]);
@@ -87,6 +87,22 @@ export function SecaoDesempenhoCoordenador({ cursoPorId, onSessionExpired }) {
       ativo = false;
     };
   }, [onSessionExpired]);
+
+  const cursoEmFocoId = Number(cursoEmFoco?.cursoId || 0);
+
+  useEffect(() => {
+    if (!cursoEmFocoId || carregando) {
+      return;
+    }
+
+    const cursoAlvo = cursosDesempenho.find((curso) => curso.cursoId === cursoEmFocoId);
+    if (cursoAlvo) {
+      setCursoSelecionadoId(cursoEmFocoId);
+    }
+
+    onCursoEmFocoAplicado?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursoEmFocoId, carregando]);
 
   const cursoSelecionado = useMemo(
     () => cursosDesempenho.find((curso) => curso.cursoId === cursoSelecionadoId) || null,
@@ -157,6 +173,45 @@ export function SecaoDesempenhoCoordenador({ cursoPorId, onSessionExpired }) {
             <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCircleCheck size={22} />} rotulo="Taxa de conclusao" valor={formatPercent(cursoSelecionado.percentualConclusao)} />
             <CartaoEstatistica icone={<TbAward size={22} />} rotulo="Desempenho medio" valor={formatGrade(cursoSelecionado.desempenhoMedio)} />
           </div>
+
+          {cursoSelecionado.avaliacoesSemModulo?.length > 0 ? (
+            <section className="conteudos-modulo conteudos-modulo--sem-toggle" aria-label="Avaliacoes do curso">
+              <header className="conteudos-modulo__cabecalho">
+                <div className="conteudos-modulo__info">
+                  <span aria-hidden="true" className="conteudos-modulo__icone">
+                    <TbTrophy size="1.4rem" />
+                  </span>
+                  <span className="conteudos-modulo__titulo">Avaliacoes do curso</span>
+                  <span className="conteudos-modulo__contagem">
+                    {cursoSelecionado.avaliacoesSemModulo.length} avaliacao{cursoSelecionado.avaliacoesSemModulo.length === 1 ? "" : "oes"}
+                  </span>
+                </div>
+              </header>
+              <p className="atividades-curso__meta conteudos-modulo__descricao">Provas e exercicios vinculados direto ao curso, sem modulo.</p>
+              <ul aria-label="Avaliacoes vinculadas direto ao curso" className="atividades-curso__lista" role="list">
+                {cursoSelecionado.avaliacoesSemModulo.map((avaliacao) => (
+                  <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
+                    <div className="atividades-curso__linha">
+                      <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                        <TbTrophy aria-hidden="true" size="1.75rem" />
+                      </span>
+                      <div className="atividades-curso__corpo">
+                        <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
+                        <p className="atividades-curso__meta">
+                          <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
+                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                          <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                        </p>
+                      </div>
+                      <div className="atividades-curso__metrica">
+                        {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"} · Media {formatGrade(avaliacao.mediaNota)}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {cursoSelecionado.modulos.length === 0 ? (
             <EmptyState message="Este curso ainda nao tem modulos cadastrados." />

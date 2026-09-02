@@ -13,6 +13,7 @@ public class CursoDesempenhoResponseDto
     public decimal PercentualConclusao { get; set; }
     public decimal DesempenhoMedio { get; set; }
     public List<ModuloDesempenhoResponseDto> Modulos { get; set; } = new();
+    public List<AvaliacaoDesempenhoResponseDto> AvaliacoesSemModulo { get; set; } = new();
 }
 
 public class ModuloDesempenhoResponseDto

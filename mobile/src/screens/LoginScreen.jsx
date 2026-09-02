@@ -13,8 +13,8 @@ import {
 import { apiRequest } from "../lib/api.js";
 
 export default function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState("admin@edtech.local");
-  const [senha, setSenha] = useState("Edtech@123");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
 
@@ -56,6 +56,8 @@ export default function LoginScreen({ onLogin }) {
             autoCapitalize="none"
             keyboardType="email-address"
             onChangeText={setEmail}
+            placeholder="seu.email@exemplo.com"
+            placeholderTextColor="#6d6478"
             style={styles.entrada}
             value={email}
           />
@@ -63,7 +65,14 @@ export default function LoginScreen({ onLogin }) {
 
         <View style={styles.campo}>
           <Text style={styles.rotulo}>Senha</Text>
-          <TextInput onChangeText={setSenha} secureTextEntry style={styles.entrada} value={senha} />
+          <TextInput
+            onChangeText={setSenha}
+            placeholder="Sua senha"
+            placeholderTextColor="#6d6478"
+            secureTextEntry
+            style={styles.entrada}
+            value={senha}
+          />
         </View>
 
         {erro ? <Text style={styles.erro}>{erro}</Text> : null}

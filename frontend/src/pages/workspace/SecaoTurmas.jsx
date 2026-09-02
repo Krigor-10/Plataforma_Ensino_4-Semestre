@@ -23,7 +23,6 @@ export function SecaoTurmas({
   alunos = [],
   cursoEmFoco,
   ehGestor,
-  ehProfessor,
   matriculas = [],
   turmas,
   cursoPorId,
@@ -74,7 +73,7 @@ export function SecaoTurmas({
     };
   }, [menuAberto]);
 
-  const podeGerenciarTurmas = Boolean(ehGestor && !ehProfessor);
+  const podeGerenciarTurmas = Boolean(ehGestor);
   const podeAtribuirProfessor = podeGerenciarTurmas;
 
   const alunoPorId = useMemo(() => mapById(alunos), [alunos]);
@@ -399,7 +398,7 @@ export function SecaoTurmas({
                 ) : null}
               </div>
               <p className="cabecalho-pagina__subtitulo">
-                {ehProfessor ? `${total} turma${total !== 1 ? "s" : ""} sob sua responsabilidade` : `${total} turma${total !== 1 ? "s" : ""} cadastrada${total !== 1 ? "s" : ""}`}
+                {total} turma{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
               </p>
             </div>
           </header>

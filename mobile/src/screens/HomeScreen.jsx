@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiRequest } from "../lib/api.js";
+import { apiRequest, ApiError } from "../lib/api.js";
 
-export default function HomeScreen({ onLogout, usuario }) {
+export default function HomeScreen({ onLogout, onSessionExpired, usuario }) {
   const [cursos, setCursos] = useState([]);
   const [status, setStatus] = useState("loading");
   const [erro, setErro] = useState("");
   const insets = useSafeAreaInsets();
+
+  // Ref em vez de dependencia direta: onSessionExpired vem do App raiz sem
+  // useCallback, entao muda de referencia a cada render — colocar na
+  // dependencia do effect refaria o GET /Cursos a cada render em vez de so
+  // no mount (mesmo motivo do AlunoWorkspace.jsx).
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onSessionExpiredRef.current = onSessionExpired;
 
   useEffect(() => {
     let ignore = false;
@@ -20,10 +27,17 @@ export default function HomeScreen({ onLogout, usuario }) {
         }
       })
       .catch((err) => {
-        if (!ignore) {
-          setErro(err.message || "Nao foi possivel carregar os cursos.");
-          setStatus("error");
+        if (ignore) {
+          return;
         }
+
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpiredRef.current?.();
+          return;
+        }
+
+        setErro(err.message || "Nao foi possivel carregar os cursos.");
+        setStatus("error");
       });
 
     return () => {

@@ -31,6 +31,11 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-titulo"
+      /* Nao fecha o modal (clicar fora nao tem esse comportamento aqui, so
+         Escape/botao fecham) — isola qualquer clique dentro do modal (incluindo
+         o fundo) de listeners de "clique fora" em document, como os menus de
+         contexto "..." de SecaoCursos/SecaoModulos/SecaoTurmas/SecaoAvaliacoesProfessor
+         e o TooltipGlobal, que senao fechariam/escondiam ao interagir com o modal. */
       onClick={(e) => e.stopPropagation()}
     >
       <article ref={refModal} className={`modal-caixa${className ? ` ${className}` : ""}`}>

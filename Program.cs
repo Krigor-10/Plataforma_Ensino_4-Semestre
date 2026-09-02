@@ -200,12 +200,15 @@ app.UseStaticFiles(new StaticFileOptions
 app.MapControllers();
 app.MapHealthChecks("/health").AllowAnonymous();
 
-app.MapOpenApi();
-
-app.MapScalarApiReference(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.Title = "PlataformaEnsino API";
-});
+    app.MapOpenApi();
+
+    app.MapScalarApiReference(options =>
+    {
+        options.Title = "PlataformaEnsino API";
+    });
+}
 
 app.MapFallbackToFile("index.html");
 

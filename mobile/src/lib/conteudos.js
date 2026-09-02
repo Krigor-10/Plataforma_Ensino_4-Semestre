@@ -92,9 +92,13 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
     curso.totalConteudos += 1;
     curso.concluidos += concluido ? 1 : 0;
     modulo.concluidos += concluido ? 1 : 0;
-    modulo.conteudos.push({ ...conteudo, concluido, progresso });
+    modulo.conteudos.push({ ...conteudo, concluido, progresso, quizzes: [] });
   });
 
+  // Quiz vinculado a um material especifico (avaliacao.conteudoDidaticoId) fica
+  // aninhado nesse conteudo em vez de solto no modulo — espelha o mesmo
+  // criterio de SecoesAluno.jsx (web), so que la o material morador e achado
+  // via modulo.conteudos.find, aqui idem.
   (avaliacoes || [])
     .filter((avaliacao) => Number(avaliacao.tipoAvaliacao) === 1)
     .forEach((avaliacao) => {
@@ -109,7 +113,15 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
         return;
       }
 
-      modulo.quizzes.push(avaliacao);
+      const material = avaliacao.conteudoDidaticoId
+        ? modulo.conteudos.find((conteudo) => conteudo.id === avaliacao.conteudoDidaticoId)
+        : null;
+
+      if (material) {
+        material.quizzes.push(avaliacao);
+      } else {
+        modulo.quizzes.push(avaliacao);
+      }
     });
 
   return [...cursosMapeados.values()].map((curso) => {

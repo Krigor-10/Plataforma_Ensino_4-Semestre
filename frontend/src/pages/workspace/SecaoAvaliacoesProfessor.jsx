@@ -913,7 +913,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
                 onClick={() => {
                   const alvo = avaliacaoDetalhe;
                   fecharDetalheAvaliacao();
-                  abrirMontagemQuestoes(alvo);
+                  abrirEdicaoAvaliacao(alvo);
                 }}
                 type="button"
               >
