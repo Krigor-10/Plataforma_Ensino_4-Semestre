@@ -279,7 +279,7 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
             curso: cursoPorId.get(linha.cursoId) || { id: linha.cursoId, titulo: linha.curso, descricao: "" },
             resumo: `${linha.modulos} modulo${linha.modulos === 1 ? "" : "s"}`,
             rodapeEsquerda: linha.turma,
-            badge: `${Math.round(Math.max(0, Math.min(linha.progresso, 100)))}% concluido`
+            percentual: Math.round(Math.max(0, Math.min(linha.progresso, 100)))
           }))}
           mensagemVazia="Assim que uma matricula for aprovada, os seus cursos ativos vao aparecer aqui."
           onSelecionar={selecionarCurso}
