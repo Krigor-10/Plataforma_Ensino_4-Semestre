@@ -7,6 +7,7 @@ import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.j
 import { SecaoConteudosProfessor } from "./workspace/SecaoConteudosProfessor.jsx";
 import { SecaoCoordenadores } from "./workspace/SecaoCoordenadores.jsx";
 import { SecaoCursos } from "./workspace/SecaoCursos.jsx";
+import { SecaoDesempenhoCoordenador } from "./workspace/SecaoDesempenhoCoordenador.jsx";
 import { SecaoModulos } from "./workspace/SecaoModulos.jsx";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./workspace/SecoesAluno.jsx";
 import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./workspace/SecaoMatriculas.jsx";
@@ -60,7 +61,7 @@ export default function WorkspaceScreen({
           return { ...section, label: "Catalogo de Cursos" };
         }
 
-        if (section.key === "turmas" && role === "Professor") {
+        if (section.key === "turmas" && (role === "Professor" || role === "Coordenador")) {
           return { ...section, label: "Progresso" };
         }
 
@@ -85,7 +86,8 @@ export default function WorkspaceScreen({
   const ocultarHeroGenerico =
     (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
     (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
-    (isProfessor && activeSection === "turmas");
+    (isProfessor && activeSection === "turmas") ||
+    (role === "Coordenador" && activeSection === "turmas");
 
   useEffect(() => {
     const canonicalPath =
@@ -781,6 +783,8 @@ export default function WorkspaceScreen({
             {activeSection === "turmas" ? (
               isProfessor ? (
                 <SecaoTurmasProfessor cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
+              ) : role === "Coordenador" ? (
+                <SecaoDesempenhoCoordenador cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
               ) : (
                 <SecaoTurmas
                   alunos={snapshot.alunos}

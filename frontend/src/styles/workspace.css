@@ -4298,6 +4298,42 @@
   bottom: calc(100% + 6px);
 }
 
+/* Mesmo padrao de cartao com borda, reaplicado nos MODULOS da tela Progresso
+   do Coordenador (Curso -> Modulos -> Materiais/Avaliacoes, sem nenhuma acao
+   administrativa — so leitura). */
+.tela-progresso-coordenador .conteudos-modulo {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: 0 var(--espaco-md);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-bottom-color: var(--cor-borda-forte);
+}
+
+/* Metrica de progresso/desempenho alinhada a direita na linha de material ou
+   avaliacao (mesma posicao de .atividades-curso__acoes, so com texto em vez
+   de botoes, ja que a Coordenacao so visualiza — nao gerencia). */
+.atividades-curso__metrica {
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+@media (max-width: 30rem) {
+  .atividades-curso__metrica {
+    white-space: normal;
+    text-align: right;
+  }
+}
+
 /* Mesmo padrao de cartao com borda das Avaliacoes do professor, reaplicado
    em CADA MODULO da tela Conteudos do PROFESSOR (o container externo da
    estrutura Modulo -> Conteudos). Modificador ".conteudos-modulo--editavel"

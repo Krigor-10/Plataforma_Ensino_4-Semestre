@@ -156,11 +156,13 @@ export function getSectionMeta(section, role) {
           : "Acompanhamento das solicitacoes e do status academico."
     },
     turmas: {
-      title: role === "Professor" ? "Progresso" : "Mapa de turmas",
+      title: role === "Professor" || role === "Coordenador" ? "Progresso" : "Mapa de turmas",
       description:
         role === "Professor"
           ? "Acompanhe o desempenho dos seus cursos e avaliacoes."
-          : "Turmas organizadas para atribuicao e acompanhamento dentro do produto."
+          : role === "Coordenador"
+            ? "Progresso e desempenho dos cursos, modulos e materiais sob sua coordenacao."
+            : "Turmas organizadas para atribuicao e acompanhamento dentro do produto."
     },
     certificados: {
       title: "Meus certificados",
