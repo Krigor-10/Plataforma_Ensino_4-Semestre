@@ -107,8 +107,8 @@ export function getSectionMeta(section, role) {
       description: "Resumo central do workspace React com dados reais do backend."
     },
     "meus-cursos": {
-      title: "Meus cursos",
-      description: "Atalho para as turmas e os cursos que ja fazem parte da sua jornada ativa."
+      title: "Progresso",
+      description: "Acompanhe o andamento dos seus cursos ativos, modulo a modulo."
     },
     "cursos-matriculados": {
       title: "Meus Cursos",

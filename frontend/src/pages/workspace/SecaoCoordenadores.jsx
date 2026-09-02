@@ -321,7 +321,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
   return (
     <div className="tela-coordenadores">
-      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
           <p className="cabecalho-pagina__subtitulo">{coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"}</p>
@@ -343,7 +343,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </div>
       </header>
 
-      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+      <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
@@ -366,7 +366,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               </th>
               <th scope="col">Curso sob supervisao</th>
               <th scope="col">Status</th>
-              <th scope="col" style={{ width: 48 }} />
+              <th className="tabela-dados__col-acoes" scope="col" />
             </tr>
           </thead>
           <tbody>
@@ -547,7 +547,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
             </footer>
           }
         >
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+          <p className="texto-confirmacao-exclusao">
             Deseja excluir a coordenacao de <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
@@ -612,9 +612,9 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                 <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
               </div>
               {coordenadorEmEdicaoId ? (
-                <div className="campo formulario-perfil__campo--largo" style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+                <div className="campo campo--linha formulario-perfil__campo--largo">
                   <input checked={dadosFormulario.ativo} disabled={salvando} id="coordenador-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
-                  <label className="campo__rotulo" htmlFor="coordenador-ativo" style={{ marginBottom: 0 }}>Conta ativa</label>
+                  <label className="campo__rotulo" htmlFor="coordenador-ativo">Conta ativa</label>
                 </div>
               ) : (
                 <>

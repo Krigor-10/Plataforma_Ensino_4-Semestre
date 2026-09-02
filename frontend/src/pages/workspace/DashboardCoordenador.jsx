@@ -28,7 +28,28 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
   const meusCursos = cursos.filter((curso) => Number(curso.coordenadorId) === Number(usuario.id));
   const idsMeusCursos = new Set(meusCursos.map((curso) => Number(curso.id)));
   const turmasVinculadas = turmas.filter((turma) => idsMeusCursos.has(Number(turma.cursoId)));
-  const turmasDosMeusCursos = turmasVinculadas.slice(0, 4);
+  const turmaPorCursoId = new Map(turmasVinculadas.map((turma) => [Number(turma.cursoId), turma]));
+
+  const cursosAcompanhados = meusCursos
+    .map((curso) => {
+      const turma = turmaPorCursoId.get(Number(curso.id));
+      if (!turma) {
+        return null;
+      }
+
+      const alunosDoCurso = matriculas.filter(
+        (matricula) => Number(matricula.turmaId) === Number(turma.id) && matricula.status === "Aprovada"
+      ).length;
+
+      return {
+        id: curso.id,
+        titulo: curso.titulo,
+        professorNome: professorPorId.get(Number(turma.professorId))?.nome || "Sem professor atribuido",
+        alunos: alunosDoCurso
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 4);
 
   const totalAlunosMatriculados = new Set(
     matriculas
@@ -61,7 +82,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
           <CartaoEstatistica
             corBorda="var(--cor-sucesso)"
             icone={<MdGroups size={22} />}
-            rotulo="Turmas vinculadas"
+            rotulo="Cursos ativos"
             valor={turmasVinculadas.length}
           />
           <CartaoEstatistica
@@ -98,33 +119,28 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
 
       <section aria-labelledby="titulo-turmas-coord" className="painel-secao" style={{ marginTop: "var(--espaco-xl)" }}>
         <header className="painel-secao__cabecalho">
-          <h2 className="painel-secao__titulo" id="titulo-turmas-coord">Turmas sob coordenacao</h2>
+          <h2 className="painel-secao__titulo" id="titulo-turmas-coord">Cursos acompanhados</h2>
           <Botao onClick={() => onMudarSecao("turmas")} tamanho="pequeno" variante="fantasma">
-            Ver todas <MdChevronRight aria-hidden="true" size={14} />
+            Ver todos <MdChevronRight aria-hidden="true" size={14} />
           </Botao>
         </header>
         <div className="painel-secao__conteudo">
-          {turmasDosMeusCursos.length > 0 ? (
+          {cursosAcompanhados.length > 0 ? (
             <ul className="lista-turmas" role="list">
-              {turmasDosMeusCursos.map((turma) => {
-                const alunosDaTurma = matriculas.filter(
-                  (matricula) => Number(matricula.turmaId) === Number(turma.id) && matricula.status === "Aprovada"
-                ).length;
-                return (
-                  <li className="item-turma" key={turma.id}>
-                    <div className="item-turma__info">
-                      <strong className="item-turma__nome">{turma.nomeTurma}</strong>
-                      <span className="item-turma__curso">{professorPorId.get(Number(turma.professorId))?.nome || "Sem professor atribuido"}</span>
-                    </div>
-                    <div className="item-turma__meta">
-                      <span>{alunosDaTurma} alunos</span>
-                    </div>
-                  </li>
-                );
-              })}
+              {cursosAcompanhados.map((curso) => (
+                <li className="item-turma" key={curso.id}>
+                  <div className="item-turma__info">
+                    <strong className="item-turma__nome">{curso.titulo}</strong>
+                    <span className="item-turma__curso">{curso.professorNome}</span>
+                  </div>
+                  <div className="item-turma__meta">
+                    <span>{curso.alunos} alunos</span>
+                  </div>
+                </li>
+              ))}
             </ul>
           ) : (
-            <EmptyState message="Nenhuma turma encontrada para os cursos sob sua coordenacao." />
+            <EmptyState message="Nenhum curso acompanhado sob sua coordenacao ainda." />
           )}
         </div>
       </section>

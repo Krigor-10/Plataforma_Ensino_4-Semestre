@@ -538,7 +538,7 @@ export function SecaoTurmas({
             </footer>
           }
         >
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+          <p className="texto-confirmacao-exclusao">
             Deseja excluir a turma <strong>{turmaParaExcluir.nomeTurma}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusaoTurma ? <InlineMessage tone="error">{mensagemExclusaoTurma}</InlineMessage> : null}

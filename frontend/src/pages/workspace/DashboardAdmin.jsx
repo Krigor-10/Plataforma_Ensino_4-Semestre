@@ -61,7 +61,7 @@ const ACESSO_RAPIDO = [
   { icone: <MdDescription size={20} />, rotulo: "Professores", secao: "professores" }
 ];
 
-export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, pendencias = [], professores = [] }) {
+export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, pendencias = [], professores = [], usuario }) {
   const alunosAtivos = alunos.filter((aluno) => aluno.ativo).length;
   const totalUsuarios = alunos.length + professores.length + coordenadores.length;
   const aprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada").length;
@@ -87,7 +87,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
     <div className="dashboard-admin">
       <header className="cabecalho-pagina">
         <div>
-          <h1 className="cabecalho-pagina__titulo">Painel administrativo</h1>
+          <h1 className="cabecalho-pagina__titulo">Ola, {(usuario?.nome ?? "").split(" ")[0]}</h1>
           <p className="cabecalho-pagina__subtitulo">Visao geral da plataforma</p>
         </div>
       </header>

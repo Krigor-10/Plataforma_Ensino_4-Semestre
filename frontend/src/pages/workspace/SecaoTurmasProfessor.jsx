@@ -156,7 +156,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
           <nav aria-label="Navegacao das turmas" className="atividades-curso__navegacao">
             <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
               <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Turmas
+              Voltar para Progresso
             </button>
           </nav>
 

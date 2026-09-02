@@ -592,6 +592,7 @@ export default function WorkspaceScreen({
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   pendencias={pendingRows}
                   professores={snapshot.professores}
+                  usuario={usuario}
                 />
               ) : role === "Coordenador" ? (
                 <DashboardCoordenador

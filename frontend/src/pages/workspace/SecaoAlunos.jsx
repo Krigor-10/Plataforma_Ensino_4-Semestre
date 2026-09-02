@@ -139,7 +139,7 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
 
   return (
     <div className="tela-alunos">
-      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Alunos</h2>
           <p className="cabecalho-pagina__subtitulo">
@@ -163,7 +163,7 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
         </div>
       </header>
 
-      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+      <div className="barra-filtros">
         <select
           aria-label="Filtrar alunos por status"
           className="campo__entrada barra-filtros__select"
@@ -194,7 +194,7 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
               <th scope="col">Cadastro</th>
               <th scope="col">Cursos matriculados</th>
               <th scope="col">Status</th>
-              <th scope="col" style={{ width: 48 }} />
+              <th className="tabela-dados__col-acoes" scope="col" />
             </tr>
           </thead>
           <tbody>

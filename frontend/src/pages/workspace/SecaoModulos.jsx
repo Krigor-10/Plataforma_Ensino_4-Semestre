@@ -341,7 +341,7 @@ export function SecaoModulos({
             </footer>
           }
         >
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+          <p className="texto-confirmacao-exclusao">
             Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
           </p>
         </Modal>

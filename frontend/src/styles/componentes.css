@@ -349,6 +349,58 @@
   max-width: min(13.75rem, 100%);
 }
 
+/* Wrapper da barra de filtros/acoes em lote — reaproveitada nas listas de
+   Alunos/Professores/Coordenadores/Cursos, que antes repetiam o mesmo
+   style inline em cada arquivo. */
+.barra-filtros {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+/* Modificador de .cabecalho-pagina pras telas de gestao (Alunos/Professores/
+   Coordenadores/Cursos), que centralizam o cabecalho verticalmente em vez
+   do align-items:flex-start padrao. */
+.cabecalho-pagina--centralizado {
+  align-items: center;
+}
+
+/* Divisor vertical fino, reaproveitavel em barras de filtro/acao — antes
+   reimplementado via style inline (e em px) em vez de usar uma classe
+   compartilhada. */
+.divisor-vertical {
+  background: var(--cor-borda);
+  flex-shrink: 0;
+  height: 1.5rem;
+  width: 0.0625rem;
+}
+
+/* Texto de confirmacao dentro dos modais "Excluir X" — reaproveitado nas
+   telas de gestao pra evitar repetir o mesmo style inline em cada uma. */
+.texto-confirmacao-exclusao {
+  color: var(--cor-texto-suave);
+  margin-bottom: 0;
+}
+
+/* Coluna de acoes (menu "...") sem cabecalho visivel nas tabelas de gestao. */
+.tabela-dados__col-acoes {
+  width: 3rem;
+}
+
+/* Campo em linha (checkbox + rotulo lado a lado), reaproveitado nos
+   formularios "Conta ativa" de Professor/Coordenador. */
+.campo--linha {
+  align-items: center;
+  display: flex;
+  gap: var(--espaco-sm);
+}
+
+.campo--linha .campo__rotulo {
+  margin-bottom: 0;
+}
+
 .campo-busca__icone {
   color: var(--cor-texto-mudo);
   left: 0.625rem;

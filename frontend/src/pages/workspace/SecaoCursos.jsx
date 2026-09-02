@@ -392,7 +392,7 @@ export function SecaoCursos({
 
   return (
     <div className="tela-cursos">
-      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Cursos</h2>
           <p className="cabecalho-pagina__subtitulo">
@@ -426,7 +426,7 @@ export function SecaoCursos({
       </section>
 
       {ehAdmin ? (
-        <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+        <div className="barra-filtros">
           <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
           <select
             className="campo__entrada barra-filtros__select"
@@ -446,7 +446,7 @@ export function SecaoCursos({
             Limpar filtros
           </Botao>
 
-          <span aria-hidden="true" style={{ background: "var(--cor-borda)", flexShrink: 0, height: "24px", width: "1px" }} />
+          <span aria-hidden="true" className="divisor-vertical" />
 
           <label style={{ alignItems: "center", color: "var(--cor-texto-suave)", display: "flex", fontSize: "0.82rem", gap: "6px" }}>
             <input

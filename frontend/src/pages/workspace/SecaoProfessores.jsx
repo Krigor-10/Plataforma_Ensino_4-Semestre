@@ -323,7 +323,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
 
   return (
     <div className="tela-professores">
-      <header className="cabecalho-pagina" style={{ alignItems: "center" }}>
+      <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Professores</h2>
           <p className="cabecalho-pagina__subtitulo">{professores.length} cadastrado{professores.length === 1 ? "" : "s"}</p>
@@ -345,7 +345,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </div>
       </header>
 
-      <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-md)", marginBottom: "var(--espaco-lg)" }}>
+      <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
@@ -369,7 +369,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               <th scope="col">Especialidade</th>
               <th scope="col">Cursos em andamento</th>
               <th scope="col">Status</th>
-              <th scope="col" style={{ width: 48 }} />
+              <th className="tabela-dados__col-acoes" scope="col" />
             </tr>
           </thead>
           <tbody>
@@ -557,7 +557,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
             </footer>
           }
         >
-          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+          <p className="texto-confirmacao-exclusao">
             Deseja excluir o professor <strong>{professorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
@@ -626,9 +626,9 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
                 <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-especialidade" maxLength={120} name="especialidade" onChange={atualizarCampo} placeholder="Ex.: Engenharia de Software" value={dadosFormulario.especialidade} />
               </div>
               {professorEmEdicaoId ? (
-                <div className="campo formulario-perfil__campo--largo" style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+                <div className="campo campo--linha formulario-perfil__campo--largo">
                   <input checked={dadosFormulario.ativo} disabled={salvando} id="professor-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
-                  <label className="campo__rotulo" htmlFor="professor-ativo" style={{ marginBottom: 0 }}>Conta ativa</label>
+                  <label className="campo__rotulo" htmlFor="professor-ativo">Conta ativa</label>
                 </div>
               ) : (
                 <>
