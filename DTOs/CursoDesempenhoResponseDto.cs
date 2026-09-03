@@ -6,6 +6,7 @@ public class CursoDesempenhoResponseDto
 {
     public int CursoId { get; set; }
     public string CursoTitulo { get; set; } = string.Empty;
+    public int? TurmaId { get; set; }
     public string? ProfessorNome { get; set; }
     public int TotalAlunos { get; set; }
     public int AlunosAtivos { get; set; }

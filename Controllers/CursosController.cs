@@ -118,9 +118,21 @@ public class CursosController : ControllerBase
     }
 
     [HttpGet("desempenho")]
-    [Authorize(Roles = "Coordenador")]
+    [Authorize(Roles = "Coordenador,Professor")]
     public async Task<IActionResult> ListarDesempenho()
     {
+        if (User.IsInRole("Professor"))
+        {
+            var professorId = ObterProfessorId();
+            if (!professorId.HasValue)
+            {
+                return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+            }
+
+            var desempenhoProfessor = await _cursoDesempenhoService.ObterDesempenhoPorProfessorAsync(professorId.Value);
+            return Ok(desempenhoProfessor);
+        }
+
         var coordenadorId = ObterCoordenadorId();
         if (!coordenadorId.HasValue)
         {

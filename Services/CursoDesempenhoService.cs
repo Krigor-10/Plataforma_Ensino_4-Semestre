@@ -24,23 +24,48 @@ public class CursoDesempenhoService : ICursoDesempenhoService
     }
 
     public async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorCoordenadorAsync(int coordenadorId)
-        => await ObterDesempenhoInternoAsync(coordenadorId, null);
+        => await ObterDesempenhoInternoAsync(coordenadorId: coordenadorId, professorId: null, cursoIdFiltro: null);
 
     public async Task<CursoDesempenhoResponseDto> ObterDesempenhoPorCursoAsync(int cursoId, int coordenadorId)
     {
-        var resultado = await ObterDesempenhoInternoAsync(coordenadorId, cursoId);
+        var resultado = await ObterDesempenhoInternoAsync(coordenadorId: coordenadorId, professorId: null, cursoIdFiltro: cursoId);
         return resultado.FirstOrDefault()
             ?? throw new KeyNotFoundException("Curso nao encontrado.");
     }
 
-    private async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoInternoAsync(int coordenadorId, int? cursoIdFiltro)
+    public async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorProfessorAsync(int professorId)
+        => await ObterDesempenhoInternoAsync(coordenadorId: null, professorId: professorId, cursoIdFiltro: null);
+
+    /* coordenadorId e professorId sao mutuamente exclusivos - exatamente um dos
+       dois deve vir preenchido, dependendo de qual papel esta consultando. O
+       resto da agregacao (modulos, materiais, avaliacoes, progresso) e 100%
+       compartilhado entre os dois papeis, so a fonte dos cursoIds difere. */
+    private async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoInternoAsync(int? coordenadorId, int? professorId, int? cursoIdFiltro)
     {
         var comparadorPtBr = StringComparer.Create(new CultureInfo("pt-BR"), false);
 
-        var cursos = await _context.Cursos
-            .AsNoTracking()
-            .Where(curso => curso.CoordenadorId == coordenadorId && (!cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value))
-            .ToListAsync();
+        List<Curso> cursos;
+        if (coordenadorId.HasValue)
+        {
+            cursos = await _context.Cursos
+                .AsNoTracking()
+                .Where(curso => curso.CoordenadorId == coordenadorId.Value && (!cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value))
+                .ToListAsync();
+        }
+        else
+        {
+            var cursoIdsDoProfessor = await _context.Turmas
+                .AsNoTracking()
+                .Where(turma => turma.ProfessorId == professorId!.Value)
+                .Select(turma => turma.CursoId)
+                .Distinct()
+                .ToListAsync();
+
+            cursos = await _context.Cursos
+                .AsNoTracking()
+                .Where(curso => cursoIdsDoProfessor.Contains(curso.Id) && (!cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value))
+                .ToListAsync();
+        }
 
         if (cursos.Count == 0)
         {
@@ -184,10 +209,15 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 .OrderBy(avaliacao => avaliacao.Titulo, comparadorPtBr)
                 .ToList();
 
+            var turmaIdDoCurso = turmaIdsPorCursoId.TryGetValue(curso.Id, out var turmaIdsDoCursoAtual)
+                ? turmaIdsDoCursoAtual.FirstOrDefault()
+                : (int?)null;
+
             resultado.Add(new CursoDesempenhoResponseDto
             {
                 CursoId = curso.Id,
                 CursoTitulo = curso.Titulo,
+                TurmaId = turmaIdDoCurso == 0 ? null : turmaIdDoCurso,
                 ProfessorNome = professorNomePorCursoId.TryGetValue(curso.Id, out var professorNome) ? professorNome : null,
                 TotalAlunos = totalAlunos,
                 AlunosAtivos = alunosAtivos,

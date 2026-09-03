@@ -3998,6 +3998,7 @@
    do Coordenador (Curso -> Modulos -> Materiais/Avaliacoes, sem nenhuma acao
    administrativa — so leitura). */
 .tela-progresso-coordenador .conteudos-modulo,
+.tela-progresso-professor .conteudos-modulo,
 .tela-progresso .conteudos-modulo {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
@@ -4006,11 +4007,13 @@
 }
 
 .tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child,
+.tela-progresso-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child,
 .tela-progresso .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
   border-bottom: 1px solid var(--cor-borda);
 }
 
 .tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]),
+.tela-progresso-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]),
 .tela-progresso .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
   border-bottom-color: var(--cor-borda-forte);
 }
@@ -4020,7 +4023,8 @@
    .conteudos-aluno (gap padrao entre blocos), entao sem essa margem os KPIs
    ficavam colados no primeiro item abaixo. Mesmo token ja usado pra separar
    cabecalho de listagem em .tela-avaliacoes. */
-.tela-progresso-coordenador .grade-estatisticas {
+.tela-progresso-coordenador .grade-estatisticas,
+.tela-progresso-professor .grade-estatisticas {
   margin-bottom: var(--espaco-xl);
 }
 
@@ -4597,104 +4601,6 @@
   align-items: flex-end;
   flex-shrink: 0;
   gap: 1px;
-}
-
-/* ------------------------------------------------------------
-   TURMAS DO PROFESSOR — analise de desempenho por avaliacao
-   (SecaoTurmasProfessor.jsx).
-   ------------------------------------------------------------ */
-.turmas-professor__indicadores {
-  margin-top: var(--espaco-xl);
-}
-
-.turmas-professor__secao-avaliacoes {
-  margin-top: var(--espaco-xl);
-  overflow: hidden;
-}
-
-.turmas-professor__avaliacoes-toggle {
-  width: 100%;
-  background: none;
-  border: none;
-  border-bottom: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--transicao-rapida);
-}
-
-.turmas-professor__avaliacoes-toggle:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.turmas-professor__avaliacoes-toggle:focus-visible {
-  outline: 2px solid var(--cor-marca-clara);
-  outline-offset: -2px;
-}
-
-.turmas-professor__avaliacoes-chevron {
-  flex-shrink: 0;
-  color: var(--cor-texto-suave);
-  transition: transform var(--transicao-rapida);
-}
-
-.turmas-professor__avaliacoes-chevron--aberto {
-  transform: rotate(180deg);
-}
-
-.turmas-professor__avaliacoes-conteudo {
-  border-top: 1px solid var(--cor-borda);
-}
-
-.turmas-professor__avaliacoes {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-md);
-}
-
-.turmas-professor__avaliacao {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  padding: var(--espaco-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-sm);
-}
-
-.turmas-professor__avaliacao-cabecalho {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
-}
-
-.turmas-professor__avaliacao-titulo {
-  font-size: 0.95rem;
-  color: var(--cor-texto-forte);
-}
-
-.turmas-professor__avaliacao-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espaco-xs);
-}
-
-.turmas-professor__avaliacao-metricas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--espaco-sm) var(--espaco-md);
-  font-size: 0.8125rem;
-  color: var(--cor-texto-suave);
-}
-
-.turmas-professor__avaliacao-metricas span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
 }
 
 .texto-mudo {
