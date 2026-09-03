@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import morgan from "morgan";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
@@ -13,6 +14,13 @@ const CORS_ORIGINS = (process.env.CORS_ORIGINS || "http://localhost:5173,http://
 
 const app = express();
 
+// CSP e Cross-Origin-Resource-Policy desligados: este gateway so serve JSON/
+// binario proxiado (/api, /uploads), nunca HTML, entao CSP nao tem o que
+// proteger aqui; CORP "same-origin" (o default do helmet) bloquearia o
+// frontend (origem separada em dev e possivelmente em producao) de carregar
+// imagens/PDFs de /uploads via <img>/<a>. O resto dos headers do helmet
+// (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) fica ativo.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: CORS_ORIGINS }));
 app.use(morgan("dev"));
 

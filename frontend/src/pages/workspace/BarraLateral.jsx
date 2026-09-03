@@ -95,7 +95,7 @@ export default function BarraLateral({
   });
 
   useEffect(() => {
-    const largura = recolhida ? "64px" : "272px";
+    const largura = recolhida ? "4rem" : "17rem";
     document.documentElement.style.setProperty("--largura-sidebar", largura);
     localStorage.setItem("coderyse-sidebar", recolhida ? "recolhida" : "expandida");
   }, [recolhida]);
