@@ -246,6 +246,10 @@ public class TurmaService : ITurmaService
                         ? valor
                         : (Participantes: 0, MediaNota: 0m);
 
+                    // Quiz e formativo - nao gera nota (ver ProgressoAlunoService.RecalcularProgressoQuizAsync),
+                    // entao media/aproveitamento ficam zerados aqui de proposito; participacao continua valendo.
+                    var ehQuiz = avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz;
+
                     return new AvaliacaoDesempenhoResponseDto
                     {
                         AvaliacaoId = avaliacao.Id,
@@ -253,12 +257,12 @@ public class TurmaService : ITurmaService
                         TipoAvaliacao = avaliacao.TipoAvaliacao,
                         StatusPublicacao = avaliacao.StatusPublicacao,
                         TotalParticipantes = estatistica.Participantes,
-                        MediaNota = Math.Round(estatistica.MediaNota, 2),
+                        MediaNota = ehQuiz ? 0 : Math.Round(estatistica.MediaNota, 2),
                         NotaMaxima = avaliacao.NotaMaxima,
                         PercentualConclusao = totalAlunos > 0
                             ? Math.Round((decimal)estatistica.Participantes / totalAlunos * 100, 1)
                             : 0,
-                        PercentualAproveitamento = avaliacao.NotaMaxima > 0
+                        PercentualAproveitamento = !ehQuiz && avaliacao.NotaMaxima > 0
                             ? Math.Round(estatistica.MediaNota / avaliacao.NotaMaxima * 100, 1)
                             : 0
                     };

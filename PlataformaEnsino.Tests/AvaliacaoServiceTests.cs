@@ -92,7 +92,7 @@ public class AvaliacaoServiceTests
         return matricula;
     }
 
-    private static CriarAvaliacaoDto NovaAvaliacaoDto(int turmaId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null)
+    private static CriarAvaliacaoDto NovaAvaliacaoDto(int turmaId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         return new CriarAvaliacaoDto
         {
@@ -100,7 +100,7 @@ public class AvaliacaoServiceTests
             Descricao = "Descricao",
             TurmaId = turmaId,
             ModuloId = moduloId,
-            TipoAvaliacao = TipoAvaliacao.Quiz,
+            TipoAvaliacao = tipoAvaliacao,
             StatusPublicacao = status,
             TentativasPermitidas = tentativasPermitidas,
             NotaMaxima = 10,
@@ -369,7 +369,7 @@ public class AvaliacaoServiceTests
     // ---------- EnviarRespostasAlunoAsync (motor de correcao) ----------
 
     private static async Task<(AvaliacaoService Service, PlataformaContext Context, Professor Professor, Aluno Aluno, Turma Turma, Modulo Modulo, Avaliacao Avaliacao)> CriarCenarioComAvaliacaoPublicada(
-        int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null)
+        int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         var context = TestContextFactory.Criar();
         var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context));
@@ -382,7 +382,7 @@ public class AvaliacaoServiceTests
 
         var avaliacao = await service.CriarAvaliacaoAsync(
             professor.Id,
-            NovaAvaliacaoDto(turma.Id, modulo.Id, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento));
+            NovaAvaliacaoDto(turma.Id, modulo.Id, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento, tipoAvaliacao: tipoAvaliacao));
 
         return (service, context, professor, aluno, turma, modulo, avaliacao);
     }
@@ -619,7 +619,7 @@ public class AvaliacaoServiceTests
     [Fact]
     public async Task EnviarRespostasAlunoAsync_SoObjetivas_LancaNotaAutomaticaEAtualizaMediaModuloECurso()
     {
-        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
         var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
         var matricula = context.Matriculas.Single();
@@ -656,7 +656,7 @@ public class AvaliacaoServiceTests
     [Fact]
     public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_NaoLancaNotaAutomatica()
     {
-        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
         var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {
             TituloInterno = "Dissertativa",
@@ -681,7 +681,7 @@ public class AvaliacaoServiceTests
     [Fact]
     public async Task EnviarRespostasAlunoAsync_SegundaTentativaCorrigida_AtualizaLancamentoExistenteParaNotaMaisRecente()
     {
-        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tentativasPermitidas: 2);
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tentativasPermitidas: 2, tipoAvaliacao: TipoAvaliacao.Prova);
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
         var correta = questao.Alternativas.Single(a => a.Letra == "A");
         var errada = questao.Alternativas.Single(a => a.Letra == "B");
@@ -697,6 +697,69 @@ public class AvaliacaoServiceTests
 
         var lancamento = Assert.Single(context.LancamentosNotasAlunos);
         Assert.Equal(7m, lancamento.NotaOficial);
+    }
+
+    // ---------- Quiz e formativo: conta progresso, nao gera nota ----------
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_Quiz_NaoLancaNotaMasContaComoProgresso()
+    {
+        var (service, context, professor, aluno, _, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+        var matricula = context.Matriculas.Single();
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id }
+            }
+        };
+
+        await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Empty(context.LancamentosNotasAlunos);
+
+        var progressoModulo = context.ProgressosModulosAlunos.Single(p => p.ModuloId == modulo.Id);
+        Assert.Equal(100m, progressoModulo.PercentualConclusao);
+        Assert.Equal(0m, progressoModulo.MediaModulo);
+        Assert.Equal(0, progressoModulo.TotalAvaliacoes);
+
+        var progressoCurso = context.ProgressosCursosAlunos.Single();
+        Assert.Equal(100m, progressoCurso.PercentualConclusao);
+        Assert.Equal(0m, progressoCurso.MediaCurso);
+
+        var matriculaAtualizada = context.Matriculas.Single(m => m.Id == matricula.Id);
+        Assert.Equal(0m, matriculaAtualizada.NotaFinal);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_Quiz_ComDissertativa_AindaContaProgresso()
+    {
+        var (service, context, professor, aluno, _, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
+        {
+            TituloInterno = "Dissertativa",
+            Enunciado = "Explique...",
+            TipoQuestao = TipoQuestao.Dissertativa,
+            Pontos = 10
+        });
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = questaoDissertativa.Id, RespostaTexto = "Minha resposta." }
+            }
+        };
+
+        await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Empty(context.LancamentosNotasAlunos);
+
+        var progressoModulo = context.ProgressosModulosAlunos.Single(p => p.ModuloId == modulo.Id);
+        Assert.Equal(100m, progressoModulo.PercentualConclusao);
     }
 
     // ---------- ListarAvaliacoesPorAlunoAsync ----------

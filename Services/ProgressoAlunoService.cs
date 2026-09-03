@@ -128,6 +128,14 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .FirstOrDefaultAsync(item => item.Id == avaliacaoId)
             ?? throw new KeyNotFoundException("Avaliacao nao encontrada.");
 
+        // Quiz e formativo (ver RecalcularProgressoQuizAsync) - nao gera lancamento
+        // de nota. Guarda defensiva: quem envia respostas ja roteia por tipo antes
+        // de chamar este metodo (AvaliacaoService.EnviarRespostasAlunoAsync).
+        if (avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz)
+        {
+            return;
+        }
+
         var matricula = await _context.Matriculas
             .FirstOrDefaultAsync(item => item.Id == matriculaId)
             ?? throw new KeyNotFoundException("Matricula nao encontrada.");
@@ -181,12 +189,42 @@ public class ProgressoAlunoService : IProgressoAlunoService
         await _context.SaveChangesAsync();
     }
 
+    public async Task RecalcularProgressoQuizAsync(int matriculaId, int avaliacaoId)
+    {
+        var avaliacao = await _context.Avaliacoes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == avaliacaoId)
+            ?? throw new KeyNotFoundException("Avaliacao nao encontrada.");
+
+        if (avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz)
+        {
+            return;
+        }
+
+        var matricula = await _context.Matriculas
+            .FirstOrDefaultAsync(item => item.Id == matriculaId)
+            ?? throw new KeyNotFoundException("Matricula nao encontrada.");
+
+        var now = DateTime.UtcNow;
+
+        if (avaliacao.ModuloId.HasValue)
+        {
+            await RecalcularModuloAsync(matricula, avaliacao.ModuloId.Value, now);
+        }
+
+        await RecalcularCursoAsync(matricula, now);
+        await _context.SaveChangesAsync();
+    }
+
     private async Task RecalcularMediaModuloAsync(Matricula matricula, int moduloId, DateTime now)
     {
+        // Quiz nao entra na media - e atividade formativa (RecalcularProgressoQuizAsync
+        // conta ele pro progresso, nao pra nota). So Prova/Exercicio geram nota.
         var avaliacoesModulo = await _context.Avaliacoes
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
                 avaliacao.TurmaId == matricula.TurmaId &&
                 avaliacao.ModuloId == moduloId)
             .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
@@ -219,11 +257,13 @@ public class ProgressoAlunoService : IProgressoAlunoService
     {
         // TurmaId ja garante o curso certo (uma turma pertence a um unico curso) —
         // nao filtra mais por Modulo.CursoId porque avaliacoes tipo Prova/Exercicio
-        // podem ficar soltas direto no curso, sem modulo (ModuloId null).
+        // podem ficar soltas direto no curso, sem modulo (ModuloId null). Quiz fica
+        // fora da media - e atividade formativa (RecalcularProgressoQuizAsync).
         var avaliacoesCurso = await _context.Avaliacoes
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
                 avaliacao.TurmaId == matricula.TurmaId)
             .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
             .ToListAsync();
@@ -334,10 +374,17 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .ToListAsync();
 
         var concluidos = conteudosConcluidosIds.ToHashSet();
-        var pesoTotal = SomarPeso(conteudosModulo.Select(conteudo => conteudo.PesoProgresso));
+
+        var (quizzesModulo, quizzesConcluidos) = await ObterQuizzesDoModuloAsync(matricula, moduloId);
+
+        var pesoTotal = SomarPeso(conteudosModulo.Select(conteudo => conteudo.PesoProgresso)
+            .Concat(quizzesModulo.Select(quiz => quiz.PesoProgresso)));
         var pesoConcluido = SomarPeso(conteudosModulo
             .Where(conteudo => concluidos.Contains(conteudo.Id))
-            .Select(conteudo => conteudo.PesoProgresso));
+            .Select(conteudo => conteudo.PesoProgresso)
+            .Concat(quizzesModulo
+                .Where(quiz => quizzesConcluidos.Contains(quiz.Id))
+                .Select(quiz => quiz.PesoProgresso)));
         var percentual = CalcularPercentual(pesoConcluido, pesoTotal);
 
         var progressoModulo = await _context.ProgressosModulosAlunos
@@ -396,10 +443,17 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .ToList();
         var modulosConcluidos = modulosComConteudo.Count(grupo =>
             grupo.All(conteudo => concluidos.Contains(conteudo.Id)));
-        var pesoTotal = SomarPeso(conteudosCurso.Select(conteudo => conteudo.PesoProgresso));
+
+        var (quizzesCurso, quizzesConcluidos) = await ObterQuizzesDoCursoAsync(matricula);
+
+        var pesoTotal = SomarPeso(conteudosCurso.Select(conteudo => conteudo.PesoProgresso)
+            .Concat(quizzesCurso.Select(quiz => quiz.PesoProgresso)));
         var pesoConcluido = SomarPeso(conteudosCurso
             .Where(conteudo => concluidos.Contains(conteudo.Id))
-            .Select(conteudo => conteudo.PesoProgresso));
+            .Select(conteudo => conteudo.PesoProgresso)
+            .Concat(quizzesCurso
+                .Where(quiz => quizzesConcluidos.Contains(quiz.Id))
+                .Select(quiz => quiz.PesoProgresso)));
         var percentual = CalcularPercentual(pesoConcluido, pesoTotal);
 
         var progressoCurso = await _context.ProgressosCursosAlunos
@@ -424,6 +478,66 @@ public class ProgressoAlunoService : IProgressoAlunoService
         progressoCurso.TotalModulos = modulosComConteudo.Count;
         progressoCurso.AtualizadoEm = now;
     }
+
+    private async Task<(List<AvaliacaoProgressoInfo> Quizzes, HashSet<int> ConcluidosIds)> ObterQuizzesDoModuloAsync(Matricula matricula, int moduloId)
+    {
+        var quizzes = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
+                avaliacao.TurmaId == matricula.TurmaId &&
+                avaliacao.ModuloId == moduloId)
+            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
+            .ToListAsync();
+
+        var concluidos = await ObterQuizzesConcluidosIdsAsync(matricula.Id, quizzes);
+        return (quizzes, concluidos);
+    }
+
+    private async Task<(List<AvaliacaoProgressoInfo> Quizzes, HashSet<int> ConcluidosIds)> ObterQuizzesDoCursoAsync(Matricula matricula)
+    {
+        var quizzes = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
+                avaliacao.TurmaId == matricula.TurmaId)
+            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
+            .ToListAsync();
+
+        var concluidos = await ObterQuizzesConcluidosIdsAsync(matricula.Id, quizzes);
+        return (quizzes, concluidos);
+    }
+
+    /// <summary>
+    /// Quiz concluido = aluno enviou pelo menos uma tentativa (Enviada ou Corrigida).
+    /// Como Quiz e formativo, a nota da tentativa nao importa aqui - so o fato de
+    /// ter sido enviada (EmAndamento/Expirada nao contam como conclusao).
+    /// </summary>
+    private async Task<HashSet<int>> ObterQuizzesConcluidosIdsAsync(int matriculaId, IReadOnlyList<AvaliacaoProgressoInfo> quizzes)
+    {
+        if (quizzes.Count == 0)
+        {
+            return new HashSet<int>();
+        }
+
+        var quizIds = quizzes.Select(quiz => quiz.Id).ToList();
+        var concluidos = await _context.TentativasAvaliacao
+            .AsNoTracking()
+            .Where(tentativa =>
+                tentativa.MatriculaId == matriculaId &&
+                quizIds.Contains(tentativa.AvaliacaoId) &&
+                tentativa.StatusTentativa != StatusTentativaAvaliacao.EmAndamento &&
+                tentativa.StatusTentativa != StatusTentativaAvaliacao.Expirada)
+            .Select(tentativa => tentativa.AvaliacaoId)
+            .Distinct()
+            .ToListAsync();
+
+        return concluidos.ToHashSet();
+    }
+
+    private sealed record AvaliacaoProgressoInfo(int Id, decimal PesoProgresso);
 
     private static decimal SomarPeso(IEnumerable<decimal> pesos)
     {

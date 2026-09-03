@@ -412,7 +412,14 @@ public class AvaliacaoService : IAvaliacaoService
             throw new InvalidOperationException("O limite de tentativas para esta avaliacao ja foi atingido.");
         }
 
-        if (!possuiDissertativa)
+        if (avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz)
+        {
+            // Quiz e formativo - a conclusao (envio) conta pro progresso do
+            // modulo/curso independente de dissertativa, ja que nao gera nota
+            // e por isso nao precisa esperar correcao manual.
+            await _progressoAlunoService.RecalcularProgressoQuizAsync(matricula.Id, avaliacao.Id);
+        }
+        else if (!possuiDissertativa)
         {
             await _progressoAlunoService.RecalcularNotaAvaliacaoAsync(matricula.Id, avaliacao.Id);
 

@@ -43,7 +43,6 @@ export default function WorkspaceScreen({
   const [refreshKey, setRefreshKey] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [confirmacaoSessao, setConfirmacaoSessao] = useState(null);
-  const [quizIntent, setQuizIntent] = useState(null);
   const [cursoEmFocoPorSecao, setCursoEmFocoPorSecao] = useState({
     modulos: null,
     turmas: null
@@ -713,10 +712,6 @@ export default function WorkspaceScreen({
                   cursoIdSelecionado={route.param ? Number(route.param) : null}
                   cursos={snapshot.cursos}
                   modulos={snapshot.modulos}
-                  onGerenciarQuiz={(intent) => {
-                    setQuizIntent(intent);
-                    onNavigate(`/app/avaliacoes/${intent.cursoId}`);
-                  }}
                   onNavigate={onNavigate}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
@@ -750,10 +745,8 @@ export default function WorkspaceScreen({
                   cursos={snapshot.cursos}
                   modulos={snapshot.modulos}
                   onNavigate={onNavigate}
-                  onQuizIntentConsumido={() => setQuizIntent(null)}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
-                  quizIntent={quizIntent}
                   turmas={snapshot.turmas}
                   usuario={usuario}
                 />

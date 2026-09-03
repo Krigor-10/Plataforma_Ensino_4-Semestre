@@ -26,6 +26,7 @@ import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
+import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 
 const OPCOES_TIPO_CONTEUDO = [
   { value: "1", label: "Texto" },
@@ -78,7 +79,18 @@ const STATUS_RASCUNHO = 1;
    usado na experiencia do aluno (SlideConteudosCurso em SecoesAluno.jsx), reaproveitando
    as classes CSS atividades-curso__* e conteudos-modulo__*, so trocando as acoes de
    "Concluir" por gerenciamento (editar, publicar/despublicar, excluir, reordenar). */
-export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSelecionado = null, cursos, modulos, onGerenciarQuiz, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
+export function SecaoConteudosProfessor({
+  avaliacoes = [],
+  conteudos,
+  cursoIdSelecionado = null,
+  cursos,
+  modulos,
+  onNavigate,
+  onRefresh,
+  onSessionExpired,
+  turmas,
+  usuario
+}) {
   const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario());
   const [conteudoEmEdicaoId, setConteudoEmEdicaoId] = useState(null);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
@@ -90,6 +102,9 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
   const [mensagemLista, setMensagemLista] = useState({ tone: "", message: "" });
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
   const [nomeArquivoSelecionado, setNomeArquivoSelecionado] = useState("");
+  const [assistenteQuizAberto, setAssistenteQuizAberto] = useState(false);
+  const [avaliacaoQuizParaEditar, setAvaliacaoQuizParaEditar] = useState(null);
+  const [contextoNovoQuiz, setContextoNovoQuiz] = useState(null);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
@@ -449,13 +464,21 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
       return;
     }
 
-    onGerenciarQuiz?.({
-      avaliacaoId: quizVinculado?.id ?? null,
-      conteudoDidaticoId: conteudo.id,
-      cursoId: cursoAtivo.curso.id,
-      moduloId: conteudo.moduloId,
-      turmaId: cursoAtivo.turma.id
-    });
+    if (quizVinculado) {
+      setAvaliacaoQuizParaEditar(quizVinculado);
+      setContextoNovoQuiz(null);
+    } else {
+      setAvaliacaoQuizParaEditar(null);
+      setContextoNovoQuiz({ conteudoDidaticoId: conteudo.id, moduloId: conteudo.moduloId });
+    }
+
+    setAssistenteQuizAberto(true);
+  }
+
+  function fecharAssistenteQuiz() {
+    setAssistenteQuizAberto(false);
+    setAvaliacaoQuizParaEditar(null);
+    setContextoNovoQuiz(null);
   }
 
   return (
@@ -488,6 +511,19 @@ export function SecaoConteudosProfessor({ avaliacoes = [], conteudos, cursoIdSel
           onVoltar={onNavigate ? voltarParaCursos : null}
         />
       )}
+
+      {assistenteQuizAberto ? (
+        <AssistenteQuizAvaliacao
+          avaliacaoParaEditar={avaliacaoQuizParaEditar}
+          conteudos={conteudos}
+          contextoNovoQuiz={contextoNovoQuiz}
+          cursoAtivo={cursoAtivo}
+          modulosDisponiveis={modulosDisponiveis}
+          onFechar={fecharAssistenteQuiz}
+          onRefresh={onRefresh}
+          onSessionExpired={onSessionExpired}
+        />
+      ) : null}
 
       {conteudoParaExcluir ? (
         <Modal

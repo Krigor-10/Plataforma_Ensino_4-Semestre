@@ -770,10 +770,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                     : "Sem limite"}
                 </dd>
               </div>
-              <div className="quiz-confirmacao__resumo-item">
-                <dt>Nota maxima</dt>
-                <dd>{formatScore(avaliacaoParaConfirmar.notaMaxima)}</dd>
-              </div>
+              {Number(avaliacaoParaConfirmar.tipoAvaliacao) !== 1 ? (
+                <div className="quiz-confirmacao__resumo-item">
+                  <dt>Nota maxima</dt>
+                  <dd>{formatScore(avaliacaoParaConfirmar.notaMaxima)}</dd>
+                </div>
+              ) : null}
               <div className="quiz-confirmacao__resumo-item">
                 <dt>Tentativas</dt>
                 <dd>
@@ -781,6 +783,10 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                 </dd>
               </div>
             </dl>
+
+            {Number(avaliacaoParaConfirmar.tipoAvaliacao) === 1 ? (
+              <InlineMessage tone="info">Quiz e uma atividade formativa: conta pro seu progresso, nao gera nota academica.</InlineMessage>
+            ) : null}
 
             {avaliacaoParaConfirmar.tempoLimiteMinutos > 0 ? (
               <div className="quiz-confirmacao__aviso">
@@ -793,6 +799,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
       ) : null}
 
       {avaliacaoEmExecucao ? (() => {
+        const ehQuizExecucao = Number(avaliacaoEmExecucao.tipoAvaliacao) === 1;
         const corrigida = resultadoTentativa ? Number(resultadoTentativa.statusTentativa) === 3 : false;
         const porcentagem =
           resultadoTentativa && Number(resultadoTentativa.notaMaxima) > 0
@@ -844,13 +851,15 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                   </div>
 
                   <h3 className="resultado-avaliacao__titulo" id="resultado-avaliacao-titulo">
-                    {corrigida ? "Avaliacao corrigida" : "Respostas enviadas"}
+                    {ehQuizExecucao ? "Quiz concluido" : corrigida ? "Avaliacao corrigida" : "Respostas enviadas"}
                   </h3>
 
                   <p className="resultado-avaliacao__descricao">
-                    {corrigida
-                      ? "A correcao automatica foi concluida e sua nota ja esta disponivel abaixo."
-                      : "Suas respostas foram registradas. As questoes dissertativas aguardam correcao do professor — a nota abaixo considera apenas as questoes ja corrigidas automaticamente."}
+                    {ehQuizExecucao
+                      ? "Quiz e uma atividade formativa: sua participacao ja foi registrada e conta pro seu progresso no modulo/curso, sem gerar nota academica."
+                      : corrigida
+                        ? "A correcao automatica foi concluida e sua nota ja esta disponivel abaixo."
+                        : "Suas respostas foram registradas. As questoes dissertativas aguardam correcao do professor — a nota abaixo considera apenas as questoes ja corrigidas automaticamente."}
                   </p>
 
                   <div
@@ -867,13 +876,13 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
 
                   <dl className="resultado-avaliacao__notas">
                     <div className="resultado-avaliacao__nota-item">
-                      <dt>Nota obtida</dt>
+                      <dt>{ehQuizExecucao ? "Acertos" : "Nota obtida"}</dt>
                       <dd>
                         {formatScore(resultadoTentativa.notaBruta)} / {formatScore(resultadoTentativa.notaMaxima)}
                       </dd>
                     </div>
                     <div className="resultado-avaliacao__nota-item">
-                      <dt>Aproveitamento</dt>
+                      <dt>{ehQuizExecucao ? "Percentual de acerto" : "Aproveitamento"}</dt>
                       <dd>{formatPercent(porcentagem)}</dd>
                     </div>
                     <div className="resultado-avaliacao__nota-item">
@@ -1140,7 +1149,8 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
         const aberta = avaliacaoAbertaId === avaliacao.id;
         const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
         const idDetalhe = `avaliacao-aluno-detalhe-${avaliacao.id}`;
-        const temNota = avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
+        const ehQuiz = Number(avaliacao.tipoAvaliacao) === 1;
+        const temNota = !ehQuiz && avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
 
         return (
           <section className="conteudos-modulo" key={avaliacao.id}>
@@ -1196,10 +1206,17 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                       <dt>Tentativas</dt>
                       <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
                     </div>
-                    <div className="lista-detalhes__item">
-                      <dt>{temNota ? "Ultima nota" : "Nota maxima"}</dt>
-                      <dd>{temNota ? formatScore(avaliacao.ultimaNota) : formatGrade(avaliacao.notaMaxima)}</dd>
-                    </div>
+                    {ehQuiz ? (
+                      <div className="lista-detalhes__item">
+                        <dt>Tipo</dt>
+                        <dd>Quiz - formativo, sem nota</dd>
+                      </div>
+                    ) : (
+                      <div className="lista-detalhes__item">
+                        <dt>{temNota ? "Ultima nota" : "Nota maxima"}</dt>
+                        <dd>{temNota ? formatScore(avaliacao.ultimaNota) : formatGrade(avaliacao.notaMaxima)}</dd>
+                      </div>
+                    )}
                   </dl>
 
                   <div className="atividades-curso__acoes-aluno">
