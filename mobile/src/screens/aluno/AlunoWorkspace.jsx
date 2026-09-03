@@ -68,10 +68,11 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
           <>
             {abaAtiva === "inicio" ? (
               <HomeScreen
+                onAbrirAba={setAbaAtiva}
                 onAbrirNotificacoes={() => setAbaAtiva("notificacoes")}
                 onAbrirPerfil={() => setAbaAtiva("perfil")}
                 onLogout={onLogout}
-                onSessionExpired={onSessionExpired}
+                snapshot={snapshot}
                 usuario={usuario}
               />
             ) : null}

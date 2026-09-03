@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatGrade, normalizeEvaluationType } from "../../lib/format.js";
-import { cores } from "../../lib/theme.js";
+import { cores, raios } from "../../lib/theme.js";
+
+const TIPO_QUIZ = 1;
 import QuizModal from "../../components/QuizModal.jsx";
 
 const CORES_TONE = {
@@ -40,7 +42,9 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
               </View>
               <Text style={estilos.cartaoMeta}>{avaliacao.cursoTitulo} - {avaliacao.moduloTitulo}</Text>
               <Text style={estilos.cartaoMeta}>{normalizeEvaluationType(avaliacao.tipoAvaliacao)} - {avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1} tentativa(s)</Text>
-              {avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? (
+              {Number(avaliacao.tipoAvaliacao) === TIPO_QUIZ ? (
+                <Text style={estilos.cartaoQuizInfo}>Quiz - formativo, sem nota</Text>
+              ) : avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined ? (
                 <Text style={estilos.cartaoNota}>Ultima nota: {formatGrade(avaliacao.ultimaNota)}</Text>
               ) : null}
 
@@ -70,13 +74,14 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: 20, gap: 12 },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16 },
+  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 16, flex: 1, marginRight: 10 },
   status: { fontWeight: "700", fontSize: 12 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   cartaoNota: { color: cores.destaque, fontWeight: "700", marginTop: 6 },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },
+  cartaoQuizInfo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic", marginTop: 6 },
+  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   bloqueadoInfo: { color: cores.textoSuave, fontSize: 12, marginTop: 12, fontStyle: "italic" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }

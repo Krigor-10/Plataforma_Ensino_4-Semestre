@@ -4,7 +4,7 @@ import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { formatPercent, normalizeContentType } from "../../lib/format.js";
-import { cores } from "../../lib/theme.js";
+import { cores, raios } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
@@ -120,7 +120,11 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                     {modulo.bloqueado ? "Conclua o modulo anterior para desbloquear" : `${modulo.concluidos}/${modulo.conteudos.length} conteudo(s) concluido(s)`}
                   </Text>
                 </View>
-                <Text style={estilos.moduloIcone}>{modulo.bloqueado ? "🔒" : aberto ? "−" : "+"}</Text>
+                {modulo.bloqueado ? (
+                  <Text style={estilos.moduloBloqueadoRotulo}>Bloqueado</Text>
+                ) : (
+                  <Text style={estilos.moduloIcone}>{aberto ? "−" : "+"}</Text>
+                )}
               </TouchableOpacity>
 
               {aberto ? (
@@ -133,7 +137,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                           <Text style={estilos.itemMeta}>{normalizeContentType(conteudo.tipoConteudo)}</Text>
                         </View>
                         {conteudo.bloqueado ? (
-                          <Text style={estilos.itemIcone}>🔒</Text>
+                          <Text style={estilos.itemBloqueadoRotulo}>Bloqueado</Text>
                         ) : conteudo.concluido ? (
                           <Text style={estilos.itemStatusOk}>Concluido</Text>
                         ) : (
@@ -161,7 +165,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                       {(conteudo.quizzes || []).map((quiz) => (
                         <View key={`quiz-${quiz.id}`} style={estilos.itemQuizAninhado}>
                           <View style={{ flex: 1 }}>
-                            <Text style={estilos.itemTitulo}>🏆 {quiz.titulo}</Text>
+                            <Text style={estilos.itemTitulo}>{quiz.titulo}</Text>
                             <Text style={estilos.itemMeta}>Quiz deste material - {quiz.totalQuestoes || 0} questao(oes)</Text>
                           </View>
                           <TouchableOpacity onPress={() => setQuizSelecionado(quiz)} style={estilos.botaoSecundario}>
@@ -175,7 +179,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                   {modulo.quizzes.map((quiz) => (
                     <View key={`quiz-${quiz.id}`} style={estilos.item}>
                       <View style={{ flex: 1 }}>
-                        <Text style={estilos.itemTitulo}>🏆 {quiz.titulo}</Text>
+                        <Text style={estilos.itemTitulo}>{quiz.titulo}</Text>
                         <Text style={estilos.itemMeta}>Quiz - {quiz.totalQuestoes || 0} questao(oes)</Text>
                       </View>
                       <TouchableOpacity onPress={() => setQuizSelecionado(quiz)} style={estilos.botaoSecundario}>
@@ -213,22 +217,23 @@ const estilos = StyleSheet.create({
   corpo: { padding: 20, paddingBottom: 40 },
   tituloCurso: { color: cores.texto, fontSize: 20, fontWeight: "700" },
   progressoCurso: { color: cores.textoSuave, marginTop: 4, marginBottom: 16 },
-  continuar: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: 12, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: cores.destaque },
+  continuar: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: raios.lg, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: cores.destaque },
   continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: 12, marginBottom: 4 },
   continuarTitulo: { color: cores.texto, fontWeight: "600" },
   erro: { color: cores.erro, marginBottom: 12 },
-  modulo: { backgroundColor: cores.fundoCartao, borderRadius: 12, marginBottom: 12, overflow: "hidden" },
+  modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
   moduloCabecalho: { flexDirection: "row", alignItems: "center", padding: 14 },
   moduloTitulo: { color: cores.texto, fontWeight: "700" },
   moduloContagem: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   moduloIcone: { color: cores.textoSuave, fontSize: 18, marginLeft: 8 },
+  moduloBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700", marginLeft: 8 },
   itensLista: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
-  item: { flexDirection: "row", alignItems: "center", backgroundColor: cores.fundo, borderRadius: 10, padding: 12, gap: 10 },
+  item: { flexDirection: "row", alignItems: "center", backgroundColor: cores.fundo, borderRadius: raios.md, padding: 12, gap: 10 },
   itemQuizAninhado: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: cores.fundo,
-    borderRadius: 10,
+    borderRadius: raios.md,
     padding: 12,
     gap: 10,
     marginTop: 8,
@@ -238,10 +243,10 @@ const estilos = StyleSheet.create({
   itemTitulo: { color: cores.texto, fontWeight: "600" },
   itemTituloConcluido: { textDecorationLine: "line-through" },
   itemMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
-  itemIcone: { fontSize: 16 },
+  itemBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700" },
   itemStatusOk: { color: cores.sucesso, fontWeight: "700", fontSize: 12 },
   itemAcoes: { flexDirection: "row", gap: 8 },
-  botaoSecundario: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  botaoSecundario: { borderWidth: 1, borderColor: cores.destaque, borderRadius: raios.sm, paddingHorizontal: 10, paddingVertical: 6 },
   botaoSecundarioTexto: { color: cores.destaque, fontWeight: "600", fontSize: 12 },
   vazioModulo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }

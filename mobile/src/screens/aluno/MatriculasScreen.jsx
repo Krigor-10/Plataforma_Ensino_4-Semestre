@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
-import { cores } from "../../lib/theme.js";
+import { cores, raios } from "../../lib/theme.js";
 
 const COR_STATUS = {
   Pendente: cores.aviso,
@@ -187,11 +187,11 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                     {temPagamentoPendente ? (
                       <>
                         <Text style={estilos.pagamentoPendente}>Pagamento pendente: {formatMoney(pagamento.valor)}</Text>
-                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoPrimario}>
+                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoSucesso}>
                           {processando === matricula.id ? (
                             <ActivityIndicator color={cores.texto} />
                           ) : (
-                            <Text style={estilos.botaoPrimarioTexto}>Confirmar pagamento (simulado)</Text>
+                            <Text style={estilos.botaoSucessoTexto}>Confirmar pagamento (simulado)</Text>
                           )}
                         </TouchableOpacity>
                       </>
@@ -241,17 +241,19 @@ const estilos = StyleSheet.create({
   abaTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
   abaTextoAtivo: { color: cores.texto },
   mensagem: { color: cores.destaque, paddingHorizontal: 20, paddingTop: 12 },
-  busca: { backgroundColor: cores.fundoCartao, borderRadius: 10, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
+  busca: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
   corpo: { padding: 20, gap: 12 },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16 },
+  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1, marginRight: 10 },
   status: { fontWeight: "700", fontSize: 12 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 4 },
   pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: 12, marginTop: 8 },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },
+  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },
+  botaoSucesso: { backgroundColor: cores.sucesso, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
+  botaoSucessoTexto: { color: cores.texto, fontWeight: "700" },
+  botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPerigoTexto: { color: cores.erro, fontWeight: "700" },
   semTurma: { color: cores.textoSuave, fontSize: 12, marginTop: 12, fontStyle: "italic" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 }

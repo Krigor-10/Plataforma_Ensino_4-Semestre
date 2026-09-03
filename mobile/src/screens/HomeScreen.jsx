@@ -1,50 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { apiRequest, ApiError } from "../lib/api.js";
+import { apiRequest } from "../lib/api.js";
+import { formatPercent } from "../lib/format.js";
+import { cores, raios } from "../lib/theme.js";
 
-export default function HomeScreen({ onAbrirNotificacoes, onAbrirPerfil, onLogout, onSessionExpired, usuario }) {
-  const [cursos, setCursos] = useState([]);
-  const [status, setStatus] = useState("loading");
-  const [erro, setErro] = useState("");
+/* Tela "Inicio" do Aluno — resumo real (cursos matriculados + progresso),
+   nao mais o catalogo inteiro do sistema. Recebe snapshot ja carregado pelo
+   AlunoWorkspace.jsx (mesma fonte de dados que Progresso/Conteudos usam),
+   em vez de fazer sua propria chamada GET /Cursos. */
+export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPerfil, onLogout, snapshot, usuario }) {
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
-
-  // Ref em vez de dependencia direta: onSessionExpired vem do App raiz sem
-  // useCallback, entao muda de referencia a cada render — colocar na
-  // dependencia do effect refaria o GET /Cursos a cada render em vez de so
-  // no mount (mesmo motivo do AlunoWorkspace.jsx).
-  const onSessionExpiredRef = useRef(onSessionExpired);
-  onSessionExpiredRef.current = onSessionExpired;
-
-  useEffect(() => {
-    let ignore = false;
-
-    apiRequest("/Cursos")
-      .then((resposta) => {
-        if (!ignore) {
-          setCursos(resposta || []);
-          setStatus("ready");
-        }
-      })
-      .catch((err) => {
-        if (ignore) {
-          return;
-        }
-
-        if (err instanceof ApiError && err.status === 401) {
-          onSessionExpiredRef.current?.();
-          return;
-        }
-
-        setErro(err.message || "Nao foi possivel carregar os cursos.");
-        setStatus("error");
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!onAbrirNotificacoes) {
@@ -68,6 +35,13 @@ export default function HomeScreen({ onAbrirNotificacoes, onAbrirPerfil, onLogou
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- so verifica presenca do prop no mount, nao precisa refazer a busca se a referencia mudar
   }, []);
+
+  const cursoPorId = new Map(snapshot.cursos.map((curso) => [curso.id, curso]));
+  const progressosPorCurso = [...(snapshot.progressos.cursos || [])].sort((a, b) => {
+    const tituloA = cursoPorId.get(a.cursoId)?.titulo || "";
+    const tituloB = cursoPorId.get(b.cursoId)?.titulo || "";
+    return tituloA.localeCompare(tituloB);
+  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
@@ -98,26 +72,37 @@ export default function HomeScreen({ onAbrirNotificacoes, onAbrirPerfil, onLogou
         </View>
       </View>
 
-      <Text style={styles.tituloSecao}>Cursos disponiveis</Text>
+      <Text style={styles.tituloSecao}>Meus cursos</Text>
 
-      {status === "loading" ? <ActivityIndicator color="#7b2ff7" style={{ marginTop: 24 }} /> : null}
-      {status === "error" ? <Text style={styles.erro}>{erro}</Text> : null}
+      {progressosPorCurso.length === 0 ? (
+        <Text style={styles.vazio}>
+          Voce ainda nao esta matriculado em nenhum curso. Va em Matriculas para explorar o catalogo.
+        </Text>
+      ) : (
+        <ScrollView contentContainerStyle={styles.listaConteudo} style={styles.lista}>
+          {progressosPorCurso.map((progresso) => {
+            const curso = cursoPorId.get(progresso.cursoId);
+            const percentual = Math.max(0, Math.min(Number(progresso.percentualConclusao) || 0, 100));
 
-      {status === "ready" ? (
-        <FlatList
-          data={cursos}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <View style={styles.cartao}>
-              <Text style={styles.cartaoTitulo}>{item.titulo}</Text>
-              <Text style={styles.cartaoCodigo}>{item.codigoRegistro}</Text>
-            </View>
-          )}
-          ListEmptyComponent={<Text style={styles.vazio}>Nenhum curso cadastrado ainda.</Text>}
-          style={styles.lista}
-          contentContainerStyle={styles.listaConteudo}
-        />
-      ) : null}
+            return (
+              <TouchableOpacity
+                disabled={!onAbrirAba}
+                key={progresso.id}
+                onPress={() => onAbrirAba?.("conteudos")}
+                style={styles.cartao}
+              >
+                <Text style={styles.cartaoTitulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
+                <View style={styles.barraFundo}>
+                  <View style={[styles.barraPreenchida, { width: `${percentual}%` }]} />
+                </View>
+                <Text style={styles.cartaoMeta}>
+                  {formatPercent(percentual)} concluido - {progresso.modulosConcluidos}/{progresso.totalModulos} modulo(s)
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -125,7 +110,7 @@ export default function HomeScreen({ onAbrirNotificacoes, onAbrirPerfil, onLogou
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#191221",
+    backgroundColor: cores.fundo,
     paddingHorizontal: 20
   },
   cabecalho: {
@@ -135,12 +120,12 @@ const styles = StyleSheet.create({
     marginBottom: 24
   },
   saudacao: {
-    color: "#fff",
+    color: cores.texto,
     fontSize: 20,
     fontWeight: "700"
   },
   perfil: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     marginTop: 2
   },
   acoesCabecalho: {
@@ -149,7 +134,7 @@ const styles = StyleSheet.create({
     gap: 16
   },
   perfilLink: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     fontWeight: "600"
   },
   notificacoesBotao: {
@@ -158,7 +143,7 @@ const styles = StyleSheet.create({
     gap: 5
   },
   notificacoesBadge: {
-    backgroundColor: "#f87171",
+    backgroundColor: cores.erro,
     borderRadius: 999,
     minWidth: 16,
     height: 16,
@@ -167,16 +152,16 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   notificacoesBadgeTexto: {
-    color: "#fff",
+    color: cores.texto,
     fontSize: 9,
     fontWeight: "700"
   },
   sair: {
-    color: "#f87171",
+    color: cores.erro,
     fontWeight: "600"
   },
   tituloSecao: {
-    color: "#fff",
+    color: cores.texto,
     fontSize: 16,
     fontWeight: "700",
     marginBottom: 12
@@ -185,33 +170,40 @@ const styles = StyleSheet.create({
     flex: 1
   },
   listaConteudo: {
-    paddingBottom: 24
+    paddingBottom: 24,
+    gap: 10
   },
   cartao: {
-    backgroundColor: "#241a30",
-    borderRadius: 10,
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
     padding: 14,
-    marginBottom: 10,
     borderLeftWidth: 3,
-    borderLeftColor: "#7b2ff7"
+    borderLeftColor: cores.destaque
   },
   cartaoTitulo: {
-    color: "#fff",
+    color: cores.texto,
     fontWeight: "600",
-    marginBottom: 4
+    marginBottom: 10
   },
-  cartaoCodigo: {
-    color: "#a89fb3",
+  barraFundo: {
+    height: 6,
+    borderRadius: raios.sm,
+    backgroundColor: cores.bordaCartao,
+    overflow: "hidden",
+    marginBottom: 8
+  },
+  barraPreenchida: {
+    height: 6,
+    borderRadius: raios.sm,
+    backgroundColor: cores.destaque
+  },
+  cartaoMeta: {
+    color: cores.textoSuave,
     fontSize: 12
   },
   vazio: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     textAlign: "center",
     marginTop: 24
-  },
-  erro: {
-    color: "#f87171",
-    marginTop: 24,
-    textAlign: "center"
   }
 });

@@ -11,6 +11,7 @@ import {
   View
 } from "react-native";
 import { apiRequest } from "../lib/api.js";
+import { cores, raios } from "../lib/theme.js";
 
 export default function LoginScreen({ onLogin }) {
   const [modo, setModo] = useState("login");
@@ -86,7 +87,7 @@ export default function LoginScreen({ onLogin }) {
               keyboardType="email-address"
               onChangeText={setEmailRecuperacao}
               placeholder="seu.email@exemplo.com"
-              placeholderTextColor="#6d6478"
+              placeholderTextColor={cores.textoSuave}
               style={styles.entrada}
               value={emailRecuperacao}
             />
@@ -95,7 +96,7 @@ export default function LoginScreen({ onLogin }) {
           {mensagemRecuperacao ? <Text style={styles.mensagemInfo}>{mensagemRecuperacao}</Text> : null}
 
           <TouchableOpacity disabled={enviandoRecuperacao} onPress={enviarRecuperacao} style={styles.botao}>
-            {enviandoRecuperacao ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Enviar instrucoes</Text>}
+            {enviandoRecuperacao ? <ActivityIndicator color={cores.texto} /> : <Text style={styles.botaoTexto}>Enviar instrucoes</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => setModo("login")} style={styles.linkVoltar}>
@@ -127,7 +128,7 @@ export default function LoginScreen({ onLogin }) {
             keyboardType="email-address"
             onChangeText={setEmail}
             placeholder="seu.email@exemplo.com"
-            placeholderTextColor="#6d6478"
+            placeholderTextColor={cores.textoSuave}
             style={styles.entrada}
             value={email}
           />
@@ -138,7 +139,7 @@ export default function LoginScreen({ onLogin }) {
           <TextInput
             onChangeText={setSenha}
             placeholder="Sua senha"
-            placeholderTextColor="#6d6478"
+            placeholderTextColor={cores.textoSuave}
             secureTextEntry
             style={styles.entrada}
             value={senha}
@@ -148,7 +149,7 @@ export default function LoginScreen({ onLogin }) {
         {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
         <TouchableOpacity disabled={carregando} onPress={entrar} style={styles.botao}>
-          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.botaoTexto}>Abrir painel</Text>}
+          {carregando ? <ActivityIndicator color={cores.texto} /> : <Text style={styles.botaoTexto}>Abrir painel</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={abrirRecuperacao} style={styles.linkEsqueciSenha}>
@@ -162,7 +163,7 @@ export default function LoginScreen({ onLogin }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#191221"
+    backgroundColor: cores.fundo
   },
   conteudo: {
     flexGrow: 1,
@@ -173,14 +174,14 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 34,
     fontWeight: "800",
-    color: "#fff",
+    color: cores.texto,
     textAlign: "center"
   },
   logoDestaque: {
-    color: "#7b2ff7"
+    color: cores.destaque
   },
   subtitulo: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     textAlign: "center",
     marginTop: 8,
     marginBottom: 32
@@ -189,33 +190,33 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   rotulo: {
-    color: "#d8d2e0",
+    color: cores.textoRotulo,
     marginBottom: 6,
     fontSize: 13
   },
   entrada: {
-    backgroundColor: "#241a30",
-    borderRadius: 10,
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: "#fff",
+    color: cores.texto,
     borderWidth: 1,
-    borderColor: "#3a2a4a"
+    borderColor: cores.bordaCartao
   },
   erro: {
-    color: "#f87171",
+    color: cores.erro,
     marginBottom: 12,
     textAlign: "center"
   },
   botao: {
-    backgroundColor: "#7b2ff7",
-    borderRadius: 10,
+    backgroundColor: cores.destaque,
+    borderRadius: raios.md,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 8
   },
   botaoTexto: {
-    color: "#fff",
+    color: cores.texto,
     fontWeight: "700"
   },
   linkEsqueciSenha: {
@@ -223,11 +224,11 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   linkEsqueciSenhaTexto: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     fontSize: 13
   },
   mensagemInfo: {
-    color: "#7b2ff7",
+    color: cores.destaque,
     marginBottom: 12,
     textAlign: "center"
   },
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
   linkVoltarTexto: {
-    color: "#a89fb3",
+    color: cores.textoSuave,
     fontSize: 13
   }
 });
