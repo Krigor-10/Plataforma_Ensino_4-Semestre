@@ -7,5 +7,5 @@ public interface IAlunoService
 {
     Task<(IEnumerable<AlunoResponseDto> Itens, int TotalItens)> ListarAlunosAsync(int? pagina, int? tamanhoPagina);
     Task<Aluno> CriarAlunoAsync(CriarAlunoDto dto);
-    Task CadastrarAlunoCompletoAsync(CadastroAlunoDto dto);
+    Task<bool> CadastrarAlunoCompletoAsync(CadastroAlunoDto dto);
 }

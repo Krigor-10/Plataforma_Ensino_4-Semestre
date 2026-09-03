@@ -105,7 +105,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                   <TbCreditCard aria-hidden="true" size={14} /> {pagando ? "Confirmando..." : "Confirmar pagamento (simulado)"}
                 </Botao>
               ) : null}
-              {matricula.status === "Aprovada" && onEntrarNoCurso ? (
+              {matricula.status === "Aprovada" && !temPagamentoPendente && onEntrarNoCurso ? (
                 <Botao onClick={onEntrarNoCurso} tamanho="pequeno" variante={progresso >= 100 ? "fantasma" : "primario"}>
                   {rotuloEntrada} <TbArrowRight aria-hidden="true" size={14} />
                 </Botao>
@@ -114,6 +114,9 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
           </>
         ) : (
           <footer className="catalogo-card__rodape-aluno">
+            <span className="catalogo-card__codigo">
+              {curso.ehGratuito ? <Insignia texto="Gratis" variante="sucesso" /> : formatMoney(curso.preco)}
+            </span>
             {temTurmaDisponivel ? (
               <Botao disabled={solicitando} onClick={onSolicitar} tamanho="pequeno" variante="primario">
                 <TbSend aria-hidden="true" size={14} /> {solicitando ? "Enviando..." : "Solicitar matricula"}

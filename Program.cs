@@ -68,6 +68,7 @@ builder.Services.AddScoped<ICursoService, CursoService>();
 builder.Services.AddScoped<ICursoAutorizacaoService, CursoAutorizacaoService>();
 builder.Services.AddScoped<IMatriculaService, MatriculaService>();
 builder.Services.AddScoped<IPagamentoService, PagamentoService>();
+builder.Services.AddScoped<IAcessoAcademicoService, AcessoAcademicoService>();
 builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();

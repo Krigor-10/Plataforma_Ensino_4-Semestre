@@ -48,12 +48,13 @@ namespace PlataformaEnsino.API.Controllers
         [HttpPost("cadastro-completo")]
         public async Task<IActionResult> CadastroCompleto([FromBody] CadastroAlunoDto dto)
         {
-            await _alunoService.CadastrarAlunoCompletoAsync(dto);
+            var cursoEhGratuito = await _alunoService.CadastrarAlunoCompletoAsync(dto);
 
-            return Ok(new
-            {
-                mensagem = "Cadastro realizado com sucesso. Solicitação pendente de aprovação."
-            });
+            var mensagem = cursoEhGratuito
+                ? "Cadastro realizado com sucesso. Sua matrícula foi aprovada e seu acesso está liberado."
+                : "Cadastro realizado com sucesso. Sua matrícula foi aprovada — confirme o pagamento pendente em \"Meus Cursos\" para liberar o acesso.";
+
+            return Ok(new { mensagem });
         }
 
         private static AlunoResponseDto MapResponse(Aluno aluno) =>

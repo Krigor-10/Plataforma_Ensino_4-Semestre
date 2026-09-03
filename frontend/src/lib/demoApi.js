@@ -267,7 +267,9 @@ function getNotificacaoActionId(path) {
 
 function listCourses() {
   const db = readDemoDb();
-  return clone(db.cursos).sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
+  return clone(db.cursos)
+    .map((curso) => ({ ...curso, ehGratuito: Number(curso.preco || 0) <= 0 }))
+    .sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR"));
 }
 
 function listTeacherCourses() {
@@ -403,10 +405,23 @@ function registerStudent(payload) {
     dataSolicitacao: now
   });
 
+  // Espelha o backend real: cadastro publico ja aprova a matricula na turma
+  // mais antiga do curso, reaproveitando a mesma funcao usada pela aprovacao
+  // manual/em lote (approveEnrollmentInDb -> resolveDemoEnrollmentClass), que
+  // tambem cria a cobranca pendente se o curso for pago. Se o curso demo nao
+  // tiver turma cadastrada, approveEnrollmentInDb lanca DemoApiError(...,422)
+  // e a funcao propaga sem chamar saveDemoDb — nada fica persistido no
+  // localStorage, espelhando o rollback da transacao real.
+  approveEnrollmentInDb(db, matriculaId);
+
+  const cursoEhGratuito = Number(db.cursos.find((item) => item.id === cursoId)?.preco || 0) <= 0;
+
   saveDemoDb(db);
 
   return {
-    mensagem: "Cadastro demo enviado com sucesso. Use o mesmo e-mail para entrar na apresentacao."
+    mensagem: cursoEhGratuito
+      ? "Cadastro realizado com sucesso. Sua matricula foi aprovada e seu acesso esta liberado."
+      : "Cadastro realizado com sucesso. Sua matricula foi aprovada — confirme o pagamento pendente em \"Meus Cursos\" para liberar o acesso."
   };
 }
 
@@ -686,7 +701,7 @@ function listStudentModules(studentId) {
   const db = readDemoDb();
   const approvedCourseIds = new Set(
     db.matriculas
-      .filter((matricula) => matricula.alunoId === studentId && Number(matricula.status) === 1)
+      .filter((matricula) => matricula.alunoId === studentId && cursoTemAcessoLiberadoDemo(db, matricula))
       .map((matricula) => matricula.cursoId)
   );
 
@@ -962,6 +977,8 @@ function approveEnrollmentInDb(db, enrollmentId, turmaIdOverride = null) {
     aluno.turmaAtual = turma.nomeTurma;
   }
 
+  criarPagamentoPendenteDemoSeNecessario(db, matricula);
+
   return {
     matriculaId: matricula.id,
     codigoRegistro: matricula.codigoRegistro || "",
@@ -969,6 +986,55 @@ function approveEnrollmentInDb(db, enrollmentId, turmaIdOverride = null) {
     turmaId: turma.id,
     nomeTurma: turma.nomeTurma || ""
   };
+}
+
+/* Espelha Services/AcessoAcademicoService.TemAcessoLiberadoAsync: matricula
+   precisa estar Aprovada (status 1) e, se o curso for pago, precisa tambem
+   ter um Pagamento com status 2 (Pago) vinculado. Curso gratuito (Preco <= 0)
+   nunca gera Pagamento, entao a matricula aprovada ja basta. Reaproveitado
+   por todas as listagens/acoes do aluno (modulos, conteudos, avaliacoes,
+   progresso, certificado) em vez de duplicar a checagem em cada uma. */
+function cursoTemAcessoLiberadoDemo(db, matricula) {
+  if (!matricula || Number(matricula.status) !== 1) {
+    return false;
+  }
+
+  const curso = db.cursos.find((item) => item.id === matricula.cursoId);
+  if (Number(curso?.preco || 0) <= 0) {
+    return true;
+  }
+
+  return (db.pagamentos || []).some(
+    (pagamento) => pagamento.matriculaId === matricula.id && Number(pagamento.status) === 2
+  );
+}
+
+/* Espelha Services/MatriculaService.CriarPagamentoPendenteSeNecessarioAsync:
+   ao aprovar uma matricula (aqui ou no cadastro automatico), cria uma
+   cobranca Pendente se o curso for pago. Curso gratuito (Preco <= 0) nunca
+   gera Pagamento. */
+function criarPagamentoPendenteDemoSeNecessario(db, matricula) {
+  ensurePagamentosCollection(db);
+
+  const jaTemPagamento = db.pagamentos.some((item) => item.matriculaId === matricula.id);
+  if (jaTemPagamento) {
+    return;
+  }
+
+  const curso = db.cursos.find((item) => item.id === matricula.cursoId);
+  const precoCurso = Number(curso?.preco || 0);
+  if (precoCurso <= 0) {
+    return;
+  }
+
+  db.pagamentos.push({
+    id: nextId(db.pagamentos),
+    matriculaId: matricula.id,
+    valor: precoCurso,
+    status: 1, // Pendente
+    criadoEm: new Date().toISOString(),
+    pagoEm: null
+  });
 }
 
 function resolveDemoEnrollmentClass(db, matricula, turmaIdOverride = null) {
@@ -1033,6 +1099,10 @@ function emitirCertificadoDemo(matriculaId) {
 
   if (Number(matricula.status) !== 1) {
     throw new DemoApiError("A matricula ainda nao foi aprovada.", 400);
+  }
+
+  if (!cursoTemAcessoLiberadoDemo(db, matricula)) {
+    throw new DemoApiError("O pagamento deste curso ainda nao foi confirmado.", 400);
   }
 
   const progresso = db.progressos.cursos.find((item) => item.matriculaId === matriculaId);
@@ -1389,7 +1459,7 @@ function listStudentContents(studentId) {
   const db = readDemoDb();
   const approvedTurmaIds = new Set(
     db.matriculas
-      .filter((matricula) => matricula.alunoId === studentId && Number(matricula.status) === 1 && matricula.turmaId)
+      .filter((matricula) => matricula.alunoId === studentId && matricula.turmaId && cursoTemAcessoLiberadoDemo(db, matricula))
       .map((matricula) => matricula.turmaId)
   );
 
@@ -1414,7 +1484,7 @@ function listStudentEvaluations(studentId) {
   ensureAttemptCollections(db);
 
   const approvedEnrollments = db.matriculas.filter(
-    (matricula) => matricula.alunoId === studentId && Number(matricula.status) === 1 && matricula.turmaId
+    (matricula) => matricula.alunoId === studentId && matricula.turmaId && cursoTemAcessoLiberadoDemo(db, matricula)
   );
   const approvedTurmaIds = new Set(approvedEnrollments.map((matricula) => matricula.turmaId));
   const enrollmentByTurmaId = new Map(approvedEnrollments.map((matricula) => [matricula.turmaId, matricula]));
@@ -1582,9 +1652,9 @@ function completeStudentContent(contentId) {
   const matricula = db.matriculas.find(
     (item) =>
       item.alunoId === user.id &&
-      Number(item.status) === 1 &&
       item.turmaId &&
-      item.turmaId === conteudo.turmaId
+      item.turmaId === conteudo.turmaId &&
+      cursoTemAcessoLiberadoDemo(db, item)
   );
   if (!matricula) {
     throw new DemoApiError("Este conteudo demo nao esta liberado para a matricula do aluno.", 422);
@@ -2171,9 +2241,9 @@ function ensureStudentCanAccessEvaluation(db, studentId, evaluationId) {
   const matricula = db.matriculas.find(
     (item) =>
       item.alunoId === studentId &&
-      Number(item.status) === 1 &&
       item.turmaId &&
-      item.turmaId === avaliacao.turmaId
+      item.turmaId === avaliacao.turmaId &&
+      cursoTemAcessoLiberadoDemo(db, item)
   );
   if (!matricula) {
     throw new DemoApiError("Esta avaliacao demo nao esta liberada para a matricula do aluno.", 403);
@@ -2201,7 +2271,7 @@ function buildStudentProgressSnapshot(db, studentId) {
 
   const enrollmentIds = new Set(
     db.matriculas
-      .filter((matricula) => matricula.alunoId === studentId && Number(matricula.status) === 1)
+      .filter((matricula) => matricula.alunoId === studentId && cursoTemAcessoLiberadoDemo(db, matricula))
       .map((matricula) => matricula.id)
   );
 

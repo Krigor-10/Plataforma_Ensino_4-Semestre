@@ -27,7 +27,7 @@ const ID_DO_CAMPO = {
 };
 
 export default function CadastroScreen({ isDemoMode, onNavigate }) {
-  useDocumentTitle("Solicitar matricula | EdTech Academy");
+  useDocumentTitle("Cadastro de matricula | EdTech Academy");
 
   const [form, setForm] = useState(SIGNUP_INITIAL_STATE);
   const [cursos, setCursos] = useState([]);
@@ -110,7 +110,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
     setCampoComErro("");
     setStatus("pending");
     setTone("info");
-    setMessage("Enviando sua solicitacao de matricula...");
+    setMessage("Enviando seu cadastro...");
 
     const cpfDigits = onlyDigits(form.cpf);
     const cepDigits = onlyDigits(form.cep);
@@ -136,7 +136,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
 
       setStatus("success");
       setTone("success");
-      setMessage(response.mensagem || "Cadastro enviado com sucesso.");
+      setMessage(response.mensagem || "Cadastro realizado com sucesso. Sua matricula foi aprovada.");
 
       window.setTimeout(() => {
         onNavigate("/login");
@@ -177,8 +177,8 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       <div className="tela-cadastro tela-cadastro--confirmacao">
         <div className="cadastro-confirmacao">
           <span className="cadastro-confirmacao__icone" aria-hidden="true">✓</span>
-          <h1 className="cadastro-confirmacao__titulo">Cadastro enviado!</h1>
-          <p className="cadastro-confirmacao__texto">{message || "Sua solicitacao de matricula foi registrada. Voce ja pode entrar com o e-mail cadastrado."}</p>
+          <h1 className="cadastro-confirmacao__titulo">Matricula confirmada!</h1>
+          <p className="cadastro-confirmacao__texto">{message || "Sua matricula foi aprovada. Voce ja pode entrar com o e-mail cadastrado e acessar o curso."}</p>
           <div className="cadastro-confirmacao__acoes">
             <Botao variante="primario" tamanho="grande" onClick={() => onNavigate("/login")}>
               Acessar plataforma
@@ -214,8 +214,8 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       <main className="cadastro-principal">
         <div className="cadastro-container">
           <div>
-            <h1 className="cadastro-intro__titulo">Solicitar matricula na EdTech</h1>
-            <p className="cadastro-intro__subtitulo">O formulario envia o cadastro completo e ja cria a solicitacao de matricula na API.</p>
+            <h1 className="cadastro-intro__titulo">Matricule-se na EdTech</h1>
+            <p className="cadastro-intro__subtitulo">O formulario envia o cadastro completo e sua matricula ja e aprovada automaticamente.</p>
           </div>
 
           {isDemoMode ? (
@@ -484,7 +484,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                 </Botao>
               ) : (
                 <Botao variante="primario" disabled={status === "pending" || catalogStatus === "loading"} type="submit">
-                  {status === "pending" ? "Enviando..." : "Enviar solicitacao"}
+                  {status === "pending" ? "Enviando..." : "Concluir cadastro"}
                 </Botao>
               )}
             </footer>

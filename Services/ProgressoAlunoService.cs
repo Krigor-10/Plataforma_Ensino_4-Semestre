@@ -9,19 +9,28 @@ namespace PlataformaEnsino.API.Services;
 public class ProgressoAlunoService : IProgressoAlunoService
 {
     private readonly PlataformaContext _context;
+    private readonly IAcessoAcademicoService _acessoAcademicoService;
 
-    public ProgressoAlunoService(PlataformaContext context)
+    public ProgressoAlunoService(PlataformaContext context, IAcessoAcademicoService acessoAcademicoService)
     {
         _context = context;
+        _acessoAcademicoService = acessoAcademicoService;
     }
 
     public async Task<ProgressoAlunoSnapshotDto> ObterSnapshotAsync(int alunoId)
     {
         await ValidarAlunoAsync(alunoId);
 
+        // Curso pago so entra com pagamento confirmado (subquery correlacionada
+        // em vez de reaproveitar IAcessoAcademicoService — EF Core nao traduz
+        // chamada de metodo C# dentro de Where/Select pra SQL).
         var matriculaIds = await _context.Matriculas
             .AsNoTracking()
-            .Where(matricula => matricula.AlunoId == alunoId && matricula.Status == StatusMatricula.Aprovada)
+            .Where(matricula =>
+                matricula.AlunoId == alunoId &&
+                matricula.Status == StatusMatricula.Aprovada &&
+                (matricula.Curso!.Preco <= 0 ||
+                 _context.Pagamentos.Any(pagamento => pagamento.MatriculaId == matricula.Id && pagamento.Status == StatusPagamento.Pago)))
             .Select(matricula => matricula.Id)
             .ToListAsync();
 
@@ -67,12 +76,18 @@ public class ProgressoAlunoService : IProgressoAlunoService
             ?? throw new KeyNotFoundException("Conteudo publicado nao encontrado.");
 
         var matricula = await _context.Matriculas
+            .Include(item => item.Curso)
             .FirstOrDefaultAsync(item =>
                 item.AlunoId == alunoId &&
                 item.Status == StatusMatricula.Aprovada &&
                 item.TurmaId.HasValue &&
                 item.TurmaId == conteudo.TurmaId)
             ?? throw new InvalidOperationException("Este conteudo nao esta liberado para a matricula do aluno.");
+
+        if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
+        {
+            throw new InvalidOperationException("O pagamento deste curso ainda nao foi confirmado.");
+        }
 
         var now = DateTime.UtcNow;
         var progresso = await _context.ProgressosConteudosAlunos

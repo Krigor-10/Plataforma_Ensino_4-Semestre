@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
@@ -21,6 +22,15 @@ public class Curso
 
     [Range(0, double.MaxValue)]
     public decimal Preco { get; set; }
+
+    /// <summary>
+    /// Fonte unica de verdade pra "curso gratuito vs pago" — computado a
+    /// partir do Preco (sem campo/coluna proprio), pra nunca poder divergir
+    /// dele. Nao persistido ([NotMapped]); backend e a fonte de verdade,
+    /// frontend so consome este campo.
+    /// </summary>
+    [NotMapped]
+    public bool EhGratuito => Preco <= 0;
 
     [StringLength(500)]
     public string? ImagemUrl { get; set; }

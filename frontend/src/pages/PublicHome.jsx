@@ -159,7 +159,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                     </button>
 
                     <footer className="cartao-curso__rodape">
-                      <strong className="cartao-curso__preco">{formatMoney(curso.preco)}</strong>
+                      <strong className="cartao-curso__preco">{curso.ehGratuito ? "Gratis" : formatMoney(curso.preco)}</strong>
                       <Botao
                         variante="primario"
                         tamanho="pequeno"
@@ -196,7 +196,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
           <dl className="lista-detalhes">
             <div className="lista-detalhes__item">
               <dt>Investimento</dt>
-              <dd>{formatMoney(cursoModal.preco)}</dd>
+              <dd>{cursoModal.ehGratuito ? "Gratis" : formatMoney(cursoModal.preco)}</dd>
             </div>
             <div className="lista-detalhes__item">
               <dt>Descricao</dt>

@@ -88,7 +88,7 @@ public class CertificadoServiceTests
         var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
 
         using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
-        var resultado = await new CertificadoService(contextoDoServico).EmitirCertificadoAsync(aluno.Id, matricula.Id);
+        var resultado = await new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico)).EmitirCertificadoAsync(aluno.Id, matricula.Id);
 
         Assert.NotNull(resultado.CertificadoEmitidoEm);
     }
@@ -104,10 +104,10 @@ public class CertificadoServiceTests
         var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma);
 
         using var primeiroContexto = TestContextFactory.Criar(nomeBanco);
-        var primeiraEmissao = await new CertificadoService(primeiroContexto).EmitirCertificadoAsync(aluno.Id, matricula.Id);
+        var primeiraEmissao = await new CertificadoService(primeiroContexto, new AcessoAcademicoService(primeiroContexto)).EmitirCertificadoAsync(aluno.Id, matricula.Id);
 
         using var segundoContexto = TestContextFactory.Criar(nomeBanco);
-        var segundaEmissao = await new CertificadoService(segundoContexto).EmitirCertificadoAsync(aluno.Id, matricula.Id);
+        var segundaEmissao = await new CertificadoService(segundoContexto, new AcessoAcademicoService(segundoContexto)).EmitirCertificadoAsync(aluno.Id, matricula.Id);
 
         Assert.Equal(primeiraEmissao.CertificadoEmitidoEm, segundaEmissao.CertificadoEmitidoEm);
     }
@@ -122,7 +122,7 @@ public class CertificadoServiceTests
         context.Matriculas.Add(matricula);
         context.SaveChanges();
 
-        var service = new CertificadoService(context);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
@@ -137,7 +137,7 @@ public class CertificadoServiceTests
         var turma = CriarTurma(context, curso.Id);
         var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 50);
 
-        var service = new CertificadoService(context);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
@@ -153,7 +153,7 @@ public class CertificadoServiceTests
         var turma = CriarTurma(context, curso.Id);
         var matricula = CriarMatriculaAprovada(context, aluno, curso, turma);
 
-        var service = new CertificadoService(context);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.EmitirCertificadoAsync(outroAluno.Id, matricula.Id));
@@ -171,10 +171,10 @@ public class CertificadoServiceTests
         var matriculaSemCertificado = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 40);
 
         using var contextoDeEmissao = TestContextFactory.Criar(nomeBanco);
-        await new CertificadoService(contextoDeEmissao).EmitirCertificadoAsync(aluno.Id, matriculaComCertificado.Id);
+        await new CertificadoService(contextoDeEmissao, new AcessoAcademicoService(contextoDeEmissao)).EmitirCertificadoAsync(aluno.Id, matriculaComCertificado.Id);
 
         using var contextoDeConsulta = TestContextFactory.Criar(nomeBanco);
-        var certificados = (await new CertificadoService(contextoDeConsulta).ListarCertificadosDoAlunoAsync(aluno.Id)).ToList();
+        var certificados = (await new CertificadoService(contextoDeConsulta, new AcessoAcademicoService(contextoDeConsulta)).ListarCertificadosDoAlunoAsync(aluno.Id)).ToList();
 
         Assert.Single(certificados);
         Assert.Equal(matriculaComCertificado.Id, certificados[0].Id);
@@ -192,10 +192,10 @@ public class CertificadoServiceTests
         var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma);
 
         using var contextoDeEmissao = TestContextFactory.Criar(nomeBanco);
-        await new CertificadoService(contextoDeEmissao).EmitirCertificadoAsync(aluno.Id, matricula.Id);
+        await new CertificadoService(contextoDeEmissao, new AcessoAcademicoService(contextoDeEmissao)).EmitirCertificadoAsync(aluno.Id, matricula.Id);
 
         using var contextoDeConsulta = TestContextFactory.Criar(nomeBanco);
-        var resultado = await new CertificadoService(contextoDeConsulta).ObterCertificadoPorCodigoAsync(matricula.CodigoRegistro);
+        var resultado = await new CertificadoService(contextoDeConsulta, new AcessoAcademicoService(contextoDeConsulta)).ObterCertificadoPorCodigoAsync(matricula.CodigoRegistro);
 
         Assert.Equal(matricula.Id, resultado.Id);
     }
@@ -209,7 +209,7 @@ public class CertificadoServiceTests
         var turma = CriarTurma(context, curso.Id);
         var matricula = CriarMatriculaAprovada(context, aluno, curso, turma);
 
-        var service = new CertificadoService(context);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ObterCertificadoPorCodigoAsync(matricula.CodigoRegistro));
@@ -219,7 +219,7 @@ public class CertificadoServiceTests
     public async Task ObterCertificadoPorCodigoAsync_CodigoInexistente_LancaKeyNotFoundException()
     {
         var context = TestContextFactory.Criar();
-        var service = new CertificadoService(context);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ObterCertificadoPorCodigoAsync("CODIGO-QUE-NAO-EXISTE"));

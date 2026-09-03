@@ -6,7 +6,7 @@ namespace PlataformaEnsino.API.Interfaces;
 public interface IMatriculaService
 {
     Task<Matricula> MatricularAlunoAsync(int alunoId, int turmaId);
-    Task<Matricula> SolicitarMatriculaAsync(int alunoId, int cursoId);
+    Task<Matricula> MatricularViaCadastroAsync(int alunoId, int cursoId);
     Task<Matricula> ObterMatriculaPorIdAsync(int id);
     Task<IEnumerable<Matricula>> ListarMatriculasPorAlunoAsync(int alunoId);
     Task<IEnumerable<MatriculaPendenteDto>> ListarMatriculasPendentesAsync();

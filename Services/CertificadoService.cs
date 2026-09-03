@@ -8,10 +8,12 @@ namespace PlataformaEnsino.API.Services;
 public class CertificadoService : ICertificadoService
 {
     private readonly PlataformaContext _context;
+    private readonly IAcessoAcademicoService _acessoAcademicoService;
 
-    public CertificadoService(PlataformaContext context)
+    public CertificadoService(PlataformaContext context, IAcessoAcademicoService acessoAcademicoService)
     {
         _context = context;
+        _acessoAcademicoService = acessoAcademicoService;
     }
 
     public async Task<Matricula> EmitirCertificadoAsync(int alunoId, int matriculaId)
@@ -27,6 +29,11 @@ public class CertificadoService : ICertificadoService
         if (matricula.Status != StatusMatricula.Aprovada)
         {
             throw new ArgumentException("A matricula ainda nao foi aprovada.");
+        }
+
+        if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
+        {
+            throw new InvalidOperationException("O pagamento deste curso ainda nao foi confirmado.");
         }
 
         var progresso = matricula.ProgressosCurso.FirstOrDefault();

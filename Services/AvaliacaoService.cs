@@ -11,12 +11,18 @@ public class AvaliacaoService : IAvaliacaoService
     private readonly PlataformaContext _context;
     private readonly IProgressoAlunoService _progressoAlunoService;
     private readonly INotificacaoService _notificacaoService;
+    private readonly IAcessoAcademicoService _acessoAcademicoService;
 
-    public AvaliacaoService(PlataformaContext context, IProgressoAlunoService progressoAlunoService, INotificacaoService notificacaoService)
+    public AvaliacaoService(
+        PlataformaContext context,
+        IProgressoAlunoService progressoAlunoService,
+        INotificacaoService notificacaoService,
+        IAcessoAcademicoService acessoAcademicoService)
     {
         _context = context;
         _progressoAlunoService = progressoAlunoService;
         _notificacaoService = notificacaoService;
+        _acessoAcademicoService = acessoAcademicoService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -44,11 +50,28 @@ public class AvaliacaoService : IAvaliacaoService
 
         var matriculas = await _context.Matriculas
             .AsNoTracking()
+            .Include(matricula => matricula.Curso)
             .Where(matricula =>
                 matricula.AlunoId == alunoId &&
                 matricula.Status == StatusMatricula.Aprovada &&
                 matricula.TurmaId.HasValue)
             .ToListAsync();
+
+        if (matriculas.Count == 0)
+        {
+            return Enumerable.Empty<AvaliacaoAlunoResponseDto>();
+        }
+
+        // Cursos pagos so entram na lista com pagamento confirmado — gratuitos
+        // (Preco <= 0) nunca geram Pagamento, entao a matricula aprovada basta.
+        var matriculaIdsComPagamentoConfirmado = await _context.Pagamentos
+            .Where(pagamento => pagamento.Status == StatusPagamento.Pago)
+            .Select(pagamento => pagamento.MatriculaId)
+            .ToListAsync();
+
+        matriculas = matriculas
+            .Where(matricula => matricula.Curso!.Preco <= 0 || matriculaIdsComPagamentoConfirmado.Contains(matricula.Id))
+            .ToList();
 
         if (matriculas.Count == 0)
         {
@@ -433,12 +456,18 @@ public class AvaliacaoService : IAvaliacaoService
 
         var matricula = await _context.Matriculas
             .AsNoTracking()
+            .Include(item => item.Curso)
             .FirstOrDefaultAsync(item =>
                 item.AlunoId == alunoId &&
                 item.Status == StatusMatricula.Aprovada &&
                 item.TurmaId.HasValue &&
                 item.TurmaId == avaliacao.TurmaId)
             ?? throw new InvalidOperationException("Esta avaliacao nao esta liberada para a matricula do aluno.");
+
+        if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
+        {
+            throw new InvalidOperationException("O pagamento deste curso ainda nao foi confirmado.");
+        }
 
         return (avaliacao, matricula);
     }

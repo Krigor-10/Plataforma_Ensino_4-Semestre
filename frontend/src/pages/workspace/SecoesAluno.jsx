@@ -61,6 +61,8 @@ const ACADEMIC_ACCENTS = [
   { solid: "#d946ef", border: "rgba(173, 136, 180, 0.34)", soft: "rgba(173, 136, 180, 0.07)" }
 ];
 
+const EMPTY_SET = new Set();
+
 const ICONE_TIPO_CONTEUDO_PROGRESSO = {
   1: <TbFileText aria-hidden="true" size="1.75rem" />,
   2: <TbFile aria-hidden="true" size="1.75rem" />,
@@ -75,7 +77,17 @@ const ICONE_TIPO_CONTEUDO_PROGRESSO = {
    accordion de modulos (conteudos-modulo), so que com KPIs e status na
    perspectiva do proprio aluno (progresso/nota) em vez de metricas
    agregadas de turma. Substitui o carrossel anterior. */
-export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matriculas, modulos = [], onNavigate, progressos = {}, turmas }) {
+export function SecaoCursosAluno({
+  avaliacoes = [],
+  conteudos,
+  cursos,
+  matriculaIdsComPagamentoPendente = EMPTY_SET,
+  matriculas,
+  modulos = [],
+  onNavigate,
+  progressos = {},
+  turmas
+}) {
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
@@ -120,7 +132,10 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
   const linhasMatriculasAprovadas = useMemo(
     () =>
       [...matriculas]
-        .filter((matricula) => normalizeStatus(matricula.status) === "Aprovada")
+        .filter(
+          (matricula) =>
+            normalizeStatus(matricula.status) === "Aprovada" && !matriculaIdsComPagamentoPendente.has(matricula.id)
+        )
         .sort((matriculaA, matriculaB) => {
           const tituloCursoA = cursoPorId.get(matriculaA.cursoId)?.titulo || "";
           const tituloCursoB = cursoPorId.get(matriculaB.cursoId)?.titulo || "";
@@ -152,7 +167,7 @@ export function SecaoCursosAluno({ avaliacoes = [], conteudos, cursos, matricula
             notaFinal: matricula.notaFinal ?? 0
           };
         }),
-    [cursoPorId, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorTurma, turmaPorId]
+    [cursoPorId, matriculaIdsComPagamentoPendente, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorTurma, turmaPorId]
   );
 
   const linhaSelecionada = useMemo(
@@ -1218,6 +1233,7 @@ export function SecaoConteudosAluno({
   conteudos,
   cursoIdSelecionado = null,
   cursos = [],
+  matriculaIdsComPagamentoPendente = EMPTY_SET,
   matriculas,
   modulos = [],
   onNavigate,
@@ -1242,7 +1258,10 @@ export function SecaoConteudosAluno({
   const matriculasAprovadas = useMemo(
     () =>
       [...matriculas]
-        .filter((matricula) => normalizeStatus(matricula.status) === "Aprovada")
+        .filter(
+          (matricula) =>
+            normalizeStatus(matricula.status) === "Aprovada" && !matriculaIdsComPagamentoPendente.has(matricula.id)
+        )
         .sort((matriculaA, matriculaB) => {
           const tituloCursoA = obterTituloCursoMatricula(matriculaA, cursoPorId);
           const tituloCursoB = obterTituloCursoMatricula(matriculaB, cursoPorId);
@@ -1254,7 +1273,7 @@ export function SecaoConteudosAluno({
 
           return obterNomeTurmaMatricula(matriculaA, turmaPorId).localeCompare(obterNomeTurmaMatricula(matriculaB, turmaPorId), "pt-BR");
         }),
-    [cursoPorId, matriculas, turmaPorId]
+    [cursoPorId, matriculaIdsComPagamentoPendente, matriculas, turmaPorId]
   );
 
   const progressosConteudos = progressos.conteudos || [];

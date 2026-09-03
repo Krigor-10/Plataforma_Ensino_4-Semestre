@@ -222,6 +222,14 @@ export default function WorkspaceScreen({
   }, [cursosDaSecaoCursos, isProfessor, role, snapshot.modulos]);
 
   const pagamentoPorMatriculaId = useMemo(() => mapById(snapshot.pagamentos.map((pagamento) => ({ ...pagamento, id: pagamento.matriculaId }))), [snapshot.pagamentos]);
+
+  // Curso pago com pagamento pendente nao conta como "ativo"/"liberado" em
+  // nenhuma tela do aluno (Dashboard, Progresso, Conteudos) — so a matricula
+  // aprovada nao basta. StatusPagamento.Pendente = 1.
+  const matriculaIdsComPagamentoPendente = useMemo(
+    () => new Set(snapshot.pagamentos.filter((pagamento) => Number(pagamento.status) === 1).map((pagamento) => pagamento.matriculaId)),
+    [snapshot.pagamentos]
+  );
   const progressoCursoPorMatriculaId = useMemo(
     () => mapById((snapshot.progressos.cursos || []).map((progresso) => ({ ...progresso, id: progresso.matriculaId }))),
     [snapshot.progressos.cursos]
@@ -631,6 +639,7 @@ export default function WorkspaceScreen({
                 avaliacoes={snapshot.avaliacoes}
                 conteudos={snapshot.conteudos}
                 cursos={snapshot.cursos}
+                matriculaIdsComPagamentoPendente={matriculaIdsComPagamentoPendente}
                 matriculas={snapshot.matriculas}
                 modulos={snapshot.modulos}
                 onNavigate={onNavigate}
@@ -720,6 +729,7 @@ export default function WorkspaceScreen({
                   conteudos={snapshot.conteudos}
                   cursoIdSelecionado={route.param ? Number(route.param) : null}
                   cursos={snapshot.cursos}
+                  matriculaIdsComPagamentoPendente={matriculaIdsComPagamentoPendente}
                   matriculas={snapshot.matriculas}
                   modulos={snapshot.modulos}
                   onNavigate={onNavigate}

@@ -2,16 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
+using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Services;
 
 public class PagamentoService : IPagamentoService
 {
     private readonly PlataformaContext _context;
+    private readonly INotificacaoService _notificacaoService;
 
-    public PagamentoService(PlataformaContext context)
+    public PagamentoService(PlataformaContext context, INotificacaoService notificacaoService)
     {
         _context = context;
+        _notificacaoService = notificacaoService;
     }
 
     public async Task<IEnumerable<PagamentoAlunoResponseDto>> ListarPagamentosDoAlunoAsync(int alunoId)
@@ -37,10 +40,18 @@ public class PagamentoService : IPagamentoService
         pagamento.ConfirmarPagamento();
         await _context.SaveChangesAsync();
 
+        var tituloCurso = pagamento.Matricula?.Curso?.Titulo ?? "seu curso";
+        await _notificacaoService.NotificarAsync(
+            alunoId,
+            "Pagamento confirmado",
+            $"Seu pagamento do curso \"{tituloCurso}\" foi confirmado. Seu acesso ja esta liberado.",
+            TipoNotificacao.PagamentoConfirmado,
+            "/app/cursos-matriculados");
+
         return MapResponse(pagamento);
     }
 
-    private static PagamentoAlunoResponseDto MapResponse(Models.Pagamento pagamento)
+    private static PagamentoAlunoResponseDto MapResponse(Pagamento pagamento)
     {
         return new PagamentoAlunoResponseDto
         {

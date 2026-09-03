@@ -15,6 +15,8 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
 import { normalizeProgressStatus } from "../../lib/format.js";
 
+const PAGAMENTO_PENDENTE = 1;
+
 export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [], modulos = [], onMudarSecao, progressos = {}, usuario }) {
   const progressosCursos = progressos.cursos || [];
   const progressosModulos = progressos.modulos || [];
@@ -27,7 +29,12 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
   const progressoConteudoPorId = new Map(progressosConteudos.map((item) => [Number(item.conteudoDidaticoId), item]));
   const moduloPorId = new Map(modulos.map((modulo) => [Number(modulo.id), modulo]));
 
-  const matriculasAprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada");
+  // Curso pago com pagamento pendente nao conta como "ativo" aqui — mesma
+  // regra aplicada em Meus Cursos (CartaoCursoMatricula): matricula aprovada
+  // != acesso liberado quando o curso e pago.
+  const matriculasAprovadas = matriculas.filter(
+    (matricula) => matricula.status === "Aprovada" && matricula.pagamentoStatus !== PAGAMENTO_PENDENTE
+  );
 
   const cursosAtivos = matriculasAprovadas.map((matricula) => {
     const progressoCurso = progressoCursoPorMatricula.get(Number(matricula.id));

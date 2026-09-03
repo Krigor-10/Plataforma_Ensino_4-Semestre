@@ -60,7 +60,31 @@ public class MatriculaService : IMatriculaService
         return await _matriculaRepository.ObterMatriculaCompletaAsync(novaMatricula.Id) ?? novaMatricula;
     }
 
-    public async Task<Matricula> SolicitarMatriculaAsync(int alunoId, int cursoId)
+    public async Task<Matricula> MatricularViaCadastroAsync(int alunoId, int cursoId)
+    {
+        var matriculaPendente = await CriarMatriculaPendenteAsync(alunoId, cursoId);
+
+        // Reaproveita o mesmo caminho da aprovacao automatica em lote: resolve a
+        // turma mais antiga do curso e aprova (o que tambem cria o Pagamento
+        // pendente se o curso for pago, via CriarPagamentoPendenteSeNecessarioAsync).
+        // Se nao houver turma cadastrada para o curso, lanca InvalidOperationException
+        // (-> 422), o que desfaz a transacao aberta em
+        // AlunoService.CadastrarAlunoCompletoAsync (aluno + esta matricula pendente
+        // intermediaria nunca chegam a ser commitados).
+        await AprovarMatriculaAutomaticamenteCoreAsync(matriculaPendente.Id);
+        await SalvarComProtecaoDeConcorrenciaAsync();
+
+        return await _matriculaRepository.ObterMatriculaCompletaAsync(matriculaPendente.Id) ?? matriculaPendente;
+    }
+
+    /// <summary>
+    /// Cria a matricula em estado Pendente, sem turma — passo intermediario
+    /// interno usado por <see cref="MatricularViaCadastroAsync"/> antes de
+    /// aprova-la automaticamente. Nao e mais exposto na interface publica:
+    /// nenhum fluxo de negocio hoje precisa de uma matricula que fique
+    /// Pendente sem ser imediatamente resolvida/aprovada.
+    /// </summary>
+    private async Task<Matricula> CriarMatriculaPendenteAsync(int alunoId, int cursoId)
     {
         var novaMatricula = new Matricula
         {

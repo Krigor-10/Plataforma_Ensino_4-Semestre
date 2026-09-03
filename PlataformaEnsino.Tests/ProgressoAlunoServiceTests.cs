@@ -10,7 +10,7 @@ public class ProgressoAlunoServiceTests
     private static (ProgressoAlunoService Service, PlataformaContext Context) CriarService()
     {
         var context = TestContextFactory.Criar();
-        return (new ProgressoAlunoService(context), context);
+        return (new ProgressoAlunoService(context, new AcessoAcademicoService(context)), context);
     }
 
     private static Aluno CriarAluno(PlataformaContext context)

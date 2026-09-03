@@ -145,7 +145,7 @@ public sealed class PagamentoConfiguration : IEntityTypeConfiguration<Pagamento>
     {
         builder
             .HasOne(p => p.Matricula)
-            .WithMany()
+            .WithMany(matricula => matricula.Pagamentos)
             .HasForeignKey(p => p.MatriculaId)
             .OnDelete(DeleteBehavior.Cascade);
 

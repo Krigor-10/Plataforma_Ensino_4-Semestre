@@ -22,9 +22,9 @@ public class MatriculaServiceTests
         return (service, context);
     }
 
-    private static Curso CriarCurso(PlataformaContext context)
+    private static Curso CriarCurso(PlataformaContext context, decimal preco = 0)
     {
-        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = "CUR-0001" };
+        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = "CUR-0001", Preco = preco };
         context.Cursos.Add(curso);
         context.SaveChanges();
         return curso;
@@ -169,5 +169,63 @@ public class MatriculaServiceTests
         Assert.Single(resultado.Erros);
         Assert.Equal(matricula.Id, resultado.Aprovadas[0].MatriculaId);
         Assert.Equal(999, resultado.Erros[0].MatriculaId);
+    }
+
+    [Fact]
+    public async Task MatricularViaCadastroAsync_CriaMatriculaJaAprovadaComTurma()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
+        Assert.Equal(turma.Id, matricula.TurmaId);
+        Assert.Equal(curso.Id, matricula.CursoId);
+        Assert.NotEmpty(matricula.CodigoRegistro);
+
+        var alunoAtualizado = context.Alunos.Single(a => a.Id == aluno.Id);
+        Assert.NotEqual("Pendente", alunoAtualizado.Matricula);
+    }
+
+    [Fact]
+    public async Task MatricularViaCadastroAsync_CursoSemTurma_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context); // sem CriarTurma
+        var aluno = CriarAluno(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.MatricularViaCadastroAsync(aluno.Id, curso.Id));
+    }
+
+    [Fact]
+    public async Task MatricularViaCadastroAsync_CursoPago_CriaPagamentoPendente()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        CriarTurma(context, curso.Id);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+
+        var pagamento = context.Pagamentos.Single(p => p.MatriculaId == matricula.Id);
+        Assert.Equal(StatusPagamento.Pendente, pagamento.Status);
+        Assert.Equal(199.90m, pagamento.Valor);
+    }
+
+    [Fact]
+    public async Task MatricularViaCadastroAsync_CursoGratuito_NaoCriaPagamento()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        CriarTurma(context, curso.Id);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+
+        Assert.False(context.Pagamentos.Any(p => p.MatriculaId == matricula.Id));
     }
 }

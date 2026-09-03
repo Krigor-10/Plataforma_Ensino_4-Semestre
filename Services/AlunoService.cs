@@ -82,14 +82,21 @@ public class AlunoService : IAlunoService
         return aluno;
     }
 
-    public async Task CadastrarAlunoCompletoAsync(CadastroAlunoDto dto)
+    /// <summary>
+    /// Retorna true se o curso escolhido e gratuito (acesso ja liberado ao
+    /// concluir o cadastro) ou false se e pago (matricula aprovada, mas o
+    /// acesso so libera apos confirmar o pagamento pendente) — usado pelo
+    /// controller pra escolher a mensagem de sucesso correta.
+    /// </summary>
+    public async Task<bool> CadastrarAlunoCompletoAsync(CadastroAlunoDto dto)
     {
         var (emailNormalizado, cpfNormalizado) = await UsuarioValidacao.NormalizarEGarantirDisponivelAsync(_context, dto.Email, dto.Cpf);
 
-        if (!await _context.Cursos.AnyAsync(curso => curso.Id == dto.CursoId))
-        {
-            throw new ArgumentException("Curso informado nao foi encontrado.");
-        }
+        var precoCurso = await _context.Cursos
+            .Where(curso => curso.Id == dto.CursoId)
+            .Select(curso => (decimal?)curso.Preco)
+            .FirstOrDefaultAsync()
+            ?? throw new ArgumentException("Curso informado nao foi encontrado.");
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -112,8 +119,10 @@ public class AlunoService : IAlunoService
         _context.Alunos.Add(aluno);
         await _context.SaveChangesAsync();
 
-        await _matriculaService.SolicitarMatriculaAsync(aluno.Id, dto.CursoId);
+        await _matriculaService.MatricularViaCadastroAsync(aluno.Id, dto.CursoId);
         await transaction.CommitAsync();
+
+        return precoCurso <= 0;
     }
 
     private Task<string> GerarCodigoAlunoAsync() =>
