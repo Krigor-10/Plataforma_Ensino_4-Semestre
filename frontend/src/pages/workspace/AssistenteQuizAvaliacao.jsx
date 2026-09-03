@@ -15,6 +15,12 @@ const OPCOES_TIPO_AVALIACAO = [
   { value: "3", label: "Exercicio" }
 ];
 
+// Tela Avaliacoes (professor) e exclusiva pra Prova/Exercicio - quiz so se cria
+// via Conteudos (modoExclusivoQuiz). Uma avaliacao tipo Quiz legada ainda pode
+// ser editada aqui (o item continua aparecendo na lista), entao a opcao Quiz
+// so reaparece no select se for exatamente o tipo ja selecionado no momento.
+const OPCOES_TIPO_AVALIACAO_SEM_QUIZ = OPCOES_TIPO_AVALIACAO.filter((opcao) => opcao.value !== TIPO_QUIZ);
+
 const OPCOES_STATUS_PUBLICACAO = [
   { value: "1", label: "Rascunho" },
   { value: "2", label: "Publicado" },
@@ -117,7 +123,7 @@ function criarAlternativasPorTipo(tipoQuestao, alternativasAtuais = []) {
   }));
 }
 
-function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz) {
+function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz) {
   if (avaliacaoParaEditar) {
     return {
       turmaId: String(avaliacaoParaEditar.turmaId),
@@ -140,7 +146,8 @@ function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoN
   return criarEstadoInicialFormulario({
     turmaId: String(cursoAtivo.turma.id),
     moduloId: contextoNovoQuiz?.moduloId ? String(contextoNovoQuiz.moduloId) : "",
-    conteudoDidaticoId: contextoNovoQuiz?.conteudoDidaticoId ? String(contextoNovoQuiz.conteudoDidaticoId) : ""
+    conteudoDidaticoId: contextoNovoQuiz?.conteudoDidaticoId ? String(contextoNovoQuiz.conteudoDidaticoId) : "",
+    tipoAvaliacao: modoExclusivoQuiz ? TIPO_QUIZ : OPCOES_TIPO_AVALIACAO_SEM_QUIZ[0].value
   });
 }
 
@@ -163,6 +170,7 @@ export function AssistenteQuizAvaliacao({
   conteudos = [],
   cursoAtivo,
   avaliacaoParaEditar = null,
+  modoExclusivoQuiz = false,
   modulosDisponiveis,
   onFechar,
   onRefresh,
@@ -170,7 +178,7 @@ export function AssistenteQuizAvaliacao({
 }) {
   const [avaliacaoAssistenteId, setAvaliacaoAssistenteId] = useState(() => avaliacaoParaEditar?.id ?? null);
   const [dadosFormulario, setDadosFormulario] = useState(() =>
-    estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz)
+    estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz)
   );
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
@@ -208,7 +216,17 @@ export function AssistenteQuizAvaliacao({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const ehQuiz = dadosFormulario.tipoAvaliacao === TIPO_QUIZ;
+  const ehQuiz = modoExclusivoQuiz || dadosFormulario.tipoAvaliacao === TIPO_QUIZ;
+
+  // Select de Tipo (fora do modoExclusivoQuiz) so oferece Quiz se for o tipo
+  // ja selecionado no momento — cobre a edicao de uma avaliacao Quiz legada
+  // sem reabrir a opcao de criar Quiz novo por aqui.
+  const opcoesTipoDisponiveis = dadosFormulario.tipoAvaliacao === TIPO_QUIZ ? OPCOES_TIPO_AVALIACAO : OPCOES_TIPO_AVALIACAO_SEM_QUIZ;
+
+  const moduloContexto = useMemo(
+    () => modulosDisponiveis.find((modulo) => String(modulo.id) === dadosFormulario.moduloId) || null,
+    [dadosFormulario.moduloId, modulosDisponiveis]
+  );
 
   const materiaisPorModuloId = useMemo(() => {
     const agrupados = new Map();
@@ -293,15 +311,15 @@ export function AssistenteQuizAvaliacao({
       turmaId: Number(dadosFormulario.turmaId),
       moduloId: ehQuiz && dadosFormulario.moduloId ? Number(dadosFormulario.moduloId) : null,
       conteudoDidaticoId: ehQuiz && dadosFormulario.conteudoDidaticoId ? Number(dadosFormulario.conteudoDidaticoId) : null,
-      tipoAvaliacao: Number(dadosFormulario.tipoAvaliacao),
+      tipoAvaliacao: modoExclusivoQuiz ? 1 : Number(dadosFormulario.tipoAvaliacao),
       statusPublicacao: Number(dadosFormulario.statusPublicacao),
-      dataAbertura: toIsoOrNull(dadosFormulario.dataAbertura),
-      dataFechamento: toIsoOrNull(dadosFormulario.dataFechamento),
-      tentativasPermitidas: Number(dadosFormulario.tentativasPermitidas),
-      tempoLimiteMinutos: dadosFormulario.tempoLimiteMinutos ? Number(dadosFormulario.tempoLimiteMinutos) : null,
+      dataAbertura: modoExclusivoQuiz ? null : toIsoOrNull(dadosFormulario.dataAbertura),
+      dataFechamento: modoExclusivoQuiz ? null : toIsoOrNull(dadosFormulario.dataFechamento),
+      tentativasPermitidas: modoExclusivoQuiz ? 1 : Number(dadosFormulario.tentativasPermitidas),
+      tempoLimiteMinutos: modoExclusivoQuiz ? null : dadosFormulario.tempoLimiteMinutos ? Number(dadosFormulario.tempoLimiteMinutos) : null,
       notaMaxima: Number(dadosFormulario.notaMaxima),
       pesoNota: Number(dadosFormulario.pesoNota),
-      pesoProgresso: Number(dadosFormulario.pesoProgresso)
+      pesoProgresso: modoExclusivoQuiz ? 1 : Number(dadosFormulario.pesoProgresso)
     };
   }
 
@@ -370,7 +388,10 @@ export function AssistenteQuizAvaliacao({
       } else {
         const criada = await apiRequest("/Avaliacoes", { method: "POST", body: JSON.stringify(dadosEnvio) });
         setAvaliacaoAssistenteId(criada.id);
-        setMensagemFormulario({ tone: "success", message: "Avaliacao criada. Agora adicione as questoes." });
+        setMensagemFormulario({
+          tone: "success",
+          message: modoExclusivoQuiz ? "Quiz criado. Agora adicione as questoes." : "Avaliacao criada. Agora adicione as questoes."
+        });
       }
 
       onRefresh?.();
@@ -539,7 +560,11 @@ export function AssistenteQuizAvaliacao({
       <Modal
         className="modal-caixa--avaliacao"
         onFechar={fecharAssistente}
-        titulo={avaliacaoAssistenteId ? "Editar avaliacao" : "Nova avaliacao"}
+        titulo={
+          modoExclusivoQuiz
+            ? avaliacaoAssistenteId ? "Editar Quiz" : "Adicionar Quiz"
+            : avaliacaoAssistenteId ? "Editar avaliacao" : "Nova avaliacao"
+        }
         rodape={
           etapaAtiva === "dados" ? (
             <footer className="criar-avaliacao__rodape">
@@ -548,7 +573,14 @@ export function AssistenteQuizAvaliacao({
               </Botao>
               <div className="criar-avaliacao__rodape-direita">
                 <Botao disabled={salvando || !modulosDisponiveis.length} form="form-avaliacao-dados" type="submit" variante="primario">
-                  <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : avaliacaoAssistenteId ? "Salvar alteracoes" : "Criar avaliacao e continuar"}
+                  <MdSave aria-hidden="true" size={17} />{" "}
+                  {salvando
+                    ? "Salvando..."
+                    : avaliacaoAssistenteId
+                    ? "Salvar alteracoes"
+                    : modoExclusivoQuiz
+                    ? "Criar quiz e continuar"
+                    : "Criar avaliacao e continuar"}
                 </Botao>
               </div>
             </footer>
@@ -624,38 +656,52 @@ export function AssistenteQuizAvaliacao({
                 <section className="criar-avaliacao__secao">
                   <h3 className="criar-avaliacao__secao-titulo">Dados gerais</h3>
                   <form className="criar-avaliacao__secao-corpo" id="form-avaliacao-dados" onSubmit={salvarDadosGerais}>
-                    <div className="grade-3">
+                    {modoExclusivoQuiz ? (
                       <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-tipo">Tipo *</label>
-                        <select className="campo__entrada" disabled={salvando} id="avaliacao-tipo" name="tipoAvaliacao" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoAvaliacao}>
-                          {OPCOES_TIPO_AVALIACAO.map((opcao) => (
-                            <option key={opcao.value} value={opcao.value}>
-                              {opcao.label}
-                            </option>
-                          ))}
-                        </select>
+                        <span className="campo__rotulo">Curso e modulo</span>
+                        <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                          <strong>{cursoAtivo.curso.titulo}</strong>
+                          {moduloContexto ? (
+                            <>
+                              {" "}· Modulo: <strong>{moduloContexto.titulo}</strong>
+                            </>
+                          ) : null}
+                        </p>
                       </div>
-                      {ehQuiz ? (
+                    ) : (
+                      <div className="grade-3">
                         <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-modulo">Modulo *</label>
-                          <select
-                            className="campo__entrada"
-                            disabled={salvando || !modulosDisponiveis.length}
-                            id="avaliacao-modulo"
-                            name="moduloId"
-                            onChange={atualizarCampoFormulario}
-                            value={dadosFormulario.moduloId}
-                          >
-                            {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
-                            {modulosDisponiveis.map((modulo) => (
-                              <option key={modulo.id} value={modulo.id}>
-                                {modulo.titulo}
+                          <label className="campo__rotulo" htmlFor="avaliacao-tipo">Tipo *</label>
+                          <select className="campo__entrada" disabled={salvando} id="avaliacao-tipo" name="tipoAvaliacao" onChange={atualizarCampoFormulario} value={dadosFormulario.tipoAvaliacao}>
+                            {opcoesTipoDisponiveis.map((opcao) => (
+                              <option key={opcao.value} value={opcao.value}>
+                                {opcao.label}
                               </option>
                             ))}
                           </select>
                         </div>
-                      ) : null}
-                    </div>
+                        {ehQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor="avaliacao-modulo">Modulo *</label>
+                            <select
+                              className="campo__entrada"
+                              disabled={salvando || !modulosDisponiveis.length}
+                              id="avaliacao-modulo"
+                              name="moduloId"
+                              onChange={atualizarCampoFormulario}
+                              value={dadosFormulario.moduloId}
+                            >
+                              {!modulosDisponiveis.length ? <option value="">Nenhum modulo disponivel</option> : null}
+                              {modulosDisponiveis.map((modulo) => (
+                                <option key={modulo.id} value={modulo.id}>
+                                  {modulo.titulo}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
 
                     {!ehQuiz ? (
                       <InlineMessage tone="info">
@@ -716,7 +762,7 @@ export function AssistenteQuizAvaliacao({
                       />
                     </div>
 
-                    <div className="grade-3">
+                    {modoExclusivoQuiz ? (
                       <div className="campo">
                         <label className="campo__rotulo" htmlFor="avaliacao-status">Status *</label>
                         <select className="campo__entrada" disabled={salvando} id="avaliacao-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
@@ -727,32 +773,47 @@ export function AssistenteQuizAvaliacao({
                           ))}
                         </select>
                       </div>
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-abertura">Abertura</label>
-                        <input className="campo__entrada" disabled={salvando} id="avaliacao-abertura" name="dataAbertura" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataAbertura} />
-                      </div>
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-fechamento">Fechamento</label>
-                        <input className="campo__entrada" disabled={salvando} id="avaliacao-fechamento" name="dataFechamento" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataFechamento} />
-                      </div>
-                    </div>
-
-                    <div className="grade-3">
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-tentativas">Tentativas permitidas *</label>
-                        <input className="campo__entrada" disabled={salvando} id="avaliacao-tentativas" min="1" name="tentativasPermitidas" onChange={atualizarCampoFormulario} type="number" value={dadosFormulario.tentativasPermitidas} />
-                      </div>
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-tempo">Tempo limite (min)</label>
-                        <input className="campo__entrada" disabled={salvando} id="avaliacao-tempo" min="1" name="tempoLimiteMinutos" onChange={atualizarCampoFormulario} placeholder="Sem limite" type="number" value={dadosFormulario.tempoLimiteMinutos} />
-                      </div>
-                      {!ehQuiz ? (
+                    ) : (
+                      <div className="grade-3">
                         <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-nota">Nota maxima *</label>
-                          <input className="campo__entrada" disabled={salvando} id="avaliacao-nota" min="0.01" name="notaMaxima" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.notaMaxima} />
+                          <label className="campo__rotulo" htmlFor="avaliacao-status">Status *</label>
+                          <select className="campo__entrada" disabled={salvando} id="avaliacao-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
+                            {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
+                              <option key={opcao.value} value={opcao.value}>
+                                {opcao.label}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                      ) : null}
-                    </div>
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-abertura">Abertura</label>
+                          <input className="campo__entrada" disabled={salvando} id="avaliacao-abertura" name="dataAbertura" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataAbertura} />
+                        </div>
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-fechamento">Fechamento</label>
+                          <input className="campo__entrada" disabled={salvando} id="avaliacao-fechamento" name="dataFechamento" onChange={atualizarCampoFormulario} type="datetime-local" value={dadosFormulario.dataFechamento} />
+                        </div>
+                      </div>
+                    )}
+
+                    {!modoExclusivoQuiz ? (
+                      <div className="grade-3">
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-tentativas">Tentativas permitidas *</label>
+                          <input className="campo__entrada" disabled={salvando} id="avaliacao-tentativas" min="1" name="tentativasPermitidas" onChange={atualizarCampoFormulario} type="number" value={dadosFormulario.tentativasPermitidas} />
+                        </div>
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-tempo">Tempo limite (min)</label>
+                          <input className="campo__entrada" disabled={salvando} id="avaliacao-tempo" min="1" name="tempoLimiteMinutos" onChange={atualizarCampoFormulario} placeholder="Sem limite" type="number" value={dadosFormulario.tempoLimiteMinutos} />
+                        </div>
+                        {!ehQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor="avaliacao-nota">Nota maxima *</label>
+                            <input className="campo__entrada" disabled={salvando} id="avaliacao-nota" min="0.01" name="notaMaxima" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.notaMaxima} />
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     {ehQuiz ? (
                       <InlineMessage tone="info">
@@ -760,20 +821,22 @@ export function AssistenteQuizAvaliacao({
                       </InlineMessage>
                     ) : null}
 
-                    <div className="grade-3">
-                      {!ehQuiz ? (
-                        <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-peso-nota">Peso da nota *</label>
-                          <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-nota" min="0.01" name="pesoNota" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoNota} />
-                        </div>
-                      ) : null}
-                      {ehQuiz ? (
-                        <div className="campo">
-                          <label className="campo__rotulo" htmlFor="avaliacao-peso-progresso">Peso de progresso *</label>
-                          <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-progresso" min="0.01" name="pesoProgresso" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoProgresso} />
-                        </div>
-                      ) : null}
-                    </div>
+                    {!modoExclusivoQuiz ? (
+                      <div className="grade-3">
+                        {!ehQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor="avaliacao-peso-nota">Peso da nota *</label>
+                            <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-nota" min="0.01" name="pesoNota" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoNota} />
+                          </div>
+                        ) : null}
+                        {ehQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor="avaliacao-peso-progresso">Peso de progresso *</label>
+                            <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-progresso" min="0.01" name="pesoProgresso" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoProgresso} />
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
                   </form>

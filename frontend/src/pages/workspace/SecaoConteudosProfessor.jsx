@@ -459,17 +459,17 @@ export function SecaoConteudosProfessor({
     }
   }
 
-  function gerenciarQuizConteudo(conteudo, quizVinculado) {
+  function gerenciarQuizModulo(modulo, quizExistente = null) {
     if (!cursoAtivo) {
       return;
     }
 
-    if (quizVinculado) {
-      setAvaliacaoQuizParaEditar(quizVinculado);
+    if (quizExistente) {
+      setAvaliacaoQuizParaEditar(quizExistente);
       setContextoNovoQuiz(null);
     } else {
       setAvaliacaoQuizParaEditar(null);
-      setContextoNovoQuiz({ conteudoDidaticoId: conteudo.id, moduloId: conteudo.moduloId });
+      setContextoNovoQuiz({ moduloId: modulo.id });
     }
 
     setAssistenteQuizAberto(true);
@@ -505,7 +505,7 @@ export function SecaoConteudosProfessor({
           onAbrirEdicao={abrirEdicaoConteudo}
           onAlternarPublicacao={alternarPublicacao}
           onExcluir={abrirExclusaoConteudo}
-          onGerenciarQuiz={gerenciarQuizConteudo}
+          onGerenciarQuizModulo={gerenciarQuizModulo}
           onNovoConteudo={abrirFormularioNovoConteudo}
           onReordenar={reordenarConteudo}
           onVoltar={onNavigate ? voltarParaCursos : null}
@@ -518,6 +518,7 @@ export function SecaoConteudosProfessor({
           conteudos={conteudos}
           contextoNovoQuiz={contextoNovoQuiz}
           cursoAtivo={cursoAtivo}
+          modoExclusivoQuiz
           modulosDisponiveis={modulosDisponiveis}
           onFechar={fecharAssistenteQuiz}
           onRefresh={onRefresh}
@@ -773,7 +774,7 @@ function TrilhaConteudosProfessor({
   onAbrirEdicao,
   onAlternarPublicacao,
   onExcluir,
-  onGerenciarQuiz,
+  onGerenciarQuizModulo,
   onNovoConteudo,
   onReordenar,
   onVoltar
@@ -812,6 +813,28 @@ function TrilhaConteudosProfessor({
     });
     return agrupados;
   }, [quizzesDoCurso]);
+
+  // Todos os quizzes do modulo (vinculados a um material ou soltos), pra
+  // listar como item editavel na trilha do professor — diferente de
+  // quizzesPorModuloId acima, que so pega os "soltos" (usado na previa do aluno).
+  const quizzesPorModuloIdCompleto = useMemo(() => {
+    const agrupados = new Map();
+    quizzesDoCurso.forEach((quiz) => {
+      if (!quiz.moduloId) {
+        return;
+      }
+      const atuais = agrupados.get(quiz.moduloId) || [];
+      atuais.push(quiz);
+      agrupados.set(quiz.moduloId, atuais);
+    });
+    return agrupados;
+  }, [quizzesDoCurso]);
+
+  const materialPorId = useMemo(() => {
+    const mapa = new Map();
+    conteudosDoCurso.forEach((conteudo) => mapa.set(conteudo.id, conteudo));
+    return mapa;
+  }, [conteudosDoCurso]);
 
   const conteudosPorModuloId = useMemo(() => {
     const agrupados = new Map();
@@ -870,6 +893,7 @@ function TrilhaConteudosProfessor({
         <div className="atividades-curso__lista-modulos">
           {modulosDoCurso.map((modulo, indiceModulo) => {
             const itensDoModulo = conteudosPorModuloId.get(modulo.id) || [];
+            const quizzesDoModuloAtual = quizzesPorModuloIdCompleto.get(modulo.id) || [];
             const estaAberto = moduloAberto === modulo.id;
             const idListaModulo = `conteudos-modulo-professor-lista-${modulo.id}`;
             const totalPublicadosModulo = itensDoModulo.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length;
@@ -915,9 +939,9 @@ function TrilhaConteudosProfessor({
                       style={{ overflow: "hidden" }}
                       transition={{ duration: 0.28, ease: "easeInOut" }}
                     >
-                      {itensDoModulo.length === 0 ? (
+                      {itensDoModulo.length === 0 && quizzesDoModuloAtual.length === 0 ? (
                         <p className="texto-vazio" role="status">Nenhum conteudo neste modulo ainda.</p>
-                      ) : (
+                      ) : itensDoModulo.length === 0 ? null : (
                         <ul aria-label={`Conteudos de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
                           {itensDoModulo.map((conteudo, indiceConteudo) => {
                             const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
@@ -958,6 +982,14 @@ function TrilhaConteudosProfessor({
                                       <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
                                       <span aria-hidden="true" className="atividades-curso__separador">·</span>
                                       <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
+                                      {quizVinculado ? (
+                                        <>
+                                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                          <span className="atividades-curso__meta-quiz">
+                                            <TbTrophy aria-hidden="true" size={12} /> Quiz vinculado
+                                          </span>
+                                        </>
+                                      ) : null}
                                     </p>
                                   </div>
                                   <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
@@ -998,9 +1030,6 @@ function TrilhaConteudosProfessor({
                                           <Botao onClick={() => onAbrirEdicao(conteudo)} tamanho="pequeno" variante="secundario">
                                             <TbPencil aria-hidden="true" size={15} /> Editar conteudo
                                           </Botao>
-                                          <Botao onClick={() => onGerenciarQuiz(conteudo, quizVinculado)} tamanho="pequeno" variante="fantasma">
-                                            <TbTrophy aria-hidden="true" size={15} /> {quizVinculado ? "Editar quiz" : "Adicionar quiz"}
-                                          </Botao>
                                           <div className="atividades-curso__publicar">
                                             <span className="atividades-curso__publicar-rotulo">{publicado ? "Publicado" : "Rascunho"}</span>
                                             <button
@@ -1031,9 +1060,50 @@ function TrilhaConteudosProfessor({
                         </ul>
                       )}
 
-                      <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="sucesso">
-                        <TbPlus aria-hidden="true" size={13} /> Adicionar conteudo
-                      </Botao>
+                      {quizzesDoModuloAtual.length > 0 ? (
+                        <ul aria-label={`Quizzes de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
+                          {quizzesDoModuloAtual.map((quiz) => {
+                            const materialVinculado = quiz.conteudoDidaticoId ? materialPorId.get(quiz.conteudoDidaticoId) : null;
+
+                            return (
+                              <li className="atividades-curso__item atividades-curso__item--editavel atividades-curso__item--quiz" key={`quiz-${quiz.id}`}>
+                                <button
+                                  aria-label={`Editar quiz: ${quiz.titulo}`}
+                                  className="atividades-curso__linha atividades-curso__linha--acionavel"
+                                  onClick={() => onGerenciarQuizModulo(modulo, quiz)}
+                                  type="button"
+                                >
+                                  <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                                    <TbTrophy aria-hidden="true" size="1.75rem" />
+                                  </span>
+                                  <div className="atividades-curso__corpo">
+                                    <span className="atividades-curso__item-titulo-linha">
+                                      <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
+                                      <TbPencil aria-hidden="true" className="atividades-curso__chevron" size="0.9rem" />
+                                    </span>
+                                    <p className="atividades-curso__meta">
+                                      <span>Quiz</span>
+                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                      <span>{materialVinculado ? `Vinculado a ${materialVinculado.titulo}` : "Vale para o modulo inteiro"}</span>
+                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                      <Insignia texto={normalizePublicationStatus(quiz.statusPublicacao)} />
+                                    </p>
+                                  </div>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+
+                      <div className="atividades-curso__adicionar-grupo">
+                        <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="sucesso">
+                          <TbPlus aria-hidden="true" size={13} /> Adicionar conteudo
+                        </Botao>
+                        <Botao className="atividades-curso__adicionar" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno" variante="fantasma">
+                          <TbTrophy aria-hidden="true" size={13} /> Adicionar Quiz
+                        </Botao>
+                      </div>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
