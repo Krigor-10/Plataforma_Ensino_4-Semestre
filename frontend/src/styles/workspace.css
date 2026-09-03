@@ -1631,85 +1631,6 @@
   margin: 0;
 }
 
-.table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  max-width: 100%;
-}
-
-.data-table {
-  border-collapse: collapse;
-  min-width: 720px;
-  width: 100%;
-}
-
-.data-table th,
-.data-table td {
-  border-bottom: 1px solid rgba(185, 153, 255, 0.08);
-  padding: 14px 12px;
-  text-align: left;
-  vertical-align: top;
-  overflow-wrap: anywhere;
-}
-
-.data-table th {
-  background: rgba(123, 47, 247, 0.1);
-  color: var(--ink-soft);
-  font-size: 0.82rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.data-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.data-table tbody tr:hover {
-  background: rgba(123, 47, 247, 0.08);
-}
-
-.data-table tbody tr.table-row--clickable {
-  cursor: pointer;
-  transition: background 160ms ease, box-shadow 160ms ease;
-}
-
-.data-table tbody tr.table-row--clickable:focus-visible {
-  box-shadow: inset 0 0 0 2px rgba(134, 239, 172, 0.44);
-  outline: none;
-}
-
-.data-table tbody tr.table-row--selected,
-.data-table tbody tr.table-row--selected:nth-child(even),
-.data-table tbody tr.table-row--selected:hover {
-  background: rgba(34, 197, 94, 0.12);
-  box-shadow: inset 3px 0 0 rgba(134, 239, 172, 0.7);
-}
-
-.table-row-arrow {
-  align-items: center;
-  background: rgba(34, 197, 94, 0.16);
-  border: 1px solid rgba(134, 239, 172, 0.34);
-  border-radius: 999px;
-  color: #dcfce7;
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-weight: 900;
-  height: 44px;
-  justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
-  width: 44px;
-}
-
-.table-row-arrow:hover {
-  background: rgba(34, 197, 94, 0.28);
-  border-color: rgba(134, 239, 172, 0.5);
-  transform: translateX(2px);
-}
-
 .module-detail-grid {
   display: grid;
   gap: 12px;
@@ -2482,75 +2403,6 @@
   }
 }
 
-@media (max-width: 640px) {
-  .data-table {
-    border-collapse: separate;
-    border-spacing: 0 12px;
-    min-width: 0;
-  }
-
-  .data-table thead {
-    display: none;
-  }
-
-  .data-table,
-  .data-table tbody,
-  .data-table tr,
-  .data-table td {
-    display: block;
-    width: 100%;
-  }
-
-  .data-table tr {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(185, 153, 255, 0.12);
-    border-radius: 16px;
-    overflow: hidden;
-  }
-
-  .data-table tbody tr:nth-child(even),
-  .data-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .data-table td {
-    border-bottom: 1px solid rgba(185, 153, 255, 0.08);
-    display: grid;
-    gap: 8px;
-    grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
-    padding: 12px 14px;
-  }
-
-  .data-table td:last-child {
-    border-bottom: 0;
-  }
-
-  .data-table td::before {
-    color: var(--ink-soft);
-    content: attr(data-label);
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.04em;
-    min-width: 0;
-    text-transform: uppercase;
-  }
-
-  .data-table td[data-label=""] {
-    grid-template-columns: 1fr;
-  }
-
-  .data-table td[data-label=""]::before {
-    display: none;
-  }
-
-  .table-inline-input,
-  .table-search-control,
-  .table-inline-select {
-    min-width: 0;
-    width: 100%;
-  }
-}
-
 .certificate-list {
   display: grid;
   gap: 12px;
@@ -3017,10 +2869,6 @@
   .content-section__intro,
   .student-content-card {
     padding: 18px;
-  }
-
-  .data-table td {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -3830,6 +3678,15 @@
   line-height: 1.2;
   color: var(--cor-texto-forte);
   margin: 0;
+}
+
+/* Compactado so no breakpoint mobile (mesmo limite ja usado por
+   .cabecalho-pagina__titulo em layout.css) — Desktop/Tablet ficam
+   intocados em 1.5rem, regra base nao foi alterada. */
+@media (max-width: 480px) {
+  .atividades-curso__titulo {
+    font-size: 1.2rem;
+  }
 }
 
 /* Curso como contexto abaixo do titulo principal (usado na tela Avaliacoes

@@ -672,10 +672,6 @@
 }
 
 @media (max-width: 480px) {
-  .grade-estatisticas {
-    grid-template-columns: 1fr;
-  }
-
   .grade-cursos {
     grid-template-columns: 1fr;
   }
@@ -696,11 +692,6 @@
 :root {
   --altura-topbar: 5.5rem;
   --largura-sidebar: 17rem;
-}
-
-.botao {
-  border-radius: var(--raio-circular);
-  min-height: 38px;
 }
 
 .botao--primario {
@@ -1186,8 +1177,8 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 2.75rem;
+  height: 2.75rem;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
   background: transparent;

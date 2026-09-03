@@ -51,54 +51,6 @@ export function PanelCard({ children, description, title }) {
   );
 }
 
-export function DataTable({ columns, emptyMessage, getRowAriaLabel, getRowClassName, onRowClick, rows }) {
-  if (!rows.length) {
-    return <EmptyState message={emptyMessage} />;
-  }
-
-  return (
-    <div className="table-wrap">
-      <table className="data-table">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key}>{column.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr
-              aria-label={onRowClick ? getRowAriaLabel?.(row) : undefined}
-              className={getRowClassName?.(row)}
-              key={row.id ?? index}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              onKeyDown={
-                onRowClick
-                  ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onRowClick(row);
-                      }
-                    }
-                  : undefined
-              }
-              role={onRowClick ? "button" : undefined}
-              tabIndex={onRowClick ? 0 : undefined}
-            >
-              {columns.map((column) => (
-                <td data-label={typeof column.label === "string" ? column.label : ""} key={column.key}>
-                  {column.render ? column.render(row) : row[column.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function MiniList({ emptyMessage, items }) {
   if (!items.length) {
     return <EmptyState message={emptyMessage} />;

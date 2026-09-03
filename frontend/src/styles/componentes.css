@@ -46,7 +46,7 @@
   justify-content: center;
   gap: var(--espaco-sm);
   padding: 0.6rem 1.25rem;
-  border-radius: var(--raio-md);
+  border-radius: var(--raio-circular);
   font-weight: 600;
   font-size: 0.9rem;
   border: 1px solid transparent;
@@ -58,6 +58,16 @@
   text-decoration: none;
   position: relative;
   user-select: none;
+}
+
+/* Alvo de toque AAA (44px) so no breakpoint mobile (mesmo limite ja usado
+   por .cabecalho-pagina__titulo/.atividades-curso__titulo) — Desktop/
+   Tablet ficam intocados. Regra base do .botao (acima) fica sem
+   min-height. */
+@media (max-width: 480px) {
+  .botao {
+    min-height: 2.75rem;
+  }
 }
 
 @keyframes botao-pulso {
