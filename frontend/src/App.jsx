@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { RouteGate } from "./components/Primitives.jsx";
 import TooltipGlobal from "./components/TooltipGlobal.jsx";
 import CadastroScreen from "./pages/CadastroScreen.jsx";
@@ -152,9 +153,11 @@ export default function App() {
     content = <PublicHome hasSession={Boolean(session.user)} isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
   }
 
+  const chaveLimite = `${route.kind}-${route.section || ""}-${route.param || ""}`;
+
   return (
     <>
-      {content}
+      <ErrorBoundary key={chaveLimite}>{content}</ErrorBoundary>
       <TooltipGlobal />
     </>
   );
