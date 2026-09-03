@@ -140,9 +140,10 @@ export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmF
           <GradeCursosProfessor
             cursos={cursosDesempenho.map((curso) => ({
               curso: cursoPorId.get(curso.cursoId) || { id: curso.cursoId, titulo: curso.cursoTitulo, descricao: "" },
-              resumo: `${curso.totalAlunos} aluno${curso.totalAlunos === 1 ? "" : "s"} - ${curso.modulos.length} modulo${curso.modulos.length === 1 ? "" : "s"}`,
+              resumo: `${curso.totalAlunos} aluno${curso.totalAlunos === 1 ? "" : "s"} · ${curso.modulos.length} modulo${curso.modulos.length === 1 ? "" : "s"}`,
               rodapeEsquerda: curso.professorNome || "Sem professor",
-              badge: `Media ${formatGrade(curso.desempenhoMedio)}`
+              badge: `Media ${formatGrade(curso.desempenhoMedio)}`,
+              percentual: curso.progressoMedio
             }))}
             mensagemVazia="Voce ainda nao tem cursos sob coordenacao."
             onSelecionar={selecionarCurso}

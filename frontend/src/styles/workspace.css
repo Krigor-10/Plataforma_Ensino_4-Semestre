@@ -4015,6 +4015,27 @@
   border-bottom-color: var(--cor-borda-forte);
 }
 
+/* Respiro entre os KPIs (resumo geral do curso) e o que vem depois (bucket de
+   avaliacoes sem modulo ou a lista de modulos) — esta tela nao usa o wrapper
+   .conteudos-aluno (gap padrao entre blocos), entao sem essa margem os KPIs
+   ficavam colados no primeiro item abaixo. Mesmo token ja usado pra separar
+   cabecalho de listagem em .tela-avaliacoes. */
+.tela-progresso-coordenador .grade-estatisticas {
+  margin-bottom: var(--espaco-xl);
+}
+
+/* Mesmo respiro acima (2rem no total), replicado nas telas que JA usam o
+   wrapper .conteudos-aluno (gap: var(--espaco-md) = 1rem entre blocos) —
+   Progresso do Aluno e Modulos (Admin/Coordenador). Gap de flex e margin do
+   item somam (nao se sobrepoem), entao aqui basta completar com
+   --espaco-md: 1rem (gap) + 1rem (margem) = 2rem, igual aos --espaco-xl
+   usados isoladamente no Progresso do Coordenador (que nao tem esse gap de
+   container). Repetir --espaco-xl aqui deixaria o respiro 50% maior. */
+.tela-progresso .grade-estatisticas,
+.tela-modulos .grade-estatisticas {
+  margin-bottom: var(--espaco-md);
+}
+
 /* Bucket "Avaliacoes do curso" (Prova/Exercicio sem modulo) — mesmo cartao com
    borda dos modulos, mas sempre aberto (sem toggle), entao o cabecalho precisa
    do padding vertical que .conteudos-modulo__toggle normalmente fornece. */
