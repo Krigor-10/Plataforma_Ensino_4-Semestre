@@ -6,7 +6,7 @@
    conjunto fixo de seções do protótipo.
    ============================================================ */
 import { useState, useEffect } from "react";
-import { TbUserFilled } from "react-icons/tb";
+import { TbBook, TbUserFilled } from "react-icons/tb";
 import {
   MdDashboard,
   MdSchool,
@@ -38,7 +38,7 @@ const ICONES_SECAO = {
   alunos: <MdSchool size={18} />,
   professores: <MdCastForEducation size={18} />,
   coordenadores: <MdManageAccounts size={18} />,
-  cursos: <MdMenuBook size={18} />,
+  cursos: <TbBook size={18} />,
   modulos: <MdLayers size={18} />,
   turmas: <MdGroups size={18} />,
   matriculas: <MdAssignment size={18} />,

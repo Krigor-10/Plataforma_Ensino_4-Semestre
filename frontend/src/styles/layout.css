@@ -602,7 +602,7 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    width: 240px;
+    width: 15rem;
     z-index: 300;
   }
 
@@ -2016,7 +2016,7 @@
     color: var(--cor-texto-mudo);
     cursor: pointer;
     transition: all var(--transicao-rapida);
-    min-height: 54px;
+    min-height: 3.375rem;
   }
 
   .nav-mobile__item:hover {
@@ -2041,7 +2041,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 64px;
+    max-width: 4rem;
     text-align: center;
   }
 

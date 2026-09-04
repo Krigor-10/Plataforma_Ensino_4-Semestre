@@ -5088,6 +5088,12 @@
   .conteudos-modulo__contagem {
     white-space: normal;
   }
+
+  /* Garante area de toque confortavel (>= 2.75rem) no cabecalho do modulo —
+     no desktop a altura do texto ja basta, mas no mobile precisa de um piso. */
+  .conteudos-modulo__toggle {
+    min-height: 2.75rem;
+  }
 }
 
 .conteudos-modulo__barra {
@@ -5741,6 +5747,16 @@
   background: var(--cor-marca);
   border-color: var(--cor-marca);
   color: #fff;
+}
+
+/* Area de toque confortavel (>= 2.75rem) pros pontos de navegacao entre
+   questoes no mobile — no desktop 2rem ja basta, e .quiz-steps ja tem
+   flex-wrap, entao aumentar aqui so adiciona linhas quando necessario. */
+@media (max-width: 768px) {
+  .quiz-step {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
 }
 
 .quiz-corpo {
