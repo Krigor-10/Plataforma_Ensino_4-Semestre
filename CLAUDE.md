@@ -93,14 +93,14 @@ Common/        → ApiExceptionMiddleware (global error handler)
 Migrations/    → EF Core migration history
 ```
 
-### User hierarchy (TPH via EF Core)
+### User hierarchy (TPT via EF Core)
 
-`Usuario` is an abstract base class stored in a single `Usuarios` table (Table Per Hierarchy). Concrete types:
+`Usuario` is an abstract base class holding the shared columns (`Nome`, `Email`, `Cpf`, `SenhaHash`, `TipoUsuario`, etc.) in the `Usuarios` table. Each concrete type is mapped to its own satellite table via `.ToTable(...)` (Table Per Type, not Table Per Hierarchy) — `Alunos`, `Professores`, `Coordenadores`, `Admins`, each holding only the FK (`Id`, 1:1 with `Usuarios.Id`) plus the type-specific columns:
 
-- `Aluno` — has `Matriculas`, `TurmaAtual`
-- `Professor` — speciality field, assigned to `Turma`
-- `Coordenador` — responsible for a `Curso`
-- `Admin` — platform administrator
+- `Aluno` — `Matricula` (string), `Matriculas` (navigation to enrollment records)
+- `Professor` — `CodigoRegistro`, `Especialidade`, plus navigation to `QuestoesBanco`/`ConteudosDidaticos`/`AvaliacoesPublicadas`/`LancamentosNota` authored by them (assignment to a `Turma` is on `Turma.ProfessorId`, not on `Professor`)
+- `Coordenador` — `CodigoRegistro` (no longer tied to a single "responsible" `Curso` — a coordinator can be linked to multiple `Cursos` via `Curso.CoordenadorId`)
+- `Admin` — platform administrator, no extra columns
 
 `TipoUsuario` (string) is set via `ConfigurarAcesso()` and used for JWT claims and role-based authorization. Passwords are hashed with BCrypt.
 
@@ -112,9 +112,19 @@ Curso → Modulo[] → ConteudoDidatico[]
 Matricula (Aluno + Curso + Turma?) with StatusMatricula enum: Pendente | Aprovada | Rejeitada | Cancelada
 ```
 
-Progress tracking uses: `ProgressoConteudoAluno`, `ProgressoModuloAluno`, `ProgressoCursoAluno`, `MarcoProgressoAluno`.
+Progress tracking uses: `ProgressoConteudoAluno`, `ProgressoModuloAluno`, `ProgressoCursoAluno`.
 
 Assessment system: `QuestaoBanco → QuestaoPublicada → Avaliacao → TentativaAvaliacao → RespostaAluno`.
+
+### Modeled but not wired up yet
+
+Three tables exist in the schema (Model + DbContext + migrations + EF configuration) but have no Controller/Service/DTO reading or writing them, confirmed via a full database audit (2026-09-04):
+
+- `MarcoProgressoAluno` — only touched by a single read (`ModuloRepository.cs`, an `AnyAsync` guard before deleting a `Modulo`); nothing ever inserts into it, so that guard never actually fires. Looks like it was meant to be a progress-event log.
+- `FeedbackAcademico` — zero references anywhere outside `Models/`, `Data/Configurations/`, and `PlataformaContext`.
+- `AnexoQuestaoBanco` — same as above (attachments for bank questions).
+
+Don't assume any of these three are live features when reading the code — check for an actual Service/Controller before building on top of them.
 
 ### Authentication
 

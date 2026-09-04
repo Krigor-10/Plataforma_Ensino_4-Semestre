@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace PlataformaEnsino.API.Models;
 
+// Modelado/migrado mas sem escritor: nenhum Service grava aqui hoje (auditoria 2026-09-04).
+// So e lido em ModuloRepository (guard de exclusao de modulo), que por isso nunca dispara.
 public class MarcoProgressoAluno
 {
     public int Id { get; set; }
