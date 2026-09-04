@@ -61,7 +61,6 @@ public class ModuloRepository : GenericRepository<Modulo>, IModuloRepository
                await Context.Avaliacoes.AnyAsync(item => item.ModuloId == moduloId) ||
                await Context.LancamentosNotasAlunos.AnyAsync(item => item.ModuloId == moduloId) ||
                await Context.ProgressosConteudosAlunos.AnyAsync(item => item.ModuloId == moduloId) ||
-               await Context.ProgressosModulosAlunos.AnyAsync(item => item.ModuloId == moduloId) ||
-               await Context.MarcosProgressosAlunos.AnyAsync(item => item.ModuloId == moduloId);
+               await Context.ProgressosModulosAlunos.AnyAsync(item => item.ModuloId == moduloId);
     }
 }

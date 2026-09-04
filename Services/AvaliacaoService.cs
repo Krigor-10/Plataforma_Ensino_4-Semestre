@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -12,17 +13,20 @@ public class AvaliacaoService : IAvaliacaoService
     private readonly IProgressoAlunoService _progressoAlunoService;
     private readonly INotificacaoService _notificacaoService;
     private readonly IAcessoAcademicoService _acessoAcademicoService;
+    private readonly IArmazenamentoArquivoService _armazenamentoService;
 
     public AvaliacaoService(
         PlataformaContext context,
         IProgressoAlunoService progressoAlunoService,
         INotificacaoService notificacaoService,
-        IAcessoAcademicoService acessoAcademicoService)
+        IAcessoAcademicoService acessoAcademicoService,
+        IArmazenamentoArquivoService armazenamentoService)
     {
         _context = context;
         _progressoAlunoService = progressoAlunoService;
         _notificacaoService = notificacaoService;
         _acessoAcademicoService = acessoAcademicoService;
+        _armazenamentoService = armazenamentoService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -204,6 +208,8 @@ public class AvaliacaoService : IAvaliacaoService
             .AsNoTracking()
             .Where(questao => questao.AvaliacaoId == avaliacaoId)
             .Include(questao => questao.Alternativas)
+            .Include(questao => questao.QuestaoBanco!)
+                .ThenInclude(questaoBanco => questaoBanco.Anexos)
             .OrderBy(questao => questao.Ordem)
             .ToListAsync();
     }
@@ -510,6 +516,64 @@ public class AvaliacaoService : IAvaliacaoService
         }
 
         return turma;
+    }
+
+    public async Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo)
+    {
+        await ValidarQuestaoBancoDoProfessorAsync(professorId, questaoBancoId);
+
+        var (extensoesPermitidas, tamanhoMaximoBytes) = tipoAnexo switch
+        {
+            TipoConteudoDidatico.Imagem => (new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" }, 5_000_000L),
+            TipoConteudoDidatico.Pdf => (new[] { ".pdf" }, 20_000_000L),
+            TipoConteudoDidatico.Video => (new[] { ".mp4", ".webm", ".mov" }, 100_000_000L),
+            _ => throw new ArgumentException("Tipo de anexo nao aceita upload de arquivo.")
+        };
+
+        var arquivoUrl = await _armazenamentoService.SalvarArquivoAsync(arquivo, "questoes", extensoesPermitidas, tamanhoMaximoBytes);
+        var proximaOrdem = await _context.AnexosQuestoesBanco
+            .Where(anexo => anexo.QuestaoBancoId == questaoBancoId)
+            .Select(anexo => (int?)anexo.Ordem)
+            .MaxAsync() ?? 0;
+
+        var novoAnexo = new AnexoQuestaoBanco
+        {
+            QuestaoBancoId = questaoBancoId,
+            Titulo = titulo.Trim(),
+            TipoAnexo = tipoAnexo.ToString(),
+            ArquivoUrl = arquivoUrl,
+            Ordem = proximaOrdem + 1
+        };
+
+        _context.AnexosQuestoesBanco.Add(novoAnexo);
+        await _context.SaveChangesAsync();
+
+        return novoAnexo;
+    }
+
+    public async Task RemoverAnexoQuestaoAsync(int questaoBancoId, int anexoId, int professorId)
+    {
+        await ValidarQuestaoBancoDoProfessorAsync(professorId, questaoBancoId);
+
+        var anexo = await _context.AnexosQuestoesBanco
+            .FirstOrDefaultAsync(item => item.Id == anexoId && item.QuestaoBancoId == questaoBancoId)
+            ?? throw new KeyNotFoundException("Anexo nao encontrado.");
+
+        _context.AnexosQuestoesBanco.Remove(anexo);
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task ValidarQuestaoBancoDoProfessorAsync(int professorId, int questaoBancoId)
+    {
+        var questaoBanco = await _context.QuestoesBanco
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == questaoBancoId)
+            ?? throw new KeyNotFoundException("Questao nao encontrada.");
+
+        if (questaoBanco.ProfessorAutorId != professorId)
+        {
+            throw new InvalidOperationException("A questao informada nao pertence ao professor autenticado.");
+        }
     }
 
     /// <summary>

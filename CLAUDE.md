@@ -112,19 +112,11 @@ Curso → Modulo[] → ConteudoDidatico[]
 Matricula (Aluno + Curso + Turma?) with StatusMatricula enum: Pendente | Aprovada | Rejeitada | Cancelada
 ```
 
-Progress tracking uses: `ProgressoConteudoAluno`, `ProgressoModuloAluno`, `ProgressoCursoAluno`.
+Progress tracking uses: `ProgressoConteudoAluno`, `ProgressoModuloAluno`, `ProgressoCursoAluno`. (`MarcoProgressoAluno` existed in the schema but was never written to anywhere — removed in migration `RemoverMarcoProgressoAluno`, 2026-09-04, after a full database audit confirmed it was dead.)
 
-Assessment system: `QuestaoBanco → QuestaoPublicada → Avaliacao → TentativaAvaliacao → RespostaAluno`.
+Assessment system: `QuestaoBanco → QuestaoPublicada → Avaliacao → TentativaAvaliacao → RespostaAluno`. Bank questions can have file attachments (`AnexoQuestaoBanco` — image/PDF/video, reuses `IArmazenamentoArquivoService`, stored under `Storage/Uploads/questoes/`), managed via `POST/DELETE /api/v1/avaliacoes/questoes-banco/{questaoBancoId}/anexos` and surfaced in `QuestaoAvaliacaoResponseDto.Anexos` — only the owning Professor (`QuestaoBanco.ProfessorAutorId`) can manage them.
 
-### Modeled but not wired up yet
-
-Three tables exist in the schema (Model + DbContext + migrations + EF configuration) but have no Controller/Service/DTO reading or writing them, confirmed via a full database audit (2026-09-04):
-
-- `MarcoProgressoAluno` — only touched by a single read (`ModuloRepository.cs`, an `AnyAsync` guard before deleting a `Modulo`); nothing ever inserts into it, so that guard never actually fires. Looks like it was meant to be a progress-event log.
-- `FeedbackAcademico` — zero references anywhere outside `Models/`, `Data/Configurations/`, and `PlataformaContext`.
-- `AnexoQuestaoBanco` — same as above (attachments for bank questions).
-
-Don't assume any of these three are live features when reading the code — check for an actual Service/Controller before building on top of them.
+`FeedbackAcademico` (a note/observation about a student) can be written by a Professor about a student enrolled in one of their own turmas (`POST /api/v1/usuarios/{alunoId}/feedbacks`), read by that student or by the Professor who wrote it (`GET .../feedbacks`), and marked read by the student (`PUT .../feedbacks/{id}/lido`). Backend only so far — no frontend screen yet.
 
 ### Authentication
 

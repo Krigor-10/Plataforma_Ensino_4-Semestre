@@ -12,10 +12,12 @@ namespace PlataformaEnsino.API.Controllers;
 public class UsuariosController : ControllerBase
 {
     private readonly IUsuarioService _usuarioService;
+    private readonly IFeedbackAcademicoService _feedbackAcademicoService;
 
-    public UsuariosController(IUsuarioService usuarioService)
+    public UsuariosController(IUsuarioService usuarioService, IFeedbackAcademicoService feedbackAcademicoService)
     {
         _usuarioService = usuarioService;
+        _feedbackAcademicoService = feedbackAcademicoService;
     }
 
     [HttpGet]
@@ -71,5 +73,51 @@ public class UsuariosController : ControllerBase
 
         await _usuarioService.TrocarSenhaAsync(usuarioId.Value, dto);
         return Ok(new { mensagem = "Senha atualizada com sucesso." });
+    }
+
+    [HttpPost("{alunoId:int}/feedbacks")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> CriarFeedback(int alunoId, [FromBody] CriarFeedbackAcademicoDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var professorId = User.ObterUsuarioId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        var feedback = await _feedbackAcademicoService.CriarFeedbackAsync(professorId.Value, alunoId, dto);
+        return CreatedAtAction(nameof(ListarFeedbacks), new { alunoId }, feedback);
+    }
+
+    [HttpGet("{alunoId:int}/feedbacks")]
+    public async Task<IActionResult> ListarFeedbacks(int alunoId)
+    {
+        var usuarioLogadoId = User.ObterUsuarioId();
+        if (!usuarioLogadoId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o usuario autenticado." });
+        }
+
+        var tipoUsuarioLogado = User.IsInRole("Aluno") ? "Aluno" : User.IsInRole("Professor") ? "Professor" : "Outro";
+        var feedbacks = await _feedbackAcademicoService.ListarPorAlunoAsync(alunoId, usuarioLogadoId.Value, tipoUsuarioLogado);
+        return Ok(feedbacks);
+    }
+
+    [HttpPut("{alunoId:int}/feedbacks/{feedbackId:int}/lido")]
+    [Authorize(Roles = "Aluno")]
+    public async Task<IActionResult> MarcarFeedbackComoLido(int alunoId, int feedbackId)
+    {
+        if (!User.PodeAcessarAluno(alunoId))
+        {
+            return Forbid();
+        }
+
+        await _feedbackAcademicoService.MarcarComoLidoAsync(feedbackId, alunoId);
+        return NoContent();
     }
 }

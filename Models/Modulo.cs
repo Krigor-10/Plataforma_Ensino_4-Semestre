@@ -41,10 +41,6 @@ public class Modulo
     [ValidateNever]
     public List<ProgressoModuloAluno> ProgressosAlunos { get; set; } = new();
 
-    [JsonIgnore]
-    [ValidateNever]
-    public List<MarcoProgressoAluno> MarcosProgresso { get; set; } = new();
-
     public void AlterarTitulo(string novoTitulo)
     {
         if (string.IsNullOrWhiteSpace(novoTitulo))

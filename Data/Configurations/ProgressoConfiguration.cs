@@ -111,38 +111,3 @@ public sealed class ProgressoCursoAlunoConfiguration : IEntityTypeConfiguration<
             .HasPrecision(6, 2);
     }
 }
-
-public sealed class MarcoProgressoAlunoConfiguration : IEntityTypeConfiguration<MarcoProgressoAluno>
-{
-    public void Configure(EntityTypeBuilder<MarcoProgressoAluno> builder)
-    {
-        builder
-            .HasOne(m => m.Matricula)
-            .WithMany(matricula => matricula.MarcosProgresso)
-            .HasForeignKey(m => m.MatriculaId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder
-            .HasOne(m => m.Curso)
-            .WithMany(c => c.MarcosProgresso)
-            .HasForeignKey(m => m.CursoId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne(m => m.Modulo)
-            .WithMany(modulo => modulo.MarcosProgresso)
-            .HasForeignKey(m => m.ModuloId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasIndex(m => new { m.MatriculaId, m.Escopo, m.CursoId, m.ModuloId, m.PercentualMarco });
-
-        builder
-            .Property(m => m.PercentualMarco)
-            .HasPrecision(5, 2);
-
-        builder
-            .Property(m => m.Observacao)
-            .HasColumnType("nvarchar(max)");
-    }
-}

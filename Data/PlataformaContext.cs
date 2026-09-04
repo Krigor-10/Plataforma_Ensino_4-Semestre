@@ -32,7 +32,6 @@ public class PlataformaContext : DbContext
     public DbSet<ProgressoConteudoAluno> ProgressosConteudosAlunos { get; set; }
     public DbSet<ProgressoModuloAluno> ProgressosModulosAlunos { get; set; }
     public DbSet<ProgressoCursoAluno> ProgressosCursosAlunos { get; set; }
-    public DbSet<MarcoProgressoAluno> MarcosProgressosAlunos { get; set; }
     public DbSet<FeedbackAcademico> FeedbacksAcademicos { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Notificacao> Notificacoes { get; set; }

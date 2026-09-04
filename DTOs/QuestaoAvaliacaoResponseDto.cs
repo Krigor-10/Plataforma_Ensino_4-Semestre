@@ -14,4 +14,5 @@ public class QuestaoAvaliacaoResponseDto
     public string Explicacao { get; set; } = string.Empty;
     public decimal Pontos { get; set; }
     public List<AlternativaAvaliacaoResponseDto> Alternativas { get; set; } = new();
+    public List<AnexoQuestaoBancoResponseDto> Anexos { get; set; } = new();
 }

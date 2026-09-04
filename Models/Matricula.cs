@@ -52,10 +52,6 @@ public class Matricula
 
     [JsonIgnore]
     [ValidateNever]
-    public List<MarcoProgressoAluno> MarcosProgresso { get; set; } = new();
-
-    [JsonIgnore]
-    [ValidateNever]
     public List<Pagamento> Pagamentos { get; set; } = new();
 
     public void RegistrarSolicitacao(DateTime? dataSolicitacao = null)

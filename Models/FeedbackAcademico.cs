@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace PlataformaEnsino.API.Models;
 
-// Modelado/migrado mas sem Controller/Service/DTO usando isso hoje (auditoria 2026-09-04).
 public class FeedbackAcademico
 {
     public int Id { get; set; }

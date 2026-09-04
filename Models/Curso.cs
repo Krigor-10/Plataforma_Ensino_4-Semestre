@@ -58,10 +58,6 @@ public class Curso
     [ValidateNever]
     public List<ProgressoCursoAluno> ProgressosAlunos { get; set; } = new();
 
-    [JsonIgnore]
-    [ValidateNever]
-    public List<MarcoProgressoAluno> MarcosProgresso { get; set; } = new();
-
     public void AtribuirCoordenador(Coordenador coordenador)
     {
         ArgumentNullException.ThrowIfNull(coordenador);

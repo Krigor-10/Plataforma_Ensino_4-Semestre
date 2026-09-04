@@ -192,6 +192,44 @@ public class AvaliacoesController : ControllerBase
         return Ok(tentativa);
     }
 
+    [HttpPost("questoes-banco/{questaoBancoId:int}/anexos")]
+    [Authorize(Roles = "Professor")]
+    [RequestSizeLimit(105_000_000)]
+    public async Task<IActionResult> AdicionarAnexoQuestao(int questaoBancoId, [FromForm] IFormFile arquivo, [FromForm] string titulo, [FromForm] TipoConteudoDidatico tipoAnexo)
+    {
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        var anexo = await _avaliacaoService.AdicionarAnexoQuestaoAsync(questaoBancoId, professorId.Value, arquivo, titulo, tipoAnexo);
+        var response = new AnexoQuestaoBancoResponseDto
+        {
+            Id = anexo.Id,
+            Titulo = anexo.Titulo,
+            TipoAnexo = anexo.TipoAnexo,
+            ArquivoUrl = anexo.ArquivoUrl,
+            Ordem = anexo.Ordem
+        };
+
+        return Created($"/api/v1/avaliacoes/questoes-banco/{questaoBancoId}/anexos/{anexo.Id}", response);
+    }
+
+    [HttpDelete("questoes-banco/{questaoBancoId:int}/anexos/{anexoId:int}")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> RemoverAnexoQuestao(int questaoBancoId, int anexoId)
+    {
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        await _avaliacaoService.RemoverAnexoQuestaoAsync(questaoBancoId, anexoId, professorId.Value);
+        return NoContent();
+    }
+
     private int? ObterProfessorId() => User.ObterUsuarioId();
 
     private int? ObterAlunoId() => User.ObterUsuarioId();
@@ -243,6 +281,17 @@ public class AvaliacoesController : ControllerBase
             TipoQuestao = questao.TipoQuestao,
             Explicacao = questao.ExplicacaoSnapshot,
             Pontos = questao.Pontos,
+            Anexos = (questao.QuestaoBanco?.Anexos ?? new List<AnexoQuestaoBanco>())
+                .OrderBy(anexo => anexo.Ordem)
+                .Select(anexo => new AnexoQuestaoBancoResponseDto
+                {
+                    Id = anexo.Id,
+                    Titulo = anexo.Titulo,
+                    TipoAnexo = anexo.TipoAnexo,
+                    ArquivoUrl = anexo.ArquivoUrl,
+                    Ordem = anexo.Ordem
+                })
+                .ToList(),
             Alternativas = questao.Alternativas
                 .OrderBy(alternativa => alternativa.Ordem)
                 .Select(alternativa => new AlternativaAvaliacaoResponseDto
