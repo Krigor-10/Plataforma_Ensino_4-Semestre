@@ -6,8 +6,8 @@ import { formatDate, formatGrade } from "../lib/format.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 const TITULOS_POR_STATUS = {
-  loading: "Verificando certificado | EdTech Academy",
-  invalido: "Codigo nao encontrado | EdTech Academy"
+  loading: "Verificando certificado | CodeRyse Academy",
+  invalido: "Codigo nao encontrado | CodeRyse Academy"
 };
 
 export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
@@ -16,7 +16,7 @@ export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
 
   useDocumentTitle(
     status === "valido" && certificado
-      ? `Certificado autentico — ${certificado.cursoTitulo} | EdTech Academy`
+      ? `Certificado autentico — ${certificado.cursoTitulo} | CodeRyse Academy`
       : TITULOS_POR_STATUS[status] || TITULOS_POR_STATUS.loading
   );
 

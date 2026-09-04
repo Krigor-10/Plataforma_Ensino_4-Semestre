@@ -189,11 +189,11 @@ export default function BarraLateral({
         <a
           href="#conteudo-principal"
           className="sidebar__logo"
-          aria-label="EdTech — ir para o painel"
+          aria-label="CodeRyse — ir para o painel"
         >
           <span className="sidebar__logo-marca" aria-hidden="true">
-            <span>Ed</span>
-            <span>Tech</span>
+            <span>Code</span>
+            <span>Ryse</span>
           </span>
           <span className="sidebar__logo-subtitulo">Academy</span>
         </a>

@@ -7,6 +7,7 @@ import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatCep, formatDate, iniciaisNome, maskCpf, onlyDigits } from "../../lib/format.js";
 
@@ -41,6 +42,7 @@ function IconeOrdenacao({ direcao }) {
 }
 
 export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh, onSessionExpired }) {
+  const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
@@ -269,6 +271,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       }
 
       setFormularioAberto(false);
+      mostrarToast(coordenadorEmEdicaoId ? "Coordenador atualizado com sucesso." : "Coordenador cadastrado com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -303,6 +306,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       await apiRequest(`/Coordenadores/${coordenadorParaExcluir.id}`, { method: "DELETE" });
 
       setCoordenadorParaExcluir(null);
+      mostrarToast("Coordenador excluido com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

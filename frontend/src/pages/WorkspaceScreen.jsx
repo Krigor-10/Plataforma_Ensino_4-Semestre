@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import LayoutWorkspace from "./workspace/LayoutWorkspace.jsx";
@@ -365,6 +366,20 @@ export default function WorkspaceScreen({
 
   const sectionMeta = getSectionMeta(activeSection, role);
   const hasData = hasSnapshotData(snapshot);
+
+  // Evita flash do card de carregamento inicial quando a API responde rapido
+  // (<150ms). So aparece se a espera for perceptivel de verdade.
+  const [exibirCargaInicial, setExibirCargaInicial] = useState(false);
+
+  useEffect(() => {
+    if (status !== "loading" || hasData) {
+      setExibirCargaInicial(false);
+      return undefined;
+    }
+
+    const temporizador = window.setTimeout(() => setExibirCargaInicial(true), 150);
+    return () => window.clearTimeout(temporizador);
+  }, [status, hasData]);
   const userInitials = useMemo(() => {
     const parts = String(usuario.nome || "")
       .trim()
@@ -572,14 +587,16 @@ export default function WorkspaceScreen({
           </header>
         ) : null}
 
-        {status === "loading" && !hasData ? (
-          <PanelCard description="Buscando informacoes da API para montar o painel." title="Carregando workspace" />
+        {exibirCargaInicial ? (
+          <div aria-busy="true" aria-live="polite" role="status">
+            <PanelCard description="Buscando informacoes da API para montar o painel." title="Carregando workspace" />
+          </div>
         ) : null}
 
         {error ? <InlineMessage tone="error">{error}</InlineMessage> : null}
 
         {status !== "loading" || hasData ? (
-          <>
+          <ErrorBoundary key={`${activeSection}-${route.param || ""}`}>
             {showOverviewCards ? (
               <section className="metric-grid">
                 {overviewCards.map((card) => (
@@ -767,6 +784,7 @@ export default function WorkspaceScreen({
                 cursos={snapshot.cursos}
                 ehAluno={isStudent}
                 linhasMatriculas={matriculaRows}
+                onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
                 turmas={snapshot.turmas}
@@ -778,6 +796,7 @@ export default function WorkspaceScreen({
               <SecaoMeusCursosMatriculados
                 cursos={snapshot.cursos}
                 linhasMatriculas={matriculaRows}
+                onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
               />
@@ -819,7 +838,7 @@ export default function WorkspaceScreen({
                 />
               )
             ) : null}
-          </>
+          </ErrorBoundary>
         ) : null}
       </LayoutWorkspace>
     </div>

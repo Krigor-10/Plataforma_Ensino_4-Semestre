@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const DESCRICAO_PADRAO =
-  "EdTech Academy: cursos digitais, solicitacao de matricula e painel academico em uma unica plataforma.";
+  "CodeRyse Academy: cursos digitais, solicitacao de matricula e painel academico em uma unica plataforma.";
 
 export function useDocumentTitle(titulo, descricao = DESCRICAO_PADRAO) {
   useEffect(() => {

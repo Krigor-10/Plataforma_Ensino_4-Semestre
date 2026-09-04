@@ -107,12 +107,12 @@ public class AuthService : IAuthService
 
         var corpoHtml =
             $"<p>Ola, {usuario.Nome}.</p>" +
-            "<p>Recebemos uma solicitacao para redefinir sua senha na EdTech Academy. " +
+            "<p>Recebemos uma solicitacao para redefinir sua senha na CodeRyse Academy. " +
             $"Clique no link abaixo para continuar (valido por 1 hora):</p>" +
             $"<p><a href=\"{link}\">{link}</a></p>" +
             "<p>Se voce nao solicitou essa alteracao, ignore este e-mail.</p>";
 
-        await _emailService.EnviarAsync(usuario.Email, "Recuperacao de senha - EdTech Academy", corpoHtml);
+        await _emailService.EnviarAsync(usuario.Email, "Recuperacao de senha - CodeRyse Academy", corpoHtml);
     }
 
     public async Task RedefinirSenhaAsync(string token, string novaSenha)

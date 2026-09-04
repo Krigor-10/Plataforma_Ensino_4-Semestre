@@ -35,8 +35,8 @@ export default function GlobalHeader({ hasSession, isDemoMode, onNavigate }) {
       <div className="cabecalho-publico__inner">
         <NavMotionLink className="cabecalho-publico__logo" onNavigate={onNavigate} to="/" data-tooltip="Inicio">
           <span className="cabecalho-publico__logo-marca" aria-hidden="true">
-            <span>Ed</span>
-            <span>Tech</span>
+            <span>Code</span>
+            <span>Ryse</span>
           </span>
           <span className="cabecalho-publico__logo-subtitulo">Academy</span>
         </NavMotionLink>

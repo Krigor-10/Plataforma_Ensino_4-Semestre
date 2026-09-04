@@ -4,6 +4,7 @@ import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
@@ -11,12 +12,13 @@ import { getCourseCover } from "../../data/courseCovers.js";
 
 const PAGAMENTO_PENDENTE = 1;
 
-export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onRefresh, onSessionExpired, turmas, usuario }) {
+export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
   if (ehAluno) {
     return (
       <VistaAlunoMatriculas
         cursos={cursos}
         linhasMatriculas={linhasMatriculas}
+        onNavigate={onNavigate}
         onRefresh={onRefresh}
         onSessionExpired={onSessionExpired}
         turmas={turmas}
@@ -132,9 +134,10 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
 }
 
 /* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
-export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onRefresh, onSessionExpired }) {
+export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onNavigate, onRefresh, onSessionExpired }) {
   const [matriculaProcessando, setMatriculaProcessando] = useState(null);
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
+  const [popupPagamento, setPopupPagamento] = useState(null);
 
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
   const cursosMatriculados = useMemo(
@@ -180,13 +183,16 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
     }
   }
 
-  async function confirmarPagamento(matricula) {
+  async function confirmarPagamento(matricula, curso) {
     setMatriculaProcessando(matricula.id);
     setMensagem({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
-      setMensagem({ tone: "success", message: "Pagamento confirmado." });
+      setPopupPagamento({
+        cursoId: curso.id,
+        mensagem: `O pagamento do curso ${curso.titulo} foi confirmado e seu acesso ja esta disponivel.`
+      });
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -224,7 +230,7 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
                 key={curso.id}
                 matricula={matricula}
                 onCancelar={() => cancelarMatricula(matricula)}
-                onConfirmarPagamento={() => confirmarPagamento(matricula)}
+                onConfirmarPagamento={() => confirmarPagamento(matricula, curso)}
                 onReabrir={() => reabrirMatricula(matricula)}
                 pagando={matriculaProcessando === matricula.id}
                 processando={matriculaProcessando === matricula.id}
@@ -233,14 +239,29 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
           })}
         </ul>
       )}
+
+      {popupPagamento ? (
+        <PopupResultadoMatricula
+          acessoLiberado
+          mensagem={popupPagamento.mensagem}
+          onAcaoPrimaria={() => {
+            const cursoId = popupPagamento.cursoId;
+            setPopupPagamento(null);
+            onNavigate?.(`/app/conteudos/${cursoId}`);
+          }}
+          onFechar={() => setPopupPagamento(null)}
+          rotuloAcaoPrimaria="Acessar curso"
+        />
+      ) : null}
     </div>
   );
 }
 
-function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSessionExpired, turmas = [], usuario }) {
+function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRefresh, onSessionExpired, turmas = [], usuario }) {
   const [busca, setBusca] = useState("");
   const [cursoSolicitando, setCursoSolicitando] = useState(null);
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
+  const [popupMatricula, setPopupMatricula] = useState(null);
 
   const turmasPorCursoId = useMemo(() => {
     const grupos = new Map();
@@ -264,8 +285,8 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
   );
 
   async function solicitarMatricula(curso) {
-    const turmaAlvo = (turmasPorCursoId.get(curso.id) || [])[0];
-    if (!turmaAlvo) {
+    const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
+    if (!temTurma) {
       return;
     }
 
@@ -275,9 +296,16 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
     try {
       await apiRequest("/Matriculas", {
         method: "POST",
-        body: JSON.stringify({ alunoId: usuario.id, turmaId: turmaAlvo.id })
+        body: JSON.stringify({ alunoId: usuario.id, cursoId: curso.id })
       });
-      setMensagem({ tone: "success", message: `Matricula solicitada em ${curso.titulo}. Aguarde a aprovacao da coordenacao.` });
+
+      const cursoEhPago = Number(curso.preco) > 0;
+      setPopupMatricula({
+        acessoLiberado: !cursoEhPago,
+        mensagem: cursoEhPago
+          ? `Sua matricula no curso ${curso.titulo} foi registrada, mas o pagamento ainda esta pendente. O acesso ao curso sera liberado apos a confirmacao do pagamento.`
+          : `Sua matricula no curso ${curso.titulo} foi aprovada com sucesso. O curso ja esta disponivel em Meus Cursos.`
+      });
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -330,6 +358,19 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onRefresh, onSess
           ))}
         </ul>
       )}
+
+      {popupMatricula ? (
+        <PopupResultadoMatricula
+          acessoLiberado={popupMatricula.acessoLiberado}
+          mensagem={popupMatricula.mensagem}
+          onAcaoPrimaria={() => {
+            setPopupMatricula(null);
+            onNavigate?.("/app/cursos-matriculados");
+          }}
+          onFechar={() => setPopupMatricula(null)}
+          rotuloAcaoPrimaria={popupMatricula.acessoLiberado ? "Acessar Meus Cursos" : "Regularizar pagamento"}
+        />
+      ) : null}
     </div>
   );
 }
@@ -559,7 +600,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
               {processandoLote ? "Processando..." : "Aprovar selecionadas"}
             </Botao>
             <Botao disabled={processandoLote} onClick={rejeitarSelecionadas} tamanho="pequeno" variante="perigo">
-              Rejeitar selecionadas
+              {processandoLote ? "Processando..." : "Rejeitar selecionadas"}
             </Botao>
           </div>
           <span className="toolbar-massa-matriculas__contador">

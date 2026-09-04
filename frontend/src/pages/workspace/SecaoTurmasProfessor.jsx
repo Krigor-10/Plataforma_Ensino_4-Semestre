@@ -4,6 +4,7 @@ import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, baixarArquivo } from "../../lib/api.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
 import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
@@ -18,6 +19,7 @@ import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
    acao administrativa de turma — isso e exclusivo do Coordenador/Admin em
    SecaoTurmas.jsx. */
 export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
+  const { mostrarToast } = useToast();
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [cursosDesempenho, setCursosDesempenho] = useState([]);
@@ -98,6 +100,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
       link.click();
       link.remove();
       URL.revokeObjectURL(urlObjeto);
+      mostrarToast("Relatorio de desempenho gerado com sucesso.", "sucesso");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();

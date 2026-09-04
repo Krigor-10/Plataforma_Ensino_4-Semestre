@@ -404,6 +404,39 @@
   margin-bottom: 0;
 }
 
+/* Popup de resultado de matricula/pagamento (Catalogo + Meus Cursos). */
+.popup-resultado-matricula__corpo {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  text-align: center;
+}
+
+.popup-resultado-matricula__corpo p {
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+.popup-resultado-matricula__icone {
+  align-items: center;
+  border-radius: var(--raio-circular);
+  display: flex;
+  height: 3.5rem;
+  justify-content: center;
+  width: 3.5rem;
+}
+
+.popup-resultado-matricula__icone--sucesso {
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.popup-resultado-matricula__icone--aviso {
+  background: var(--cor-aviso-fundo);
+  color: var(--cor-aviso);
+}
+
 /* Coluna de acoes (menu "...") sem cabecalho visivel nas tabelas de gestao. */
 .tabela-dados__col-acoes {
   width: 3rem;

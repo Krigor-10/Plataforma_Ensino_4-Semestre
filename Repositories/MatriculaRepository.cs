@@ -29,13 +29,7 @@ public class MatriculaRepository : GenericRepository<Matricula>, IMatriculaRepos
             .ToListAsync();
     }
 
-    public async Task<bool> ExisteMatriculaAsync(int alunoId, int turmaId)
-    {
-        return await Context.Set<Matricula>()
-            .AnyAsync(m => m.AlunoId == alunoId && m.TurmaId == turmaId);
-    }
-
-    public async Task<List<Matricula>> ObterMatriculasPendentesAsync()
+public async Task<List<Matricula>> ObterMatriculasPendentesAsync()
     {
         return await Context.Set<Matricula>()
             .AsNoTracking()

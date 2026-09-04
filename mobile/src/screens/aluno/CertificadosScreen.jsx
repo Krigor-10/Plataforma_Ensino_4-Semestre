@@ -152,7 +152,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                     {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
                   </Text>
                   <Text style={estilos.certificadoData}>{formatDate(certificadoEmitido.emitidoEm)}</Text>
-                  <Text style={estilos.certificadoEscola}>Oferecido pela escola: EdTech Academy</Text>
+                  <Text style={estilos.certificadoEscola}>Oferecido pela escola: CodeRyse Academy</Text>
                   <Text style={estilos.certificadoVerificacao}>Codigo de verificacao: {certificadoEmitido.codigoVerificacao}</Text>
                 </View>
               ) : null}

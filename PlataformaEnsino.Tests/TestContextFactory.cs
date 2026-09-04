@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using PlataformaEnsino.API.Data;
 
 namespace PlataformaEnsino.Tests;
@@ -15,8 +16,13 @@ public static class TestContextFactory
     /// </summary>
     public static PlataformaContext Criar(string nomeBanco)
     {
+        // O provider InMemory nao suporta transacao real — ignora o aviso pra
+        // Database.BeginTransactionAsync() virar um no-op em vez de lancar
+        // (MatriculaService.MatricularComAprovacaoAutomaticaAsync usa
+        // transacao de verdade no SQL Server em producao).
         var options = new DbContextOptionsBuilder<PlataformaContext>()
             .UseInMemoryDatabase(nomeBanco)
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new PlataformaContext(options);

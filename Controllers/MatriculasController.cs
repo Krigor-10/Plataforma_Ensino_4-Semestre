@@ -76,7 +76,7 @@ public class MatriculasController : ControllerBase
             return Forbid();
         }
 
-        var matricula = await _matriculaService.MatricularAlunoAsync(request.AlunoId, request.TurmaId);
+        var matricula = await _matriculaService.MatricularComAprovacaoAutomaticaAsync(request.AlunoId, request.CursoId);
         return CreatedAtAction(nameof(GetMatriculaPorId), new { id = matricula.Id }, MapResponse(matricula));
     }
 

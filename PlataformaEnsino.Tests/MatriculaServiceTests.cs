@@ -61,44 +61,19 @@ public class MatriculaServiceTests
         return aluno;
     }
 
-    [Fact]
-    public async Task MatricularAlunoAsync_CriaMatriculaPendente()
+    private static Matricula CriarMatriculaPendente(PlataformaContext context, int alunoId, int cursoId, int turmaId)
     {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
-        var aluno = CriarAluno(context);
+        var matricula = new Matricula
+        {
+            AlunoId = alunoId,
+            CursoId = cursoId,
+            CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..10]
+        };
+        matricula.VincularTurma(turmaId);
 
-        var matricula = await service.MatricularAlunoAsync(aluno.Id, turma.Id);
-
-        Assert.Equal(StatusMatricula.Pendente, matricula.Status);
-        Assert.Equal(curso.Id, matricula.CursoId);
-        Assert.NotEmpty(matricula.CodigoRegistro);
-    }
-
-    [Fact]
-    public async Task MatricularAlunoAsync_ImpedeMatriculaDuplicadaNaMesmaTurma()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
-        var aluno = CriarAluno(context);
-
-        await service.MatricularAlunoAsync(aluno.Id, turma.Id);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.MatricularAlunoAsync(aluno.Id, turma.Id));
-    }
-
-    [Fact]
-    public async Task MatricularAlunoAsync_AlunoInexistente_LancaKeyNotFound()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
-
-        await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => service.MatricularAlunoAsync(alunoId: 999, turma.Id));
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+        return matricula;
     }
 
     [Fact]
@@ -108,7 +83,7 @@ public class MatriculaServiceTests
         var curso = CriarCurso(context);
         var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = await service.MatricularAlunoAsync(aluno.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
 
         await service.AprovarMatriculaAsync(matricula.Id, turma.Id);
 
@@ -132,7 +107,7 @@ public class MatriculaServiceTests
         var turmaDoCurso = CriarTurma(context, curso.Id);
         var turmaDeOutroCurso = CriarTurma(context, outroCurso.Id);
         var aluno = CriarAluno(context);
-        var matricula = await service.MatricularAlunoAsync(aluno.Id, turmaDoCurso.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turmaDoCurso.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.AprovarMatriculaAsync(matricula.Id, turmaDeOutroCurso.Id));
@@ -145,7 +120,7 @@ public class MatriculaServiceTests
         var curso = CriarCurso(context);
         var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = await service.MatricularAlunoAsync(aluno.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
 
         await service.RejeitarMatriculaAsync(matricula.Id);
 
@@ -160,7 +135,7 @@ public class MatriculaServiceTests
         var curso = CriarCurso(context);
         var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = await service.MatricularAlunoAsync(aluno.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
 
         var resultado = await service.AprovarMatriculasAutomaticamenteAsync(new[] { matricula.Id, 999 });
 
@@ -172,14 +147,14 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task MatricularViaCadastroAsync_CriaMatriculaJaAprovadaComTurma()
+    public async Task MatricularComAprovacaoAutomaticaAsync_CriaMatriculaJaAprovadaComTurma()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
         var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
-        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
 
         Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
         Assert.Equal(turma.Id, matricula.TurmaId);
@@ -191,25 +166,25 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task MatricularViaCadastroAsync_CursoSemTurma_LancaInvalidOperation()
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoSemTurma_LancaInvalidOperation()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context); // sem CriarTurma
         var aluno = CriarAluno(context);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.MatricularViaCadastroAsync(aluno.Id, curso.Id));
+            () => service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id));
     }
 
     [Fact]
-    public async Task MatricularViaCadastroAsync_CursoPago_CriaPagamentoPendente()
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoPago_CriaPagamentoPendente()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context, preco: 199.90m);
         CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
-        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
 
         var pagamento = context.Pagamentos.Single(p => p.MatriculaId == matricula.Id);
         Assert.Equal(StatusPagamento.Pendente, pagamento.Status);
@@ -217,14 +192,14 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task MatricularViaCadastroAsync_CursoGratuito_NaoCriaPagamento()
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoGratuito_NaoCriaPagamento()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
         CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
-        var matricula = await service.MatricularViaCadastroAsync(aluno.Id, curso.Id);
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
 
         Assert.False(context.Pagamentos.Any(p => p.MatriculaId == matricula.Id));
     }

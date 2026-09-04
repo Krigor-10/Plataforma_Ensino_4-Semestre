@@ -9,6 +9,7 @@ import Modal from "../../components/Modal.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
 import SelectUsuario from "../../components/SelectUsuario.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizeStatus } from "../../lib/format.js";
@@ -32,6 +33,7 @@ export function SecaoTurmas({
   onRefresh,
   onSessionExpired
 }) {
+  const { mostrarToast } = useToast();
   const [turmaSelecionadaId, setTurmaSelecionadaId] = useState(null);
   const [buscaAluno, setBuscaAluno] = useState("");
   const [filtroProfessor, setFiltroProfessor] = useState("todos");
@@ -247,6 +249,7 @@ export function SecaoTurmas({
 
       setFormularioCriacaoAberto(false);
       setDadosFormularioTurma({ nomeTurma: "", cursoId: "", professorId: "" });
+      mostrarToast("Turma criada com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -283,6 +286,7 @@ export function SecaoTurmas({
       });
 
       setTurmaAtribuindo(null);
+      mostrarToast("Professor atribuido com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -319,6 +323,7 @@ export function SecaoTurmas({
       });
 
       setTurmaEditandoNome(null);
+      mostrarToast("Nome da turma atualizado com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -351,6 +356,7 @@ export function SecaoTurmas({
 
       setTurmaParaExcluir(null);
       setTurmaSelecionadaId(null);
+      mostrarToast("Turma excluida com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

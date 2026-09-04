@@ -2543,7 +2543,7 @@ function ensureCoordinatorCollection(db) {
       estado: "SP",
       tipoUsuario: "Coordenador",
       ativo: true,
-      cursoResponsavel: "Trilhas EdTech"
+      cursoResponsavel: "Trilhas CodeRyse"
     },
     {
       id: 902,
@@ -2931,7 +2931,7 @@ function createInitialDemoDb() {
         estado: "SP",
         tipoUsuario: "Coordenador",
         ativo: true,
-        cursoResponsavel: "Trilhas EdTech"
+        cursoResponsavel: "Trilhas CodeRyse"
       },
       {
         id: 902,

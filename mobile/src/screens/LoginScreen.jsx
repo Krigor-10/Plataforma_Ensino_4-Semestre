@@ -73,7 +73,7 @@ export default function LoginScreen({ onLogin }) {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
         <ScrollView contentContainerStyle={styles.conteudo} keyboardShouldPersistTaps="handled">
           <Text style={styles.logo}>
-            Ed<Text style={styles.logoDestaque}>Tech</Text>
+            Code<Text style={styles.logoDestaque}>Ryse</Text>
           </Text>
           <Text style={styles.subtitulo}>
             Informe o e-mail cadastrado. Se ele existir na base, enviaremos um link para redefinir sua senha (abra o
@@ -117,7 +117,7 @@ export default function LoginScreen({ onLogin }) {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.logo}>
-          Ed<Text style={styles.logoDestaque}>Tech</Text>
+          Code<Text style={styles.logoDestaque}>Ryse</Text>
         </Text>
         <Text style={styles.subtitulo}>Entre com sua conta para abrir o painel.</Text>
 

@@ -30,59 +30,47 @@ public class MatriculaService : IMatriculaService
         _notificacaoService = notificacaoService;
     }
 
-    public async Task<Matricula> MatricularAlunoAsync(int alunoId, int turmaId)
+    /// <summary>
+    /// Ponto de entrada unico pra "aluno ganha uma matricula ja aprovada
+    /// sem intervencao de coordenador" — usado tanto no cadastro
+    /// (<see cref="Services.AlunoService.CadastrarAlunoCompletoAsync"/>)
+    /// quanto na solicitacao pelo Catalogo de Cursos (aluno ja logado
+    /// pedindo matricula num curso adicional). Resolve a turma mais antiga
+    /// do curso, aprova na hora, e cria o Pagamento pendente se o curso for
+    /// pago (via CriarPagamentoPendenteSeNecessarioAsync) — o acesso ao
+    /// conteudo continua bloqueado ate a confirmacao do pagamento
+    /// (ver AcessoAcademicoService). Se nao houver turma cadastrada para o
+    /// curso, lanca InvalidOperationException (-> 422). Sempre transacional:
+    /// se a aprovacao falhar (ex.: sem turma), a matricula Pendente
+    /// intermediaria criada por CriarMatriculaPendenteAsync tambem e
+    /// desfeita, evitando um registro orfao no banco. Quando chamado de
+    /// dentro de uma transacao ja aberta pelo chamador (cadastro), reaproveita
+    /// essa transacao em vez de abrir uma segunda.
+    /// </summary>
+    public async Task<Matricula> MatricularComAprovacaoAutomaticaAsync(int alunoId, int cursoId)
     {
-        var aluno = await _alunoRepository.ObterPorIdAsync(alunoId)
-            ?? throw new KeyNotFoundException("Aluno não encontrado.");
+        var transacaoJaAberta = _context.Database.CurrentTransaction is not null;
+        await using var transaction = transacaoJaAberta ? null : await _context.Database.BeginTransactionAsync();
 
-        var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
-            ?? throw new KeyNotFoundException("Turma não encontrada.");
-
-        if (await _matriculaRepository.ExisteMatriculaAsync(alunoId, turmaId))
-        {
-            throw new InvalidOperationException("O aluno já está matriculado nesta turma.");
-        }
-
-        var novaMatricula = new Matricula
-        {
-            AlunoId = alunoId,
-            CursoId = turma.CursoId,
-            Aluno = aluno,
-            Turma = turma
-        };
-        novaMatricula.CodigoRegistro = await GerarCodigoMatriculaAsync();
-        novaMatricula.VincularTurma(turmaId);
-        novaMatricula.RegistrarSolicitacao(DateTime.UtcNow);
-
-        await _matriculaRepository.AdicionarAsync(novaMatricula);
-        await _matriculaRepository.SalvarAlteracoesAsync();
-
-        return await _matriculaRepository.ObterMatriculaCompletaAsync(novaMatricula.Id) ?? novaMatricula;
-    }
-
-    public async Task<Matricula> MatricularViaCadastroAsync(int alunoId, int cursoId)
-    {
         var matriculaPendente = await CriarMatriculaPendenteAsync(alunoId, cursoId);
 
-        // Reaproveita o mesmo caminho da aprovacao automatica em lote: resolve a
-        // turma mais antiga do curso e aprova (o que tambem cria o Pagamento
-        // pendente se o curso for pago, via CriarPagamentoPendenteSeNecessarioAsync).
-        // Se nao houver turma cadastrada para o curso, lanca InvalidOperationException
-        // (-> 422), o que desfaz a transacao aberta em
-        // AlunoService.CadastrarAlunoCompletoAsync (aluno + esta matricula pendente
-        // intermediaria nunca chegam a ser commitados).
         await AprovarMatriculaAutomaticamenteCoreAsync(matriculaPendente.Id);
         await SalvarComProtecaoDeConcorrenciaAsync();
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
 
         return await _matriculaRepository.ObterMatriculaCompletaAsync(matriculaPendente.Id) ?? matriculaPendente;
     }
 
     /// <summary>
     /// Cria a matricula em estado Pendente, sem turma — passo intermediario
-    /// interno usado por <see cref="MatricularViaCadastroAsync"/> antes de
-    /// aprova-la automaticamente. Nao e mais exposto na interface publica:
-    /// nenhum fluxo de negocio hoje precisa de uma matricula que fique
-    /// Pendente sem ser imediatamente resolvida/aprovada.
+    /// interno usado por <see cref="MatricularComAprovacaoAutomaticaAsync"/>
+    /// antes de aprova-la automaticamente. Nao e mais exposto na interface
+    /// publica: nenhum fluxo de negocio hoje precisa de uma matricula que
+    /// fique Pendente sem ser imediatamente resolvida/aprovada.
     /// </summary>
     private async Task<Matricula> CriarMatriculaPendenteAsync(int alunoId, int cursoId)
     {

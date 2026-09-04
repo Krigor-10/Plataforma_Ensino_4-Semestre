@@ -9,6 +9,7 @@ import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
@@ -19,6 +20,7 @@ function formatDecimal(value) {
 }
 
 export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
+  const { mostrarToast } = useToast();
   // Assistente de criacao/edicao de avaliacao/quiz — componente compartilhado
   // (AssistenteQuizAvaliacao.jsx), tambem montado direto por
   // SecaoConteudosProfessor.jsx no botao "Adicionar/Editar quiz" (sem
@@ -221,6 +223,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
       }
 
       setAvaliacaoParaExcluir(null);
+      mostrarToast("Avaliacao excluida com sucesso.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -315,6 +318,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         method: "PUT",
         body: JSON.stringify(montarPayloadAtualizacao(avaliacaoAtualizada))
       });
+      mostrarToast(proximoStatus === 2 ? "Avaliacao publicada com sucesso." : "Avaliacao despublicada com sucesso.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

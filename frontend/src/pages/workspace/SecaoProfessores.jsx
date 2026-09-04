@@ -8,6 +8,7 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { formatCep, formatDate, iniciaisNome, maskCpf, onlyDigits } from "../../lib/format.js";
@@ -44,6 +45,7 @@ function IconeOrdenacao({ direcao }) {
 }
 
 export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, professores = [], turmas = [] }) {
+  const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
@@ -270,6 +272,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       }
 
       setFormularioAberto(false);
+      mostrarToast(professorEmEdicaoId ? "Professor atualizado com sucesso." : "Professor cadastrado com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -304,6 +307,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       await apiRequest(`/Professores/${professorParaExcluir.id}`, { method: "DELETE" });
 
       setProfessorParaExcluir(null);
+      mostrarToast("Professor excluido com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

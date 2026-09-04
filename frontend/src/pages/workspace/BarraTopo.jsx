@@ -255,7 +255,7 @@ export default function BarraTopo({
 
           <div className="topbar__contexto">
             <nav className="topbar__breadcrumb" aria-label="Localização atual">
-              <span className="topbar__breadcrumb-raiz" style={{ color: "var(--cor-marca-clara)" }}>EdTech Academy</span>
+              <span className="topbar__breadcrumb-raiz" style={{ color: "var(--cor-marca-clara)" }}>CodeRyse Academy</span>
               <span className="topbar__breadcrumb-sep" aria-hidden="true" style={{ color: "var(--cor-marca-clara)", fontSize: "1rem" }}>›</span>
               <span className="topbar__breadcrumb-secao">
                 <IconeSecao size={16} aria-hidden="true" />

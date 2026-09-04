@@ -308,7 +308,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                   </p>
 
                   <p className="certificate-sheet__data">{formatDate(certificadoEmitido.emitidoEm)}</p>
-                  <p className="certificate-sheet__escola">Oferecido pela escola: <strong>EdTech Academy</strong></p>
+                  <p className="certificate-sheet__escola">Oferecido pela escola: <strong>CodeRyse Academy</strong></p>
 
                   <div className="certificate-sheet__assinaturas">
                     <div className="certificate-sheet__assinatura">
@@ -318,7 +318,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                     <TbAward aria-hidden="true" className="certificate-sheet__laurel" size={22} />
                     <div className="certificate-sheet__assinatura">
                       <span className="certificate-sheet__linha" />
-                      <span>EdTech Academy</span>
+                      <span>CodeRyse Academy</span>
                     </div>
                   </div>
 

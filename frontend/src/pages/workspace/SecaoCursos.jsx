@@ -3,6 +3,7 @@ import { TbArrowLeft, TbAward, TbCamera, TbEdit, TbLayoutGrid, TbSearch, TbUserC
 import { MdAttachMoney, MdGroups, MdLayers, MdMenuBook, MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -37,6 +38,7 @@ export function SecaoCursos({
   onRefresh,
   onSessionExpired
 }) {
+  const { mostrarToast } = useToast();
   const [cursosSelecionados, setCursosSelecionados] = useState(() => new Set());
   const [coordenadorSelecionado, setCoordenadorSelecionado] = useState("");
   const [filtroCoordenador, setFiltroCoordenador] = useState("todos");
@@ -323,6 +325,7 @@ export function SecaoCursos({
       });
 
       setCursoParaEditar(null);
+      mostrarToast("Curso salvo com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -386,6 +389,7 @@ export function SecaoCursos({
     try {
       await apiRequest(`/Cursos/${cursoParaImagem.id}/imagem`, { method: "POST", body: formData });
       fecharModalImagem();
+      mostrarToast("Imagem do curso atualizada com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

@@ -8,6 +8,7 @@ import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Modal from "../../components/Modal.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { formatDate, normalizeStatus } from "../../lib/format.js";
@@ -28,6 +29,7 @@ export function SecaoModulos({
   professores = [],
   turmas = []
 }) {
+  const { mostrarToast } = useToast();
   const podeGerenciar = ehAdmin || ehCoordenador;
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
@@ -235,6 +237,7 @@ export function SecaoModulos({
         });
       }
 
+      mostrarToast(moduloEmEdicaoId ? "Modulo atualizado com sucesso." : "Modulo criado com sucesso.", "sucesso");
       fecharFormulario();
       onRefresh();
     } catch (err) {
@@ -266,6 +269,7 @@ export function SecaoModulos({
     try {
       await apiRequest(`/Modulos/${moduloParaExcluir.id}`, { method: "DELETE" });
       setModuloParaExcluir(null);
+      mostrarToast("Modulo excluido com sucesso.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

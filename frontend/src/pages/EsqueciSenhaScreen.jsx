@@ -5,7 +5,7 @@ import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function EsqueciSenhaScreen({ onNavigate }) {
-  useDocumentTitle("Recuperar senha | EdTech Academy");
+  useDocumentTitle("Recuperar senha | CodeRyse Academy");
 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle");
@@ -40,8 +40,8 @@ export default function EsqueciSenhaScreen({ onNavigate }) {
         <div className="tela-login__visual-conteudo">
           <div className="visual-logo">
             <span className="visual-logo__marca" aria-hidden="true">
-              <span>Ed</span>
-              <span>Tech</span>
+              <span>Code</span>
+              <span>Ryse</span>
             </span>
             <span className="visual-logo__subtitulo">Academy</span>
           </div>

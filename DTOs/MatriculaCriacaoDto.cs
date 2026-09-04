@@ -8,5 +8,5 @@ public class MatriculaCriacaoDto
     public int AlunoId { get; set; }
 
     [Required]
-    public int TurmaId { get; set; }
+    public int CursoId { get; set; }
 }

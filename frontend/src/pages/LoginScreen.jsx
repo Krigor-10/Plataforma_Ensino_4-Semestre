@@ -14,7 +14,7 @@ export default function LoginScreen({
   onNavigate,
   onSessionStart
 }) {
-  useDocumentTitle("Entrar | EdTech Academy");
+  useDocumentTitle("Entrar | CodeRyse Academy");
 
   const [form, setForm] = useState({ email: "", senha: "" });
   const [status, setStatus] = useState("idle");
@@ -56,8 +56,8 @@ export default function LoginScreen({
         <div className="tela-login__visual-conteudo">
           <div className="visual-logo">
             <span className="visual-logo__marca" aria-hidden="true">
-              <span>Ed</span>
-              <span>Tech</span>
+              <span>Code</span>
+              <span>Ryse</span>
             </span>
             <span className="visual-logo__subtitulo">Academy</span>
           </div>
@@ -77,7 +77,7 @@ export default function LoginScreen({
         </header>
 
         <div className="tela-login__corpo">
-          <h1 className="tela-login__titulo">Entrar na EdTech</h1>
+          <h1 className="tela-login__titulo">Entrar na CodeRyse</h1>
           <p className="tela-login__subtitulo">Use seu e-mail e senha para abrir o ambiente conectado a API.</p>
 
           {isDemoMode ? (

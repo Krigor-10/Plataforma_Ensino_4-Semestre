@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { RouteGate } from "./components/Primitives.jsx";
 import TooltipGlobal from "./components/TooltipGlobal.jsx";
+import { ToastProvider } from "./hooks/useToast.jsx";
 import CadastroScreen from "./pages/CadastroScreen.jsx";
 import EsqueciSenhaScreen from "./pages/EsqueciSenhaScreen.jsx";
 import LoginScreen from "./pages/LoginScreen.jsx";
@@ -90,25 +91,35 @@ export default function App() {
     });
   }
 
-  function handleLogout(nextPath = "/") {
-    if (!isDemoMode && session.refreshToken) {
-      apiRequest("/Auth/logout", {
-        method: "POST",
-        body: JSON.stringify({ refreshToken: session.refreshToken })
-      }).catch(() => {});
-    }
+  // useCallback aqui nao e so otimizacao: onSessionExpired (derivado disso
+  // logo abaixo) e dependencia do useEffect de carregamento do workspace.
+  // Sem referencia estavel, esse efeito refaz todas as chamadas de API a
+  // cada navegacao entre menus da Sidebar, porque o App re-renderiza a cada
+  // troca de rota.
+  const handleLogout = useCallback(
+    (nextPath = "/") => {
+      if (!isDemoMode && session.refreshToken) {
+        apiRequest("/Auth/logout", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken: session.refreshToken })
+        }).catch(() => {});
+      }
 
-    clearSession();
-    setSession({ token: "", user: null });
-    handleNavigate(nextPath, { replace: true });
-  }
+      clearSession();
+      setSession({ token: "", user: null });
+      navigate(nextPath, setRoute, { replace: true });
+    },
+    [isDemoMode, session.refreshToken]
+  );
+
+  const handleSessionExpired = useCallback(() => handleLogout("/login"), [handleLogout]);
 
   let content;
 
   if (!sessionReady && route.kind === "app") {
     content = <RouteGate title="Preparando o acesso" text="Verificando sua sessao." />;
   } else if (route.kind === "app" && !session.user) {
-    content = <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da EdTech." />;
+    content = <RouteGate title="Preparando o acesso" text="Abrindo a tela de login da CodeRyse." />;
   } else if (
     session.user &&
     (route.kind === "login" || route.kind === "cadastro" || route.kind === "esqueci-senha" || route.kind === "redefinir-senha")
@@ -143,7 +154,7 @@ export default function App() {
         usuario={session.user}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
-        onSessionExpired={() => handleLogout("/login")}
+        onSessionExpired={handleSessionExpired}
         onUsuarioAtualizado={handleUsuarioAtualizado}
       />
     );
@@ -153,12 +164,16 @@ export default function App() {
     content = <PublicHome hasSession={Boolean(session.user)} isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
   }
 
-  const chaveLimite = `${route.kind}-${route.section || ""}-${route.param || ""}`;
+  // So a troca de "kind" (ex.: login -> app) deve remontar a arvore inteira.
+  // Nao incluir route.section/param aqui: manter o WorkspaceScreen como a
+  // mesma instancia React durante a navegacao entre menus da Sidebar evita
+  // reload total do painel (Sidebar recriada + refetch de todos os dados).
+  const chaveLimite = route.kind;
 
   return (
-    <>
+    <ToastProvider>
       <ErrorBoundary key={chaveLimite}>{content}</ErrorBoundary>
       <TooltipGlobal />
-    </>
+    </ToastProvider>
   );
 }

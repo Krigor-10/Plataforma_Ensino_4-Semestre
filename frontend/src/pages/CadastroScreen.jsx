@@ -27,7 +27,7 @@ const ID_DO_CAMPO = {
 };
 
 export default function CadastroScreen({ isDemoMode, onNavigate }) {
-  useDocumentTitle("Cadastro de matricula | EdTech Academy");
+  useDocumentTitle("Cadastro de matricula | CodeRyse Academy");
 
   const [form, setForm] = useState(SIGNUP_INITIAL_STATE);
   const [cursos, setCursos] = useState([]);
@@ -198,8 +198,8 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
           </button>
           <a className="cabecalho-publico__logo" href="/" onClick={(event) => { event.preventDefault(); onNavigate("/"); }}>
             <span className="cabecalho-publico__logo-marca" aria-hidden="true">
-              <span>Ed</span>
-              <span>Tech</span>
+              <span>Code</span>
+              <span>Ryse</span>
             </span>
           </a>
           <span className="cadastro-cabecalho__legenda">
@@ -214,7 +214,7 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       <main className="cadastro-principal">
         <div className="cadastro-container">
           <div>
-            <h1 className="cadastro-intro__titulo">Matricule-se na EdTech</h1>
+            <h1 className="cadastro-intro__titulo">Matricule-se na CodeRyse</h1>
             <p className="cadastro-intro__subtitulo">O formulario envia o cadastro completo e sua matricula ja e aprovada automaticamente.</p>
           </div>
 

@@ -63,8 +63,8 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
   );
 
   async function solicitar(curso) {
-    const turmaAlvo = (turmasPorCursoId.get(curso.id) || [])[0];
-    if (!turmaAlvo) {
+    const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
+    if (!temTurma) {
       return;
     }
 
@@ -72,8 +72,14 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
     setMensagem("");
 
     try {
-      await apiRequest("/Matriculas", { method: "POST", body: JSON.stringify({ alunoId: usuario.id, turmaId: turmaAlvo.id }) });
-      setMensagem(`Matricula solicitada em ${curso.titulo}. Aguarde a aprovacao da coordenacao.`);
+      await apiRequest("/Matriculas", { method: "POST", body: JSON.stringify({ alunoId: usuario.id, cursoId: curso.id }) });
+
+      const cursoEhPago = Number(curso.preco) > 0;
+      setMensagem(
+        cursoEhPago
+          ? `Matricula em ${curso.titulo} aprovada — confirme o pagamento pendente para liberar o acesso.`
+          : `Matricula em ${curso.titulo} aprovada. Seu acesso ja esta liberado.`
+      );
       await onRecarregar();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

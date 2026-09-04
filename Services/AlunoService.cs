@@ -119,7 +119,7 @@ public class AlunoService : IAlunoService
         _context.Alunos.Add(aluno);
         await _context.SaveChangesAsync();
 
-        await _matriculaService.MatricularViaCadastroAsync(aluno.Id, dto.CursoId);
+        await _matriculaService.MatricularComAprovacaoAutomaticaAsync(aluno.Id, dto.CursoId);
         await transaction.CommitAsync();
 
         return precoCurso <= 0;

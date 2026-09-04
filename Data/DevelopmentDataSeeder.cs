@@ -198,7 +198,7 @@ public static class DevelopmentDataSeeder
             context.Admins.Add(admin);
         }
 
-        admin.Nome = "Administrador EdTech";
+        admin.Nome = "Administrador CodeRyse";
         admin.Email = AdminEmail;
         admin.Cpf = "11111111111";
         admin.Telefone = "11999990001";

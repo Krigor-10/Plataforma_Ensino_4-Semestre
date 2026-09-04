@@ -23,6 +23,7 @@ import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
@@ -91,6 +92,7 @@ export function SecaoConteudosProfessor({
   turmas,
   usuario
 }) {
+  const { mostrarToast } = useToast();
   const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario());
   const [conteudoEmEdicaoId, setConteudoEmEdicaoId] = useState(null);
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
@@ -356,6 +358,7 @@ export function SecaoConteudosProfessor({
         await apiRequest("/ConteudosDidaticos", { method: "POST", body: JSON.stringify(dadosEnvio) });
       }
 
+      mostrarToast(conteudoEmEdicaoId ? "Conteudo atualizado com sucesso." : "Conteudo criado com sucesso.", "sucesso");
       limparFormulario();
       setFormularioAberto(false);
       onRefresh();
@@ -387,6 +390,7 @@ export function SecaoConteudosProfessor({
       }
 
       setConteudoParaExcluir(null);
+      mostrarToast("Conteudo excluido com sucesso.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -411,6 +415,10 @@ export function SecaoConteudosProfessor({
         method: "PUT",
         body: JSON.stringify(montarPayloadConteudo(conteudo, { statusPublicacao: proximoStatus }))
       });
+      mostrarToast(
+        proximoStatus === STATUS_PUBLICADO ? "Conteudo publicado com sucesso." : "Conteudo despublicado com sucesso.",
+        "sucesso"
+      );
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

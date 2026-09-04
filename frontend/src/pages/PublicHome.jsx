@@ -13,7 +13,7 @@ import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
-  useDocumentTitle("EdTech Academy | Cursos digitais");
+  useDocumentTitle("CodeRyse Academy | Cursos digitais");
 
   const [courses, setCourses] = useState(() => filterPublicCourses(CURATED_COURSES));
   const [status, setStatus] = useState("loading");
@@ -68,7 +68,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
           <div className="secao-hero__conteudo">
             <p className="secao-hero__tag">Cursos digitais com acompanhamento academico</p>
             <h1 className="secao-hero__titulo" id="titulo-hero">
-              EdTech
+              CodeRyse
               <br />
               <span className="secao-hero__titulo--destaque">Academy</span>
             </h1>
@@ -209,7 +209,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
       <footer className="rodape-publico" role="contentinfo">
         <div className="rodape-publico__inner">
           <div className="rodape-publico__marca-bloco">
-            <p className="rodape-publico__marca">EdTech Academy</p>
+            <p className="rodape-publico__marca">CodeRyse Academy</p>
             <p className="rodape-publico__direitos">
               Cursos digitais e gestao academica em uma unica plataforma.
             </p>
@@ -237,7 +237,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
 
         <div className="rodape-publico__barra-inferior">
           <p className="rodape-publico__copyright">
-            © {new Date().getFullYear()} EdTech Academy. Todos os direitos reservados.
+            © {new Date().getFullYear()} CodeRyse Academy. Todos os direitos reservados.
           </p>
         </div>
       </footer>
