@@ -15,10 +15,16 @@ public sealed class CursoConfiguration : IEntityTypeConfiguration<Curso>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
+            .HasIndex(c => c.CoordenadorId);
+
+        builder
             .HasOne(c => c.Criador)
             .WithMany()
             .HasForeignKey(c => c.CriadoPor)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasIndex(c => c.CriadoPor);
 
         builder
             .Property(c => c.Preco)
@@ -106,6 +112,12 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .WithMany(a => a.Matriculas)
             .HasForeignKey(m => m.AlunoId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // O indice unico IX_Matriculas_AlunoId_TurmaId_Aprovada (abaixo) e filtrado
+        // (Status = 1), entao nao serve pra consultas gerais "todas as matriculas
+        // do aluno X" sem esse filtro — esse indice cobre esse caso.
+        builder
+            .HasIndex(m => m.AlunoId);
 
         builder
             .HasOne(m => m.Curso)

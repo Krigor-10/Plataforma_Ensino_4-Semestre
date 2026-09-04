@@ -14,11 +14,16 @@ public sealed class ConteudoDidaticoConfiguration : IEntityTypeConfiguration<Con
             .HasForeignKey(c => c.ProfessorAutorId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // NO_ACTION (nao Cascade): TurmaService.ExcluirTurmaAsync ja bloqueia a
+        // exclusao da turma quando ha conteudo vinculado, entao essa cascata nunca
+        // deveria disparar de verdade — trocado por endurecimento defensivo (achado
+        // da auditoria de banco 2026-09-04), pra nao apagar conteudos em silencio
+        // caso algum caminho futuro pule essa checagem do Service.
         builder
             .HasOne(c => c.Turma)
             .WithMany(t => t.ConteudosDidaticos)
             .HasForeignKey(c => c.TurmaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder
             .HasOne(c => c.Modulo)

@@ -74,11 +74,16 @@ public sealed class AvaliacaoConfiguration : IEntityTypeConfiguration<Avaliacao>
             .HasForeignKey(a => a.ProfessorAutorId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // NO_ACTION (nao Cascade): TurmaService.ExcluirTurmaAsync ja bloqueia a
+        // exclusao da turma quando ha avaliacao vinculada, entao essa cascata nunca
+        // deveria disparar de verdade — trocado por endurecimento defensivo (achado
+        // da auditoria de banco 2026-09-04), pra nao apagar avaliacoes em silencio
+        // caso algum caminho futuro pule essa checagem do Service.
         builder
             .HasOne(a => a.Turma)
             .WithMany(t => t.Avaliacoes)
             .HasForeignKey(a => a.TurmaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
 
         builder
             .HasOne(a => a.Modulo)
