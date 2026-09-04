@@ -393,6 +393,10 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
     () => linhasMatriculas.filter((matricula) => matricula.status === "Rejeitada"),
     [linhasMatriculas]
   );
+  const matriculasCanceladas = useMemo(
+    () => linhasMatriculas.filter((matricula) => matricula.status === "Cancelada"),
+    [linhasMatriculas]
+  );
 
   const idsPendentes = useMemo(() => new Set(matriculasPendentes.map((matricula) => matricula.id)), [matriculasPendentes]);
 
@@ -550,11 +554,18 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
   const abas = [
     { chave: "pendentes", rotulo: "Pendentes", contagem: matriculasPendentes.length },
     { chave: "rejeitadas", rotulo: "Rejeitadas", contagem: matriculasRejeitadas.length },
-    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length }
+    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length },
+    { chave: "canceladas", rotulo: "Canceladas", contagem: matriculasCanceladas.length }
   ];
 
   const linhasDaAba =
-    abaAtiva === "pendentes" ? matriculasPendentes : abaAtiva === "aprovadas" ? matriculasAprovadas : matriculasRejeitadas;
+    abaAtiva === "pendentes"
+      ? matriculasPendentes
+      : abaAtiva === "aprovadas"
+        ? matriculasAprovadas
+        : abaAtiva === "rejeitadas"
+          ? matriculasRejeitadas
+          : matriculasCanceladas;
 
   return (
     <div className="tela-matriculas">
@@ -617,7 +628,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
         <table aria-label="Matriculas" className="tabela-dados">
           <thead>
             <tr>
-              {abaAtiva === "pendentes" ? <th scope="col" style={{ width: 40 }} /> : null}
+              {abaAtiva === "pendentes" ? <th className="tabela-dados__col-selecao" scope="col" /> : null}
               <th scope="col">Protocolo</th>
               <th scope="col">Aluno</th>
               <th scope="col">Curso</th>
@@ -633,7 +644,9 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
                     ? "Nenhum aluno pendente de aprovacao."
                     : abaAtiva === "aprovadas"
                       ? "Nenhuma matricula aprovada encontrada."
-                      : "Nenhuma matricula rejeitada encontrada."}
+                      : abaAtiva === "rejeitadas"
+                        ? "Nenhuma matricula rejeitada encontrada."
+                        : "Nenhuma matricula cancelada encontrada."}
                 </td>
               </tr>
             ) : (

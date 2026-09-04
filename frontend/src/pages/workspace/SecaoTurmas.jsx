@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbChalkboard, TbCheck, TbDotsVertical, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
-import { MdGroups, MdSave } from "react-icons/md";
+import { TbArrowLeft, TbCheck, TbChecklist, TbDotsVertical, TbPercentage, TbPlus, TbSearch, TbUsers, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -375,39 +376,41 @@ export function SecaoTurmas({
       {!turmaSelecionada ? (
         <>
           <header className="cabecalho-pagina">
-            <div style={{ flex: 1 }}>
-              <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-lg)" }}>
-                <h2 className="cabecalho-pagina__titulo">Turmas</h2>
-                {ehGestor ? (
-                  <select
-                    aria-label="Filtrar turmas por professor"
-                    className="campo__entrada barra-filtros__select"
-                    onChange={(event) => setFiltroProfessor(event.target.value)}
-                    value={filtroProfessor}
-                  >
-                    <option value="todos">Todos os professores</option>
-                    <option value="sem-professor">Sem professor</option>
-                    {professoresOrdenados.map((professor) => (
-                      <option key={professor.id} value={professor.id}>
-                        {professor.nome}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                {podeGerenciarTurmas ? (
-                  <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} title={motivoCriacaoBloqueada || undefined} variante="primario">
-                    <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                      <TbPlus aria-hidden="true" size={18} />
-                    </motion.span>{" "}
-                    Nova turma
-                  </Botao>
-                ) : null}
-              </div>
+            <div>
+              <h2 className="cabecalho-pagina__titulo">Turmas</h2>
               <p className="cabecalho-pagina__subtitulo">
                 {total} turma{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
               </p>
             </div>
           </header>
+
+          {ehGestor ? (
+            <div className="barra-filtros">
+              <label className="visualmente-oculto" htmlFor="filtro-turma-professor">Filtrar turmas por professor</label>
+              <select
+                className="campo__entrada barra-filtros__select"
+                id="filtro-turma-professor"
+                onChange={(event) => setFiltroProfessor(event.target.value)}
+                value={filtroProfessor}
+              >
+                <option value="todos">Todos os professores</option>
+                <option value="sem-professor">Sem professor</option>
+                {professoresOrdenados.map((professor) => (
+                  <option key={professor.id} value={professor.id}>
+                    {professor.nome}
+                  </option>
+                ))}
+              </select>
+              {podeGerenciarTurmas ? (
+                <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} tamanho="pequeno" title={motivoCriacaoBloqueada || undefined} variante="primario">
+                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                    <TbPlus aria-hidden="true" size={16} />
+                  </motion.span>{" "}
+                  Nova turma
+                </Botao>
+              ) : null}
+            </div>
+          ) : null}
 
           {podeGerenciarTurmas && motivoCriacaoBloqueada ? <InlineMessage tone="info">{motivoCriacaoBloqueada}</InlineMessage> : null}
 
@@ -612,100 +615,61 @@ function SlideTurma({ alunos, busca, cursoTitulo, menuAberto, onAtribuirProfesso
 
   return (
     <div className="conteudos-aluno">
-      <header className="conteudos-aluno__cabecalho">
-        <div className="conteudos-aluno__curso-info">
-          <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-md)" }}>
-            <div aria-hidden="true" className="cartao-progresso-aluno__avatar conteudos-aluno__avatar-desktop">
-              <MdGroups size={20} />
-            </div>
-            <div>
-              <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "var(--espaco-sm)" }}>
-                <h2 className="conteudos-aluno__curso-titulo">{turma.nomeTurma}</h2>
-                <span className="conteudos-aluno__curso-etiqueta">{cursoTitulo}</span>
-              </div>
-            </div>
-          </div>
-          <div className="conteudos-aluno__meta-chips">
-            <span className="conteudos-aluno__meta-chip conteudos-aluno__meta-chip--progresso">
-              <TbUsers aria-hidden="true" size={12} />
-              {alunos.length} aluno{alunos.length !== 1 ? "s" : ""}
-            </span>
-            <span className="conteudos-aluno__meta-chip">
-              <TbChalkboard aria-hidden="true" size={12} />
-              {professorNome}
-            </span>
-          </div>
+      <header className="atividades-curso__cabecalho">
+        <div>
+          <h2 className="atividades-curso__titulo">{turma.nomeTurma}</h2>
+          <p className="atividades-curso__subtitulo">{cursoTitulo} · Professor {professorNome}</p>
         </div>
 
-        <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
-          <div className="conteudos-aluno__progresso-geral">
-            <p className="progresso-hero__legenda">{aprovados}/{alunos.length} aprovados</p>
-            <div aria-label={`${taxaAprovacao} por cento de aprovacao`} className="anel-progresso">
-              <svg className="anel-progresso__svg" viewBox="0 0 120 120">
-                <defs>
-                  <linearGradient id={`anel-grad-turma-${turma.id}`} x1="0%" x2="100%" y1="0%" y2="100%">
-                    <stop offset="0%" stopColor="#b992ff" />
-                    <stop offset="100%" stopColor="#7b2ff7" />
-                  </linearGradient>
-                </defs>
-                <circle className="anel-progresso__trilha" cx="60" cy="60" r="50" />
-                <circle
-                  className="anel-progresso__arco"
-                  cx="60"
-                  cy="60"
-                  r="50"
-                  stroke={`url(#anel-grad-turma-${turma.id})`}
-                  style={{ strokeDasharray: "314.16", strokeDashoffset: 314.16 * (1 - taxaAprovacao / 100) }}
-                />
-              </svg>
-              <span aria-hidden="true" className="anel-progresso__texto">{taxaAprovacao}%</span>
-            </div>
+        {onAtribuirProfessor || onEditarNome || onExcluirTurma ? (
+          <div className="menu-contexto">
+            <button
+              aria-expanded={menuAberto}
+              aria-haspopup="true"
+              aria-label="Opcoes da turma"
+              className="menu-contexto__botao"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleMenu();
+              }}
+              type="button"
+            >
+              <TbDotsVertical aria-hidden="true" size={18} />
+            </button>
+            {menuAberto ? (
+              <ul className="menu-contexto__lista">
+                {onAtribuirProfessor ? (
+                  <li>
+                    <button onClick={onAtribuirProfessor} type="button">
+                      Atribuir professor
+                    </button>
+                  </li>
+                ) : null}
+                {onEditarNome ? (
+                  <li>
+                    <button onClick={onEditarNome} type="button">
+                      Editar nome
+                    </button>
+                  </li>
+                ) : null}
+                {onExcluirTurma ? (
+                  <li>
+                    <button className="menu-item--perigo" onClick={onExcluirTurma} type="button">
+                      Excluir turma
+                    </button>
+                  </li>
+                ) : null}
+              </ul>
+            ) : null}
           </div>
-
-          {onAtribuirProfessor || onEditarNome || onExcluirTurma ? (
-            <div className="menu-contexto">
-              <button
-                aria-expanded={menuAberto}
-                aria-haspopup="true"
-                aria-label="Opcoes da turma"
-                className="menu-contexto__botao"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleMenu();
-                }}
-                type="button"
-              >
-                <TbDotsVertical aria-hidden="true" size={18} />
-              </button>
-              {menuAberto ? (
-                <ul className="menu-contexto__lista">
-                  {onAtribuirProfessor ? (
-                    <li>
-                      <button onClick={onAtribuirProfessor} type="button">
-                        Atribuir professor
-                      </button>
-                    </li>
-                  ) : null}
-                  {onEditarNome ? (
-                    <li>
-                      <button onClick={onEditarNome} type="button">
-                        Editar nome
-                      </button>
-                    </li>
-                  ) : null}
-                  {onExcluirTurma ? (
-                    <li>
-                      <button className="menu-item--perigo" onClick={onExcluirTurma} type="button">
-                        Excluir turma
-                      </button>
-                    </li>
-                  ) : null}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        ) : null}
       </header>
+
+      <div className="grade-estatisticas">
+        <CartaoEstatistica icone={<TbUsers size={22} />} rotulo="Alunos matriculados" valor={alunos.length} />
+        <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbChecklist size={22} />} rotulo="Aprovados" valor={aprovados} />
+        <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbPercentage size={22} />} rotulo="Taxa de aprovacao" valor={`${taxaAprovacao}%`} />
+      </div>
 
       {alunos.length > 0 ? (
         <div className="campo-busca campo-busca--compacta slide-alunos__busca">

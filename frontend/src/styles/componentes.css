@@ -442,6 +442,11 @@
   width: 3rem;
 }
 
+/* Coluna de checkbox de selecao em lote, sem cabecalho visivel. */
+.tabela-dados__col-selecao {
+  width: 2.5rem;
+}
+
 /* Campo em linha (checkbox + rotulo lado a lado), reaproveitado nos
    formularios "Conta ativa" de Professor/Coordenador. */
 .campo--linha {
