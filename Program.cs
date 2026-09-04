@@ -87,6 +87,21 @@ var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
 
+// Fora de Development, o placeholder versionado em appsettings.json ("SET_VIA_...")
+// e um texto publico e conhecido: usa-lo como chave de assinatura permitiria a
+// qualquer pessoa forjar tokens validos. Falha rapido e com mensagem clara em vez
+// de subir "funcionando" com uma chave insegura.
+if (!builder.Environment.IsDevelopment() &&
+    (string.IsNullOrWhiteSpace(jwtKey) ||
+     jwtKey == "SET_VIA_DOTNET_USER-SECRETS_OU_VARIAVEL_DE_AMBIENTE" ||
+     jwtKey.Length < 32))
+{
+    throw new InvalidOperationException(
+        "Jwt:Key nao foi configurada com uma chave real (minimo 32 caracteres) para o ambiente '" +
+        builder.Environment.EnvironmentName + "'. Configure via variavel de ambiente Jwt__Key ou " +
+        "'dotnet user-secrets set \"Jwt:Key\" \"<chave>\"'. Veja appsettings.example.json.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

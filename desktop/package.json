@@ -4,6 +4,9 @@
   "description": "App desktop do PlataformaEnsino, empacotando a SPA React existente via Electron.",
   "main": "main.js",
   "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"

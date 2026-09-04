@@ -4,6 +4,9 @@
   "description": "Gateway Express para web, mobile e desktop consumirem a API .NET de forma integrada.",
   "type": "module",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js"
