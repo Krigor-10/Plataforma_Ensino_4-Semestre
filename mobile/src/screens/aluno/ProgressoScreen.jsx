@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import CapaCurso from "../../components/CapaCurso.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent, normalizeContentType } from "../../lib/format.js";
-import { cores, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
@@ -158,7 +158,7 @@ function Metrica({ rotulo, valor }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  corpo: { padding: 20, gap: 14 },
+  corpo: { padding: espacamentos.xl, gap: 14 },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
   cabecalhoLinha: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
   cabecalhoConteudo: { flex: 1 },

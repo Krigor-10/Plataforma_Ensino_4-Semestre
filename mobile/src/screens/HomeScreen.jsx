@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CapaCurso from "../components/CapaCurso.jsx";
 import { apiRequest } from "../lib/api.js";
 import { formatPercent } from "../lib/format.js";
-import { cores, raios } from "../lib/theme.js";
+import { cores, espacamentos, raios } from "../lib/theme.js";
 
 /* Tela "Inicio" do Aluno — resumo real (cursos matriculados + progresso),
    nao mais o catalogo inteiro do sistema. Recebe snapshot ja carregado pelo
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: cores.fundo,
-    paddingHorizontal: 20
+    paddingHorizontal: espacamentos.xl
   },
   cabecalho: {
     flexDirection: "row",

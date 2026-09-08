@@ -22,3 +22,15 @@ export const raios = {
   md: 10,
   lg: 16
 };
+
+// Escala de espacamento (padding/margin/gap) - cada tela reinventava seus
+// proprios valores soltos (14/16/20/24 apareciam sem padrao); esta escala
+// e o vocabulario comum daqui pra frente.
+export const espacamentos = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 24
+};

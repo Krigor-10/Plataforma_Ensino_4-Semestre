@@ -5,7 +5,7 @@ import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { formatPercent, normalizeContentType } from "../../lib/format.js";
-import { cores, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
@@ -211,12 +211,12 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   chipsScroll: { flexGrow: 0 },
-  chipsLinha: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 8 },
+  chipsLinha: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, paddingBottom: espacamentos.sm, gap: espacamentos.sm },
   chip: { backgroundColor: cores.fundoCartao, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: cores.bordaCartao },
   chipAtivo: { backgroundColor: cores.destaque, borderColor: cores.destaque },
   chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
   chipTextoAtivo: { color: cores.texto },
-  corpo: { padding: 20, paddingBottom: 40 },
+  corpo: { padding: espacamentos.xl, paddingBottom: 40 },
   tituloCurso: { color: cores.texto, fontSize: 20, fontWeight: "700" },
   progressoCurso: { color: cores.textoSuave, marginTop: 4, marginBottom: 16 },
   continuar: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: raios.lg, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: cores.destaque },

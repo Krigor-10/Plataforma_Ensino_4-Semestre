@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatCep, onlyDigits } from "../../lib/format.js";
-import { cores } from "../../lib/theme.js";
+import { cores, espacamentos } from "../../lib/theme.js";
 
 function estadoFormularioInicial(usuario) {
   return {
@@ -192,7 +192,7 @@ function Campo({ label, ...props }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  corpo: { padding: 20, paddingBottom: 40, gap: 8 },
+  corpo: { padding: espacamentos.xl, paddingBottom: 40, gap: espacamentos.sm },
   voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, alignSelf: "flex-start", marginBottom: 8, marginLeft: -6 },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
   tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 8 },

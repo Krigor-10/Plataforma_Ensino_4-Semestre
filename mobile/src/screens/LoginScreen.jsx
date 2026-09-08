@@ -12,7 +12,7 @@ import {
   View
 } from "react-native";
 import { apiRequest } from "../lib/api.js";
-import { cores, raios } from "../lib/theme.js";
+import { cores, espacamentos, raios } from "../lib/theme.js";
 
 export default function LoginScreen({ onLogin }) {
   const [modo, setModo] = useState("login");
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   conteudo: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: espacamentos.xxl,
     paddingVertical: 32
   },
   logo: {

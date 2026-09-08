@@ -3,7 +3,7 @@ import { ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
-import { cores } from "../lib/theme.js";
+import { cores, espacamentos } from "../lib/theme.js";
 
 /**
  * Modal de "fazer avaliacao/quiz" reutilizado tanto pela lista de
@@ -297,7 +297,7 @@ const estilos = StyleSheet.create({
   },
   titulo: { color: cores.texto, fontSize: 16, fontWeight: "700", flex: 1, marginRight: 12 },
   fechar: { color: cores.erro, fontWeight: "600" },
-  corpo: { padding: 20, paddingBottom: 40 },
+  corpo: { padding: espacamentos.xl, paddingBottom: 40 },
   secaoTitulo: { color: cores.texto, fontSize: 18, fontWeight: "700", marginBottom: 16 },
   resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 },
   resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: 12, minWidth: "45%", marginBottom: 8 },

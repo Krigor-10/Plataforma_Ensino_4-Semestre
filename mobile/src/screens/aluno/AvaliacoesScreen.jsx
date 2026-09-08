@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatGrade, normalizeEvaluationType } from "../../lib/format.js";
-import { cores, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 import QuizModal from "../../components/QuizModal.jsx";
@@ -83,7 +83,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  corpo: { padding: 20, gap: 12 },
+  corpo: { padding: espacamentos.xl, gap: espacamentos.md },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 16, flex: 1, marginRight: 10 },

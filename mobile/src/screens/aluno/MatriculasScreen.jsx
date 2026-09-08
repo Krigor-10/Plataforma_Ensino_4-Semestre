@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOp
 import CapaCurso from "../../components/CapaCurso.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
-import { cores, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 
 const COR_STATUS = {
   Pendente: cores.aviso,
@@ -259,15 +259,15 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  abas: { flexDirection: "row", paddingHorizontal: 20, paddingTop: 16, gap: 8 },
+  abas: { flexDirection: "row", paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, gap: espacamentos.sm },
   aba: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: cores.fundoCartao },
   abaAtiva: { backgroundColor: cores.destaque },
   abaTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
   abaTextoAtivo: { color: cores.texto },
   mensagem: { color: cores.destaque, paddingHorizontal: 20, paddingTop: 12 },
   busca: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
-  corpo: { padding: 20, gap: 12 },
-  cartaoLinha: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
+  corpo: { padding: espacamentos.xl, gap: espacamentos.md },
+  cartaoLinha: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.md, backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.lg },
   cartao: { flex: 1 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1, marginRight: 10 },

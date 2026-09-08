@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
-import { cores } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 
 export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   const [certificadoAberto, setCertificadoAberto] = useState(null);
@@ -175,19 +175,19 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  resumo: { alignItems: "center", paddingTop: 24, paddingBottom: 12 },
+  resumo: { alignItems: "center", paddingTop: espacamentos.xxl, paddingBottom: espacamentos.md },
   resumoValor: { color: cores.destaque, fontSize: 32, fontWeight: "800" },
   resumoRotulo: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
-  corpo: { padding: 20, paddingTop: 4, gap: 12 },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16 },
+  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.xs, gap: espacamentos.md },
+  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, padding: espacamentos.lg },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   notaTexto: { color: cores.sucesso, fontWeight: "700", marginTop: 8 },
   percentualTexto: { color: cores.textoSuave, fontSize: 12, marginTop: 8 },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 10, alignItems: "center", marginTop: 12 },
+  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: espacamentos.md },
   botaoDesabilitado: { backgroundColor: cores.bloqueado },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoSecundario: { flex: 1, borderWidth: 1, borderColor: cores.bordaCartao, borderRadius: 8, paddingVertical: 10, alignItems: "center" },
+  botaoSecundario: { flex: 1, borderWidth: 1, borderColor: cores.bordaCartao, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center" },
   botaoSecundarioTexto: { color: cores.textoSuave, fontWeight: "700" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
   erro: { color: cores.erro, textAlign: "center", marginTop: 40, paddingHorizontal: 24 },
