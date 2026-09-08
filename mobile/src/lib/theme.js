@@ -3,7 +3,7 @@
 // erro/--cor-aviso/--raio-sm/--raio-md/--raio-lg) — cor de marca ja batia,
 // as 3 cores de status (sucesso/erro/aviso) divergiam antes desta correcao.
 export const cores = {
-  fundo: "#191221",
+  fundo: "#000000",
   fundoCartao: "#241a30",
   fundoCartaoAtivo: "#2c1f3d",
   bordaCartao: "#3a2a4a",

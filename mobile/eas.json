@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 23.2.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://192.168.0.3:4000"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://SUBSTITUIR-PELA-URL-DO-AZURE"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,12 +15,12 @@ import { EMPTY_SNAPSHOT, loadAlunoSnapshot } from "../../lib/dashboard.js";
 import { cores } from "../../lib/theme.js";
 
 const ABAS = [
-  { chave: "inicio", rotulo: "Inicio" },
-  { chave: "conteudos", rotulo: "Conteudos" },
-  { chave: "avaliacoes", rotulo: "Avaliacoes" },
-  { chave: "progresso", rotulo: "Progresso" },
-  { chave: "matriculas", rotulo: "Matriculas" },
-  { chave: "certificados", rotulo: "Certificados" }
+  { chave: "inicio", icone: "home-outline", iconeAtivo: "home", rotulo: "Inicio" },
+  { chave: "conteudos", icone: "book-outline", iconeAtivo: "book", rotulo: "Conteudos" },
+  { chave: "avaliacoes", icone: "clipboard-outline", iconeAtivo: "clipboard", rotulo: "Avaliacoes" },
+  { chave: "progresso", icone: "bar-chart-outline", iconeAtivo: "bar-chart", rotulo: "Progresso" },
+  { chave: "matriculas", icone: "school-outline", iconeAtivo: "school", rotulo: "Matriculas" },
+  { chave: "certificados", icone: "ribbon-outline", iconeAtivo: "ribbon", rotulo: "Certificados" }
 ];
 
 export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, token, usuario }) {
@@ -108,16 +109,22 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
       </View>
 
       <View style={[estilos.tabBar, { paddingBottom: insets.bottom || 10 }]}>
-        {ABAS.map((aba) => (
-          <TouchableOpacity
-            accessibilityLabel={aba.rotulo}
-            key={aba.chave}
-            onPress={() => setAbaAtiva(aba.chave)}
-            style={estilos.tabItem}
-          >
-            <Text style={[estilos.tabTexto, abaAtiva === aba.chave ? estilos.tabTextoAtivo : null]}>{aba.rotulo}</Text>
-          </TouchableOpacity>
-        ))}
+        {ABAS.map((aba) => {
+          const ativa = abaAtiva === aba.chave;
+          return (
+            <TouchableOpacity
+              accessibilityLabel={aba.rotulo}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: ativa }}
+              key={aba.chave}
+              onPress={() => setAbaAtiva(aba.chave)}
+              style={estilos.tabItem}
+            >
+              <Ionicons color={ativa ? cores.destaque : cores.textoSuave} name={ativa ? aba.iconeAtivo : aba.icone} size={20} />
+              <Text style={[estilos.tabTexto, ativa ? estilos.tabTextoAtivo : null]}>{aba.rotulo}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </View>
   );
@@ -134,7 +141,7 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.fundoCartao,
     paddingTop: 10
   },
-  tabItem: { flex: 1, alignItems: "center", paddingHorizontal: 2 },
+  tabItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 2, minHeight: 44 },
   tabTexto: { color: cores.textoSuave, fontSize: 10, fontWeight: "600", textAlign: "center" },
   tabTextoAtivo: { color: cores.destaque }
 });

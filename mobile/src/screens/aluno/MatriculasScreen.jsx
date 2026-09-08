@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import CapaCurso from "../../components/CapaCurso.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
 import { cores, raios } from "../../lib/theme.js";
@@ -9,6 +11,13 @@ const COR_STATUS = {
   Aprovada: cores.sucesso,
   Rejeitada: cores.erro,
   Cancelada: cores.textoSuave
+};
+
+const ICONE_STATUS = {
+  Pendente: "time-outline",
+  Aprovada: "checkmark-circle",
+  Rejeitada: "close-circle",
+  Cancelada: "ban-outline"
 };
 
 const PAGAMENTO_PENDENTE = 1;
@@ -181,38 +190,44 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                 const temPagamentoPendente = status === "Aprovada" && pagamento?.status === PAGAMENTO_PENDENTE;
 
                 return (
-                  <View key={curso.id} style={estilos.cartao}>
-                    <View style={estilos.cartaoTopo}>
-                      <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
-                      <Text style={[estilos.status, { color: COR_STATUS[status] || cores.textoSuave }]}>{status}</Text>
-                    </View>
-                    <Text style={estilos.cartaoMeta}>{curso.descricao}</Text>
-                    <Text style={estilos.cartaoMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
-                    {status === "Aprovada" ? <Text style={estilos.cartaoMeta}>Nota final: {formatGrade(matricula.notaFinal)}</Text> : null}
+                  <View key={curso.id} style={estilos.cartaoLinha}>
+                    <CapaCurso curso={curso} size={56} />
+                    <View style={estilos.cartao}>
+                      <View style={estilos.cartaoTopo}>
+                        <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
+                        <View style={estilos.statusLinha}>
+                          <Ionicons color={COR_STATUS[status] || cores.textoSuave} name={ICONE_STATUS[status] || "help-circle-outline"} size={13} />
+                          <Text style={[estilos.status, { color: COR_STATUS[status] || cores.textoSuave }]}>{status}</Text>
+                        </View>
+                      </View>
+                      <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
+                      <Text style={estilos.cartaoMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
+                      {status === "Aprovada" ? <Text style={estilos.cartaoMeta}>Nota final: {formatGrade(matricula.notaFinal)}</Text> : null}
 
-                    {temPagamentoPendente ? (
-                      <>
-                        <Text style={estilos.pagamentoPendente}>Pagamento pendente: {formatMoney(pagamento.valor)}</Text>
-                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoSucesso}>
-                          {processando === matricula.id ? (
-                            <ActivityIndicator color={cores.texto} />
-                          ) : (
-                            <Text style={estilos.botaoSucessoTexto}>Confirmar pagamento (simulado)</Text>
-                          )}
+                      {temPagamentoPendente ? (
+                        <View style={estilos.pagamentoLinha}>
+                          <Text style={estilos.pagamentoPendente}>Pendente (simulado): {formatMoney(pagamento.valor)}</Text>
+                          <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoSucessoCompacto}>
+                            {processando === matricula.id ? (
+                              <ActivityIndicator color={cores.texto} size="small" />
+                            ) : (
+                              <Text style={estilos.botaoSucessoCompactoTexto}>Confirmar</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+
+                      {status === "Pendente" ? (
+                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => cancelar(matricula)} style={estilos.botaoPerigo}>
+                          {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPerigoTexto}>Cancelar solicitacao</Text>}
                         </TouchableOpacity>
-                      </>
-                    ) : null}
-
-                    {status === "Pendente" ? (
-                      <TouchableOpacity disabled={processando === matricula.id} onPress={() => cancelar(matricula)} style={estilos.botaoPerigo}>
-                        {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPerigoTexto}>Cancelar solicitacao</Text>}
-                      </TouchableOpacity>
-                    ) : null}
-                    {status === "Rejeitada" ? (
-                      <TouchableOpacity disabled={processando === matricula.id} onPress={() => reabrir(matricula)} style={estilos.botaoPrimario}>
-                        {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Reabrir solicitacao</Text>}
-                      </TouchableOpacity>
-                    ) : null}
+                      ) : null}
+                      {status === "Rejeitada" ? (
+                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => reabrir(matricula)} style={estilos.botaoPrimario}>
+                          {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Reabrir solicitacao</Text>}
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                 );
               })
@@ -221,16 +236,19 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
             : cursosCatalogo.map((curso) => {
                 const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
                 return (
-                  <View key={curso.id} style={estilos.cartao}>
-                    <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
-                    <Text style={estilos.cartaoMeta}>{curso.descricao}</Text>
-                    {temTurma ? (
-                      <TouchableOpacity disabled={processando === curso.id} onPress={() => solicitar(curso)} style={estilos.botaoPrimario}>
-                        {processando === curso.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Solicitar matricula</Text>}
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={estilos.semTurma}>Sem turma disponivel</Text>
-                    )}
+                  <View key={curso.id} style={estilos.cartaoLinha}>
+                    <CapaCurso curso={curso} size={56} />
+                    <View style={estilos.cartao}>
+                      <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
+                      <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
+                      {temTurma ? (
+                        <TouchableOpacity disabled={processando === curso.id} onPress={() => solicitar(curso)} style={estilos.botaoPrimario}>
+                          {processando === curso.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Solicitar matricula</Text>}
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={estilos.semTurma}>Sem turma disponivel</Text>
+                      )}
+                    </View>
                   </View>
                 );
               })}
@@ -249,16 +267,19 @@ const estilos = StyleSheet.create({
   mensagem: { color: cores.destaque, paddingHorizontal: 20, paddingTop: 12 },
   busca: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
   corpo: { padding: 20, gap: 12 },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
+  cartaoLinha: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
+  cartao: { flex: 1 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1, marginRight: 10 },
+  statusLinha: { flexDirection: "row", alignItems: "center", gap: 4 },
   status: { fontWeight: "700", fontSize: 12 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 4 },
-  pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: 12, marginTop: 8 },
+  pagamentoLinha: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10 },
+  pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: 12, flexShrink: 1 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoSucesso: { backgroundColor: cores.sucesso, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
-  botaoSucessoTexto: { color: cores.texto, fontWeight: "700" },
+  botaoSucessoCompacto: { backgroundColor: cores.sucesso, borderRadius: raios.sm, minHeight: 40, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
+  botaoSucessoCompactoTexto: { color: cores.texto, fontWeight: "700", fontSize: 12 },
   botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPerigoTexto: { color: cores.erro, fontWeight: "700" },
   semTurma: { color: cores.textoSuave, fontSize: 12, marginTop: 12, fontStyle: "italic" },

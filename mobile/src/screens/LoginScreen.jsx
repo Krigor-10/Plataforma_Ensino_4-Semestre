@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -100,7 +101,8 @@ export default function LoginScreen({ onLogin }) {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => setModo("login")} style={styles.linkVoltar}>
-            <Text style={styles.linkVoltarTexto}>{"< Voltar para o login"}</Text>
+            <Ionicons color={cores.textoSuave} name="chevron-back" size={16} />
+            <Text style={styles.linkVoltarTexto}>Voltar para o login</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -233,8 +235,12 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   linkVoltar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
     marginTop: 20,
-    alignItems: "center"
+    minHeight: 44
   },
   linkVoltarTexto: {
     color: cores.textoSuave,

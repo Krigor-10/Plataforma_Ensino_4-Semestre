@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -71,8 +72,9 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
   return (
     <View style={estilos.container}>
       <View style={estilos.cabecalho}>
-        <TouchableOpacity onPress={onVoltar}>
-          <Text style={estilos.voltarTexto}>{"< Voltar"}</Text>
+        <TouchableOpacity onPress={onVoltar} style={estilos.voltar}>
+          <Ionicons color={cores.destaque} name="chevron-back" size={18} />
+          <Text style={estilos.voltarTexto}>Voltar</Text>
         </TouchableOpacity>
         {naoLidas > 0 ? (
           <TouchableOpacity onPress={marcarTodasComoLidas}>
@@ -111,6 +113,7 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo, padding: 20 },
   cabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, marginLeft: -6 },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
   marcarTodasTexto: { color: cores.textoSuave, fontSize: 12, fontWeight: "600" },
   titulo: { color: cores.texto, fontWeight: "700", fontSize: 20, marginBottom: 16 },

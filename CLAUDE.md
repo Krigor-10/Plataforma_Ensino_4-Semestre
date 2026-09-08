@@ -65,9 +65,22 @@ npm run android     # requires an Android emulator/device
 npm run ios         # requires macOS
 ```
 
-`src/lib/config.js` resolves the gateway URL per platform: `10.0.2.2:4000` on the Android emulator (it can't see the host's `localhost`), `127.0.0.1:4000` everywhere else (iOS simulator, web). For a physical device, change it to the host machine's LAN IP. The gateway's `CORS_ORIGINS` (`gateway/.env`) must include whatever origin the mobile web target runs on (`http://localhost:8081` by default).
+`src/lib/config.js` resolves the gateway URL per platform: `10.0.2.2:4000` on the Android emulator (it can't see the host's `localhost`), `127.0.0.1:4000` everywhere else (iOS simulator, web) — unless the `EXPO_PUBLIC_API_URL` env var is set, which always wins (used by the EAS Build profiles below for physical-device/production builds). The gateway's `CORS_ORIGINS` (`gateway/.env`) must include whatever origin the mobile web target runs on (`http://localhost:8081` by default).
 
 Run order: same as web, but start `mobile` (`npm run web`) instead of `frontend`.
+
+#### Building an installable APK (EAS Build)
+
+`mobile/eas.json` defines build profiles (Android `apk`, not the Play Store `aab`):
+
+```powershell
+cd mobile
+npx eas-cli login          # one-time, needs a free Expo account
+npx eas-cli build --platform android --profile preview     # LAN IP (same Wi-Fi as the backend), for testing on a real device before Azure is up
+npx eas-cli build --platform android --profile production  # points at the real Azure URL once deployed — edit eas.json's production.env.EXPO_PUBLIC_API_URL first
+```
+
+The build runs on Expo's servers; when it finishes you get a link to download the `.apk` and install it directly on an Android phone (no Play Store needed). iOS builds need an Apple Developer Program membership, not set up yet.
 
 ### Development seeding
 

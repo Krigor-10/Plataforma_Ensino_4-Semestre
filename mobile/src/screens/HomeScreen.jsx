@@ -1,6 +1,8 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import CapaCurso from "../components/CapaCurso.jsx";
 import { apiRequest } from "../lib/api.js";
 import { formatPercent } from "../lib/format.js";
 import { cores, raios } from "../lib/theme.js";
@@ -52,8 +54,8 @@ export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPer
         </View>
         <View style={styles.acoesCabecalho}>
           {onAbrirNotificacoes ? (
-            <TouchableOpacity onPress={onAbrirNotificacoes} style={styles.notificacoesBotao}>
-              <Text style={styles.perfilLink}>Notificacoes</Text>
+            <TouchableOpacity accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={styles.notificacoesBotao}>
+              <Ionicons color={cores.textoSuave} name="notifications-outline" size={22} />
               {notificacoesNaoLidas > 0 ? (
                 <View style={styles.notificacoesBadge}>
                   <Text style={styles.notificacoesBadgeTexto}>{notificacoesNaoLidas > 9 ? "9+" : notificacoesNaoLidas}</Text>
@@ -62,12 +64,12 @@ export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPer
             </TouchableOpacity>
           ) : null}
           {onAbrirPerfil ? (
-            <TouchableOpacity onPress={onAbrirPerfil}>
-              <Text style={styles.perfilLink}>Perfil</Text>
+            <TouchableOpacity accessibilityLabel="Perfil" onPress={onAbrirPerfil} style={styles.acaoBotao}>
+              <Ionicons color={cores.textoSuave} name="person-outline" size={22} />
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity onPress={onLogout}>
-            <Text style={styles.sair}>Sair</Text>
+          <TouchableOpacity accessibilityLabel="Sair" onPress={onLogout} style={styles.acaoBotao}>
+            <Ionicons color={cores.erro} name="log-out-outline" size={22} />
           </TouchableOpacity>
         </View>
       </View>
@@ -91,13 +93,16 @@ export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPer
                 onPress={() => onAbrirAba?.("conteudos")}
                 style={styles.cartao}
               >
-                <Text style={styles.cartaoTitulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
-                <View style={styles.barraFundo}>
-                  <View style={[styles.barraPreenchida, { width: `${percentual}%` }]} />
+                <CapaCurso curso={curso} size={56} />
+                <View style={styles.cartaoConteudo}>
+                  <Text style={styles.cartaoTitulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
+                  <View style={styles.barraFundo}>
+                    <View style={[styles.barraPreenchida, { width: `${percentual}%` }]} />
+                  </View>
+                  <Text style={styles.cartaoMeta}>
+                    {formatPercent(percentual)} concluido - {progresso.modulosConcluidos}/{progresso.totalModulos} modulo(s)
+                  </Text>
                 </View>
-                <Text style={styles.cartaoMeta}>
-                  {formatPercent(percentual)} concluido - {progresso.modulosConcluidos}/{progresso.totalModulos} modulo(s)
-                </Text>
               </TouchableOpacity>
             );
           })}
@@ -131,18 +136,24 @@ const styles = StyleSheet.create({
   acoesCabecalho: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16
+    gap: 4
   },
-  perfilLink: {
-    color: cores.textoSuave,
-    fontWeight: "600"
+  acaoBotao: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center"
   },
   notificacoesBotao: {
-    flexDirection: "row",
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
-    gap: 5
+    justifyContent: "center"
   },
   notificacoesBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
     backgroundColor: cores.erro,
     borderRadius: 999,
     minWidth: 16,
@@ -155,10 +166,6 @@ const styles = StyleSheet.create({
     color: cores.texto,
     fontSize: 9,
     fontWeight: "700"
-  },
-  sair: {
-    color: cores.erro,
-    fontWeight: "600"
   },
   tituloSecao: {
     color: cores.texto,
@@ -174,11 +181,17 @@ const styles = StyleSheet.create({
     gap: 10
   },
   cartao: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
     backgroundColor: cores.fundoCartao,
     borderRadius: raios.lg,
     padding: 14,
     borderLeftWidth: 3,
     borderLeftColor: cores.destaque
+  },
+  cartaoConteudo: {
+    flex: 1
   },
   cartaoTitulo: {
     color: cores.texto,

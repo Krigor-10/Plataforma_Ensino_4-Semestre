@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
@@ -11,6 +12,12 @@ const CORES_TONE = {
   sucesso: cores.sucesso,
   aviso: cores.aviso,
   erro: cores.erro
+};
+
+const ICONES_TONE = {
+  sucesso: "checkmark-circle",
+  aviso: "time-outline",
+  erro: "close-circle"
 };
 
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
@@ -38,7 +45,10 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
             <View key={avaliacao.id} style={estilos.cartao}>
               <View style={estilos.cartaoTopo}>
                 <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
-                <Text style={[estilos.status, { color: CORES_TONE[disponibilidade.tone] || cores.textoSuave }]}>{disponibilidade.label}</Text>
+                <View style={estilos.statusLinha}>
+                  <Ionicons color={CORES_TONE[disponibilidade.tone] || cores.textoSuave} name={ICONES_TONE[disponibilidade.tone] || "help-circle-outline"} size={13} />
+                  <Text style={[estilos.status, { color: CORES_TONE[disponibilidade.tone] || cores.textoSuave }]}>{disponibilidade.label}</Text>
+                </View>
               </View>
               <Text style={estilos.cartaoMeta}>{avaliacao.cursoTitulo} - {avaliacao.moduloTitulo}</Text>
               <Text style={estilos.cartaoMeta}>{normalizeEvaluationType(avaliacao.tipoAvaliacao)} - {avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1} tentativa(s)</Text>
@@ -77,6 +87,7 @@ const estilos = StyleSheet.create({
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 16, flex: 1, marginRight: 10 },
+  statusLinha: { flexDirection: "row", alignItems: "center", gap: 4 },
   status: { fontWeight: "700", fontSize: 12 },
   cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   cartaoNota: { color: cores.destaque, fontWeight: "700", marginTop: 6 },

@@ -1,5 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import CapaCurso from "../../components/CapaCurso.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent, normalizeContentType } from "../../lib/format.js";
 import { cores, raios } from "../../lib/theme.js";
@@ -59,10 +61,15 @@ export default function ProgressoScreen({ snapshot }) {
           return (
             <View key={progresso.id} style={estilos.cartao}>
               <TouchableOpacity onPress={() => setCursoAbertoId(aberto ? null : progresso.cursoId)}>
-                <Text style={estilos.titulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
+                <View style={estilos.cabecalhoLinha}>
+                  <CapaCurso curso={curso} size={48} />
+                  <View style={estilos.cabecalhoConteudo}>
+                    <Text style={estilos.titulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
 
-                <View style={estilos.barraFundo}>
-                  <View style={[estilos.barraPreenchida, { width: `${Math.max(0, Math.min(Number(progresso.percentualConclusao) || 0, 100))}%` }]} />
+                    <View style={estilos.barraFundo}>
+                      <View style={[estilos.barraPreenchida, { width: `${Math.max(0, Math.min(Number(progresso.percentualConclusao) || 0, 100))}%` }]} />
+                    </View>
+                  </View>
                 </View>
 
                 <View style={estilos.linhaMetricas}>
@@ -71,7 +78,10 @@ export default function ProgressoScreen({ snapshot }) {
                   <Metrica rotulo="Media" valor={formatGrade(progresso.mediaCurso)} />
                 </View>
 
-                <Text style={estilos.expandirRotulo}>{aberto ? "Ocultar modulos −" : "Ver modulos +"}</Text>
+                <View style={estilos.expandirLinha}>
+                  <Text style={estilos.expandirRotulo}>{aberto ? "Ocultar modulos" : "Ver modulos"}</Text>
+                  <Ionicons color={cores.destaque} name={aberto ? "chevron-up" : "chevron-down"} size={16} />
+                </View>
               </TouchableOpacity>
 
               {aberto && grupo ? (
@@ -150,14 +160,17 @@ const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: 20, gap: 14 },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: 16 },
-  titulo: { color: cores.texto, fontWeight: "700", fontSize: 16, marginBottom: 12 },
-  barraFundo: { height: 8, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginBottom: 14 },
+  cabecalhoLinha: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
+  cabecalhoConteudo: { flex: 1 },
+  titulo: { color: cores.texto, fontWeight: "700", fontSize: 16, marginBottom: 8 },
+  barraFundo: { height: 8, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden" },
   barraPreenchida: { height: 8, borderRadius: raios.sm, backgroundColor: cores.destaque },
   linhaMetricas: { flexDirection: "row", justifyContent: "space-between" },
   metrica: { alignItems: "center", flex: 1 },
   metricaValor: { color: cores.texto, fontWeight: "700", fontSize: 15 },
   metricaRotulo: { color: cores.textoSuave, fontSize: 11, marginTop: 2 },
-  expandirRotulo: { color: cores.destaque, fontWeight: "600", fontSize: 12, textAlign: "center", marginTop: 14 },
+  expandirLinha: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 14 },
+  expandirRotulo: { color: cores.destaque, fontWeight: "600", fontSize: 12 },
   modulosLista: { marginTop: 16, gap: 10 },
   modulo: { backgroundColor: cores.fundo, borderRadius: raios.md, padding: 12 },
   moduloCabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },

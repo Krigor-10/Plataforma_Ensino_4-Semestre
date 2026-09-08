@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -141,7 +142,8 @@ export default function PerfilScreen({ onSessionExpired, onUsuarioAtualizado, on
   return (
     <ScrollView contentContainerStyle={estilos.corpo} style={estilos.container}>
       <TouchableOpacity onPress={onVoltar} style={estilos.voltar}>
-        <Text style={estilos.voltarTexto}>{"< Voltar"}</Text>
+        <Ionicons color={cores.destaque} name="chevron-back" size={18} />
+        <Text style={estilos.voltarTexto}>Voltar</Text>
       </TouchableOpacity>
 
       <Text style={estilos.tituloSecao}>Editar dados</Text>
@@ -191,7 +193,7 @@ function Campo({ label, ...props }) {
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: 20, paddingBottom: 40, gap: 8 },
-  voltar: { marginBottom: 8 },
+  voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, alignSelf: "flex-start", marginBottom: 8, marginLeft: -6 },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
   tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 8 },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16, gap: 12 },

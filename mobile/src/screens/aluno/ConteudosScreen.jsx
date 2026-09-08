@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
@@ -76,7 +77,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
   return (
     <View style={estilos.container}>
-      <ScrollView contentContainerStyle={estilos.chipsLinha} horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={estilos.chipsLinha} horizontal showsHorizontalScrollIndicator={false} style={estilos.chipsScroll}>
         {grupos.map((curso) => (
           <TouchableOpacity
             key={curso.id}
@@ -123,7 +124,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                 {modulo.bloqueado ? (
                   <Text style={estilos.moduloBloqueadoRotulo}>Bloqueado</Text>
                 ) : (
-                  <Text style={estilos.moduloIcone}>{aberto ? "−" : "+"}</Text>
+                  <Ionicons color={cores.textoSuave} name={aberto ? "chevron-up" : "chevron-down"} size={18} style={estilos.moduloIcone} />
                 )}
               </TouchableOpacity>
 
@@ -209,6 +210,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
+  chipsScroll: { flexGrow: 0 },
   chipsLinha: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 8 },
   chip: { backgroundColor: cores.fundoCartao, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: cores.bordaCartao },
   chipAtivo: { backgroundColor: cores.destaque, borderColor: cores.destaque },
@@ -225,7 +227,7 @@ const estilos = StyleSheet.create({
   moduloCabecalho: { flexDirection: "row", alignItems: "center", padding: 14 },
   moduloTitulo: { color: cores.texto, fontWeight: "700" },
   moduloContagem: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
-  moduloIcone: { color: cores.textoSuave, fontSize: 18, marginLeft: 8 },
+  moduloIcone: { marginLeft: 8 },
   moduloBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700", marginLeft: 8 },
   itensLista: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
   item: { flexDirection: "row", alignItems: "center", backgroundColor: cores.fundo, borderRadius: raios.md, padding: 12, gap: 10 },
