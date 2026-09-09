@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require("electron");
+const { app, BrowserWindow, session, shell } = require("electron");
 const path = require("path");
 
 // O app desktop nao tem interface propria: ele abre uma janela Electron
@@ -18,6 +18,23 @@ function criarJanelaPrincipal() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
+    }
+  });
+
+  // Materiais de conteudo do tipo "Link" abrem via target="_blank" na SPA.
+  // A partir do Electron 14, window.open/target="_blank" e negado por padrao
+  // quando nao ha um handler - sem isso, o clique nao faz nada.
+  janela.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  // Restringe navegacao de topo a origem do proprio app (defesa em profundidade
+  // complementar a CSP abaixo, que so cobre carregamento de recursos).
+  janela.webContents.on("will-navigate", (event, url) => {
+    if (new URL(url).origin !== new URL(APP_URL).origin) {
+      event.preventDefault();
+      shell.openExternal(url);
     }
   });
 

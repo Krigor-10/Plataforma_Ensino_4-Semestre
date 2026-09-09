@@ -72,15 +72,25 @@ public abstract class Usuario
 
     public void AlterarDados(string nome, string email, string telefone, string cep, string rua, string numero, string bairro, string cidade, string estado)
     {
-        Nome = nome;
+        if (string.IsNullOrWhiteSpace(nome))
+        {
+            throw new ArgumentException("O nome é obrigatório.");
+        }
+
+        if (string.IsNullOrWhiteSpace(rua) || string.IsNullOrWhiteSpace(numero) || string.IsNullOrWhiteSpace(bairro) || string.IsNullOrWhiteSpace(cidade) || string.IsNullOrWhiteSpace(estado))
+        {
+            throw new ArgumentException("O endereço é obrigatório.");
+        }
+
+        Nome = nome.Trim();
         Email = email;
         Telefone = telefone;
         Cep = cep;
-        Rua = rua;
-        Numero = numero;
-        Bairro = bairro;
-        Cidade = cidade;
-        Estado = estado;
+        Rua = rua.Trim();
+        Numero = numero.Trim();
+        Bairro = bairro.Trim();
+        Cidade = cidade.Trim();
+        Estado = estado.Trim();
     }
 
     public void ConfigurarAcesso(string tipoUsuario, string senhaHash, bool ativo = true)

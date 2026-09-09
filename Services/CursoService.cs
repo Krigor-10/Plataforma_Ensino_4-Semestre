@@ -25,6 +25,8 @@ public class CursoService : ICursoService
 
     public async Task<Curso> CriarCursoAsync(CriarCursoDto dto, int criadoPorId)
     {
+        ValidarTitulo(dto.Titulo);
+
         var novoCurso = new Curso
         {
             Titulo = dto.Titulo.Trim(),
@@ -42,6 +44,8 @@ public class CursoService : ICursoService
 
     public async Task<Curso> AtualizarCursoAsync(int id, AtualizarCursoDto dto)
     {
+        ValidarTitulo(dto.Titulo);
+
         var curso = await _cursoRepository.ObterPorIdAsync(id)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
@@ -120,6 +124,14 @@ public class CursoService : ICursoService
         await _cursoRepository.SalvarAlteracoesAsync();
 
         return curso;
+    }
+
+    private static void ValidarTitulo(string titulo)
+    {
+        if (string.IsNullOrWhiteSpace(titulo))
+        {
+            throw new ArgumentException("O título do curso é obrigatório.");
+        }
     }
 
     private Task<string> GerarCodigoCursoAsync() =>

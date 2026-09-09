@@ -279,7 +279,7 @@ export default function BarraTopo({
             onBlur={() => setTimeout(() => setBuscaFocada(false), 150)}
             aria-label="Busca global"
             aria-autocomplete="list"
-            style={{ width: "100%", paddingLeft: "32px", paddingRight: termoBusca ? "32px" : undefined, fontSize: "0.85rem", padding: "0.45rem 1rem 0.45rem 32px" }}
+            style={{ width: "100%", paddingLeft: "32px", paddingRight: termoBusca ? "32px" : "1rem", fontSize: "0.85rem", paddingTop: "0.45rem", paddingBottom: "0.45rem" }}
           />
           {termoBusca && (
             <button
