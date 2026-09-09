@@ -1,43 +1,15 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CapaCurso from "../components/CapaCurso.jsx";
-import { apiRequest } from "../lib/api.js";
 import { formatPercent } from "../lib/format.js";
 import { cores, espacamentos, raios } from "../lib/theme.js";
 
 /* Tela "Inicio" do Aluno — resumo real (cursos matriculados + progresso),
    nao mais o catalogo inteiro do sistema. Recebe snapshot ja carregado pelo
    AlunoWorkspace.jsx (mesma fonte de dados que Progresso/Conteudos usam),
-   em vez de fazer sua propria chamada GET /Cursos. */
-export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPerfil, onLogout, snapshot, usuario }) {
-  const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
-  const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (!onAbrirNotificacoes) {
-      return;
-    }
-
-    let ignore = false;
-
-    // Falha aqui e silenciosa de proposito (mesmo criterio do web): o badge
-    // de notificacao nao e critico o suficiente pra interromper a tela.
-    apiRequest("/Notificacoes/nao-lidas/contagem")
-      .then((resposta) => {
-        if (!ignore) {
-          setNotificacoesNaoLidas(resposta?.total || 0);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      ignore = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- so verifica presenca do prop no mount, nao precisa refazer a busca se a referencia mudar
-  }, []);
-
+   em vez de fazer sua propria chamada GET /Cursos. Saudacao e acoes de
+   notificacoes/perfil/logout viraram HeaderGlobal.jsx (persistente em
+   todas as abas, nao so aqui). */
+export default function HomeScreen({ onAbrirAba, snapshot }) {
   const cursoPorId = new Map(snapshot.cursos.map((curso) => [curso.id, curso]));
   const progressosPorCurso = [...(snapshot.progressos.cursos || [])].sort((a, b) => {
     const tituloA = cursoPorId.get(a.cursoId)?.titulo || "";
@@ -46,34 +18,7 @@ export default function HomeScreen({ onAbrirAba, onAbrirNotificacoes, onAbrirPer
   });
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <View style={styles.cabecalho}>
-        <View>
-          <Text style={styles.saudacao}>Ola, {usuario.nome}</Text>
-          <Text style={styles.perfil}>{usuario.tipoUsuario}</Text>
-        </View>
-        <View style={styles.acoesCabecalho}>
-          {onAbrirNotificacoes ? (
-            <TouchableOpacity accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={styles.notificacoesBotao}>
-              <Ionicons color={cores.textoSuave} name="notifications-outline" size={22} />
-              {notificacoesNaoLidas > 0 ? (
-                <View style={styles.notificacoesBadge}>
-                  <Text style={styles.notificacoesBadgeTexto}>{notificacoesNaoLidas > 9 ? "9+" : notificacoesNaoLidas}</Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
-          ) : null}
-          {onAbrirPerfil ? (
-            <TouchableOpacity accessibilityLabel="Perfil" onPress={onAbrirPerfil} style={styles.acaoBotao}>
-              <Ionicons color={cores.textoSuave} name="person-outline" size={22} />
-            </TouchableOpacity>
-          ) : null}
-          <TouchableOpacity accessibilityLabel="Sair" onPress={onLogout} style={styles.acaoBotao}>
-            <Ionicons color={cores.erro} name="log-out-outline" size={22} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+    <View style={styles.container}>
       <Text style={styles.tituloSecao}>Meus cursos</Text>
 
       {progressosPorCurso.length === 0 ? (
@@ -116,56 +61,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: cores.fundo,
-    paddingHorizontal: espacamentos.xl
-  },
-  cabecalho: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24
-  },
-  saudacao: {
-    color: cores.texto,
-    fontSize: 20,
-    fontWeight: "700"
-  },
-  perfil: {
-    color: cores.textoSuave,
-    marginTop: 2
-  },
-  acoesCabecalho: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4
-  },
-  acaoBotao: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  notificacoesBotao: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  notificacoesBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: cores.erro,
-    borderRadius: 999,
-    minWidth: 16,
-    height: 16,
-    paddingHorizontal: 3,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  notificacoesBadgeTexto: {
-    color: cores.texto,
-    fontSize: 9,
-    fontWeight: "700"
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.xl
   },
   tituloSecao: {
     color: cores.texto,

@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HeaderGlobal from "../../components/HeaderGlobal.jsx";
+import ScreenIndicator from "../../components/ScreenIndicator.jsx";
 import HomeScreen from "../HomeScreen.jsx";
 import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
@@ -23,11 +25,22 @@ const ABAS = [
   { chave: "certificados", icone: "ribbon-outline", iconeAtivo: "ribbon", rotulo: "Certificados" }
 ];
 
+/* Titulo/icone do ScreenIndicator por aba — reaproveita rotulo e iconeAtivo
+   que ABAS ja tem pras 6 abas com item no menu inferior (fonte unica, sem
+   duplicar string/icone), so acrescenta as 2 telas alcancadas pelo
+   HeaderGlobal (perfil/notificacoes) que nao tem item proprio no rodape. */
+const TELAS_INFO = {
+  ...Object.fromEntries(ABAS.map((aba) => [aba.chave, { icone: aba.iconeAtivo, titulo: aba.rotulo }])),
+  perfil: { icone: "person", titulo: "Meu perfil" },
+  notificacoes: { icone: "notifications", titulo: "Notificacoes" }
+};
+
 export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, token, usuario }) {
   const [abaAtiva, setAbaAtiva] = useState("inicio");
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [notificacoesVersao, setNotificacoesVersao] = useState(0);
   const insets = useSafeAreaInsets();
 
   // Ref em vez de dependencia direta: onSessionExpired e recriada a cada
@@ -60,6 +73,16 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
 
   return (
     <View style={estilos.container}>
+      <HeaderGlobal
+        notificacoesVersao={notificacoesVersao}
+        onAbrirNotificacoes={() => setAbaAtiva("notificacoes")}
+        onAbrirPerfil={() => setAbaAtiva("perfil")}
+        onLogout={onLogout}
+        usuario={usuario}
+      />
+
+      <ScreenIndicator icone={TELAS_INFO[abaAtiva]?.icone} titulo={TELAS_INFO[abaAtiva]?.titulo || ""} />
+
       <View style={[estilos.corpo, { paddingBottom: insets.bottom }]}>
         {carregando ? (
           <ActivityIndicator color={cores.destaque} style={{ marginTop: 60 }} />
@@ -67,16 +90,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
           <Text style={estilos.erro}>{erro}</Text>
         ) : (
           <>
-            {abaAtiva === "inicio" ? (
-              <HomeScreen
-                onAbrirAba={setAbaAtiva}
-                onAbrirNotificacoes={() => setAbaAtiva("notificacoes")}
-                onAbrirPerfil={() => setAbaAtiva("perfil")}
-                onLogout={onLogout}
-                snapshot={snapshot}
-                usuario={usuario}
-              />
-            ) : null}
+            {abaAtiva === "inicio" ? <HomeScreen onAbrirAba={setAbaAtiva} snapshot={snapshot} /> : null}
             {abaAtiva === "perfil" ? (
               <PerfilScreen
                 onSessionExpired={onSessionExpired}
@@ -87,6 +101,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
             ) : null}
             {abaAtiva === "notificacoes" ? (
               <NotificacoesScreen
+                onNotificacoesAtualizadas={() => setNotificacoesVersao((atual) => atual + 1)}
                 onSessionExpired={onSessionExpired}
                 onVoltar={() => setAbaAtiva("inicio")}
               />
