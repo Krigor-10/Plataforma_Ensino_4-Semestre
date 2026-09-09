@@ -35,6 +35,11 @@ export default function LoginScreen({ onLogin }) {
         body: JSON.stringify({ email: email.trim(), senha })
       });
 
+      if (resposta.usuario?.tipoUsuario !== "Aluno") {
+        setErro("O app mobile e exclusivo para contas de Aluno no momento. Acesse pelo navegador (site) com esse perfil.");
+        return;
+      }
+
       await onLogin({ token: resposta.token, refreshToken: resposta.refreshToken, user: resposta.usuario });
     } catch (err) {
       setErro(err.message || "Nao foi possivel entrar agora.");

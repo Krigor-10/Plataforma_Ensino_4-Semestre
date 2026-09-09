@@ -3,7 +3,7 @@ import { ActivityIndicator, StatusBar, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import LoginScreen from "./src/screens/LoginScreen.jsx";
-import HomeScreen from "./src/screens/HomeScreen.jsx";
+import AcessoNaoSuportadoScreen from "./src/screens/AcessoNaoSuportadoScreen.jsx";
 import AlunoWorkspace from "./src/screens/aluno/AlunoWorkspace.jsx";
 import { apiRequest } from "./src/lib/api.js";
 import { clearSession, persistSession, readSession } from "./src/lib/session.js";
@@ -66,7 +66,7 @@ export default function App() {
               usuario={session.user}
             />
           ) : (
-            <HomeScreen onLogout={handleLogout} usuario={session.user} />
+            <AcessoNaoSuportadoScreen onLogout={handleLogout} usuario={session.user} />
           )
         ) : (
           <LoginScreen onLogin={handleLogin} />
