@@ -14,12 +14,15 @@ import {
   TbClock,
   TbFile,
   TbFileText,
+  TbHelpCircle,
   TbLayoutGrid,
   TbLock,
   TbPhoto,
   TbPlayerPlay,
   TbExternalLink,
   TbRefresh,
+  TbRepeat,
+  TbTarget,
   TbTrophy,
   TbX
 } from "react-icons/tb";
@@ -759,11 +762,11 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
 
             <dl className="quiz-confirmacao__resumo">
               <div className="quiz-confirmacao__resumo-item">
-                <dt>Questoes</dt>
+                <dt><TbHelpCircle aria-hidden="true" size={14} /> Questoes</dt>
                 <dd>{avaliacaoParaConfirmar.totalQuestoes || 0}</dd>
               </div>
               <div className="quiz-confirmacao__resumo-item">
-                <dt>Tempo limite</dt>
+                <dt><TbClock aria-hidden="true" size={14} /> Tempo limite</dt>
                 <dd>
                   {avaliacaoParaConfirmar.tempoLimiteMinutos > 0
                     ? `${avaliacaoParaConfirmar.tempoLimiteMinutos} minutos`
@@ -772,12 +775,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
               </div>
               {Number(avaliacaoParaConfirmar.tipoAvaliacao) !== 1 ? (
                 <div className="quiz-confirmacao__resumo-item">
-                  <dt>Nota maxima</dt>
+                  <dt><TbTarget aria-hidden="true" size={14} /> Nota maxima</dt>
                   <dd>{formatScore(avaliacaoParaConfirmar.notaMaxima)}</dd>
                 </div>
               ) : null}
               <div className="quiz-confirmacao__resumo-item">
-                <dt>Tentativas</dt>
+                <dt><TbRepeat aria-hidden="true" size={14} /> Tentativas</dt>
                 <dd>
                   {(avaliacaoParaConfirmar.tentativasRealizadas || 0) + 1} de {avaliacaoParaConfirmar.tentativasPermitidas || 1}
                 </dd>

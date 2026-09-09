@@ -5776,12 +5776,20 @@
 }
 
 .quiz-confirmacao__resumo-item dt {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--cor-texto-suave);
   margin-bottom: 0.2rem;
+}
+
+.quiz-confirmacao__resumo-item dt svg {
+  flex-shrink: 0;
+  color: var(--cor-marca-clara);
 }
 
 .quiz-confirmacao__resumo-item dd {
@@ -5816,7 +5824,12 @@
 
 @media (max-width: 480px) {
   .quiz-confirmacao__resumo {
-    grid-template-columns: 1fr;
+    gap: var(--espaco-xs) var(--espaco-sm);
+    padding: var(--espaco-md);
+  }
+
+  .quiz-confirmacao__aviso {
+    padding: var(--espaco-sm) var(--espaco-md);
   }
 }
 

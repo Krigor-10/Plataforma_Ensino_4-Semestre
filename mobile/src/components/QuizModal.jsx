@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
 import { cores, espacamentos } from "../lib/theme.js";
+
+const TIPO_QUIZ = 1;
 
 /**
  * Modal de "fazer avaliacao/quiz" reutilizado tanto pela lista de
@@ -153,10 +156,12 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
             <View>
               <Text style={estilos.secaoTitulo}>Antes de comecar</Text>
               <View style={estilos.resumo}>
-                <ResumoItem rotulo="Questoes" valor={String(avaliacao.totalQuestoes || 0)} />
-                <ResumoItem rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
-                <ResumoItem rotulo="Nota maxima" valor={formatScore(avaliacao.notaMaxima)} />
-                <ResumoItem rotulo="Tentativas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
+                <ResumoItem icone="help-circle-outline" rotulo="Questoes" valor={String(avaliacao.totalQuestoes || 0)} />
+                <ResumoItem icone="clock-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+                {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
+                  <ResumoItem icone="trophy-outline" rotulo="Nota maxima" valor={formatScore(avaliacao.notaMaxima)} />
+                ) : null}
+                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
               </View>
               {erro ? <Text style={estilos.erro}>{erro}</Text> : null}
               <TouchableOpacity onPress={iniciar} style={estilos.botaoPrimario}>
@@ -262,8 +267,8 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                   : "Suas respostas foram registradas. Questoes dissertativas aguardam correcao do professor."}
               </Text>
               <Text style={estilos.resultadoPorcentagem}>{formatPercent(porcentagem)}</Text>
-              <ResumoItem rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
-              <ResumoItem rotulo="Tentativas usadas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
+              <ResumoItem icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
+              <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
               <TouchableOpacity onPress={onFechar} style={estilos.botaoPrimario}>
                 <Text style={estilos.botaoPrimarioTexto}>Fechar</Text>
               </TouchableOpacity>
@@ -275,10 +280,13 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   );
 }
 
-function ResumoItem({ rotulo, valor }) {
+function ResumoItem({ icone, rotulo, valor }) {
   return (
     <View style={estilos.resumoItem}>
-      <Text style={estilos.resumoRotulo}>{rotulo}</Text>
+      <View style={estilos.resumoRotuloLinha}>
+        {icone ? <MaterialCommunityIcons color={cores.destaque} name={icone} size={18} /> : null}
+        <Text style={estilos.resumoRotulo}>{rotulo}</Text>
+      </View>
       <Text style={estilos.resumoValor}>{valor}</Text>
     </View>
   );
@@ -299,9 +307,10 @@ const estilos = StyleSheet.create({
   fechar: { color: cores.erro, fontWeight: "600" },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
   secaoTitulo: { color: cores.texto, fontSize: 18, fontWeight: "700", marginBottom: 16 },
-  resumo: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 20 },
-  resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: 12, minWidth: "45%", marginBottom: 8 },
-  resumoRotulo: { color: cores.textoSuave, fontSize: 12, marginBottom: 4 },
+  resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
+  resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
+  resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
+  resumoRotulo: { color: cores.textoSuave, fontSize: 12 },
   resumoValor: { color: cores.texto, fontWeight: "700" },
   erro: { color: cores.erro, marginBottom: 12 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 10, paddingVertical: 14, alignItems: "center" },

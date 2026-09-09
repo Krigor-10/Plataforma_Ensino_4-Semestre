@@ -8,6 +8,14 @@ import { formatPercent, normalizeContentType } from "../../lib/format.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
 
+const ICONE_TIPO_CONTEUDO = {
+  1: "document-text-outline",
+  2: "document-attach-outline",
+  3: "videocam-outline",
+  4: "link-outline",
+  5: "image-outline"
+};
+
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
   const [cursoAtivoId, setCursoAtivoId] = useState(null);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
@@ -117,14 +125,27 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
               >
                 <View style={{ flex: 1 }}>
                   <Text style={estilos.moduloTitulo}>{modulo.titulo}</Text>
-                  <Text style={estilos.moduloContagem}>
-                    {modulo.bloqueado ? "Conclua o modulo anterior para desbloquear" : `${modulo.concluidos}/${modulo.conteudos.length} conteudo(s) concluido(s)`}
-                  </Text>
+                  {modulo.bloqueado ? (
+                    <Text style={estilos.moduloContagem}>Conclua o modulo anterior para desbloquear</Text>
+                  ) : null}
                 </View>
                 {modulo.bloqueado ? (
                   <Text style={estilos.moduloBloqueadoRotulo}>Bloqueado</Text>
                 ) : (
-                  <Ionicons color={cores.textoSuave} name={aberto ? "chevron-up" : "chevron-down"} size={18} style={estilos.moduloIcone} />
+                  <View style={estilos.moduloIndicadores}>
+                    <Text
+                      accessibilityLabel={`${modulo.concluidos} de ${modulo.conteudos.length} conteudos concluidos`}
+                      style={estilos.moduloContagemInline}
+                    >
+                      {modulo.concluidos}/{modulo.conteudos.length}
+                    </Text>
+                    {modulo.conteudos.length > 0 && modulo.concluidos === modulo.conteudos.length ? (
+                      <View accessibilityLabel="Modulo concluido" accessible>
+                        <Ionicons color={cores.sucesso} name="checkmark-circle" size={16} />
+                      </View>
+                    ) : null}
+                    <Ionicons color={cores.textoSuave} name={aberto ? "chevron-up" : "chevron-down"} size={18} />
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -132,15 +153,19 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                 <View style={estilos.itensLista}>
                   {modulo.conteudos.map((conteudo) => (
                     <View key={conteudo.id}>
-                      <View style={[estilos.item, conteudo.concluido ? estilos.itemConcluido : null]}>
+                      <View style={estilos.item}>
+                        <View accessibilityLabel={`Conteudo em ${normalizeContentType(conteudo.tipoConteudo)}`} accessible>
+                          <Ionicons color={cores.textoSuave} name={ICONE_TIPO_CONTEUDO[conteudo.tipoConteudo] || "document-outline"} size={18} />
+                        </View>
                         <View style={{ flex: 1 }}>
-                          <Text style={[estilos.itemTitulo, conteudo.concluido ? estilos.itemTituloConcluido : null]}>{conteudo.titulo}</Text>
-                          <Text style={estilos.itemMeta}>{normalizeContentType(conteudo.tipoConteudo)}</Text>
+                          <Text style={estilos.itemTitulo}>{conteudo.titulo}</Text>
                         </View>
                         {conteudo.bloqueado ? (
                           <Text style={estilos.itemBloqueadoRotulo}>Bloqueado</Text>
                         ) : conteudo.concluido ? (
-                          <Text style={estilos.itemStatusOk}>Concluido</Text>
+                          <View accessibilityLabel="Concluido" accessible>
+                            <Ionicons color={cores.sucesso} name="checkmark-circle" size={20} />
+                          </View>
                         ) : (
                           <View style={estilos.itemAcoes}>
                             {conteudo.arquivoUrl || conteudo.linkUrl ? (
@@ -165,9 +190,12 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
                       {(conteudo.quizzes || []).map((quiz) => (
                         <View key={`quiz-${quiz.id}`} style={estilos.itemQuizAninhado}>
+                          <View accessibilityLabel="Quiz" accessible>
+                            <Ionicons color={cores.textoSuave} name="help-circle-outline" size={18} />
+                          </View>
                           <View style={{ flex: 1 }}>
                             <Text style={estilos.itemTitulo}>{quiz.titulo}</Text>
-                            <Text style={estilos.itemMeta}>Quiz deste material - {quiz.totalQuestoes || 0} questao(oes)</Text>
+                            <Text style={estilos.itemMeta}>{quiz.totalQuestoes || 0} questao(oes)</Text>
                           </View>
                           <TouchableOpacity onPress={() => setQuizSelecionado(quiz)} style={estilos.botaoSecundario}>
                             <Text style={estilos.botaoSecundarioTexto}>Iniciar quiz</Text>
@@ -179,9 +207,12 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
                   {modulo.quizzes.map((quiz) => (
                     <View key={`quiz-${quiz.id}`} style={estilos.item}>
+                      <View accessibilityLabel="Quiz" accessible>
+                        <Ionicons color={cores.textoSuave} name="help-circle-outline" size={18} />
+                      </View>
                       <View style={{ flex: 1 }}>
                         <Text style={estilos.itemTitulo}>{quiz.titulo}</Text>
-                        <Text style={estilos.itemMeta}>Quiz - {quiz.totalQuestoes || 0} questao(oes)</Text>
+                        <Text style={estilos.itemMeta}>{quiz.totalQuestoes || 0} questao(oes)</Text>
                       </View>
                       <TouchableOpacity onPress={() => setQuizSelecionado(quiz)} style={estilos.botaoSecundario}>
                         <Text style={estilos.botaoSecundarioTexto}>Iniciar quiz</Text>
@@ -227,7 +258,8 @@ const estilos = StyleSheet.create({
   moduloCabecalho: { flexDirection: "row", alignItems: "center", padding: 14 },
   moduloTitulo: { color: cores.texto, fontWeight: "700" },
   moduloContagem: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
-  moduloIcone: { marginLeft: 8 },
+  moduloIndicadores: { flexDirection: "row", alignItems: "center", gap: 8 },
+  moduloContagemInline: { color: cores.textoSuave, fontSize: 12, fontWeight: "600" },
   moduloBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700", marginLeft: 8 },
   itensLista: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
   item: { flexDirection: "row", alignItems: "center", backgroundColor: cores.fundo, borderRadius: raios.md, padding: 12, gap: 10 },
@@ -241,12 +273,9 @@ const estilos = StyleSheet.create({
     marginTop: 8,
     marginLeft: 16
   },
-  itemConcluido: { opacity: 0.65 },
   itemTitulo: { color: cores.texto, fontWeight: "600" },
-  itemTituloConcluido: { textDecorationLine: "line-through" },
   itemMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   itemBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700" },
-  itemStatusOk: { color: cores.sucesso, fontWeight: "700", fontSize: 12 },
   itemAcoes: { flexDirection: "row", gap: 8 },
   botaoSecundario: { borderWidth: 1, borderColor: cores.destaque, borderRadius: raios.sm, paddingHorizontal: 10, paddingVertical: 6 },
   botaoSecundarioTexto: { color: cores.destaque, fontWeight: "600", fontSize: 12 },
