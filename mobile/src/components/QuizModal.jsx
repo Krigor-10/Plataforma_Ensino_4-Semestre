@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, AppState, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
@@ -24,6 +24,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const [erro, setErro] = useState("");
   const [resultado, setResultado] = useState(null);
   const [tempoRestante, setTempoRestante] = useState(null);
+  const prazoFinalRef = useRef(null);
 
   useEffect(() => {
     if (visivel) {
@@ -35,27 +36,55 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       setErro("");
       setResultado(null);
       setTempoRestante(null);
+      prazoFinalRef.current = null;
     }
   }, [visivel, avaliacao?.id]);
 
   useEffect(() => {
-    if (fase !== "execucao" || tempoRestante === null) {
+    if (fase !== "execucao" || prazoFinalRef.current === null) {
       return undefined;
     }
 
-    if (tempoRestante <= 0) {
+    function recalcular() {
+      const restante = Math.max(0, Math.round((prazoFinalRef.current - Date.now()) / 1000));
+      setTempoRestante(restante);
+      return restante;
+    }
+
+    if (recalcular() <= 0) {
       enviar(true);
       return undefined;
     }
 
-    const temporizador = setTimeout(() => setTempoRestante((atual) => (atual === null ? null : atual - 1)), 1000);
-    return () => clearTimeout(temporizador);
-  }, [fase, tempoRestante]);
+    const intervalo = setInterval(() => {
+      if (recalcular() <= 0) {
+        clearInterval(intervalo);
+        enviar(true);
+      }
+    }, 1000);
+
+    const assinatura = AppState.addEventListener("change", (proximoEstado) => {
+      if (proximoEstado === "active" && recalcular() <= 0) {
+        enviar(true);
+      }
+    });
+
+    return () => {
+      clearInterval(intervalo);
+      assinatura.remove();
+    };
+  }, [fase]);
 
   async function iniciar() {
     setFase("carregando");
     setErro("");
-    setTempoRestante(avaliacao.tempoLimiteMinutos > 0 ? avaliacao.tempoLimiteMinutos * 60 : null);
+    if (avaliacao.tempoLimiteMinutos > 0) {
+      prazoFinalRef.current = Date.now() + avaliacao.tempoLimiteMinutos * 60000;
+      setTempoRestante(avaliacao.tempoLimiteMinutos * 60);
+    } else {
+      prazoFinalRef.current = null;
+      setTempoRestante(null);
+    }
 
     try {
       const proximasQuestoes = await apiRequest(`/Avaliacoes/${avaliacao.id}/aluno/questoes`);
