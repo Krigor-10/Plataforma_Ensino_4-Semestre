@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import CapaCurso from "../../components/CapaCurso.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
@@ -18,6 +19,7 @@ const ICONE_TIPO_CONTEUDO = {
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
   const [cursoAtivoId, setCursoAtivoId] = useState(null);
+  const [seletorCursoAberto, setSeletorCursoAberto] = useState(false);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [erro, setErro] = useState("");
@@ -85,20 +87,18 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
   return (
     <View style={estilos.container}>
-      <ScrollView contentContainerStyle={estilos.chipsLinha} horizontal showsHorizontalScrollIndicator={false} style={estilos.chipsScroll}>
-        {grupos.map((curso) => (
-          <TouchableOpacity
-            key={curso.id}
-            onPress={() => setCursoAtivoId(curso.id)}
-            style={[estilos.chip, curso.id === cursoAtivo.id ? estilos.chipAtivo : null]}
-          >
-            <Text style={[estilos.chipTexto, curso.id === cursoAtivo.id ? estilos.chipTextoAtivo : null]}>{curso.titulo}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <TouchableOpacity
+        accessibilityLabel={`Curso atual: ${cursoAtivo.titulo}. Toque para trocar de curso`}
+        accessibilityRole="button"
+        onPress={() => setSeletorCursoAberto(true)}
+        style={estilos.seletorCurso}
+      >
+        <CapaCurso curso={cursoAtivo} size={40} />
+        <Text numberOfLines={1} style={estilos.seletorCursoTexto}>{cursoAtivo.titulo}</Text>
+        <Ionicons color={cores.destaque} name="chevron-down" size={18} />
+      </TouchableOpacity>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
-        <Text style={estilos.tituloCurso}>{cursoAtivo.titulo}</Text>
         <Text style={estilos.progressoCurso}>{formatPercent(cursoAtivo.progresso)} de progresso - {cursoAtivo.modulos.length} modulo(s)</Text>
 
         {cursoAtivo.proximoConteudo ? (
@@ -235,21 +235,86 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         onSessionExpired={onSessionExpired}
         visivel={Boolean(quizSelecionado)}
       />
+
+      <Modal animationType="fade" onRequestClose={() => setSeletorCursoAberto(false)} transparent visible={seletorCursoAberto}>
+        <TouchableOpacity
+          accessibilityLabel="Fechar selecao de curso"
+          activeOpacity={1}
+          onPress={() => setSeletorCursoAberto(false)}
+          style={estilos.seletorFundo}
+        >
+          <TouchableOpacity activeOpacity={1} style={estilos.seletorPainel}>
+            <Text style={estilos.seletorPainelTitulo}>Selecionar curso</Text>
+            <ScrollView contentContainerStyle={estilos.seletorLista}>
+              {grupos.map((curso) => {
+                const ativo = curso.id === cursoAtivo.id;
+                return (
+                  <TouchableOpacity
+                    accessibilityLabel={curso.titulo}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: ativo }}
+                    key={curso.id}
+                    onPress={() => {
+                      setCursoAtivoId(curso.id);
+                      setSeletorCursoAberto(false);
+                    }}
+                    style={[estilos.seletorItem, ativo ? estilos.seletorItemAtivo : null]}
+                  >
+                    <CapaCurso curso={curso} size={40} />
+                    <Text numberOfLines={2} style={[estilos.seletorItemTexto, ativo ? estilos.seletorItemTextoAtivo : null]}>
+                      {curso.titulo}
+                    </Text>
+                    {ativo ? <Ionicons color={cores.destaque} name="checkmark" size={18} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  chipsScroll: { flexGrow: 0 },
-  chipsLinha: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, paddingBottom: espacamentos.sm, gap: espacamentos.sm },
-  chip: { backgroundColor: cores.fundoCartao, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8, borderWidth: 1, borderColor: cores.bordaCartao },
-  chipAtivo: { backgroundColor: cores.destaque, borderColor: cores.destaque },
-  chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
-  chipTextoAtivo: { color: cores.texto },
-  corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  tituloCurso: { color: cores.texto, fontSize: 20, fontWeight: "700" },
-  progressoCurso: { color: cores.textoSuave, marginTop: 4, marginBottom: 16 },
+  seletorCurso: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: espacamentos.sm,
+    paddingHorizontal: espacamentos.xl,
+    paddingVertical: espacamentos.lg,
+    minHeight: 44
+  },
+  seletorCursoTexto: { color: cores.texto, fontSize: 20, fontWeight: "700", flex: 1 },
+  seletorFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", paddingHorizontal: espacamentos.xl, paddingTop: 100 },
+  seletorPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, maxHeight: "70%", overflow: "hidden" },
+  seletorPainelTitulo: {
+    color: cores.textoSuave,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    padding: espacamentos.lg,
+    paddingBottom: espacamentos.sm
+  },
+  seletorLista: { paddingHorizontal: espacamentos.sm, paddingBottom: espacamentos.sm },
+  seletorItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: espacamentos.sm,
+    paddingHorizontal: espacamentos.md,
+    paddingVertical: espacamentos.md,
+    borderRadius: raios.md,
+    minHeight: 44
+  },
+  seletorItemAtivo: { backgroundColor: cores.fundoCartaoAtivo },
+  seletorItemTexto: { color: cores.textoSuave, fontSize: 15, fontWeight: "600", flex: 1 },
+  seletorItemTextoAtivo: { color: cores.texto },
+  corpo: { padding: espacamentos.xl, paddingTop: 0, paddingBottom: 40 },
+  progressoCurso: { color: cores.textoSuave, marginBottom: 16 },
   continuar: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: raios.lg, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: cores.destaque },
   continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: 12, marginBottom: 4 },
   continuarTitulo: { color: cores.texto, fontWeight: "600" },
