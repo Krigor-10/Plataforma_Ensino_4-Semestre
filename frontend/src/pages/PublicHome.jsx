@@ -87,11 +87,12 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                 variante="sucesso"
                 tamanho="grande"
                 onClick={() => onNavigate("/cadastro")}
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                className="linha-icone-texto"
+                style={{ gap: "0.5rem" }}
               >
                 <TbSend size={18} aria-hidden="true" /> Solicitar matricula
               </Botao>
-              <a href="#cursos" className="botao botao--fantasma botao--grande" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <a href="#cursos" className="botao botao--fantasma botao--grande linha-icone-texto">
                 Ver cursos <TbChevronDown size={18} aria-hidden="true" />
               </a>
             </div>
@@ -165,7 +166,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                         tamanho="pequeno"
                         onClick={() => onNavigate("/cadastro")}
                         aria-label={`Cadastrar-se em ${curso.titulo}`}
-                        style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                        className="linha-icone-texto"
                       >
                         <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
                       </Botao>
@@ -184,10 +185,10 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
           onFechar={() => setCursoModal(null)}
           rodape={
             <footer className="modal-rodape">
-              <Botao variante="perigo" onClick={() => setCursoModal(null)} style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}>
+              <Botao variante="perigo" onClick={() => setCursoModal(null)} className="linha-icone-texto" style={{ marginRight: "auto" }}>
                 <TbX size={15} aria-hidden="true" /> Fechar
               </Botao>
-              <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} className="linha-icone-texto">
                 <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
               </Botao>
             </footer>

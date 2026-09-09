@@ -9,10 +9,6 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<Folder Include="Models\NovaPasta\" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<Content Remove="**\desktop.ini" />
 		<None Remove="**\desktop.ini" />
 	</ItemGroup>
@@ -39,7 +35,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Scalar.AspNetCore" Version="2.4.1" />
-		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
 	</ItemGroup>
 
 </Project>

@@ -54,3 +54,51 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  mobile:
+    name: Mobile (Expo)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Testes
+        run: npm test -- --ci
+
+  gateway:
+    name: Gateway (Express)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: gateway/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Fumaca - sobe o gateway e confere /health
+        run: |
+          cp .env.example .env
+          npm start &
+          npx wait-on http://127.0.0.1:4000/health --timeout 15000
+          curl --fail http://127.0.0.1:4000/health

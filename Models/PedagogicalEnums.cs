@@ -52,21 +52,6 @@ public enum OrigemCorrecaoNota
     Mista = 3
 }
 
-public enum EscopoMarcoProgresso
-{
-    Curso = 1,
-    Modulo = 2
-}
-
-public enum OrigemMarcoProgresso
-{
-    ConteudoConcluido = 1,
-    AvaliacaoConcluida = 2,
-    ModuloAtualizado = 3,
-    CursoAtualizado = 4,
-    Recalculo = 5
-}
-
 public enum StatusPagamento
 {
     Pendente = 1,

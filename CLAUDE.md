@@ -82,6 +82,8 @@ npx eas-cli build --platform android --profile production  # points at the real 
 
 The build runs on Expo's servers; when it finishes you get a link to download the `.apk` and install it directly on an Android phone (no Play Store needed). iOS builds need an Apple Developer Program membership, not set up yet.
 
+`preview.env.EXPO_PUBLIC_API_URL` in `eas.json` is hardcoded to one developer's LAN IP — anyone else generating a `preview` build first needs to edit it to their own machine's IP on the same Wi-Fi as the backend, the same way `production.env.EXPO_PUBLIC_API_URL` needs editing before a real deploy.
+
 ### Development seeding
 
 On startup in the `Development` environment, `DevelopmentDataSeeder` auto-seeds the database with:
@@ -154,7 +156,7 @@ Services throw these standard exception types directly; controllers do not catch
 
 ### API docs
 
-Swagger/OpenAPI is available at `/swagger` and Scalar UI at `/scalar/v1` in development.
+OpenAPI JSON is available at `/openapi/v1.json` and Scalar UI at `/scalar/v1` in development (no Swashbuckle/`/swagger` route — the project uses ASP.NET Core's native OpenAPI generation).
 
 ## Regras obrigatórias de desenvolvimento
 

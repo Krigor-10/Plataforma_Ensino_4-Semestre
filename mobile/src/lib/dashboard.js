@@ -25,7 +25,3 @@ export async function loadAlunoSnapshot(usuario) {
 
   return { ...EMPTY_SNAPSHOT, cursos, turmas, matriculas, modulos, conteudos, avaliacoes, progressos, pagamentos };
 }
-
-export function mapById(lista) {
-  return new Map(lista.map((item) => [item.id, item]));
-}

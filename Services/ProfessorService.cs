@@ -98,7 +98,7 @@ public class ProfessorService : IProfessorService
         }
         catch (DbUpdateException)
         {
-            throw new InvalidOperationException("Nao e possivel excluir o professor pois ele esta vinculado a uma ou mais turmas.");
+            throw new InvalidOperationException("Nao e possivel excluir o professor pois ele esta vinculado a turmas, conteudos, questoes, avaliacoes ou feedbacks academicos.");
         }
     }
 

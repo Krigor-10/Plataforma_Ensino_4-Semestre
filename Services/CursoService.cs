@@ -67,7 +67,7 @@ public class CursoService : ICursoService
 
     public async Task<IEnumerable<Curso>> ListarTodosCursosAsync()
     {
-        return await _cursoRepository.ObterTodosAsync();
+        return await _context.Cursos.AsNoTracking().ToListAsync();
     }
 
     public async Task<IEnumerable<Curso>> ListarCursosPorProfessorAsync(int professorId)

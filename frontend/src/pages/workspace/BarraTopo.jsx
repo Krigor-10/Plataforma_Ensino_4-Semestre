@@ -488,9 +488,8 @@ export default function BarraTopo({
 
                   <div className="popup-perfil__rodape">
                     <button
-                      className="botao botao--fantasma popup-perfil__editar"
+                      className="botao botao--fantasma popup-perfil__editar linha-icone-texto"
                       onClick={() => { setPopupAberto(false); onAbrirPerfil(); }}
-                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
                       type="button"
                     >
                       <TbUserCircle size={15} aria-hidden="true" />
@@ -498,9 +497,8 @@ export default function BarraTopo({
                     </button>
                     <hr style={{ border: "none", borderTop: "1px solid var(--cor-borda)", margin: "4px 0" }} />
                     <button
-                      className="botao botao--perigo popup-perfil__sair"
+                      className="botao botao--perigo popup-perfil__sair linha-icone-texto"
                       onClick={() => { setPopupAberto(false); onLogoutClick(); }}
-                      style={{ display: "flex", alignItems: "center", gap: "6px" }}
                       type="button"
                     >
                       <MdLogout size={15} aria-hidden="true" />

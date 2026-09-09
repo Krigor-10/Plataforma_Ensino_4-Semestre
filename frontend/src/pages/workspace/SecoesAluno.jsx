@@ -822,7 +822,8 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
               <footer className="modal-rodape">
                 <Botao
                   onClick={fecharExecucaoAvaliacao}
-                  style={{ display: "flex", alignItems: "center", gap: "6px", marginRight: "auto" }}
+                  className="linha-icone-texto"
+                  style={{ marginRight: "auto" }}
                   type="button"
                   variante="fantasma"
                 >
@@ -831,7 +832,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                 {podeRefazer ? (
                   <Botao
                     onClick={refazerAvaliacao}
-                    style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                    className="linha-icone-texto"
                     type="button"
                     variante="secundario"
                   >

@@ -1,22 +1,3 @@
-export function RouteLink({ children, className, onNavigate, to }) {
-  return (
-    <a
-      className={className}
-      href={to}
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
-          return;
-        }
-
-        event.preventDefault();
-        onNavigate(to);
-      }}
-    >
-      {children}
-    </a>
-  );
-}
-
 export function InlineMessage({ children, tone }) {
   const isError = tone === "error";
 

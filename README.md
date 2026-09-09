@@ -128,6 +128,7 @@ O projeto não inclui um `docker-compose.yml` hoje (não é necessário no Windo
 
 ```bash
 dotnet restore
+dotnet tool restore   # instala o dotnet-ef fixado em .config/dotnet-tools.json
 dotnet build
 dotnet ef database update
 dotnet run
@@ -204,7 +205,7 @@ Controllers/    HTTP - minimal logic, delega pra Services
 Services/       Regra de negócio, um service por área
 Repositories/   Acesso a dados via EF Core (GenericRepository<T> como base)
 Interfaces/     Contratos, registrados via DI em Program.cs
-Models/         Entidades de domínio (Usuario é TPH: Admin/Coordenador/Professor/Aluno)
+Models/         Entidades de domínio (Usuario é TPT: Admin/Coordenador/Professor/Aluno)
 DTOs/           Contratos de request/response
 Data/           PlataformaContext + DevelopmentDataSeeder
 Common/         Middleware de erro global, logging de requisição
@@ -248,6 +249,7 @@ Usa EF Core InMemory — não precisa de SQL Server/LocalDB configurado pra roda
 - [ ] Clonar o repositório
 - [ ] (Opcional, dev) `dotnet user-secrets set "Jwt:Key" "..."` — sem isso, o placeholder versionado já funciona em `Development`
 - [ ] `dotnet restore`
+- [ ] `dotnet tool restore`
 - [ ] `dotnet ef database update`
 - [ ] `dotnet run`
 - [ ] Validar login com uma das contas seed (tabela acima)

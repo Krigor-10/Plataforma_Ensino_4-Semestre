@@ -25,16 +25,7 @@ public class UsuarioService : IUsuarioService
 
     public async Task<IEnumerable<Usuario>> ListarTodosUsuariosAsync()
     {
-        return await _usuarioRepository.ObterTodosAsync();
-    }
-
-    public async Task EliminarUsuarioAsync(int id)
-    {
-        var usuario = await _usuarioRepository.ObterPorIdAsync(id)
-            ?? throw new KeyNotFoundException("Utilizador não encontrado.");
-
-        _usuarioRepository.Deletar(usuario);
-        await _usuarioRepository.SalvarAlteracoesAsync();
+        return await _context.Usuarios.AsNoTracking().ToListAsync();
     }
 
     public async Task<Usuario> AtualizarPerfilAsync(int usuarioId, AtualizarPerfilDto dto)

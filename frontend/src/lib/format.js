@@ -47,19 +47,6 @@ export function normalizePublicationStatus(status) {
   return status || "Desconhecido";
 }
 
-export function publicationStatusTone(status) {
-  switch (normalizePublicationStatus(status)) {
-    case "Publicado":
-      return "success";
-    case "Rascunho":
-      return "warning";
-    case "Arquivado":
-      return "danger";
-    default:
-      return "info";
-  }
-}
-
 export function normalizeContentType(type) {
   const labels = {
     1: "Texto",
@@ -101,20 +88,6 @@ export function progressStatusTone(status) {
   }
 }
 
-export function statusTone(status) {
-  switch (normalizeStatus(status)) {
-    case "Aprovada":
-      return "success";
-    case "Rejeitada":
-    case "Cancelada":
-      return "danger";
-    case "Pendente":
-      return "warning";
-    default:
-      return "info";
-  }
-}
-
 export function compactText(value, maxLength) {
   if (!value) {
     return "-";
@@ -125,14 +98,6 @@ export function compactText(value, maxLength) {
   }
 
   return `${value.slice(0, maxLength - 3)}...`;
-}
-
-export function describeCourse(course) {
-  if (course.descricao) {
-    return compactText(course.descricao, 120);
-  }
-
-  return "Trilha estruturada, acompanhamento academico e jornadas pensadas para evolucao real.";
 }
 
 export function formatMoney(value) {

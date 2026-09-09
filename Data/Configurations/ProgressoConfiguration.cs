@@ -44,7 +44,7 @@ public sealed class ProgressoModuloAlunoConfiguration : IEntityTypeConfiguration
             .HasOne(p => p.Matricula)
             .WithMany(m => m.ProgressosModulo)
             .HasForeignKey(p => p.MatriculaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder
             .HasOne(p => p.Modulo)
@@ -82,7 +82,7 @@ public sealed class ProgressoCursoAlunoConfiguration : IEntityTypeConfiguration<
             .HasOne(p => p.Matricula)
             .WithMany(m => m.ProgressosCurso)
             .HasForeignKey(p => p.MatriculaId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder
             .HasOne(p => p.Curso)

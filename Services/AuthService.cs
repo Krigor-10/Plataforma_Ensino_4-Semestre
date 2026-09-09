@@ -215,10 +215,31 @@ public class AuthService : IAuthService
         var expireDias = _configuration.GetValue<int>("Jwt:RefreshTokenExpireDays", 30);
         var valor = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
+        await ExpurgarRefreshTokensAntigosAsync(usuarioId);
+
         var refreshToken = RefreshToken.Emitir(usuarioId, CalcularHashToken(valor), expireDias);
         _context.RefreshTokens.Add(refreshToken);
         await _context.SaveChangesAsync();
 
         return valor;
+    }
+
+    // Expurgo lazy: a cada novo refresh token emitido pro usuario, aproveita
+    // pra descartar os dele que ja expiraram - evita a tabela crescer
+    // indefinidamente sem precisar de um job separado. So expirados (nao
+    // "revogados mas ainda dentro da validade") pra nao apagar o rastro de
+    // auditoria de um token revogado logo em seguida (ex: redefinicao de
+    // senha revoga sessoes ativas e o usuario loga de novo na sequencia).
+    private async Task ExpurgarRefreshTokensAntigosAsync(int usuarioId)
+    {
+        var agora = DateTime.UtcNow;
+        var tokensExpirados = await _context.RefreshTokens
+            .Where(r => r.UsuarioId == usuarioId && r.ExpiraEm < agora)
+            .ToListAsync();
+
+        if (tokensExpirados.Count > 0)
+        {
+            _context.RefreshTokens.RemoveRange(tokensExpirados);
+        }
     }
 }

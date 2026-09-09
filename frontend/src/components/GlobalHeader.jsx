@@ -79,7 +79,7 @@ export default function GlobalHeader({ hasSession, isDemoMode, onNavigate }) {
                 tamanho="pequeno"
                 onClick={() => onNavigate("/cadastro")}
                 data-tooltip="Criar conta"
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                className="linha-icone-texto"
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.96 }}
                 transition={MOLA}

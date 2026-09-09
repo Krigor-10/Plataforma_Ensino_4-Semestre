@@ -384,7 +384,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
           titulo="Detalhes da avaliacao"
           rodape={
             <footer className="modal-rodape">
-              <Botao onClick={fecharDetalheAvaliacao} style={{ alignItems: "center", display: "flex", gap: "6px", marginRight: "auto" }} variante="perigo">
+              <Botao onClick={fecharDetalheAvaliacao} className="linha-icone-texto" style={{ marginRight: "auto" }} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Fechar
               </Botao>
               <Botao
@@ -393,7 +393,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
                   setMensagemExclusaoAvaliacao("");
                   fecharDetalheAvaliacao();
                 }}
-                style={{ alignItems: "center", display: "flex", gap: "6px" }}
+                className="linha-icone-texto"
                 variante="perigo"
               >
                 <MdDelete aria-hidden="true" size={19} /> Excluir
