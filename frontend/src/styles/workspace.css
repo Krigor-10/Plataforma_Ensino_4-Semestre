@@ -3598,6 +3598,51 @@
   gap: var(--espaco-md);
 }
 
+/* Turmas (Admin/Coordenador): titulo + filtro de professor + botao "Nova
+   turma" na mesma linha do cabecalho, sem a linha isolada de "X turmas
+   cadastradas" (removida do JSX). align-items:center fica melhor aqui que o
+   flex-start padrao de .cabecalho-pagina agora que o titulo nao tem mais
+   subtitulo empilhado embaixo — escopado a .tela-turmas pra nao afetar as
+   demais telas que ainda usam titulo+subtitulo com esse mesmo cabecalho. */
+.tela-turmas .cabecalho-pagina {
+  align-items: center;
+}
+
+/* .barra-filtros e reaproveitada aqui (Turmas) e em Cursos (busca + botao
+   "Novo curso") como o agrupamento de acoes do cabecalho; seu margin-bottom
+   (pensado pra quando ela fica sozinha, abaixo do cabecalho) nao se aplica
+   nesse contexto, onde ela e o proprio segundo item do header. Em Cursos ha
+   tambem uma .barra-filtros distinta mais abaixo (filtro de coordenador em
+   lote) que fica de fora deste seletor por nao estar dentro de
+   .cabecalho-pagina.
+   flex-wrap:nowrap corrige um calculo errado de largura intrinseca do
+   Chromium quando um flex item (.barra-filtros) e ele mesmo um flex
+   container com flex-wrap:wrap nos proprios filhos — sem isso, o navegador
+   as vezes reserva espaco de menos e quebra select/botao pra linha de baixo
+   mesmo sobrando bastante espaco horizontal. O wrap real (mobile) volta no
+   breakpoint abaixo. */
+.tela-turmas .cabecalho-pagina .barra-filtros,
+.tela-cursos .cabecalho-pagina .barra-filtros {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 768px) {
+  /* No mobile o cabecalho empilha (.cabecalho-pagina vira flex-direction:
+     column em layout.css) — mantem o alinhamento a esquerda padrao das
+     demais telas em vez do center usado no desktop/tablet, e devolve o
+     wrap real do agrupamento de acoes (select/busca + botao), que no
+     desktop fica nowrap so pra contornar o calculo de largura do Chromium. */
+  .tela-turmas .cabecalho-pagina {
+    align-items: flex-start;
+  }
+
+  .tela-turmas .cabecalho-pagina .barra-filtros,
+  .tela-cursos .cabecalho-pagina .barra-filtros {
+    flex-wrap: wrap;
+  }
+}
+
 .atividades-curso__navegacao {
   display: flex;
 }

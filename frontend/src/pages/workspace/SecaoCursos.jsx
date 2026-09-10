@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbAward, TbCamera, TbEdit, TbLayoutGrid, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
-import { MdAttachMoney, MdGroups, MdLayers, MdMenuBook, MdSave } from "react-icons/md";
+import { motion } from "framer-motion";
+import { TbArrowLeft, TbAward, TbCamera, TbEdit, TbLayoutGrid, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { MdAttachMoney, MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -54,6 +55,10 @@ export function SecaoCursos({
   const [cursoParaEditar, setCursoParaEditar] = useState(null);
   const [dadosEdicaoCurso, setDadosEdicaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
   const [mensagemEdicao, setMensagemEdicao] = useState({ tone: "", message: "" });
+  const [formularioCriacaoAberto, setFormularioCriacaoAberto] = useState(false);
+  const [dadosCriacaoCurso, setDadosCriacaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
+  const [mensagemCriacao, setMensagemCriacao] = useState({ tone: "", message: "" });
+  const [salvandoCriacao, setSalvandoCriacao] = useState(false);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
 
   const coordenadoresOrdenados = useMemo(
@@ -339,6 +344,68 @@ export function SecaoCursos({
     }
   }
 
+  function abrirFormularioCriacaoCurso() {
+    setDadosCriacaoCurso({ titulo: "", descricao: "", preco: "" });
+    setMensagemCriacao({ tone: "", message: "" });
+    setFormularioCriacaoAberto(true);
+  }
+
+  function fecharFormularioCriacaoCurso() {
+    if (salvandoCriacao) {
+      return;
+    }
+
+    setFormularioCriacaoAberto(false);
+  }
+
+  function atualizarCampoCriacaoCurso(event) {
+    const { name, value } = event.target;
+    setDadosCriacaoCurso((atual) => ({ ...atual, [name]: value }));
+  }
+
+  async function salvarNovoCurso(event) {
+    event.preventDefault();
+
+    const preco = Number(dadosCriacaoCurso.preco || 0);
+
+    if (!dadosCriacaoCurso.titulo.trim()) {
+      setMensagemCriacao({ tone: "error", message: "Informe o titulo do curso." });
+      return;
+    }
+
+    if (!Number.isFinite(preco) || preco < 0) {
+      setMensagemCriacao({ tone: "error", message: "Informe um preco valido." });
+      return;
+    }
+
+    setSalvandoCriacao(true);
+    setMensagemCriacao({ tone: "", message: "" });
+
+    try {
+      await apiRequest("/Cursos", {
+        method: "POST",
+        body: JSON.stringify({
+          titulo: dadosCriacaoCurso.titulo.trim(),
+          descricao: dadosCriacaoCurso.descricao.trim(),
+          preco
+        })
+      });
+
+      setFormularioCriacaoAberto(false);
+      mostrarToast("Curso criado com sucesso.", "sucesso");
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemCriacao({ tone: "error", message: err.message || "Nao foi possivel criar o curso agora." });
+    } finally {
+      setSalvandoCriacao(false);
+    }
+  }
+
   function abrirModalImagem(curso) {
     setCursoParaImagem(curso);
     setArquivoImagemSelecionado(null);
@@ -403,11 +470,42 @@ export function SecaoCursos({
     }
   }
 
-  const totalMatriculas = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.matriculas || 0), 0);
-  const totalModulos = cursosFiltrados.reduce((total, curso) => total + (resumoPorCursoId.get(curso.id)?.modulos || 0), 0);
-
   const modaisComuns = (
     <>
+      {formularioCriacaoAberto ? (
+        <Modal
+          onFechar={fecharFormularioCriacaoCurso}
+          titulo="Novo curso"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={salvandoCriacao} onClick={fecharFormularioCriacaoCurso} type="button" variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={salvandoCriacao} form="form-novo-curso" type="submit" variante="primario">
+                <MdSave aria-hidden="true" size={17} /> {salvandoCriacao ? "Salvando..." : "Criar curso"}
+              </Botao>
+            </footer>
+          }
+        >
+          <form className="formulario-modal" id="form-novo-curso" onSubmit={salvarNovoCurso}>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="novo-curso-titulo">Titulo *</label>
+              <input autoComplete="off" className="campo__entrada" disabled={salvandoCriacao} id="novo-curso-titulo" maxLength={150} name="titulo" onChange={atualizarCampoCriacaoCurso} value={dadosCriacaoCurso.titulo} />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="novo-curso-descricao">Descricao</label>
+              <textarea className="campo__entrada" disabled={salvandoCriacao} id="novo-curso-descricao" maxLength={1000} name="descricao" onChange={atualizarCampoCriacaoCurso} rows={4} value={dadosCriacaoCurso.descricao} />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="novo-curso-preco">Preco (R$) *</label>
+              <input className="campo__entrada" disabled={salvandoCriacao} id="novo-curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoCriacaoCurso} step="0.01" type="number" value={dadosCriacaoCurso.preco} />
+            </div>
+
+            {mensagemCriacao.message ? <InlineMessage tone={mensagemCriacao.tone}>{mensagemCriacao.message}</InlineMessage> : null}
+          </form>
+        </Modal>
+      ) : null}
+
       {cursoParaEditar ? (
         <Modal
           onFechar={fecharModalEdicao}
@@ -559,27 +657,31 @@ export function SecaoCursos({
                 : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
           </p>
         </div>
-        <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
-        <div className="campo-busca campo-busca--cabecalho">
-          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
-          <input
-            className="campo__entrada"
-            id="busca-cursos"
-            onChange={(event) => setBuscaCurso(event.target.value)}
-            placeholder="Pesquisar cursos"
-            type="search"
-            value={buscaCurso}
-          />
+
+        <div className="barra-filtros">
+          <label className="visualmente-oculto" htmlFor="busca-cursos">Buscar curso</label>
+          <div className="campo-busca">
+            <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+            <input
+              className="campo__entrada"
+              id="busca-cursos"
+              onChange={(event) => setBuscaCurso(event.target.value)}
+              placeholder="Pesquisar cursos"
+              type="search"
+              value={buscaCurso}
+            />
+          </div>
+
+          {ehAdmin ? (
+            <Botao onClick={abrirFormularioCriacaoCurso} tamanho="pequeno" variante="primario">
+              <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                <TbPlus aria-hidden="true" size={16} />
+              </motion.span>{" "}
+              Novo curso
+            </Botao>
+          ) : null}
         </div>
       </header>
-
-      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-xl)" }}>
-        <div className="grade-estatisticas">
-          <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos listados" valor={cursosFiltrados.length} />
-          <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdLayers size={22} />} rotulo="Modulos no total" valor={totalModulos} />
-          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<MdGroups size={22} />} rotulo="Matriculas no total" valor={totalMatriculas} />
-        </div>
-      </section>
 
       {ehAdmin ? (
         <div className="barra-filtros">

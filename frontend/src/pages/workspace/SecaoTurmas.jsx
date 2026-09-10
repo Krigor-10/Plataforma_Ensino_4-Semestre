@@ -165,7 +165,6 @@ export function SecaoTurmas({
     return turmas.filter((turma) => Number(turma.professorId) === professorId);
   }, [filtroProfessor, turmas]);
 
-  const total = turmasFiltradas.length;
   const turmaSelecionada = useMemo(
     () => turmasFiltradas.find((turma) => turma.id === turmaSelecionadaId) || null,
     [turmaSelecionadaId, turmasFiltradas]
@@ -378,39 +377,36 @@ export function SecaoTurmas({
           <header className="cabecalho-pagina">
             <div>
               <h2 className="cabecalho-pagina__titulo">Turmas</h2>
-              <p className="cabecalho-pagina__subtitulo">
-                {total} turma{total !== 1 ? "s" : ""} cadastrada{total !== 1 ? "s" : ""}
-              </p>
             </div>
-          </header>
 
-          {ehGestor ? (
-            <div className="barra-filtros">
-              <label className="visualmente-oculto" htmlFor="filtro-turma-professor">Filtrar turmas por professor</label>
-              <select
-                className="campo__entrada barra-filtros__select"
-                id="filtro-turma-professor"
-                onChange={(event) => setFiltroProfessor(event.target.value)}
-                value={filtroProfessor}
-              >
-                <option value="todos">Todos os professores</option>
-                <option value="sem-professor">Sem professor</option>
-                {professoresOrdenados.map((professor) => (
-                  <option key={professor.id} value={professor.id}>
-                    {professor.nome}
-                  </option>
-                ))}
-              </select>
-              {podeGerenciarTurmas ? (
-                <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} tamanho="pequeno" title={motivoCriacaoBloqueada || undefined} variante="primario">
-                  <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                    <TbPlus aria-hidden="true" size={16} />
-                  </motion.span>{" "}
-                  Nova turma
-                </Botao>
-              ) : null}
-            </div>
-          ) : null}
+            {ehGestor ? (
+              <div className="barra-filtros">
+                <label className="visualmente-oculto" htmlFor="filtro-turma-professor">Filtrar turmas por professor</label>
+                <select
+                  className="campo__entrada barra-filtros__select"
+                  id="filtro-turma-professor"
+                  onChange={(event) => setFiltroProfessor(event.target.value)}
+                  value={filtroProfessor}
+                >
+                  <option value="todos">Todos os professores</option>
+                  <option value="sem-professor">Sem professor</option>
+                  {professoresOrdenados.map((professor) => (
+                    <option key={professor.id} value={professor.id}>
+                      {professor.nome}
+                    </option>
+                  ))}
+                </select>
+                {podeGerenciarTurmas ? (
+                  <Botao disabled={Boolean(motivoCriacaoBloqueada)} onClick={abrirFormularioCriacao} tamanho="pequeno" title={motivoCriacaoBloqueada || undefined} variante="primario">
+                    <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                      <TbPlus aria-hidden="true" size={16} />
+                    </motion.span>{" "}
+                    Nova turma
+                  </Botao>
+                ) : null}
+              </div>
+            ) : null}
+          </header>
 
           {podeGerenciarTurmas && motivoCriacaoBloqueada ? <InlineMessage tone="info">{motivoCriacaoBloqueada}</InlineMessage> : null}
 
