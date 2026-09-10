@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend, TbUser, TbUsers } from "react-icons/tb";
+import { TbArrowRight, TbCheck, TbClock, TbCreditCard, TbSearch, TbSend, TbX } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -7,7 +7,7 @@ import Insignia from "../../components/Insignia.jsx";
 import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatDate, formatGrade, formatMoney } from "../../lib/format.js";
+import { clampPercent, formatDate, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 
@@ -51,7 +51,7 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    sempre a mesma imagem por curso. */
 export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando, temTurmaDisponivel = false }) {
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
-  const progresso = Math.round(Math.max(0, Math.min(matricula?.progresso ?? 0, 100)));
+  const progresso = clampPercent(matricula?.progresso);
   const rotuloEntrada = progresso >= 100 ? "Revisar curso" : progresso > 0 ? "Continuar curso" : "Iniciar curso";
 
   return (
@@ -69,19 +69,11 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
             {!compacto ? (
               <p className="catalogo-card__data">
                 <TbClock aria-hidden="true" size={13} />
-                Solicitada em {formatDate(matricula.dataSolicitacao)}
-              </p>
-            ) : null}
-            {!compacto && matricula.turma ? (
-              <p className="catalogo-card__data">
-                <TbUsers aria-hidden="true" size={13} />
-                {matricula.turma}
-              </p>
-            ) : null}
-            {!compacto && matricula.professor ? (
-              <p className="catalogo-card__data">
-                <TbUser aria-hidden="true" size={13} />
-                Professor {matricula.professor}
+                {[
+                  `Solicitada em ${formatDate(matricula.dataSolicitacao)}`,
+                  matricula.turma,
+                  matricula.professor ? `Professor ${matricula.professor}` : null
+                ].filter(Boolean).join(" · ")}
               </p>
             ) : null}
             {temPagamentoPendente ? (
@@ -588,7 +580,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
       </nav>
 
       {abaAtiva === "pendentes" ? (
-        <div className="toolbar-massa-matriculas">
+        <div className="toolbar-massa">
           <label className="table-bulk-toggle">
             <input
               checked={todasPendentesSelecionadas}
@@ -599,15 +591,15 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
             />
             <span>Selecionar todas as pendentes</span>
           </label>
-          <div className="toolbar-massa-matriculas__acoes">
+          <div className="toolbar-massa__acoes">
             <Botao disabled={processandoLote} onClick={aprovarSelecionadas} tamanho="pequeno" variante="sucesso">
-              {processandoLote ? "Processando..." : "Aprovar selecionadas"}
+              <TbCheck aria-hidden="true" size={15} /> {processandoLote ? "Processando..." : "Aprovar selecionadas"}
             </Botao>
             <Botao disabled={processandoLote} onClick={rejeitarSelecionadas} tamanho="pequeno" variante="perigo">
-              {processandoLote ? "Processando..." : "Rejeitar selecionadas"}
+              <TbX aria-hidden="true" size={15} /> {processandoLote ? "Processando..." : "Rejeitar selecionadas"}
             </Botao>
           </div>
-          <span className="toolbar-massa-matriculas__contador">
+          <span className="toolbar-massa__contador">
             {quantidadeSelecionada
               ? `${quantidadeSelecionada} selecionada${quantidadeSelecionada > 1 ? "s" : ""}`
               : `${matriculasPendentes.length} pendente${matriculasPendentes.length === 1 ? "" : "s"}`}

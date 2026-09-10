@@ -37,15 +37,11 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
         return null;
       }
 
-      const alunosDoCurso = matriculas.filter(
-        (matricula) => Number(matricula.turmaId) === Number(turma.id) && matricula.status === "Aprovada"
-      ).length;
-
       return {
         id: curso.id,
         titulo: curso.titulo,
         professorNome: professorPorId.get(Number(turma.professorId))?.nome || "Sem professor atribuido",
-        alunos: alunosDoCurso
+        turmaNome: turma.nomeTurma
       };
     })
     .filter(Boolean)
@@ -82,7 +78,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
           <CartaoEstatistica
             corBorda="var(--cor-sucesso)"
             icone={<MdGroups size={22} />}
-            rotulo="Cursos ativos"
+            rotulo="Turmas ativas"
             valor={turmasVinculadas.length}
           />
           <CartaoEstatistica
@@ -134,7 +130,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
                     <span className="item-turma__curso">{curso.professorNome}</span>
                   </div>
                   <div className="item-turma__meta">
-                    <span>{curso.alunos} alunos</span>
+                    <span>{curso.turmaNome || "Sem turma"}</span>
                   </div>
                 </li>
               ))}

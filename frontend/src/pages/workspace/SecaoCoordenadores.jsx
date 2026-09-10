@@ -139,6 +139,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const paginaSegura = Math.min(pagina, totalPaginas);
   const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
   const itensPagina = coordenadoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+  const totalAtivos = coordenadores.filter((coordenador) => coordenador.ativo).length;
 
   function limparFiltros() {
     setBusca("");
@@ -328,34 +329,38 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
-          <p className="cabecalho-pagina__subtitulo">{coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"}</p>
+          <p className="cabecalho-pagina__subtitulo">
+            {coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
+          </p>
         </div>
-        <div className="campo-busca campo-busca--cabecalho">
-          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
-          <label className="visualmente-oculto" htmlFor="busca-coordenadores">Buscar coordenador</label>
-          <input
-            className="campo__entrada"
-            id="busca-coordenadores"
-            onChange={(event) => {
-              setBusca(event.target.value);
-              setPagina(1);
-            }}
-            placeholder="Buscar por nome ou e-mail..."
-            type="search"
-            value={busca}
-          />
+        <div className="barra-filtros">
+          <div className="campo-busca">
+            <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+            <label className="visualmente-oculto" htmlFor="busca-coordenadores">Buscar coordenador</label>
+            <input
+              className="campo__entrada"
+              id="busca-coordenadores"
+              onChange={(event) => {
+                setBusca(event.target.value);
+                setPagina(1);
+              }}
+              placeholder="Buscar por nome ou e-mail..."
+              type="search"
+              value={busca}
+            />
+          </div>
+          <Botao onClick={abrirFormulario} tamanho="pequeno" variante="primario">
+            <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+              <TbPlus aria-hidden="true" size={18} />
+            </motion.span>{" "}
+            Cadastrar coordenador
+          </Botao>
         </div>
       </header>
 
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
-        </Botao>
-        <Botao onClick={abrirFormulario} style={{ marginLeft: "auto" }} variante="primario">
-          <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-            <TbPlus aria-hidden="true" size={18} />
-          </motion.span>{" "}
-          Cadastrar coordenador
         </Botao>
       </div>
 
@@ -574,64 +579,79 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           }
         >
           <form className="formulario-modal" id="form-coordenador" onSubmit={salvarCoordenador}>
-            <div className="formulario-perfil__grade">
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="coordenador-nome">Nome completo *</label>
-                <input autoComplete="name" className="campo__entrada" disabled={salvando} id="coordenador-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="coordenador-cpf">CPF *</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-email">E-mail *</label>
-                <input autoComplete="email" className="campo__entrada" disabled={salvando} id="coordenador-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-telefone">Telefone *</label>
-                <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="coordenador-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-cep">CEP *</label>
-                <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="coordenador-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="coordenador-rua">Rua *</label>
-                <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="coordenador-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-numero">Numero *</label>
-                <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="coordenador-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-bairro">Bairro *</label>
-                <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="coordenador-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-cidade">Cidade *</label>
-                <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="coordenador-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="coordenador-estado">UF *</label>
-                <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
-              </div>
-              {coordenadorEmEdicaoId ? (
-                <div className="campo campo--linha formulario-perfil__campo--largo">
-                  <input checked={dadosFormulario.ativo} disabled={salvando} id="coordenador-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
-                  <label className="campo__rotulo" htmlFor="coordenador-ativo">Conta ativa</label>
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Dados pessoais</h3>
+              <div className="formulario-perfil__grade">
+                <div className="campo formulario-perfil__campo--largo">
+                  <label className="campo__rotulo" htmlFor="coordenador-nome">Nome completo *</label>
+                  <input autoComplete="name" className="campo__entrada" disabled={salvando} id="coordenador-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
                 </div>
-              ) : (
-                <>
-                  <div className="campo">
-                    <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>
-                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-cpf">CPF *</label>
+                  <input autoComplete="off" className="campo__entrada" disabled={salvando} id="coordenador-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-telefone">Telefone *</label>
+                  <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="coordenador-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-email">E-mail *</label>
+                  <input autoComplete="email" className="campo__entrada" disabled={salvando} id="coordenador-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Endereco</h3>
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-cep">CEP *</label>
+                  <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="coordenador-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
+                </div>
+                <div className="campo formulario-perfil__campo--largo">
+                  <label className="campo__rotulo" htmlFor="coordenador-rua">Rua *</label>
+                  <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="coordenador-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-numero">Numero *</label>
+                  <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="coordenador-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-bairro">Bairro *</label>
+                  <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="coordenador-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-cidade">Cidade *</label>
+                  <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="coordenador-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="coordenador-estado">UF *</label>
+                  <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="coordenador-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Acesso</h3>
+              <div className="formulario-perfil__grade">
+                {coordenadorEmEdicaoId ? (
+                  <div className="campo campo--linha formulario-perfil__campo--largo">
+                    <input checked={dadosFormulario.ativo} disabled={salvando} id="coordenador-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
+                    <label className="campo__rotulo" htmlFor="coordenador-ativo">Conta ativa</label>
                   </div>
-                  <div className="campo">
-                    <label className="campo__rotulo" htmlFor="coordenador-confirmar-senha">Confirmar senha *</label>
-                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
-                  </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="coordenador-senha">Senha *</label>
+                      <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                    </div>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="coordenador-confirmar-senha">Confirmar senha *</label>
+                      <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="coordenador-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}

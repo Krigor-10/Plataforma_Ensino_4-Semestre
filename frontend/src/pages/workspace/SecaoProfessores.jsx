@@ -129,6 +129,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   const paginaSegura = Math.min(pagina, totalPaginas);
   const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
   const itensPagina = professoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+  const totalAtivos = professores.filter((professor) => professor.ativo).length;
 
   function limparFiltros() {
     setBusca("");
@@ -330,34 +331,38 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Professores</h2>
-          <p className="cabecalho-pagina__subtitulo">{professores.length} cadastrado{professores.length === 1 ? "" : "s"}</p>
+          <p className="cabecalho-pagina__subtitulo">
+            {professores.length} cadastrado{professores.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
+          </p>
         </div>
-        <div className="campo-busca campo-busca--cabecalho">
-          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
-          <label className="visualmente-oculto" htmlFor="busca-professores">Buscar professor</label>
-          <input
-            className="campo__entrada"
-            id="busca-professores"
-            onChange={(event) => {
-              setBusca(event.target.value);
-              setPagina(1);
-            }}
-            placeholder="Buscar por nome, e-mail ou especialidade..."
-            type="search"
-            value={busca}
-          />
+        <div className="barra-filtros">
+          <div className="campo-busca">
+            <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+            <label className="visualmente-oculto" htmlFor="busca-professores">Buscar professor</label>
+            <input
+              className="campo__entrada"
+              id="busca-professores"
+              onChange={(event) => {
+                setBusca(event.target.value);
+                setPagina(1);
+              }}
+              placeholder="Buscar por nome, e-mail ou especialidade..."
+              type="search"
+              value={busca}
+            />
+          </div>
+          <Botao onClick={abrirFormulario} tamanho="pequeno" variante="primario">
+            <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+              <TbPlus aria-hidden="true" size={18} />
+            </motion.span>{" "}
+            Cadastrar professor
+          </Botao>
         </div>
       </header>
 
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
-        </Botao>
-        <Botao onClick={abrirFormulario} style={{ marginLeft: "auto" }} variante="primario">
-          <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-            <TbPlus aria-hidden="true" size={18} />
-          </motion.span>{" "}
-          Cadastrar professor
         </Botao>
       </div>
 
@@ -584,68 +589,83 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
           }
         >
           <form className="formulario-modal" id="form-professor" onSubmit={salvarProfessor}>
-            <div className="formulario-perfil__grade">
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="professor-nome">Nome completo *</label>
-                <input autoComplete="name" className="campo__entrada" disabled={salvando} id="professor-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="professor-cpf">CPF *</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-email">E-mail *</label>
-                <input autoComplete="email" className="campo__entrada" disabled={salvando} id="professor-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-telefone">Telefone *</label>
-                <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="professor-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-cep">CEP *</label>
-                <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="professor-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="professor-rua">Rua *</label>
-                <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="professor-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-numero">Numero *</label>
-                <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="professor-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-bairro">Bairro *</label>
-                <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="professor-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-cidade">Cidade *</label>
-                <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="professor-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
-              </div>
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="professor-estado">UF *</label>
-                <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="professor-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
-              </div>
-              <div className="campo formulario-perfil__campo--largo">
-                <label className="campo__rotulo" htmlFor="professor-especialidade">Especialidade *</label>
-                <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-especialidade" maxLength={120} name="especialidade" onChange={atualizarCampo} placeholder="Ex.: Engenharia de Software" value={dadosFormulario.especialidade} />
-              </div>
-              {professorEmEdicaoId ? (
-                <div className="campo campo--linha formulario-perfil__campo--largo">
-                  <input checked={dadosFormulario.ativo} disabled={salvando} id="professor-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
-                  <label className="campo__rotulo" htmlFor="professor-ativo">Conta ativa</label>
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Dados pessoais</h3>
+              <div className="formulario-perfil__grade">
+                <div className="campo formulario-perfil__campo--largo">
+                  <label className="campo__rotulo" htmlFor="professor-nome">Nome completo *</label>
+                  <input autoComplete="name" className="campo__entrada" disabled={salvando} id="professor-nome" maxLength={150} name="nome" onChange={atualizarCampo} value={dadosFormulario.nome} />
                 </div>
-              ) : (
-                <>
-                  <div className="campo">
-                    <label className="campo__rotulo" htmlFor="professor-senha">Senha *</label>
-                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-cpf">CPF *</label>
+                  <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-cpf" inputMode="numeric" maxLength={14} name="cpf" onChange={atualizarCampo} placeholder="Somente numeros" value={dadosFormulario.cpf} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-telefone">Telefone *</label>
+                  <input autoComplete="tel" className="campo__entrada" disabled={salvando} id="professor-telefone" maxLength={20} name="telefone" onChange={atualizarCampo} placeholder="(11) 99999-9999" value={dadosFormulario.telefone} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-email">E-mail *</label>
+                  <input autoComplete="email" className="campo__entrada" disabled={salvando} id="professor-email" name="email" onChange={atualizarCampo} type="email" value={dadosFormulario.email} />
+                </div>
+                <div className="campo formulario-perfil__campo--largo">
+                  <label className="campo__rotulo" htmlFor="professor-especialidade">Especialidade *</label>
+                  <input autoComplete="off" className="campo__entrada" disabled={salvando} id="professor-especialidade" maxLength={120} name="especialidade" onChange={atualizarCampo} placeholder="Ex.: Engenharia de Software" value={dadosFormulario.especialidade} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Endereco</h3>
+              <div className="formulario-perfil__grade">
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-cep">CEP *</label>
+                  <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="professor-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
+                </div>
+                <div className="campo formulario-perfil__campo--largo">
+                  <label className="campo__rotulo" htmlFor="professor-rua">Rua *</label>
+                  <input autoComplete="address-line1" className="campo__entrada" disabled={salvando} id="professor-rua" maxLength={200} name="rua" onChange={atualizarCampo} value={dadosFormulario.rua} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-numero">Numero *</label>
+                  <input autoComplete="address-line2" className="campo__entrada" disabled={salvando} id="professor-numero" maxLength={20} name="numero" onChange={atualizarCampo} value={dadosFormulario.numero} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-bairro">Bairro *</label>
+                  <input autoComplete="address-level3" className="campo__entrada" disabled={salvando} id="professor-bairro" maxLength={120} name="bairro" onChange={atualizarCampo} value={dadosFormulario.bairro} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-cidade">Cidade *</label>
+                  <input autoComplete="address-level2" className="campo__entrada" disabled={salvando} id="professor-cidade" maxLength={120} name="cidade" onChange={atualizarCampo} value={dadosFormulario.cidade} />
+                </div>
+                <div className="campo">
+                  <label className="campo__rotulo" htmlFor="professor-estado">UF *</label>
+                  <input autoComplete="address-level1" className="campo__entrada" disabled={salvando} id="professor-estado" maxLength={2} name="estado" onChange={atualizarCampo} placeholder="SP" value={dadosFormulario.estado} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="detalhe-usuario__secao-titulo">Acesso</h3>
+              <div className="formulario-perfil__grade">
+                {professorEmEdicaoId ? (
+                  <div className="campo campo--linha formulario-perfil__campo--largo">
+                    <input checked={dadosFormulario.ativo} disabled={salvando} id="professor-ativo" name="ativo" onChange={atualizarCampo} type="checkbox" />
+                    <label className="campo__rotulo" htmlFor="professor-ativo">Conta ativa</label>
                   </div>
-                  <div className="campo">
-                    <label className="campo__rotulo" htmlFor="professor-confirmar-senha">Confirmar senha *</label>
-                    <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
-                  </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="professor-senha">Senha *</label>
+                      <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-senha" minLength={6} name="senha" onChange={atualizarCampo} type="password" value={dadosFormulario.senha} />
+                    </div>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="professor-confirmar-senha">Confirmar senha *</label>
+                      <input autoComplete="new-password" className="campo__entrada" disabled={salvando} id="professor-confirmar-senha" minLength={6} name="confirmarSenha" onChange={atualizarCampo} type="password" value={dadosFormulario.confirmarSenha} />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}

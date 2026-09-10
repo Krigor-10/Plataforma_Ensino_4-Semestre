@@ -290,9 +290,6 @@ export function SecaoModulos({
           <header className="cabecalho-pagina">
             <div>
               <h2 className="cabecalho-pagina__titulo">Modulos</h2>
-              <p className="cabecalho-pagina__subtitulo">
-                {modulos.length} modulo{modulos.length === 1 ? "" : "s"} cadastrado{modulos.length === 1 ? "" : "s"}
-              </p>
             </div>
           </header>
 

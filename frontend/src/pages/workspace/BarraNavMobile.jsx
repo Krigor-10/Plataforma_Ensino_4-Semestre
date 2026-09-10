@@ -27,11 +27,6 @@ const ICONE_COMP = {
   certificados: TbCertificate,
 };
 
-const ROTULO_MOBILE = {
-  pessoas: "Usuários",
-  academico: "Acadêmico",
-};
-
 function obterItensNavMobile(sections) {
   const gruposVisiveis = {};
   for (const [chave, def] of Object.entries(GRUPOS_DEF)) {
@@ -61,7 +56,7 @@ function obterItensNavMobile(sections) {
         itens.push({
           chave: grupoKey,
           tipo: "grupo",
-          rotulo: ROTULO_MOBILE[grupoKey] ?? grupo.rotulo,
+          rotulo: grupo.rotulo,
           Icone: grupo.Icone,
           navegarPara: grupo.navegarPara,
           filhosChaves: grupo.filhos.map((f) => f.key),

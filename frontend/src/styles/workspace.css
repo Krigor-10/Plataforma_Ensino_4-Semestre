@@ -3622,7 +3622,9 @@
    mesmo sobrando bastante espaco horizontal. O wrap real (mobile) volta no
    breakpoint abaixo. */
 .tela-turmas .cabecalho-pagina .barra-filtros,
-.tela-cursos .cabecalho-pagina .barra-filtros {
+.tela-cursos .cabecalho-pagina .barra-filtros,
+.tela-professores .cabecalho-pagina .barra-filtros,
+.tela-coordenadores .cabecalho-pagina .barra-filtros {
   margin-bottom: 0;
   flex-wrap: nowrap;
 }
@@ -3638,9 +3640,20 @@
   }
 
   .tela-turmas .cabecalho-pagina .barra-filtros,
-  .tela-cursos .cabecalho-pagina .barra-filtros {
+  .tela-cursos .cabecalho-pagina .barra-filtros,
+  .tela-professores .cabecalho-pagina .barra-filtros,
+  .tela-coordenadores .cabecalho-pagina .barra-filtros {
     flex-wrap: wrap;
   }
+}
+
+/* .toolbar-massa em Matriculas fica colada a tabela logo abaixo (por isso so
+   arredonda o topo). Em Cursos ela fica sobre a grade de cards, sem uma borda
+   pareada abaixo — precisa se fechar como um bloco completo e proprio. */
+.tela-cursos .toolbar-massa {
+  border-radius: var(--raio-md);
+  border-bottom: 1px solid var(--cor-borda);
+  margin-bottom: var(--espaco-lg);
 }
 
 .atividades-curso__navegacao {
@@ -6322,7 +6335,7 @@
   overflow: hidden;
   background: linear-gradient(135deg, rgba(55, 10, 130, 0.88) 0%, rgba(123, 47, 247, 0.70) 55%, rgba(168, 85, 247, 0.52) 100%);
   border-radius: var(--raio-xl);
-  padding: var(--espaco-xl) var(--espaco-2xl);
+  padding: var(--espaco-lg) var(--espaco-xl);
   box-shadow: var(--sombra-acento);
   color: #fff;
 }
@@ -6337,17 +6350,17 @@
 }
 
 .banner-certificados::before {
-  width: 320px;
-  height: 320px;
+  width: 220px;
+  height: 220px;
   right: -60px;
-  top: -120px;
+  top: -90px;
 }
 
 .banner-certificados::after {
-  width: 180px;
-  height: 180px;
-  right: 140px;
-  bottom: -90px;
+  width: 120px;
+  height: 120px;
+  right: 100px;
+  bottom: -60px;
 }
 
 .banner-certificados__conteudo {
@@ -6360,8 +6373,8 @@
 }
 
 .banner-certificados__icone-area {
-  width: 76px;
-  height: 76px;
+  width: 56px;
+  height: 56px;
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: var(--raio-lg);
@@ -6378,7 +6391,7 @@
 }
 
 .banner-certificados__titulo {
-  font-size: 1.7rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.02em;
@@ -6393,11 +6406,11 @@
 .banner-certificados__stats {
   display: flex;
   align-items: center;
-  gap: var(--espaco-lg);
+  gap: var(--espaco-md);
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--raio-lg);
-  padding: var(--espaco-md) var(--espaco-xl);
+  padding: var(--espaco-sm) var(--espaco-lg);
   backdrop-filter: blur(6px);
   flex-shrink: 0;
 }
@@ -6410,7 +6423,7 @@
 }
 
 .banner-certificados__stat-valor {
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: #fff;
   line-height: 1;
@@ -6563,8 +6576,8 @@
   align-items: center;
   gap: var(--espaco-sm);
   text-align: center;
-  opacity: 0.45;
-  filter: grayscale(0.6);
+  opacity: 0.6;
+  filter: grayscale(0.7);
   transition: border-color var(--transicao-rapida), opacity var(--transicao-rapida);
 }
 
@@ -6617,9 +6630,15 @@
   position: absolute;
   top: var(--espaco-sm);
   right: var(--espaco-sm);
-  font-size: 0.75rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
   color: var(--cor-texto-mudo);
-  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 900px) {
@@ -6813,6 +6832,12 @@
   justify-content: space-between;
   gap: var(--espaco-md);
   padding: var(--espaco-md) 0;
+}
+
+.perfil-seguranca-item + .perfil-seguranca-item {
+  border-top: 1px solid var(--cor-borda);
+  margin-top: var(--espaco-sm);
+  padding-top: var(--espaco-lg);
 }
 
 .perfil-seguranca-item--formulario {

@@ -5,6 +5,8 @@ const variantePorValor = {
   Ativa: "sucesso",
   Concluído: "sucesso",
   Publicada: "sucesso",
+  Publicado: "sucesso",
+  "Parcialmente publicado": "info",
   "Em andamento": "info",
   Pendente: "aviso",
   Rascunho: "aviso",

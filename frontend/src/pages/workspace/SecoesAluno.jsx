@@ -38,6 +38,7 @@ import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
+  clampPercent,
   compactText,
   formatDate,
   formatGrade,
@@ -298,7 +299,7 @@ export function SecaoCursosAluno({
             curso: cursoPorId.get(linha.cursoId) || { id: linha.cursoId, titulo: linha.curso, descricao: "" },
             resumo: `${linha.modulos} modulo${linha.modulos === 1 ? "" : "s"}`,
             rodapeEsquerda: linha.turma,
-            percentual: Math.round(Math.max(0, Math.min(linha.progresso, 100)))
+            percentual: clampPercent(linha.progresso)
           }))}
           mensagemVazia="Assim que uma matricula for aprovada, os seus cursos ativos vao aparecer aqui."
           onSelecionar={selecionarCurso}
@@ -312,7 +313,7 @@ export function SecaoCursosAluno({
 
 function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
-  const percentual = Math.round(Math.max(0, Math.min(detalhe.progresso, 100)));
+  const percentual = clampPercent(detalhe.progresso);
   const modulosComConteudo = detalhe.modulos.filter((modulo) => modulo.conteudos.length > 0);
   const modulosConcluidos = modulosComConteudo.filter((modulo) => modulo.progresso >= 100).length;
   const totalConteudos = detalhe.modulos.reduce((total, modulo) => total + modulo.conteudos.length, 0);
@@ -1628,7 +1629,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
     });
   }
 
-  const percentualCurso = Math.round(Math.max(0, Math.min(curso.progresso, 100)));
+  const percentualCurso = clampPercent(curso.progresso);
 
   return (
     <div className="conteudos-aluno">

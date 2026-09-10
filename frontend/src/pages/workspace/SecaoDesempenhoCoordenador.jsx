@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbAward, TbChartBar, TbCircleCheck, TbUserCheck, TbUsers } from "react-icons/tb";
-import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import { TbArrowLeft, TbUserCheck } from "react-icons/tb";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
+import IndicadoresDesempenhoCurso from "../../components/IndicadoresDesempenhoCurso.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatGrade, formatPercent } from "../../lib/format.js";
+import { formatGrade } from "../../lib/format.js";
 import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
 
 /* PROGRESSO DA COORDENACAO — navegacao por Curso -> Modulos -> Materiais/
@@ -138,13 +138,7 @@ export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmF
             </div>
           </header>
 
-          <div className="grade-estatisticas">
-            <CartaoEstatistica icone={<TbUsers size={22} />} rotulo="Alunos" valor={cursoSelecionado.totalAlunos} />
-            <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbUserCheck size={22} />} rotulo="Ativos" valor={cursoSelecionado.alunosAtivos} />
-            <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbChartBar size={22} />} rotulo="Progresso medio" valor={formatPercent(cursoSelecionado.progressoMedio)} />
-            <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCircleCheck size={22} />} rotulo="Taxa de conclusao" valor={formatPercent(cursoSelecionado.percentualConclusao)} />
-            <CartaoEstatistica icone={<TbAward size={22} />} rotulo="Desempenho medio" valor={formatGrade(cursoSelecionado.desempenhoMedio)} />
-          </div>
+          <IndicadoresDesempenhoCurso curso={cursoSelecionado} />
 
           <PainelModulosDesempenho curso={cursoSelecionado} />
         </>

@@ -5,7 +5,7 @@ import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatDate, formatGrade } from "../../lib/format.js";
+import { formatDate, formatGrade, formatPercent } from "../../lib/format.js";
 
 function estaConcluido(progresso) {
   return Boolean(progresso && Number(progresso.percentualConclusao || 0) >= 100);
@@ -158,7 +158,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
       <header className="banner-certificados" aria-label="Resumo de certificados">
         <div className="banner-certificados__conteudo">
           <div className="banner-certificados__icone-area" aria-hidden="true">
-            <TbCertificate size={44} />
+            <TbCertificate size={28} />
           </div>
 
           <div className="banner-certificados__texto">
@@ -200,7 +200,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
               ) : (
                 <div className="item-certificado__status">
                   <span className="item-certificado__nota" style={{ color: "var(--cor-texto-mudo)" }}>
-                    {Math.round(certificado.percentual)}% concluido
+                    {formatPercent(certificado.percentual)} concluido
                   </span>
                 </div>
               )}

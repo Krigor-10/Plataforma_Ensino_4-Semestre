@@ -497,7 +497,12 @@ export function SecaoConteudosProfessor({
             curso,
             resumo: `${totalModulos} modulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteudo${totalConteudos === 1 ? "" : "s"}`,
             rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`,
-            badge: totalConteudos > 0 && totalPublicados === totalConteudos ? "Publicado" : "Rascunho"
+            badge:
+              totalPublicados === 0
+                ? "Rascunho"
+                : totalPublicados === totalConteudos
+                ? "Publicado"
+                : "Parcialmente publicado"
           }))}
           mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
           onSelecionar={abrirCurso}
@@ -988,8 +993,12 @@ function TrilhaConteudosProfessor({
                                     </span>
                                     <p className="atividades-curso__meta">
                                       <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                      <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
+                                      {!conteudoAtivo ? (
+                                        <>
+                                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                          <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
+                                        </>
+                                      ) : null}
                                       {quizVinculado ? (
                                         <>
                                           <span aria-hidden="true" className="atividades-curso__separador">·</span>

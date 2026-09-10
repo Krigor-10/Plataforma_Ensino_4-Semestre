@@ -15,7 +15,7 @@ import {
 import { MdLogout } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
-import NavGrupo, { temNavGrupo } from "./NavGrupo.jsx";
+import NavGrupo, { obterGrupoAtivo, temNavGrupo } from "./NavGrupo.jsx";
 import { getSectionMeta } from "../../data/appConfig.js";
 import { corPorTipo } from "./BarraLateral.jsx";
 import { apiRequest } from "../../lib/api.js";
@@ -239,6 +239,7 @@ export default function BarraTopo({
   }
 
   const comTabs = temNavGrupo(sections, secaoAtual);
+  const grupoAtivo = comTabs ? obterGrupoAtivo(sections, secaoAtual) : null;
   const ehAluno = role === "Aluno";
 
   return (
@@ -259,8 +260,17 @@ export default function BarraTopo({
               <span className="topbar__breadcrumb-raiz" style={{ color: "var(--cor-marca-clara)" }}>CodeRyse Academy</span>
               <span className="topbar__breadcrumb-sep" aria-hidden="true" style={{ color: "var(--cor-marca-clara)", fontSize: "1rem" }}>›</span>
               <span className="topbar__breadcrumb-secao">
-                <IconeSecao size={16} aria-hidden="true" />
-                {meta.title}
+                {grupoAtivo ? (
+                  <>
+                    <grupoAtivo.Icone size={16} aria-hidden="true" />
+                    {grupoAtivo.rotulo}
+                  </>
+                ) : (
+                  <>
+                    <IconeSecao size={16} aria-hidden="true" />
+                    {meta.title}
+                  </>
+                )}
               </span>
             </nav>
           </div>

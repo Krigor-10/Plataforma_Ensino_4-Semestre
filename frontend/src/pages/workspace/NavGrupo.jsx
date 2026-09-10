@@ -47,6 +47,13 @@ function obterFilhosVisiveis(sections, secaoAtual) {
   return filhos.length >= 2 ? { grupo, filhos } : null;
 }
 
+/* Usado pelo breadcrumb da BarraTopo pra saber o rotulo/icone do grupo (ex.:
+   "Gestao") quando o NavGrupo esta ativo — evita duplicar a mesma logica de
+   agrupamento em dois arquivos. */
+export function obterGrupoAtivo(sections, secaoAtual) {
+  return obterFilhosVisiveis(sections, secaoAtual)?.grupo ?? null;
+}
+
 export default function NavGrupo({ sections, secaoAtual, onNavigate }) {
   const resultado = obterFilhosVisiveis(sections, secaoAtual);
 

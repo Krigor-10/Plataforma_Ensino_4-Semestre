@@ -701,42 +701,46 @@ export function SecaoCursos({
           <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
             Limpar filtros
           </Botao>
+        </div>
+      ) : null}
 
-          <span aria-hidden="true" className="divisor-vertical" />
-
-          <label className="barra-filtros__checkbox-selecao">
+      {ehAdmin ? (
+        <div className="toolbar-massa">
+          <label className="table-bulk-toggle">
             <input
               checked={todosCursosSelecionados}
               disabled={salvando || !cursosFiltrados.length}
               onChange={alternarTodosCursos}
               type="checkbox"
             />
-            Selecionar cursos
+            <span>Selecionar todos os cursos listados</span>
           </label>
-          <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir</label>
-          <select
-            className="campo__entrada barra-filtros__select"
-            disabled={salvando || !coordenadoresOrdenados.length}
-            id="coordenador-atribuir"
-            onChange={(event) => setCoordenadorSelecionado(event.target.value)}
-            value={coordenadorSelecionado}
-          >
-            <option value="">Selecionar coordenador</option>
-            <option value="0">Aguardando coordenador</option>
-            {coordenadoresOrdenados.map((coordenador) => (
-              <option key={coordenador.id} value={coordenador.id}>
-                {coordenador.nome}
-              </option>
-            ))}
-          </select>
-          <Botao disabled={salvando} onClick={atribuirCoordenador} tamanho="pequeno" variante="primario">
-            {salvando ? "Salvando..." : "Atribuir coordenador"}
-          </Botao>
-          <p style={{ color: "var(--cor-texto-suave)", fontSize: "0.8rem", marginLeft: "auto" }}>
+          <div className="toolbar-massa__acoes">
+            <label className="visualmente-oculto" htmlFor="coordenador-atribuir">Coordenador para atribuir aos cursos selecionados</label>
+            <select
+              className="campo__entrada barra-filtros__select"
+              disabled={salvando || !coordenadoresOrdenados.length}
+              id="coordenador-atribuir"
+              onChange={(event) => setCoordenadorSelecionado(event.target.value)}
+              value={coordenadorSelecionado}
+            >
+              <option value="">Selecionar coordenador</option>
+              <option value="0">Aguardando coordenador</option>
+              {coordenadoresOrdenados.map((coordenador) => (
+                <option key={coordenador.id} value={coordenador.id}>
+                  {coordenador.nome}
+                </option>
+              ))}
+            </select>
+            <Botao disabled={salvando} onClick={atribuirCoordenador} tamanho="pequeno" variante="secundario">
+              <TbUserCheck aria-hidden="true" size={15} /> {salvando ? "Salvando..." : "Atribuir coordenador"}
+            </Botao>
+          </div>
+          <span className="toolbar-massa__contador">
             {quantidadeSelecionada
               ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s selecionados" : " selecionado"}`
               : `${cursosFiltrados.length} de ${cursos.length} curso${cursos.length === 1 ? "" : "s"}`}
-          </p>
+          </span>
         </div>
       ) : null}
 

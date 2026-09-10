@@ -123,7 +123,7 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
                   "0 0 0px rgba(123, 47, 247, 0)"
                 ]
               }}
-              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              transition={{ repeat: 2, duration: 1.8, ease: "easeInOut" }}
               whileHover={{ scale: 1.1, boxShadow: "0 8px 32px rgba(123, 47, 247, 0.8)" }}
               whileTap={{ scale: 0.95 }}
               style={{ display: "inline-block", borderRadius: "var(--raio-md)" }}
@@ -151,7 +151,7 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
                   "0 0 0px rgba(123, 47, 247, 0)"
                 ]
               }}
-              transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+              transition={{ repeat: 2, duration: 1.8, ease: "easeInOut" }}
               whileHover={{ scale: 1.1, boxShadow: "0 8px 32px rgba(123, 47, 247, 0.8)" }}
               whileTap={{ scale: 0.95 }}
               style={{ display: "inline-block", borderRadius: "var(--raio-md)" }}

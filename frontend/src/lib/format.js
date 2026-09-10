@@ -146,9 +146,12 @@ export function formatGrade(value) {
   return numeric > 0 ? numeric.toFixed(1).replace(".", ",") : "-";
 }
 
+export function clampPercent(value) {
+  return Math.round(Math.max(0, Math.min(Number(value) || 0, 100)));
+}
+
 export function formatPercent(value) {
-  const numeric = Number(value || 0);
-  return `${Math.max(0, Math.min(numeric, 100)).toFixed(0)}%`;
+  return `${clampPercent(value)}%`;
 }
 
 export function onlyDigits(value) {

@@ -1076,8 +1076,8 @@
   border-top-right-radius: 0;
 }
 
-/* ── Toolbar de ações em massa — matrículas ──────────────────── */
-.toolbar-massa-matriculas {
+/* ── Toolbar de ações em massa — reutilizada em Matriculas e Cursos ── */
+.toolbar-massa {
   display: flex;
   align-items: center;
   gap: var(--espaco-sm);
@@ -1086,18 +1086,21 @@
   border: 1px solid var(--cor-borda);
   border-bottom: none;
   border-radius: var(--raio-md) var(--raio-md) 0 0;
+  flex-wrap: wrap;
 }
 
-.toolbar-massa-matriculas__contador {
+.toolbar-massa__contador {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--cor-texto-forte);
   margin-right: auto;
 }
 
-.toolbar-massa-matriculas__acoes {
+.toolbar-massa__acoes {
   display: flex;
+  align-items: center;
   gap: var(--espaco-sm);
+  flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {
@@ -2081,7 +2084,7 @@
 
   .cabecalho-pagina .botao,
   .painel-secao__cabecalho .botao,
-  .toolbar-massa-matriculas,
+  .toolbar-massa,
   .abas-matriculas,
   .barra-filtros {
     display: none !important;

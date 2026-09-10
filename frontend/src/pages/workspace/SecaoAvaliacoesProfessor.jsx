@@ -338,7 +338,12 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
             curso,
             resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
             rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
-            badge: totalAvaliacoes > 0 && totalPublicadas === totalAvaliacoes ? "Publicado" : "Rascunho"
+            badge:
+              totalPublicadas === 0
+                ? "Rascunho"
+                : totalPublicadas === totalAvaliacoes
+                ? "Publicado"
+                : "Parcialmente publicado"
           }))}
           mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
           onSelecionar={abrirCurso}
@@ -381,7 +386,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
       {avaliacaoDetalhe ? (
         <Modal
           onFechar={fecharDetalheAvaliacao}
-          titulo="Detalhes da avaliacao"
+          titulo="Ajustes rapidos da avaliacao"
           rodape={
             <footer className="modal-rodape">
               <Botao onClick={fecharDetalheAvaliacao} className="linha-icone-texto" style={{ marginRight: "auto" }} variante="perigo">
@@ -700,12 +705,12 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
                   <ul className="menu-contexto__lista">
                     <li>
                       <button onClick={() => onVerDetalhes(avaliacao)} type="button">
-                        Ver detalhes
+                        Ajustes rapidos
                       </button>
                     </li>
                     <li>
                       <button onClick={() => onEditar(avaliacao)} type="button">
-                        Editar
+                        Editar estrutura
                       </button>
                     </li>
                     <li>
@@ -730,10 +735,6 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
                   transition={{ duration: 0.24, ease: "easeInOut" }}
                 >
                   <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
-                    <div className="lista-detalhes__item">
-                      <dt>Status</dt>
-                      <dd><Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} /></dd>
-                    </div>
                     {Number(avaliacao.tipoAvaliacao) === 1 ? (
                       <div className="lista-detalhes__item">
                         <dt>Tipo</dt>
