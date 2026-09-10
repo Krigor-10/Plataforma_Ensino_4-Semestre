@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbAward, TbCertificate, TbDownload, TbTrophy } from "react-icons/tb";
-import { LuEye, LuDownload } from "react-icons/lu";
+import { TbAward, TbCertificate, TbDownload, TbEye, TbLock, TbTrophy } from "react-icons/tb";
+import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
@@ -216,7 +216,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                   whileTap={certificado.desbloqueado ? { scale: 0.9 } : {}}
                   transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 >
-                  <LuEye aria-hidden="true" size={22} />
+                  <TbEye aria-hidden="true" size={22} />
                 </motion.button>
                 <span aria-hidden="true" className="cert-separador" />
                 <motion.button
@@ -234,7 +234,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                   whileTap={certificado.desbloqueado ? { scale: 0.9 } : {}}
                   transition={{ type: "spring", stiffness: 400, damping: 18 }}
                 >
-                  <LuDownload aria-hidden="true" size={22} />
+                  <TbDownload aria-hidden="true" size={22} />
                 </motion.button>
               </div>
             </li>
@@ -259,7 +259,9 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
               {conquista.desbloqueada ? (
                 <span aria-hidden="true" className="cartao-conquista__check">✓</span>
               ) : (
-                <span aria-hidden="true" className="cartao-conquista__cadeado">⊘</span>
+                <span aria-hidden="true" className="cartao-conquista__cadeado">
+                  <TbLock size={14} />
+                </span>
               )}
             </li>
           ))}
@@ -273,9 +275,9 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
           titulo="Certificado de Conclusao"
           rodape={
             <footer className="modal-rodape">
-              <button className="botao botao--primario" disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button">
+              <Botao disabled={!certificadoEmitido} onClick={imprimirCertificado} type="button" variante="primario">
                 <TbDownload aria-hidden="true" size={16} /> Baixar / Imprimir
-              </button>
+              </Botao>
             </footer>
           }
         >

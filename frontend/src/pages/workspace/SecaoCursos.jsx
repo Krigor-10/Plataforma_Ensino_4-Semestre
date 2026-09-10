@@ -549,7 +549,7 @@ export function SecaoCursos({
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
               <Botao disabled={enviandoImagem || !arquivoImagemSelecionado} onClick={enviarImagemCurso} type="button" variante="primario">
-                {enviandoImagem ? "Enviando..." : "Salvar"}
+                <MdSave aria-hidden="true" size={17} /> {enviandoImagem ? "Enviando..." : "Salvar"}
               </Botao>
             </footer>
           }

@@ -90,7 +90,7 @@ export function DashboardProfessor({ avaliacoes = [], cursos = [], onMudarSecao,
           <header className="painel-secao__cabecalho">
             <h2 className="painel-secao__titulo" id="titulo-minhas-avaliacoes">Avaliacoes</h2>
             <Botao onClick={() => onMudarSecao("avaliacoes")} tamanho="pequeno" variante="primario">
-              <TbCirclePlus size={18} /> Nova
+              <TbCirclePlus aria-hidden="true" size={18} /> Nova
             </Botao>
           </header>
           <div className="painel-secao__conteudo">

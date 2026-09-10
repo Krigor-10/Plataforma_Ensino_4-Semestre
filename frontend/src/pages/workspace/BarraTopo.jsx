@@ -13,6 +13,7 @@ import {
   TbUserCircle, TbX, TbSearch, TbUserFilled, TbBell, TbBellRinging,
 } from "react-icons/tb";
 import { MdLogout } from "react-icons/md";
+import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import NavGrupo, { temNavGrupo } from "./NavGrupo.jsx";
 import { getSectionMeta } from "../../data/appConfig.js";
@@ -487,23 +488,25 @@ export default function BarraTopo({
                   </div>
 
                   <div className="popup-perfil__rodape">
-                    <button
-                      className="botao botao--fantasma popup-perfil__editar linha-icone-texto"
+                    <Botao
+                      className="popup-perfil__editar linha-icone-texto"
                       onClick={() => { setPopupAberto(false); onAbrirPerfil(); }}
                       type="button"
+                      variante="fantasma"
                     >
                       <TbUserCircle size={15} aria-hidden="true" />
                       Meu Perfil
-                    </button>
+                    </Botao>
                     <hr style={{ border: "none", borderTop: "1px solid var(--cor-borda)", margin: "4px 0" }} />
-                    <button
-                      className="botao botao--perigo popup-perfil__sair linha-icone-texto"
+                    <Botao
+                      className="popup-perfil__sair linha-icone-texto"
                       onClick={() => { setPopupAberto(false); onLogoutClick(); }}
                       type="button"
+                      variante="perigo"
                     >
                       <MdLogout size={15} aria-hidden="true" />
                       Sair
-                    </button>
+                    </Botao>
                   </div>
                 </motion.div>
               )}

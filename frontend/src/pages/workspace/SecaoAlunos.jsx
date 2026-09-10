@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import { useMemo, useState } from "react";
+import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbEye, TbSearch, TbSelector, TbX } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -30,36 +29,7 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
-  const [kebabAbertoId, setKebabAbertoId] = useState(null);
-  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const [alunoDetalhe, setAlunoDetalhe] = useState(null);
-  const kebabRef = useRef(null);
-
-  useEffect(() => {
-    if (!kebabAbertoId) {
-      return undefined;
-    }
-
-    function fechar(event) {
-      if (event.type === "keydown") {
-        if (event.key === "Escape") {
-          setKebabAbertoId(null);
-        }
-        return;
-      }
-
-      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
-        setKebabAbertoId(null);
-      }
-    }
-
-    document.addEventListener("mousedown", fechar);
-    document.addEventListener("keydown", fechar);
-    return () => {
-      document.removeEventListener("mousedown", fechar);
-      document.removeEventListener("keydown", fechar);
-    };
-  }, [kebabAbertoId]);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const matriculasPorAluno = useMemo(() => {
@@ -127,15 +97,6 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
     setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
     setPagina(1);
   }
-
-  function abrirKebab(event, alunoId) {
-    event.stopPropagation();
-    const retangulo = event.currentTarget.getBoundingClientRect();
-    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
-    setKebabAbertoId((atual) => (atual === alunoId ? null : alunoId));
-  }
-
-  const alunoKebab = alunos.find((aluno) => aluno.id === kebabAbertoId);
 
   return (
     <div className="tela-alunos">
@@ -232,14 +193,12 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
                     </td>
                     <td data-label="" onClick={(event) => event.stopPropagation()}>
                       <button
-                        aria-expanded={kebabAbertoId === aluno.id}
-                        aria-haspopup="menu"
-                        aria-label={`Acoes para ${aluno.nome}`}
+                        aria-label={`Ver detalhes de ${aluno.nome}`}
                         className="kebab-btn"
-                        onClick={(event) => abrirKebab(event, aluno.id)}
+                        onClick={() => setAlunoDetalhe(aluno)}
                         type="button"
                       >
-                        <TbDotsVertical aria-hidden="true" size={16} />
+                        <TbEye aria-hidden="true" size={16} />
                       </button>
                     </td>
                   </tr>
@@ -276,24 +235,6 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [] }) {
           </div>
         </nav>
       ) : null}
-
-      {kebabAbertoId && alunoKebab
-        ? createPortal(
-            <div className="kebab-menu" ref={kebabRef} style={{ left: kebabPos.left, top: kebabPos.top }}>
-              <button
-                className="kebab-menu__item"
-                onClick={() => {
-                  setAlunoDetalhe(alunoKebab);
-                  setKebabAbertoId(null);
-                }}
-                type="button"
-              >
-                Ver detalhes
-              </button>
-            </div>,
-            document.body
-          )
-        : null}
 
       {alunoDetalhe ? (
         <Modal

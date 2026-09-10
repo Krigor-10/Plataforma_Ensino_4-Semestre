@@ -204,7 +204,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     const campoVazio = obrigatorios.find((campo) => !String(dadosFormulario[campo] || "").trim());
 
     if (campoVazio) {
-      return `Preencha todos os campos obrigatorios para ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} a coordenacao.`;
+      return `Preencha todos os campos obrigatorios para ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} o coordenador.`;
     }
 
     if (onlyDigits(dadosFormulario.cpf).length !== 11) {
@@ -281,7 +281,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
       setMensagemFormulario({
         tone: "error",
-        message: err.message || `Nao foi possivel ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} a coordenacao agora.`
+        message: err.message || `Nao foi possivel ${coordenadorEmEdicaoId ? "salvar" : "cadastrar"} o coordenador agora.`
       });
     } finally {
       setSalvando(false);
@@ -314,7 +314,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         return;
       }
 
-      setMensagemExclusao(err.message || "Nao foi possivel excluir a coordenacao agora.");
+      setMensagemExclusao(err.message || "Nao foi possivel excluir o coordenador agora.");
     } finally {
       setSalvando(false);
     }
@@ -355,7 +355,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
             <TbPlus aria-hidden="true" size={18} />
           </motion.span>{" "}
-          Cadastrar coordenacao
+          Cadastrar coordenador
         </Botao>
       </div>
 
@@ -539,7 +539,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       {coordenadorParaExcluir ? (
         <Modal
           onFechar={() => setCoordenadorParaExcluir(null)}
-          titulo="Excluir coordenacao"
+          titulo="Excluir coordenador"
           rodape={
             <footer className="modal-rodape">
               <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
@@ -552,7 +552,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           }
         >
           <p className="texto-confirmacao-exclusao">
-            Deseja excluir a coordenacao de <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
+            Deseja excluir o coordenador <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
@@ -561,14 +561,14 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       {formularioAberto ? (
         <Modal
           onFechar={fecharFormulario}
-          titulo={coordenadorEmEdicaoId ? "Editar coordenacao" : "Cadastrar coordenacao"}
+          titulo={coordenadorEmEdicaoId ? "Editar coordenador" : "Cadastrar coordenador"}
           rodape={
             <footer className="modal-rodape">
               <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
               <Botao disabled={salvando} form="form-coordenador" type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : coordenadorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar coordenacao"}
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : coordenadorEmEdicaoId ? "Salvar alteracoes" : "Cadastrar coordenador"}
               </Botao>
             </footer>
           }

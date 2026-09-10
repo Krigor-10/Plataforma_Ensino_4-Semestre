@@ -4,6 +4,7 @@
    bloqueia interação com o fundo via aria-modal="true".
    ============================================================ */
 import { useEffect } from "react";
+import { TbX } from "react-icons/tb";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 export default function Modal({ titulo, onFechar, children, className, acoes, rodape }) {
@@ -48,7 +49,7 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
             aria-label="Fechar modal"
             type="button"
           >
-            ✕
+            <TbX aria-hidden="true" size={18} />
           </button>
         </header>
         <div className="modal-conteudo">{children}</div>
