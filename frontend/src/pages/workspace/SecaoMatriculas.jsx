@@ -5,6 +5,7 @@ import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
@@ -135,8 +136,8 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
 
 /* Tela "Meus Cursos": so os cursos em que o aluno tem matricula (qualquer status) - sem catalogo, sem opcao de solicitar */
 export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onNavigate, onRefresh, onSessionExpired }) {
+  const { mostrarToast } = useToast();
   const [matriculaProcessando, setMatriculaProcessando] = useState(null);
-  const [mensagem, setMensagem] = useState({ tone: "", message: "" });
   const [popupPagamento, setPopupPagamento] = useState(null);
 
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
@@ -147,7 +148,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
 
   async function cancelarMatricula(matricula) {
     setMatriculaProcessando(matricula.id);
-    setMensagem({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Matriculas/${matricula.id}/cancelar`, { method: "PUT" });
@@ -158,7 +158,7 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel cancelar a solicitacao agora." });
+      mostrarToast(err.message || "Nao foi possivel cancelar a solicitacao agora.", "erro");
     } finally {
       setMatriculaProcessando(null);
     }
@@ -166,7 +166,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
 
   async function reabrirMatricula(matricula) {
     setMatriculaProcessando(matricula.id);
-    setMensagem({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Matriculas/${matricula.id}/reabrir`, { method: "PUT" });
@@ -177,7 +176,7 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel reabrir a solicitacao agora." });
+      mostrarToast(err.message || "Nao foi possivel reabrir a solicitacao agora.", "erro");
     } finally {
       setMatriculaProcessando(null);
     }
@@ -185,7 +184,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
 
   async function confirmarPagamento(matricula, curso) {
     setMatriculaProcessando(matricula.id);
-    setMensagem({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
@@ -200,7 +198,7 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel confirmar o pagamento agora." });
+      mostrarToast(err.message || "Nao foi possivel confirmar o pagamento agora.", "erro");
     } finally {
       setMatriculaProcessando(null);
     }
@@ -214,8 +212,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
           <p className="cabecalho-pagina__subtitulo">{cursosMatriculados.length} matricula(s) registrada(s).</p>
         </div>
       </header>
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
       {cursosMatriculados.length === 0 ? (
         <EmptyState message="Voce ainda nao esta matriculado em nenhum curso. Explore o catalogo em Matriculas." />
@@ -258,9 +254,9 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
 }
 
 function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRefresh, onSessionExpired, turmas = [], usuario }) {
+  const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
   const [cursoSolicitando, setCursoSolicitando] = useState(null);
-  const [mensagem, setMensagem] = useState({ tone: "", message: "" });
   const [popupMatricula, setPopupMatricula] = useState(null);
 
   const turmasPorCursoId = useMemo(() => {
@@ -291,7 +287,6 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
     }
 
     setCursoSolicitando(curso.id);
-    setMensagem({ tone: "", message: "" });
 
     try {
       await apiRequest("/Matriculas", {
@@ -313,7 +308,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel solicitar a matricula agora." });
+      mostrarToast(err.message || "Nao foi possivel solicitar a matricula agora.", "erro");
     } finally {
       setCursoSolicitando(null);
     }
@@ -339,8 +334,6 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
           />
         </div>
       </header>
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
       {cursosFiltrados.length === 0 ? (
         <EmptyState message="Nenhum curso encontrado." />
@@ -375,8 +368,10 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
   );
 }
 
+const TOM_TOAST_POR_RESULTADO = { success: "sucesso", warning: "aviso", error: "erro", info: "aviso" };
+
 function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }) {
-  const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
+  const { mostrarToast } = useToast();
   const [processandoLote, setProcessandoLote] = useState(false);
   const [matriculasSelecionadas, setMatriculasSelecionadas] = useState(() => new Set());
   const [abaAtiva, setAbaAtiva] = useState("pendentes");
@@ -419,13 +414,11 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
   useEffect(() => {
     if (abaAtiva !== "pendentes") {
       setMatriculasSelecionadas(new Set());
-      setMensagem({ tone: "info", message: "" });
     }
   }, [abaAtiva]);
 
   async function executarLote(acao, resolverFeedback) {
     try {
-      setMensagem({ tone: "info", message: "" });
       setProcessandoLote(true);
 
       const resultado = await acao();
@@ -434,7 +427,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
           ? resolverFeedback(resultado)
           : { tone: "success", message: resolverFeedback };
 
-      setMensagem(feedback);
+      mostrarToast(feedback.message, TOM_TOAST_POR_RESULTADO[feedback.tone] || "aviso");
       if (feedback.tone !== "error") {
         setMatriculasSelecionadas(new Set());
       }
@@ -445,7 +438,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel atualizar a matricula." });
+      mostrarToast(err.message || "Nao foi possivel atualizar a matricula.", "erro");
     } finally {
       setProcessandoLote(false);
     }
@@ -490,7 +483,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
 
   async function aprovarSelecionadas() {
     if (!quantidadeSelecionada) {
-      setMensagem({ tone: "error", message: "Selecione ao menos uma matricula pendente." });
+      mostrarToast("Selecione ao menos uma matricula pendente.", "erro");
       return;
     }
 
@@ -506,7 +499,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
 
   async function rejeitarSelecionadas() {
     if (!quantidadeSelecionada) {
-      setMensagem({ tone: "error", message: "Selecione ao menos uma matricula pendente." });
+      mostrarToast("Selecione ao menos uma matricula pendente.", "erro");
       return;
     }
 
@@ -621,8 +614,6 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
           </span>
         </div>
       ) : null}
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Matriculas" className="tabela-dados">

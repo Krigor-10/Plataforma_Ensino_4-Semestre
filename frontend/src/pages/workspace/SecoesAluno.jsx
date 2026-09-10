@@ -33,6 +33,7 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
@@ -1263,7 +1264,7 @@ export function SecaoConteudosAluno({
   progressos = {},
   turmas = []
 }) {
-  const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
+  const { mostrarToast } = useToast();
   const { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem: mensagemQuiz, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
     onRefresh,
     onSessionExpired
@@ -1537,7 +1538,6 @@ export function SecaoConteudosAluno({
 
   async function marcarConteudoConcluido(conteudoId) {
     try {
-      setMensagem({ tone: "info", message: "" });
       setConteudoProcessando(conteudoId);
 
       await apiRequest(`/Progressos/conteudos/${conteudoId}/concluir`, { method: "PUT" });
@@ -1546,7 +1546,7 @@ export function SecaoConteudosAluno({
         proximos.add(conteudoId);
         return proximos;
       });
-      setMensagem({ tone: "success", message: "Conteudo marcado como concluido." });
+      mostrarToast("Conteudo marcado como concluido.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -1554,7 +1554,7 @@ export function SecaoConteudosAluno({
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel atualizar o progresso." });
+      mostrarToast(err.message || "Nao foi possivel atualizar o progresso.", "erro");
     } finally {
       setConteudoProcessando(null);
     }
@@ -1562,7 +1562,6 @@ export function SecaoConteudosAluno({
 
   return (
     <div className="tela-conteudos-aluno">
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
       {mensagemQuiz.message ? <InlineMessage tone={mensagemQuiz.tone}>{mensagemQuiz.message}</InlineMessage> : null}
 
       {gruposConteudosPorCurso.length === 0 ? (

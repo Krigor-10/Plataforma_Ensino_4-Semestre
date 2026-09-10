@@ -44,7 +44,6 @@ export function SecaoCursos({
   const [coordenadorSelecionado, setCoordenadorSelecionado] = useState("");
   const [filtroCoordenador, setFiltroCoordenador] = useState("todos");
   const [buscaCurso, setBuscaCurso] = useState("");
-  const [mensagem, setMensagem] = useState({ tone: "info", message: "" });
   const [salvando, setSalvando] = useState(false);
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [cursoParaImagem, setCursoParaImagem] = useState(null);
@@ -231,17 +230,16 @@ export function SecaoCursos({
     const coordenadorId = Number(coordenadorSelecionado);
 
     if (!quantidadeSelecionada) {
-      setMensagem({ tone: "error", message: "Selecione ao menos um curso para atribuir coordenador." });
+      mostrarToast("Selecione ao menos um curso para atribuir coordenador.", "erro");
       return;
     }
 
     if (coordenadorSelecionado === "") {
-      setMensagem({ tone: "error", message: "Selecione um coordenador ou a opcao Aguardando coordenador." });
+      mostrarToast("Selecione um coordenador ou a opcao Aguardando coordenador.", "erro");
       return;
     }
 
     try {
-      setMensagem({ tone: "info", message: "" });
       setSalvando(true);
 
       for (const curso of cursosMarcados) {
@@ -252,12 +250,12 @@ export function SecaoCursos({
       }
 
       const coordenador = coordenadorId ? coordenadorPorId.get(coordenadorId) : null;
-      setMensagem({
-        tone: "success",
-        message: coordenador
+      mostrarToast(
+        coordenador
           ? `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s vinculados" : " vinculado"} a ${coordenador.nome}.`
-          : `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s marcados" : " marcado"} como aguardando coordenador.`
-      });
+          : `${quantidadeSelecionada} curso${quantidadeSelecionada > 1 ? "s marcados" : " marcado"} como aguardando coordenador.`,
+        "sucesso"
+      );
       setCursosSelecionados(new Set());
       setCoordenadorSelecionado("");
       onRefresh?.();
@@ -267,7 +265,7 @@ export function SecaoCursos({
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel atribuir coordenador agora." });
+      mostrarToast(err.message || "Nao foi possivel atribuir coordenador agora.", "erro");
       onRefresh?.();
     } finally {
       setSalvando(false);
@@ -741,8 +739,6 @@ export function SecaoCursos({
           </p>
         </div>
       ) : null}
-
-      {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
       {cursosFiltrados.length === 0 ? (
         <p className="texto-vazio texto-vazio--central" role="status">

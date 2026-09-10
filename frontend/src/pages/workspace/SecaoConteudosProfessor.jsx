@@ -1105,8 +1105,11 @@ function TrilhaConteudosProfessor({
                       ) : null}
 
                       <div className="atividades-curso__adicionar-grupo">
-                        <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="sucesso">
-                          <TbPlus aria-hidden="true" size={13} /> Adicionar conteudo
+                        <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="primario">
+                          <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                            <TbPlus aria-hidden="true" size={13} />
+                          </motion.span>{" "}
+                          Novo conteudo
                         </Botao>
                         <Botao className="atividades-curso__adicionar" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno" variante="fantasma">
                           <TbTrophy aria-hidden="true" size={13} /> Adicionar Quiz
