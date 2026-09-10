@@ -13,19 +13,22 @@ namespace PlataformaEnsino.API.Controllers;
 public class MatriculasController : ControllerBase
 {
     private readonly IMatriculaService _matriculaService;
+    private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
 
-    public MatriculasController(IMatriculaService matriculaService)
+    public MatriculasController(IMatriculaService matriculaService, ICursoAutorizacaoService cursoAutorizacaoService)
     {
         _matriculaService = matriculaService;
+        _cursoAutorizacaoService = cursoAutorizacaoService;
     }
 
     // Sem "pagina": retorna a lista completa (comportamento atual, sem quebrar clientes existentes).
     // Com "pagina": retorna so aquela pagina e expoe o total em X-Total-Count.
+    // Coordenador so ve matriculas dos proprios cursos (CoordenadorId); Admin ve tudo.
     [HttpGet]
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<ActionResult<IEnumerable<MatriculaResponseDto>>> GetMatriculas([FromQuery] int? pagina, [FromQuery] int? tamanhoPagina)
     {
-        var (itens, totalItens) = await _matriculaService.ListarMatriculasAsync(pagina, tamanhoPagina);
+        var (itens, totalItens) = await _matriculaService.ListarMatriculasAsync(pagina, tamanhoPagina, ObterCoordenadorIdParaFiltro());
 
         if (pagina.HasValue)
         {
@@ -39,7 +42,7 @@ public class MatriculasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> ListarPendentes()
     {
-        var result = await _matriculaService.ListarMatriculasPendentesAsync();
+        var result = await _matriculaService.ListarMatriculasPendentesAsync(ObterCoordenadorIdParaFiltro());
         return Ok(result);
     }
 
@@ -84,6 +87,11 @@ public class MatriculasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> Aprovar(int id, [FromBody] int turmaId)
     {
+        if (!await UsuarioPodeGerenciarMatriculaAsync(id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         await _matriculaService.AprovarMatriculaAsync(id, turmaId);
         return Ok(new { mensagem = "Matrícula aprovada com sucesso." });
     }
@@ -92,7 +100,44 @@ public class MatriculasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> AprovarLote([FromBody] AprovarMatriculasLoteRequestDto request)
     {
-        var resultado = await _matriculaService.AprovarMatriculasAutomaticamenteAsync(request?.MatriculaIds ?? []);
+        var idsSolicitados = (request?.MatriculaIds ?? []).Where(id => id > 0).Distinct().ToList();
+
+        var idsAutorizados = new List<int>();
+        var errosDeAutorizacao = new List<AprovacaoMatriculaErroDto>();
+
+        foreach (var id in idsSolicitados)
+        {
+            var cursoId = await _matriculaService.ObterCursoIdDaMatriculaAsync(id);
+
+            // Matricula inexistente (cursoId null) segue pro service sem checagem
+            // de posse — o proprio service reporta "nao encontrada" no item.
+            if (cursoId is null || await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, cursoId.Value))
+            {
+                idsAutorizados.Add(id);
+            }
+            else
+            {
+                errosDeAutorizacao.Add(new AprovacaoMatriculaErroDto
+                {
+                    MatriculaId = id,
+                    CursoId = cursoId.Value,
+                    Motivo = "Voce nao tem permissao para gerenciar esta matricula."
+                });
+            }
+        }
+
+        // Se sobrou pelo menos 1 id autorizado, deixa o service processar normalmente
+        // (inclusive o caso de lista vazia -> ArgumentException -> 400, comportamento
+        // preexistente). Se havia ids mas nenhum autorizado, nao chama o service com
+        // lista vazia (viraria a mensagem generica de "selecione ao menos uma
+        // matricula", confusa quando na verdade nenhuma era permitida).
+        var resultado = idsAutorizados.Count > 0 || idsSolicitados.Count == 0
+            ? await _matriculaService.AprovarMatriculasAutomaticamenteAsync(idsAutorizados)
+            : new AprovacaoMatriculasLoteResultadoDto();
+
+        resultado.Erros.AddRange(errosDeAutorizacao);
+        resultado.TotalSolicitado = idsSolicitados.Count;
+
         return Ok(resultado);
     }
 
@@ -100,6 +145,11 @@ public class MatriculasController : ControllerBase
     [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> Rejeitar(int id)
     {
+        if (!await UsuarioPodeGerenciarMatriculaAsync(id))
+        {
+            return MensagemAcessoNegado();
+        }
+
         await _matriculaService.RejeitarMatriculaAsync(id);
         return Ok(new { mensagem = "Matrícula rejeitada com sucesso." });
     }
@@ -133,6 +183,20 @@ public class MatriculasController : ControllerBase
     }
 
     private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
+
+    // Admin nao tem CoordenadorId proprio pra filtrar por, entao ve tudo (null = sem filtro).
+    private int? ObterCoordenadorIdParaFiltro() => User.IsInRole("Admin") ? null : User.ObterUsuarioId();
+
+    // Matricula inexistente (cursoId null) e deixada passar: o proprio service.AprovarMatriculaAsync/
+    // RejeitarMatriculaAsync reporta o KeyNotFoundException -> 404, sem confundir com 403.
+    private async Task<bool> UsuarioPodeGerenciarMatriculaAsync(int matriculaId)
+    {
+        var cursoId = await _matriculaService.ObterCursoIdDaMatriculaAsync(matriculaId);
+        return cursoId is null || await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, cursoId.Value);
+    }
+
+    private ObjectResult MensagemAcessoNegado() =>
+        StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Voce nao tem permissao para gerenciar esta matricula." });
 
     private static MatriculaResponseDto MapResponse(Matricula matricula) =>
         new MatriculaResponseDto

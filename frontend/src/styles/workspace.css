@@ -3697,11 +3697,55 @@
   margin: 0.35rem 0 0;
 }
 
-/* Espacamento entre o botao Voltar e o cabecalho, exclusivo da tela
-   Avaliacoes do ALUNO (o professor reaproveita .atividades-curso__navegacao
-   sem essa margem, entao a regra fica escopada a .tela-avaliacoes-aluno). */
-.tela-avaliacoes-aluno .atividades-curso__navegacao {
+/* Curso + professor responsavel na mesma linha, exclusivo do header expandido
+   de Progresso do Coordenador (SecaoDesempenhoCoordenador) — quebra pra 2
+   linhas sozinha via flex-wrap quando faltar espaco (mobile), sem <br> fixo
+   nem media query dedicada. Escopado a .tela-progresso-coordenador pra nao
+   afetar Turmas/Modulos/Avaliacoes, que tambem reaproveitam
+   .atividades-curso__cabecalho. */
+.tela-progresso-coordenador .cabecalho-curso-professor {
+  display: flex;
+  align-items: center;
+  column-gap: 0.75rem;
+  row-gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tela-progresso-coordenador .cabecalho-curso-professor__professor {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+/* Espacamento entre o botao Voltar e o cabecalho em Avaliacoes — mesmo valor
+   pro Aluno e pro Professor (telas equivalentes, .tela-avaliacoes-aluno e
+   .tela-avaliacoes-professor compartilham a base .tela-avaliacoes). Achado de
+   auditoria: so o Aluno tinha essa margem, Professor ficava com o botao
+   colado no titulo abaixo. */
+.tela-avaliacoes-aluno .atividades-curso__navegacao,
+.tela-avaliacoes-professor .atividades-curso__navegacao {
   margin-bottom: var(--espaco-lg);
+}
+
+/* Progresso do Coordenador/Professor nao usa o wrapper .conteudos-aluno (gap
+   padrao de 1rem entre blocos), entao precisa repor manualmente o mesmo
+   respiro que as demais telas (Cursos, Modulos, Conteudos, Progresso do
+   Aluno) ganham de graca entre o botao Voltar e o cabecalho abaixo. Achado
+   de auditoria: sem isso, o botao ficava colado no titulo. */
+.tela-progresso-coordenador .atividades-curso__navegacao,
+.tela-progresso-professor .atividades-curso__navegacao {
+  margin-bottom: var(--espaco-md);
+}
+
+/* Mesmo raciocinio do cabecalho->KPI ja corrigido pro Coordenador (ver regra
+   .cabecalho-curso-professor acima) — a tela irmã do Professor tinha o mesmo
+   bug (cabecalho colado nos KPIs) e nao tinha recebido a correcao. */
+.tela-progresso-professor .atividades-curso__cabecalho {
+  margin-bottom: var(--espaco-md);
 }
 
 /* Cada avaliacao do ALUNO vira uma unidade visual com borda propria (cartao
@@ -3872,6 +3916,16 @@
 .tela-progresso-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]),
 .tela-progresso .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
   border-bottom-color: var(--cor-borda-forte);
+}
+
+/* Respiro entre o cabecalho (titulo do curso + professor) e o inicio dos
+   KPIs, exclusivo do Progresso do Coordenador — mesma tela sem o wrapper
+   .conteudos-aluno (gap padrao entre blocos, ver comentario abaixo), entao
+   sem essa margem o cabecalho ficava colado no primeiro KPI. Mesmo token
+   (--espaco-md = 1rem) que o gap de .conteudos-aluno da "de graca" pro
+   Progresso do Aluno entre esses dois mesmos blocos. */
+.tela-progresso-coordenador .atividades-curso__cabecalho {
+  margin-bottom: var(--espaco-md);
 }
 
 /* Respiro entre os KPIs (resumo geral do curso) e o que vem depois (bucket de

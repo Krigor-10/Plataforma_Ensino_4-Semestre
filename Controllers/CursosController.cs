@@ -80,6 +80,18 @@ public class CursosController : ControllerBase
             return MensagemAcessoNegado();
         }
 
+        // Valor do curso e responsabilidade exclusiva do Admin. Coordenador
+        // continua editando titulo/descricao normalmente; so bloqueia se o
+        // preco enviado realmente diverge do atual (nao ignora silenciosamente).
+        if (!User.IsInRole("Admin"))
+        {
+            var cursoAtual = await _cursoService.ObterCursoPorIdAsync(id);
+            if (dto.Preco != cursoAtual.Preco)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Apenas administradores podem alterar o valor do curso." });
+            }
+        }
+
         var curso = await _cursoService.AtualizarCursoAsync(id, dto);
         return Ok(curso);
     }
@@ -97,8 +109,9 @@ public class CursosController : ControllerBase
         });
     }
 
+    // Foto de capa e responsabilidade exclusiva do Admin (mesma regra do valor).
     [HttpPost("{id:int}/imagem")]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin")]
     [RequestSizeLimit(6_000_000)]
     public async Task<IActionResult> EnviarImagemCurso(int id, [FromForm] IFormFile imagem)
     {

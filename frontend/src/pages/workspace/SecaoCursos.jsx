@@ -434,7 +434,8 @@ export function SecaoCursos({
             </div>
             <div className="campo">
               <label className="campo__rotulo" htmlFor="curso-preco">Preco (R$) *</label>
-              <input className="campo__entrada" disabled={salvandoEdicao} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
+              <input className="campo__entrada" disabled={salvandoEdicao || !ehAdmin} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
+              {!ehAdmin ? <p className="campo__ajuda">Apenas administradores podem alterar o valor do curso.</p> : null}
             </div>
 
             {mensagemEdicao.message ? <InlineMessage tone={mensagemEdicao.tone}>{mensagemEdicao.message}</InlineMessage> : null}
@@ -527,14 +528,14 @@ export function SecaoCursos({
                 <TbUsers aria-hidden="true" size={16} /> Ver turma padrao
               </Botao>
               {ehAdmin || ehCoordenador ? (
-                <>
-                  <Botao onClick={() => abrirModalEdicao(cursoSelecionado)} tamanho="pequeno" variante="secundario">
-                    <TbEdit aria-hidden="true" size={16} /> Editar curso
-                  </Botao>
-                  <Botao onClick={() => abrirModalImagem(cursoSelecionado)} tamanho="pequeno" variante="secundario">
-                    <TbCamera aria-hidden="true" size={16} /> Alterar foto de capa
-                  </Botao>
-                </>
+                <Botao onClick={() => abrirModalEdicao(cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                  <TbEdit aria-hidden="true" size={16} /> Editar curso
+                </Botao>
+              ) : null}
+              {ehAdmin ? (
+                <Botao onClick={() => abrirModalImagem(cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                  <TbCamera aria-hidden="true" size={16} /> Alterar foto de capa
+                </Botao>
               ) : null}
             </div>
           </section>
@@ -572,7 +573,7 @@ export function SecaoCursos({
         </div>
       </header>
 
-      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-lg)" }}>
+      <section aria-label="Indicadores de cursos" style={{ marginBottom: "var(--espaco-xl)" }}>
         <div className="grade-estatisticas">
           <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos listados" valor={cursosFiltrados.length} />
           <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdLayers size={22} />} rotulo="Modulos no total" valor={totalModulos} />

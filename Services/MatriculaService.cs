@@ -102,9 +102,9 @@ public class MatriculaService : IMatriculaService
         return await _matriculaRepository.ObterMatriculasPorAlunoAsync(alunoId);
     }
 
-    public async Task<IEnumerable<MatriculaPendenteDto>> ListarMatriculasPendentesAsync()
+    public async Task<IEnumerable<MatriculaPendenteDto>> ListarMatriculasPendentesAsync(int? coordenadorId)
     {
-        var matriculas = await _matriculaRepository.ObterMatriculasPendentesAsync();
+        var matriculas = await _matriculaRepository.ObterMatriculasPendentesAsync(coordenadorId);
 
         return matriculas.Select(m => new MatriculaPendenteDto
         {
@@ -118,11 +118,14 @@ public class MatriculaService : IMatriculaService
         });
     }
 
-    public async Task<(IEnumerable<Matricula> Itens, int TotalItens)> ListarMatriculasAsync(int? pagina, int? tamanhoPagina)
+    public async Task<(IEnumerable<Matricula> Itens, int TotalItens)> ListarMatriculasAsync(int? pagina, int? tamanhoPagina, int? coordenadorId)
     {
-        var (itens, totalItens) = await _matriculaRepository.ListarPaginadoAsync(pagina, tamanhoPagina);
+        var (itens, totalItens) = await _matriculaRepository.ListarPaginadoAsync(pagina, tamanhoPagina, coordenadorId);
         return (itens, totalItens);
     }
+
+    public Task<int?> ObterCursoIdDaMatriculaAsync(int matriculaId) =>
+        _matriculaRepository.ObterCursoIdAsync(matriculaId);
 
     public async Task AprovarMatriculaAsync(int matriculaId, int turmaId)
     {

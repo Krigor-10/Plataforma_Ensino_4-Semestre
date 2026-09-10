@@ -95,7 +95,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
       </section>
 
       {dadosGrafico.length > 0 ? (
-        <section aria-labelledby="titulo-grafico-coord" className="painel-secao" style={{ marginTop: "var(--espaco-lg)" }}>
+        <section aria-labelledby="titulo-grafico-coord" className="painel-secao" style={{ marginTop: "var(--espaco-xl)" }}>
           <header className="painel-secao__cabecalho">
             <h2 className="painel-secao__titulo" id="titulo-grafico-coord">Alunos aprovados por curso</h2>
             <span className="admin-grafico-subtitulo">matriculas com status aprovada</span>

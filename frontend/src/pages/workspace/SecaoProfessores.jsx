@@ -522,7 +522,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
             </div>
           </dl>
 
-          <section aria-label="Resumo de atividade" style={{ marginBottom: "var(--espaco-lg)" }}>
+          <section aria-label="Resumo de atividade" style={{ marginBottom: "var(--espaco-xl)" }}>
             <div className="grade-estatisticas">
               <CartaoEstatistica icone={<MdGroups size={22} />} rotulo="Turmas" valor={turmasDetalhe.length} />
               <CartaoEstatistica corBorda="var(--cor-info)" icone={<MdSchool size={22} />} rotulo="Cursos" valor={cursosDetalhe.length} />

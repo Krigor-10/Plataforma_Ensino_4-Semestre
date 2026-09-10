@@ -100,7 +100,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
         </div>
       </section>
 
-      <div className="grade-2" style={{ marginTop: "var(--espaco-lg)" }}>
+      <div className="grade-2" style={{ marginTop: "var(--espaco-xl)" }}>
         <section aria-labelledby="titulo-matriculas-admin" className="painel-secao">
           <header className="painel-secao__cabecalho">
             <h2 className="painel-secao__titulo" id="titulo-matriculas-admin">

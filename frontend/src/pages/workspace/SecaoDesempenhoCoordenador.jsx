@@ -124,10 +124,16 @@ export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmF
           </nav>
 
           <header className="atividades-curso__cabecalho">
-            <div>
+            <div className="cabecalho-curso-professor">
               <h2 className="atividades-curso__titulo">{cursoSelecionado.cursoTitulo}</h2>
               {cursoSelecionado.professorNome ? (
-                <p className="atividades-curso__subtitulo">Professor responsavel: {cursoSelecionado.professorNome}</p>
+                <>
+                  <span aria-hidden="true" className="divisor-vertical" />
+                  <p className="cabecalho-curso-professor__professor">
+                    <TbUserCheck aria-hidden="true" size={15} />
+                    {cursoSelecionado.professorNome}
+                  </p>
+                </>
               ) : null}
             </div>
           </header>
