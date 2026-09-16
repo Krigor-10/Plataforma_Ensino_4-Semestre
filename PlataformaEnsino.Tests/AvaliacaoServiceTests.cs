@@ -656,6 +656,33 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
+    public async Task EnviarRespostasAlunoAsync_DuasAvaliacoesNoCurso_SoLancaNotaFinalQuandoAmbasForemCorrigidas()
+    {
+        var (service, context, professor, aluno, turma, modulo, avaliacao1) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
+        var avaliacao2 = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, tipoAvaliacao: TipoAvaliacao.Prova));
+        var matricula = context.Matriculas.Single();
+
+        var questao1 = await service.AdicionarQuestaoAsync(avaliacao1.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
+        var questao2 = await service.AdicionarQuestaoAsync(avaliacao2.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 3));
+
+        await service.EnviarRespostasAlunoAsync(avaliacao1.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao1.Id, AlternativaId = questao1.Alternativas.Single(a => a.Letra == "A").Id } }
+        });
+
+        var matriculaAposPrimeiraCorrecao = context.Matriculas.Single(m => m.Id == matricula.Id);
+        Assert.Equal(0m, matriculaAposPrimeiraCorrecao.NotaFinal);
+
+        await service.EnviarRespostasAlunoAsync(avaliacao2.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao2.Id, AlternativaId = questao2.Alternativas.Single(a => a.Letra == "A").Id } }
+        });
+
+        var matriculaAposSegundaCorrecao = context.Matriculas.Single(m => m.Id == matricula.Id);
+        Assert.Equal(5m, matriculaAposSegundaCorrecao.NotaFinal);
+    }
+
+    [Fact]
     public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_NaoLancaNotaAutomatica()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);

@@ -144,6 +144,53 @@ public class CertificadoServiceTests
     }
 
     [Fact]
+    public async Task EmitirCertificadoAsync_AvaliacaoPublicadaSemCorrecao_LancaArgumentException()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
+    }
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_AvaliacaoPublicadaJaCorrigida_EmiteCertificado()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.Publicar();
+        contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(8, 1, OrigemCorrecaoNota.Automatica);
+        contextoDeArranjo.LancamentosNotasAlunos.Add(lancamento);
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
+
+        Assert.NotNull(resultado.CertificadoEmitidoEm);
+    }
+
+    [Fact]
     public async Task EmitirCertificadoAsync_MatriculaDeOutroAluno_LancaKeyNotFoundException()
     {
         var context = TestContextFactory.Criar();

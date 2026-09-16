@@ -288,7 +288,12 @@ public class ProgressoAlunoService : IProgressoAlunoService
         progressoCurso.MediaCurso = media;
         progressoCurso.AtualizadoEm = now;
 
-        if (matricula.Status == StatusMatricula.Aprovada)
+        // So vira "nota final" quando toda avaliacao (Prova/Exercicio) publicada do
+        // curso ja tem lancamento - antes disso, media e so um resultado parcial das
+        // avaliacoes ja corrigidas ate agora e nao deveria ser exposta como nota final.
+        var cursoTotalmenteAvaliado = avaliacoesCurso.Count > 0 && lancamentos.Count == avaliacoesCurso.Count;
+
+        if (matricula.Status == StatusMatricula.Aprovada && cursoTotalmenteAvaliado)
         {
             matricula.LancarNotaFinal(media);
         }

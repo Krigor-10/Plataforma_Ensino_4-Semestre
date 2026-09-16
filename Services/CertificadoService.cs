@@ -42,6 +42,25 @@ public class CertificadoService : ICertificadoService
             throw new ArgumentException("O curso ainda nao foi concluido.");
         }
 
+        // PercentualConclusao so conta conteudo+quiz (ver ProgressoAlunoService.RecalcularCursoAsync);
+        // Prova/Exercicio nao entra no progresso, entao precisa ser checado a parte aqui
+        // pra impedir certificado com avaliacao somativa publicada e ainda sem correcao.
+        var existeAvaliacaoPendente = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
+                avaliacao.TurmaId == matricula.TurmaId)
+            .Select(avaliacao => avaliacao.Id)
+            .Where(avaliacaoId => !_context.LancamentosNotasAlunos
+                .Any(lancamento => lancamento.MatriculaId == matricula.Id && lancamento.AvaliacaoId == avaliacaoId))
+            .AnyAsync();
+
+        if (existeAvaliacaoPendente)
+        {
+            throw new ArgumentException("Ha avaliacoes (prova/exercicio) pendentes de correcao para concluir o curso.");
+        }
+
         if (matricula.CertificadoEmitidoEm is null)
         {
             matricula.EmitirCertificado();
