@@ -21,7 +21,7 @@ function estadoFormularioInicial(usuario) {
 
 const SENHA_INICIAL = { senhaAtual: "", novaSenha: "", confirmarNovaSenha: "" };
 
-export default function PerfilScreen({ onSessionExpired, onUsuarioAtualizado, onVoltar, usuario }) {
+export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtualizado, onVoltar, usuario }) {
   const [dados, setDados] = useState(() => estadoFormularioInicial(usuario));
   const [mensagemPerfil, setMensagemPerfil] = useState("");
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
@@ -177,6 +177,11 @@ export default function PerfilScreen({ onSessionExpired, onUsuarioAtualizado, on
           {salvandoSenha ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Trocar senha</Text>}
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity accessibilityLabel="Sair da conta" onPress={onLogout} style={estilos.botaoSair}>
+        <Ionicons color={cores.erro} name="log-out-outline" size={18} />
+        <Text style={estilos.botaoSairTexto}>Sair</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -210,5 +215,18 @@ const estilos = StyleSheet.create({
   },
   mensagem: { color: cores.destaque, fontSize: 13 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" }
+  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
+  botaoSair: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 28,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: cores.erro,
+    minHeight: 44
+  },
+  botaoSairTexto: { color: cores.erro, fontWeight: "700" }
 });

@@ -6,13 +6,14 @@ import { apiRequest } from "../lib/api.js";
 import { cores, espacamentos } from "../lib/theme.js";
 
 /* Header global do Aluno — antes vivia so dentro de HomeScreen.jsx, entao
-   notificacoes/perfil/logout sumiam ao navegar pras outras abas (AlunoWorkspace.jsx
+   notificacoes/perfil sumiam ao navegar pras outras abas (AlunoWorkspace.jsx
    nao usa Stack/Tab/Drawer Navigator, e um switcher proprio por state). Agora e
    montado uma unica vez acima da area trocada por aba, preservando exatamente o
    visual/comportamento que a Home ja tinha. notificacoesVersao muda quando
    NotificacoesScreen marca algo como lido, pra badge acompanhar sem precisar
-   remontar o header inteiro. */
-export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, onAbrirPerfil, onLogout, usuario }) {
+   remontar o header inteiro. "Sair" nao mora aqui de proposito — e uma acao
+   destrutiva, fica no Perfil pra nao virar tap acidental ao lado de Notificacoes. */
+export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -51,9 +52,6 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
         </TouchableOpacity>
         <TouchableOpacity accessibilityLabel="Perfil" onPress={onAbrirPerfil} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name="person-outline" size={22} />
-        </TouchableOpacity>
-        <TouchableOpacity accessibilityLabel="Sair" onPress={onLogout} style={estilos.botao}>
-          <Ionicons color={cores.erro} name="log-out-outline" size={22} />
         </TouchableOpacity>
       </View>
     </View>
