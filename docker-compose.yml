@@ -1,0 +1,40 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_SA_PASSWORD:?defina DB_SA_PASSWORD no .env}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - sqlserver
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PlataformaEnsinoDB;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;"
+    ports:
+      - "5000:8080"
+    volumes:
+      - uploads-data:/app/Storage/Uploads
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    environment:
+      DOTNET_API_URL: "http://api:8080"
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:8081"
+    ports:
+      - "4000:4000"
+
+volumes:
+  sqlserver-data:
+  uploads-data:

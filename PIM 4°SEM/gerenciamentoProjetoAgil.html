@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Projeto Ágil — PlataformaEnsino</title>
+    <style>
+
+        /* ═══════════════════════════════════════════
+           CONFIGURAÇÃO DE PÁGINA — ABNT NBR 14724
+           A4: 210×297 mm
+           Margens: Superior 3cm | Esquerda 3cm
+                    Inferior 2cm | Direita  2cm
+           Sem cabeçalho nem rodapé
+        ═══════════════════════════════════════════ */
+        @page {
+            size: 210mm 297mm;
+            margin: 3cm 2cm 2cm 3cm;
+        }
+
+        /* ═══════════════════════════════════════════
+           RESET E BASE
+        ═══════════════════════════════════════════ */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           TIPOGRAFIA ABNT
+           Fonte: Arial 12pt
+           Espaçamento: 1,5
+           Alinhamento: Justificado
+        ═══════════════════════════════════════════ */
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000;
+            background: #fff;
+            text-align: justify;
+        }
+
+        /* Simulação de página A4 na tela */
+        @media screen {
+            html { background: #d0d0d0; }
+            body {
+                max-width: 210mm;
+                min-height: 297mm;
+                margin: 20px auto;
+                padding: 3cm 2cm 2cm 3cm;
+                background: #fff;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+            }
+        }
+
+        /* ═══════════════════════════════════════════
+           TÍTULOS — ABNT
+        ═══════════════════════════════════════════ */
+        h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 18pt;
+            margin-bottom: 6pt;
+            line-height: 1.5;
+        }
+
+        h2 {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            font-weight: bold;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 14pt;
+            margin-bottom: 4pt;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════
+           PARÁGRAFOS
+        ═══════════════════════════════════════════ */
+        p {
+            font-size: 12pt;
+            line-height: 1.5;
+            text-indent: 1.5cm;
+            text-align: justify;
+            margin-bottom: 0;
+        }
+
+        p.no-indent {
+            text-indent: 0;
+        }
+
+        ul, ol {
+            margin: 6pt 0 10pt 2cm;
+            font-size: 12pt;
+            line-height: 1.5;
+        }
+
+        li {
+            margin-bottom: 4pt;
+            text-align: justify;
+        }
+
+        /* ═══════════════════════════════════════════
+           TABELAS — ABNT
+        ═══════════════════════════════════════════ */
+        .tbl-caption {
+            font-size: 12pt;
+            font-weight: normal;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 12pt;
+            margin-bottom: 3pt;
+            line-height: 1.5;
+        }
+
+        .tbl-wrap {
+            margin-bottom: 6pt;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+
+        thead th {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            background: #e8e8e8;
+            font-weight: bold;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        tbody td {
+            border: 1px solid #000;
+            padding: 4pt 8pt;
+            vertical-align: top;
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) td {
+            background: #f5f5f5;
+        }
+
+        .td-code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            white-space: nowrap;
+        }
+
+        .td-code-wrap {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 9pt;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .tbl-source {
+            font-size: 10pt;
+            text-align: left;
+            text-indent: 0;
+            margin-top: 2pt;
+            margin-bottom: 12pt;
+            color: #333;
+        }
+
+        .tbl-group-header td {
+            background: #dcdcdc;
+            font-weight: bold;
+            border: 1px solid #000;
+        }
+
+        tbody tr.tbl-group-header:nth-child(even) td {
+            background: #dcdcdc;
+        }
+
+        .tbl-subtotal td {
+            font-weight: bold;
+            border-top: 1.5px solid #000;
+        }
+
+        tbody tr.tbl-subtotal:nth-child(even) td {
+            background: #f5f5f5;
+        }
+
+        /* ═══════════════════════════════════════════
+           QUADRO KANBAN
+        ═══════════════════════════════════════════ */
+        .kanban-board {
+            display: flex;
+            gap: 0.6cm;
+            margin: 10pt 0 4pt 0;
+            align-items: flex-start;
+        }
+
+        .kanban-coluna {
+            flex: 1;
+            border: 1px solid #000;
+        }
+
+        .kanban-coluna-titulo {
+            background: #e8e8e8;
+            font-weight: bold;
+            font-size: 10pt;
+            text-align: center;
+            padding: 5pt 4pt;
+            border-bottom: 1px solid #000;
+            text-transform: uppercase;
+        }
+
+        .kanban-cartao {
+            border: 1px solid #999;
+            border-radius: 3pt;
+            margin: 6pt;
+            padding: 5pt 7pt;
+            font-size: 9.5pt;
+            line-height: 1.35;
+            background: #fafafa;
+        }
+
+        .kanban-cartao .kanban-cartao-titulo {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 2pt;
+        }
+
+        .kanban-cartao .kanban-cartao-meta {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 8.5pt;
+            color: #444;
+        }
+
+        /* ═══════════════════════════════════════════
+           CÓDIGO INLINE
+        ═══════════════════════════════════════════ */
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+        }
+
+        /* ═══════════════════════════════════════════
+           NOTA / AVISO
+        ═══════════════════════════════════════════ */
+        .nota {
+            border-left: 3pt solid #555;
+            padding: 6pt 10pt;
+            margin: 10pt 0 10pt 0;
+            font-size: 11pt;
+            line-height: 1.5;
+            text-align: justify;
+            text-indent: 0;
+            background: #f9f9f9;
+        }
+
+        /* ═══════════════════════════════════════════
+           FIGURAS (DIAGRAMAS)
+        ═══════════════════════════════════════════ */
+        figure {
+            margin: 12pt 0 4pt 0;
+            text-align: center;
+        }
+
+        figure svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        figcaption {
+            font-size: 10pt;
+            text-align: center;
+            text-indent: 0;
+            margin-top: 6pt;
+            margin-bottom: 12pt;
+            color: #333;
+        }
+
+        /* ═══════════════════════════════════════════
+           CAPA E FOLHA DE ROSTO — ABNT NBR 14724
+        ═══════════════════════════════════════════ */
+        .capa-page, .rosto-page {
+            min-height: 24.7cm;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: space-between;
+            page-break-after: always;
+            break-after: page;
+        }
+
+        .capa-page p, .rosto-page p {
+            text-indent: 0;
+            margin: 0;
+        }
+
+        .capa-logo {
+            text-align: center;
+            margin-bottom: 1cm;
+        }
+
+        .capa-logo img {
+            width: 4.5cm;
+            height: auto;
+        }
+
+        .capa-topo, .capa-rodape {
+            text-align: center;
+            text-transform: uppercase;
+            line-height: 1.7;
+        }
+
+        .capa-meio {
+            text-align: center;
+            max-width: 13cm;
+            margin: 0 auto;
+        }
+
+        .capa-titulo-projeto, .rosto-titulo {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            line-height: 1.4;
+            margin-bottom: 8pt;
+        }
+
+        .capa-subtitulo, .rosto-subtitulo {
+            font-size: 12pt;
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 18pt;
+        }
+
+        .capa-equipe {
+            margin: 0 auto;
+            border-collapse: collapse;
+        }
+
+        .capa-equipe th {
+            font-size: 10pt;
+            font-weight: bold;
+            text-align: left;
+            padding: 2pt 10pt;
+            border-bottom: 1px solid #000;
+        }
+
+        .capa-equipe th:last-child, .capa-equipe td:last-child {
+            text-align: right;
+        }
+
+        .capa-equipe td {
+            font-size: 12pt;
+            text-align: left;
+            padding: 2pt 10pt;
+        }
+
+        .capa-equipe td:last-child {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10pt;
+        }
+
+        .rosto-page {
+            align-items: stretch;
+        }
+
+        .rosto-page .capa-equipe {
+            margin: 0 auto 24pt auto;
+        }
+
+        .rosto-nota {
+            width: 7.5cm;
+            margin-left: auto;
+            margin-right: 0;
+            font-size: 11pt;
+            line-height: 1.5;
+            text-align: justify;
+        }
+
+        .rosto-nota p {
+            text-indent: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           ELEMENTOS PRÉ-TEXTUAIS — RESUMO / ABSTRACT / SUMÁRIO
+        ═══════════════════════════════════════════ */
+        .pretextual-page {
+            page-break-after: always;
+            break-after: page;
+        }
+
+        .pretextual-titulo {
+            font-size: 12pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            text-indent: 0;
+            margin-bottom: 12pt;
+        }
+
+        .pretextual-page p.no-indent {
+            text-indent: 0;
+        }
+
+        .palavras-chave {
+            text-indent: 0;
+            margin-top: 12pt;
+        }
+
+        .sumario-item {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 6pt;
+            font-size: 12pt;
+            line-height: 1.5;
+        }
+
+        .sumario-titulo {
+            white-space: nowrap;
+        }
+
+        .sumario-pontilhado {
+            flex: 1;
+            border-bottom: 1px dotted #000;
+            margin: 0 4pt 3pt 4pt;
+            height: 0;
+        }
+
+        .sumario-pagina {
+            white-space: nowrap;
+        }
+
+        /* ═══════════════════════════════════════════
+           CONTROLE DE QUEBRA DE PÁGINA
+        ═══════════════════════════════════════════ */
+        @media print {
+            h1 { page-break-after: avoid; break-after: avoid; }
+            h2 { page-break-after: avoid; break-after: avoid; }
+            .tbl-caption { page-break-after: avoid; break-after: avoid; }
+            .tbl-wrap { page-break-inside: avoid; break-inside: avoid; }
+            tbody tr { page-break-inside: avoid; break-inside: avoid; }
+            thead { display: table-header-group; }
+            figure { page-break-inside: avoid; break-inside: avoid; }
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     CAPA
+══════════════════════════════════════ -->
+<section class="capa-page">
+    <div class="capa-topo">
+        <div class="capa-logo">
+            <img src="data:image/png;base64,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" alt="Logotipo da Universidade Paulista - UNIP">
+        </div>
+        <p>Universidade Paulista</p>
+        <p>ICET — Instituto de Ciências Exatas e Tecnologia</p>
+        <p>Curso Superior de Tecnologia em Análise e Desenvolvimento de Sistemas</p>
+        <p>Projeto Integrado Multidisciplinar — PIM IV</p>
+    </div>
+
+    <div class="capa-meio">
+        <p class="capa-titulo-projeto">Desenvolvimento de uma Plataforma Web de Avaliação e Apoio à Aprendizagem</p>
+        <p class="capa-subtitulo">Gerenciamento de Projeto Ágil</p>
+
+        <table class="capa-equipe">
+            <thead>
+                <tr><th>Nome</th><th>R.A.</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Nicolas Pimentel dos Santos</td><td>H6136J1</td></tr>
+                <tr><td>Maria Isabel Branco Sterce da Silva</td><td>R868AE5</td></tr>
+                <tr><td>Heitor Henrique Pereira Nadir</td><td>R853AG4</td></tr>
+                <tr><td>Krigor de Sousa Nasare</td><td>R2694J7</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="capa-rodape">
+        <p>São José dos Campos – SP</p>
+        <p>Setembro / 2026</p>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     FOLHA DE ROSTO
+══════════════════════════════════════ -->
+<section class="rosto-page">
+    <table class="capa-equipe">
+        <thead>
+            <tr><th>Aluno</th><th>RA</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Nicolas Pimentel dos Santos</td><td>H6136J1</td></tr>
+            <tr><td>Maria Isabel Branco Sterce da Silva</td><td>R868AE5</td></tr>
+            <tr><td>Heitor Henrique Pereira Nadir</td><td>R853AG4</td></tr>
+            <tr><td>Krigor de Sousa Nasare</td><td>R2694J7</td></tr>
+        </tbody>
+    </table>
+
+    <div>
+        <p class="rosto-titulo">Desenvolvimento de uma Plataforma Web de Avaliação e Apoio à Aprendizagem</p>
+        <p class="rosto-subtitulo">Gerenciamento de Projeto Ágil</p>
+    </div>
+
+    <div class="rosto-nota">
+        <p>Relatório técnico de Gerenciamento de Projeto Ágil, apresentado como parte dos requisitos do
+        Projeto Integrado Multidisciplinar (PIM) do Curso Superior de Tecnologia em Análise e
+        Desenvolvimento de Sistemas da UNIP (Universidade Paulista), sob orientação do corpo docente do
+        curso.</p>
+    </div>
+
+    <div class="capa-rodape">
+        <p>São José dos Campos – SP</p>
+        <p>Setembro / 2026</p>
+    </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     RESUMO
+══════════════════════════════════════ -->
+<section class="pretextual-page">
+    <p class="pretextual-titulo">Resumo</p>
+
+    <p>Este documento apresenta o planejamento de gerenciamento ágil de projeto da PlataformaEnsino
+    (marca comercial CodeRyse Academy), atendendo à Etapa 9 do Projeto Integrado Multidisciplinar (PIM
+    IV) do Curso Superior de Tecnologia em Análise e Desenvolvimento de Sistemas da UNIP. A equipe
+    adotou o Scrum como único framework ágil do projeto, apoiado pelo GitHub como ferramenta de
+    controle de versão do código-fonte. São apresentados os cinco artefatos exigidos pelo manual do
+    PIM: o Product Backlog, organizado em 9 épicos e 31 User Stories rastreadas a 29 requisitos
+    funcionais; o Sprint Backlog, detalhando a distribuição de 197 story points entre cinco sprints; o
+    cronograma das sprints, com ciclos semanais iniciados aos sábados; o quadro Kanban do trabalho
+    macro da equipe; e a definição das entregas de cada sprint, com seu critério de pronto. O documento
+    também descreve os papéis da equipe Scrum, os requisitos não funcionais do projeto, as práticas de
+    qualidade e segurança integradas ao ciclo de desenvolvimento (DevSecOps) e os indicadores ágeis de
+    acompanhamento. Os resultados indicam que a equipe já concluiu etapas centrais do desenvolvimento
+    técnico — modelagem do banco de dados, implementação das classes de entidade e protótipo web —,
+    restando como próximos passos a hospedagem do banco de dados em nuvem e a validação de usabilidade
+    da plataforma com usuários reais.</p>
+
+    <p class="palavras-chave"><strong>Palavras-chave:</strong> Gerenciamento ágil de projetos. Scrum.
+    Sprint Backlog. Quadro Kanban. Plataforma educacional.</p>
+</section>
+
+<!-- ══════════════════════════════════════
+     ABSTRACT
+══════════════════════════════════════ -->
+<section class="pretextual-page">
+    <p class="pretextual-titulo">Abstract</p>
+
+    <p>This document presents the agile project management plan for PlataformaEnsino (commercial brand
+    CodeRyse Academy), addressing Stage 9 of the Multidisciplinary Integrated Project (PIM IV) of the
+    Systems Analysis and Development Technology program at UNIP. The team adopted Scrum as the sole
+    agile framework used in the project, supported by GitHub as the source code version control tool.
+    Five artifacts required by the PIM guidelines are presented: the Product Backlog, organized into 9
+    epics and 31 User Stories traced to 29 functional requirements; the Sprint Backlog, detailing the
+    distribution of 197 story points across five sprints; the sprint schedule, with weekly cycles
+    starting on Saturdays; the team's macro-level Kanban board; and the definition of deliverables for
+    each sprint, along with its definition of done. The document also describes the Scrum team roles,
+    the project's non-functional requirements, the quality and security practices integrated into the
+    development cycle (DevSecOps), and the agile tracking indicators. Results indicate that the team
+    has already completed core technical development stages — database modeling, entity class
+    implementation, and the web prototype —, with cloud database hosting and usability testing with
+    real users remaining as next steps.</p>
+
+    <p class="palavras-chave"><strong>Keywords:</strong> Agile project management. Scrum. Sprint
+    Backlog. Kanban board. Educational platform.</p>
+</section>
+
+<!-- ══════════════════════════════════════
+     SUMÁRIO
+══════════════════════════════════════ -->
+<section class="pretextual-page">
+    <p class="pretextual-titulo">Sumário</p>
+
+    <div class="sumario-item"><span class="sumario-titulo">1 Introdução e Metodologia Ágil Adotada</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">5</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">2 Papéis da Equipe Scrum</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">6</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">3 Product Backlog e Épicos</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">7</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">4 Requisitos Não Funcionais</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">9</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">5 Sprint Backlog</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">9</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">6 Cronograma das Sprints</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">12</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">7 Quadro Kanban</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">14</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">8 Definição das Entregas</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">15</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">9 Qualidade e DevSecOps Integrados ao Ciclo Ágil</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">16</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">10 Métricas e Indicadores Ágeis</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">17</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">Conclusão</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">17</span></div>
+    <div class="sumario-item"><span class="sumario-titulo">Referências</span><span class="sumario-pontilhado"></span><span class="sumario-pagina">18</span></div>
+</section>
+
+<!-- ══════════════════════════════════════
+     1 INTRODUÇÃO E METODOLOGIA
+══════════════════════════════════════ -->
+<h1>1 Introdução e Metodologia Ágil Adotada</h1>
+
+<p>Este documento descreve como o desenvolvimento da PlataformaEnsino (marca comercial <strong>CodeRyse
+Academy</strong>) foi planejado e conduzido sob a ótica de gerenciamento ágil de projetos, atendendo à Etapa
+9 do PIM IV ("Gerenciamento Ágil do Projeto"). Ele apresenta os cinco itens exigidos pelo manual do PIM —
+Product Backlog (Seção 3), Sprint Backlog (Seção 5), cronograma das sprints (Seção 6), quadro Kanban (Seção
+7) e definição das entregas (Seção 8) —, além dos requisitos não funcionais e das práticas de qualidade
+integradas ao ciclo de desenvolvimento.</p>
+
+<p>A equipe adotou o <strong>Scrum</strong> como único framework ágil do projeto, apoiado por um quadro de
+tarefas para o acompanhamento diário do trabalho em andamento e pelo <strong>GitHub</strong> como ferramenta
+de controle de versão do código, garantindo histórico e rastreabilidade das entregas de cada sprint. A
+escolha do Scrum se justifica pelo tamanho da equipe (quatro integrantes), pelo escopo do projeto — que
+cresceu de forma incremental ao longo dos semestres, começando por autenticação e cadastro básico e evoluindo
+até avaliações, progresso, certificados e multiplataforma — e pela necessidade de entregas fracionadas e
+priorizadas por valor de negócio, em vez de um plano fechado no início do projeto, incompatível com um
+contexto acadêmico em que requisitos e prioridades amadurecem a cada entrega.</p>
+
+<p>O funcionamento do Scrum segue um ciclo iterativo: o Product Backlog concentra todas as funcionalidades
+desejadas, priorizadas por valor; a cada Sprint Planning, um subconjunto de itens é selecionado para compor
+o Sprint Backlog; a Sprint é executada com acompanhamento contínuo do quadro de tarefas; ao final, uma
+Sprint Review valida o incremento entregue e uma Retrospectiva identifica melhorias de processo para o
+próximo ciclo.</p>
+
+<figure>
+<svg viewBox="0 0 620 260" role="img" aria-label="Diagrama do ciclo Scrum: Product Backlog alimenta a Sprint Planning, que gera a Sprint (com Daily Scrum) executada pela equipe, seguida por Sprint Review e Sprint Retrospectiva, cujo resultado retorna ao Product Backlog, reiniciando o ciclo.">
+  <defs>
+    <marker id="setaScrum" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-family="Arial, Helvetica, sans-serif" fill="currentColor">
+    <g stroke="currentColor" stroke-width="1.5" fill="none">
+      <rect x="15" y="90" width="105" height="60"/>
+      <rect x="155" y="90" width="105" height="60"/>
+      <rect x="295" y="90" width="105" height="60"/>
+      <rect x="435" y="90" width="80" height="60"/>
+      <rect x="515" y="0" width="90" height="60" transform="translate(0,0)"/>
+    </g>
+    <text x="67" y="115" font-size="11" text-anchor="middle">Product</text>
+    <text x="67" y="129" font-size="11" text-anchor="middle">Backlog</text>
+    <text x="207" y="115" font-size="11" text-anchor="middle">Sprint</text>
+    <text x="207" y="129" font-size="11" text-anchor="middle">Planning</text>
+    <text x="347" y="108" font-size="11" text-anchor="middle">Sprint</text>
+    <text x="347" y="122" font-size="10" text-anchor="middle">(Daily Scrum</text>
+    <text x="347" y="134" font-size="10" text-anchor="middle">diário)</text>
+    <text x="475" y="115" font-size="10" text-anchor="middle">Sprint</text>
+    <text x="475" y="129" font-size="10" text-anchor="middle">Review</text>
+
+    <line x1="120" y1="120" x2="155" y2="120" marker-end="url(#setaScrum)"/>
+    <line x1="260" y1="120" x2="295" y2="120" marker-end="url(#setaScrum)"/>
+    <line x1="400" y1="120" x2="435" y2="120" marker-end="url(#setaScrum)"/>
+
+    <g stroke="currentColor" stroke-width="1.5" fill="none">
+      <rect x="435" y="185" width="170" height="55"/>
+    </g>
+    <text x="520" y="208" font-size="11" text-anchor="middle">Sprint</text>
+    <text x="520" y="222" font-size="11" text-anchor="middle">Retrospectiva</text>
+
+    <line x1="475" y1="150" x2="520" y2="185" marker-end="url(#setaScrum)"/>
+
+    <path d="M435,212 C 230,250 30,212 67,150" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#setaScrum)"/>
+    <text x="230" y="245" font-size="9" text-anchor="middle">próximo ciclo — itens refinados retornam ao backlog</text>
+  </g>
+</svg>
+<figcaption>Figura 1 — Ciclo Scrum aplicado ao projeto: do Product Backlog à Retrospectiva, reiniciando a cada nova Sprint.</figcaption>
+</figure>
+
+<!-- ══════════════════════════════════════
+     2 PAPÉIS DA EQUIPE SCRUM
+══════════════════════════════════════ -->
+<h1>2 Papéis da Equipe Scrum</h1>
+
+<p>O Scrum define três papéis principais: o <strong>Product Owner</strong>, responsável por priorizar o
+backlog conforme valor de negócio; o <strong>Scrum Master</strong>, responsável por remover impedimentos e
+garantir que o processo ágil seja seguido pela equipe; e o <strong>Development Team</strong>, responsável por
+transformar os itens do backlog em incremento funcional a cada sprint. Na equipe do projeto, esses papéis
+foram distribuídos da seguinte forma:</p>
+
+<p class="tbl-caption">Tabela 1 – Papéis da equipe Scrum</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Nome</th>
+                <th>RA</th>
+                <th>Sigla</th>
+                <th>Papel no projeto</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Krigor de Sousa Nasare</td><td class="td-code">R2694J7</td><td class="td-code">KSN</td><td>Desenvolvedor</td></tr>
+            <tr><td>Heitor Henrique Pereira Nadir</td><td class="td-code">R853AG4</td><td class="td-code">HHPN</td><td>Scrum Master</td></tr>
+            <tr><td>Maria Isabel Branco Iterce da Silva</td><td class="td-code">R868AE5</td><td class="td-code">MIBSS</td><td>Desenvolvedor</td></tr>
+            <tr><td>Nicolas Pimentel dos Santos</td><td class="td-code">H6136J1</td><td class="td-code">NPS</td><td>Product Owner (P.O.)</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores, com base na composição da equipe do PIM.</p>
+
+<p>Ainda que os papéis de Scrum Master e Product Owner estejam formalmente atribuídos, a equipe trabalha de
+forma colaborativa: elicitação de requisitos, modelagem de dados e documentação do projeto são
+responsabilidade compartilhada entre os quatro integrantes, conforme registrado no quadro de tarefas
+apresentado na Seção 6.</p>
+
+<!-- ══════════════════════════════════════
+     3 PRODUCT BACKLOG E ÉPICOS
+══════════════════════════════════════ -->
+<h1>3 Product Backlog e Épicos</h1>
+
+<p>O Product Backlog do projeto reúne <strong>31 User Stories</strong>, organizadas em <strong>9 épicos</strong>
+e rastreadas até <strong>29 requisitos funcionais</strong> (RF01–RF29), cobrindo os quatro perfis de usuário
+da plataforma — Aluno, Professor, Coordenador e Administrador. Cada User Story segue o formato "Como
+&lt;perfil&gt;, quero &lt;ação&gt; para &lt;objetivo&gt;" e traz critérios de aceite explícitos, o que permite
+validar objetivamente se o incremento entregue satisfaz a necessidade descrita.</p>
+
+<p>A priorização segue o método <strong>MoSCoW</strong> simplificado em três níveis — prioridade alta
+(essencial ao MVP), média (importante, mas não bloqueante) e baixa (desejável, pode ser adiada) — e cada item
+recebeu uma estimativa em <strong>story points</strong> (escala Fibonacci: 2, 3, 5, 8, 13), usada para
+dimensionar a capacidade de cada sprint.</p>
+
+<p class="tbl-caption">Tabela 2 – Épicos do Product Backlog</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Épico</th>
+                <th>Perfis envolvidos</th>
+                <th>Objetivo</th>
+                <th>User Stories</th>
+                <th>Story Pts</th>
+                <th>Prioridade</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Autenticação</td><td>Todos</td><td>Permitir acesso seguro à plataforma com login/logout e senhas criptografadas</td><td class="td-code-wrap">US-01,02,10,17,27</td><td>16</td><td>Alta</td></tr>
+            <tr><td>Dashboard</td><td>Aluno</td><td>Exibir resumo de desempenho, avaliações pendentes e concluídas</td><td class="td-code-wrap">US-03</td><td>8</td><td>Alta</td></tr>
+            <tr><td>Materiais</td><td>Aluno, Professor, Coordenador</td><td>Publicar, acessar e gerenciar materiais de estudo</td><td class="td-code-wrap">US-04,14,22</td><td>18</td><td>Alta</td></tr>
+            <tr><td>Avaliações</td><td>Aluno, Professor</td><td>Criar, publicar, responder e corrigir avaliações online</td><td class="td-code-wrap">US-05,06,07,12,13</td><td>42</td><td>Alta</td></tr>
+            <tr><td>Turmas e Cursos</td><td>Coordenador, Admin</td><td>Gerenciar turmas, cursos, matrículas e vínculos</td><td class="td-code-wrap">US-11,18,19,20,21,23,24,28,29,30</td><td>58</td><td>Alta</td></tr>
+            <tr><td>Relatórios</td><td>Professor, Coordenador</td><td>Gerar e visualizar relatórios de desempenho por aluno e turma</td><td class="td-code-wrap">US-15,16,25,26</td><td>29</td><td>Média</td></tr>
+            <tr><td>Desempenho do Aluno</td><td>Aluno</td><td>Visualizar histórico e evolução de desempenho</td><td class="td-code-wrap">US-08</td><td>8</td><td>Média</td></tr>
+            <tr><td>Feedback</td><td>Aluno</td><td>Registrar feedback sobre conteúdos e avaliações</td><td class="td-code-wrap">US-09</td><td>5</td><td>Baixa</td></tr>
+            <tr><td>Painel Administrativo</td><td>Administrador</td><td>Visualizar dados de uso e métricas gerais da plataforma</td><td class="td-code-wrap">US-31</td><td>13</td><td>Média</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir do Product Backlog do projeto.</p>
+
+<p>O detalhamento completo de cada User Story — critério de aceite, requisito funcional relacionado, sprint
+alocada e status — está registrado na planilha de Product Backlog que acompanha este documento
+(<code>Product_Backlog_PIM.xlsx</code>), evitando duplicar aqui uma tabela de 31 linhas que perderia
+legibilidade em formato de texto corrido.</p>
+
+<!-- ══════════════════════════════════════
+     4 REQUISITOS NÃO FUNCIONAIS
+══════════════════════════════════════ -->
+<h1>4 Requisitos Não Funcionais</h1>
+
+<p>Além dos requisitos funcionais rastreados por User Story, o backlog define <strong>9 requisitos não
+funcionais</strong> (RNF01–RNF09), que estabelecem restrições de qualidade transversais a todas as
+funcionalidades — usabilidade, responsividade, segurança, desempenho, disponibilidade, compatibilidade,
+privacidade, manutenibilidade e acessibilidade — e que orientam decisões técnicas independentemente de qual
+User Story está sendo implementada no momento.</p>
+
+<p class="tbl-caption">Tabela 3 – Requisitos não funcionais do projeto</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Categoria</th>
+                <th>Descrição</th>
+                <th>Prioridade</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td class="td-code">RNF01</td><td>Usabilidade</td><td>Interface simples e intuitiva, adaptada ao perfil dos usuários da plataforma</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF02</td><td>Responsividade</td><td>O sistema deve funcionar corretamente em desktop, tablet e celular</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF03</td><td>Segurança</td><td>Senhas armazenadas com hash BCrypt — nunca em texto plano</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF04</td><td>Desempenho</td><td>Páginas devem carregar em até 3 segundos em conexão padrão</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF05</td><td>Disponibilidade</td><td>Sistema disponível pelo menos 95% do tempo (≈ 18h/dia)</td><td>Média</td></tr>
+            <tr><td class="td-code">RNF06</td><td>Compatibilidade</td><td>Suporte a Chrome, Firefox e Edge nas versões dos últimos 2 anos</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF07</td><td>Privacidade</td><td>Dados pessoais e de progresso tratados conforme a LGPD</td><td>Alta</td></tr>
+            <tr><td class="td-code">RNF08</td><td>Manutenibilidade</td><td>Código deve seguir princípios de Orientação a Objetos e boas práticas C#</td><td>Média</td></tr>
+            <tr><td class="td-code">RNF09</td><td>Acessibilidade</td><td>Contraste adequado (WCAG AA) e textos alternativos em imagens</td><td>Média</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir da aba de Requisitos Não Funcionais do backlog.</p>
+
+<!-- ══════════════════════════════════════
+     5 SPRINT BACKLOG
+══════════════════════════════════════ -->
+<h1>5 Sprint Backlog</h1>
+
+<p>Enquanto o Product Backlog (Seção 3) organiza o trabalho por épico, o <strong>Sprint Backlog</strong>
+reorganiza o mesmo conjunto de User Stories por sprint — é o subconjunto de itens que a equipe se compromete
+a entregar em cada ciclo, na ordem em que serão executados. A Tabela 4 lista, para cada uma das cinco
+sprints, as User Stories selecionadas, o perfil a que atendem e a estimativa em story points de cada uma.</p>
+
+<p class="tbl-caption">Tabela 4 – Sprint Backlog detalhado por sprint</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>User Story</th>
+                <th>Perfil</th>
+                <th>Descrição resumida</th>
+                <th>Pts</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tbl-group-header"><td colspan="4">Sprint 1 — Autenticação de todos os perfis</td></tr>
+            <tr><td class="td-code">US-01</td><td>Aluno</td><td>Login com e-mail e senha</td><td>5</td></tr>
+            <tr><td class="td-code">US-02</td><td>Aluno</td><td>Logout com encerramento de sessão</td><td>2</td></tr>
+            <tr><td class="td-code">US-10</td><td>Professor</td><td>Login e logout do professor</td><td>3</td></tr>
+            <tr><td class="td-code">US-17</td><td>Coordenador</td><td>Login e logout do coordenador</td><td>3</td></tr>
+            <tr><td class="td-code">US-27</td><td>Administrador</td><td>Login e logout do administrador</td><td>3</td></tr>
+            <tr class="tbl-subtotal"><td colspan="3">Subtotal Sprint 1</td><td>16</td></tr>
+
+            <tr class="tbl-group-header"><td colspan="4">Sprint 2 — Dashboard, materiais e gestão base</td></tr>
+            <tr><td class="td-code">US-03</td><td>Aluno</td><td>Dashboard com resumo de desempenho</td><td>8</td></tr>
+            <tr><td class="td-code">US-04</td><td>Aluno</td><td>Visualizar materiais (PDF)</td><td>5</td></tr>
+            <tr><td class="td-code">US-05</td><td>Aluno</td><td>Visualizar avaliações disponíveis</td><td>3</td></tr>
+            <tr><td class="td-code">US-11</td><td>Professor</td><td>Visualizar turmas atribuídas</td><td>3</td></tr>
+            <tr><td class="td-code">US-14</td><td>Professor</td><td>Upload de materiais em PDF</td><td>8</td></tr>
+            <tr><td class="td-code">US-18</td><td>Coordenador</td><td>Criar, editar e inativar turmas</td><td>8</td></tr>
+            <tr><td class="td-code">US-19</td><td>Coordenador</td><td>Gerenciar alunos e professores vinculados</td><td>8</td></tr>
+            <tr><td class="td-code">US-21</td><td>Coordenador</td><td>Criar, editar e inativar cursos</td><td>5</td></tr>
+            <tr><td class="td-code">US-28</td><td>Administrador</td><td>Cadastrar, editar e desativar usuários</td><td>8</td></tr>
+            <tr><td class="td-code">US-29</td><td>Administrador</td><td>Criar, editar e inativar turmas</td><td>5</td></tr>
+            <tr><td class="td-code">US-30</td><td>Administrador</td><td>Vincular alunos e professores a turmas</td><td>5</td></tr>
+            <tr class="tbl-subtotal"><td colspan="3">Subtotal Sprint 2</td><td>66</td></tr>
+
+            <tr class="tbl-group-header"><td colspan="4">Sprint 3 — Avaliações e vínculos</td></tr>
+            <tr><td class="td-code">US-06</td><td>Aluno</td><td>Realizar avaliação com indicador de progresso</td><td>13</td></tr>
+            <tr><td class="td-code">US-07</td><td>Aluno</td><td>Visualizar resultado da avaliação</td><td>8</td></tr>
+            <tr><td class="td-code">US-12</td><td>Professor</td><td>Criar avaliação com questões e prazo</td><td>13</td></tr>
+            <tr><td class="td-code">US-13</td><td>Professor</td><td>Editar ou excluir avaliações não iniciadas</td><td>5</td></tr>
+            <tr><td class="td-code">US-20</td><td>Coordenador</td><td>Aprovar ou rejeitar matrículas</td><td>8</td></tr>
+            <tr><td class="td-code">US-23</td><td>Coordenador</td><td>Vincular alunos e professores às turmas</td><td>5</td></tr>
+            <tr><td class="td-code">US-24</td><td>Coordenador</td><td>Vincular alunos a cursos</td><td>3</td></tr>
+            <tr class="tbl-subtotal"><td colspan="3">Subtotal Sprint 3</td><td>55</td></tr>
+
+            <tr class="tbl-group-header"><td colspan="4">Sprint 4 — Relatórios e desempenho</td></tr>
+            <tr><td class="td-code">US-08</td><td>Aluno</td><td>Histórico e evolução de desempenho</td><td>8</td></tr>
+            <tr><td class="td-code">US-15</td><td>Professor</td><td>Relatório de desempenho individual por aluno</td><td>8</td></tr>
+            <tr><td class="td-code">US-16</td><td>Professor</td><td>Relatório de desempenho geral da turma</td><td>8</td></tr>
+            <tr><td class="td-code">US-22</td><td>Coordenador</td><td>Gerenciar materiais por curso e turma</td><td>5</td></tr>
+            <tr><td class="td-code">US-25</td><td>Coordenador</td><td>Relatório geral por curso e turma</td><td>8</td></tr>
+            <tr><td class="td-code">US-26</td><td>Coordenador</td><td>Relatório individual por aluno</td><td>5</td></tr>
+            <tr class="tbl-subtotal"><td colspan="3">Subtotal Sprint 4</td><td>42</td></tr>
+
+            <tr class="tbl-group-header"><td colspan="4">Sprint 5 — Feedback e painel admin</td></tr>
+            <tr><td class="td-code">US-09</td><td>Aluno</td><td>Registrar feedback sobre conteúdos e avaliações</td><td>5</td></tr>
+            <tr><td class="td-code">US-31</td><td>Administrador</td><td>Painel com dados de uso da plataforma</td><td>13</td></tr>
+            <tr class="tbl-subtotal"><td colspan="3">Subtotal Sprint 5</td><td>18</td></tr>
+
+            <tr class="tbl-subtotal"><td colspan="3">TOTAL GERAL</td><td>197</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir do Product Backlog do projeto, reagrupado por
+sprint. O total de 197 story points corrigido nesta seção substitui a soma de 190 pontos usada em versões
+anteriores da planilha — divergência identificada ao reconferir a estimativa individual de cada User Story
+contra o total antes lançado na aba de Sprints.</p>
+
+<!-- ══════════════════════════════════════
+     6 CRONOGRAMA DAS SPRINTS
+══════════════════════════════════════ -->
+<h1>6 Cronograma das Sprints</h1>
+
+<p>O backlog foi dividido em <strong>cinco sprints</strong>, totalizando <strong>197 story points</strong>
+planejados. A distribuição não é uniforme por escolha: a Sprint 1 concentra apenas autenticação — uma base
+que todos os outros perfis dependem — enquanto as Sprints 2 e 3 absorvem o maior volume de trabalho, por
+reunirem as funcionalidades centrais de cada perfil (dashboard, materiais, gestão de turmas e o próprio fluxo
+de avaliação). As Sprints 4 e 5 fecham o ciclo com relatórios, métricas e funcionalidades de valor agregado,
+como o feedback do aluno e o painel administrativo.</p>
+
+<p>Como a equipe só consegue se reunir de forma síncrona aos <strong>sábados</strong> — os demais dias são
+dedicados individualmente ao trabalho ou aos estudos de cada integrante —, cada sprint tem duração de uma
+semana corrida, sempre começando num sábado: a Sprint Planning e a Sprint Review/Retrospectiva da sprint
+anterior acontecem no mesmo encontro semanal, o que também define a data de início da sprint seguinte.</p>
+
+<p class="tbl-caption">Tabela 5 – Cronograma das sprints</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Sprint</th>
+                <th>Início (Planning)</th>
+                <th>Término (execução)</th>
+                <th>Review / Retrospectiva</th>
+                <th>Story Pts</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Sprint 1</td><td>05/09/2026 (sáb)</td><td>11/09/2026 (sex)</td><td>12/09/2026 (sáb)</td><td>16</td><td>Planejada</td></tr>
+            <tr><td>Sprint 2</td><td>12/09/2026 (sáb)</td><td>18/09/2026 (sex)</td><td>19/09/2026 (sáb)</td><td>66</td><td>Planejada</td></tr>
+            <tr><td>Sprint 3</td><td>19/09/2026 (sáb)</td><td>25/09/2026 (sex)</td><td>26/09/2026 (sáb)</td><td>55</td><td>Planejada</td></tr>
+            <tr><td>Sprint 4</td><td>26/09/2026 (sáb)</td><td>02/10/2026 (sex)</td><td>03/10/2026 (sáb)</td><td>42</td><td>Planejada</td></tr>
+            <tr><td>Sprint 5</td><td>03/10/2026 (sáb)</td><td>09/10/2026 (sex)</td><td>10/10/2026 (sáb)</td><td>18</td><td>Planejada</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores, cronograma planejado para o ciclo de sprints do PIM IV.</p>
+
+<figure>
+<svg viewBox="0 0 620 300" role="img" aria-label="Gráfico de barras com os story points planejados por sprint: Sprint 1 com 16 pontos, Sprint 2 com 66, Sprint 3 com 55, Sprint 4 com 42 e Sprint 5 com 18 pontos.">
+  <g font-family="Arial, Helvetica, sans-serif" fill="currentColor">
+    <line x1="20" y1="250" x2="600" y2="250" stroke="currentColor" stroke-width="1.5"/>
+
+    <g stroke="currentColor" stroke-width="1.5" fill="none">
+      <rect x="40" y="200" width="70" height="50"/>
+      <rect x="150" y="50" width="70" height="200"/>
+      <rect x="260" y="83" width="70" height="167"/>
+      <rect x="370" y="122" width="70" height="128"/>
+      <rect x="480" y="195" width="70" height="55"/>
+    </g>
+
+    <text x="75" y="194" font-size="11" text-anchor="middle">16</text>
+    <text x="185" y="44" font-size="11" text-anchor="middle">66</text>
+    <text x="295" y="77" font-size="11" text-anchor="middle">55</text>
+    <text x="405" y="116" font-size="11" text-anchor="middle">42</text>
+    <text x="515" y="189" font-size="11" text-anchor="middle">18</text>
+
+    <text x="75" y="268" font-size="10" text-anchor="middle">Sprint 1</text>
+    <text x="185" y="268" font-size="10" text-anchor="middle">Sprint 2</text>
+    <text x="295" y="268" font-size="10" text-anchor="middle">Sprint 3</text>
+    <text x="405" y="268" font-size="10" text-anchor="middle">Sprint 4</text>
+    <text x="515" y="268" font-size="10" text-anchor="middle">Sprint 5</text>
+
+    <text x="310" y="288" font-size="9" text-anchor="middle">Story points planejados por sprint — total de 197 pontos</text>
+  </g>
+</svg>
+<figcaption>Figura 2 — Distribuição de story points planejados entre as cinco sprints do projeto.</figcaption>
+</figure>
+
+<div class="nota">
+<strong>Nota:</strong> este cronograma reflete o escopo original do backlog, elaborado como exercício de
+gerenciamento ágil. Na prática, o desenvolvimento do projeto ao longo dos semestres seguiu um ritmo orientado
+por rodadas de auditoria e correção incremental — cada rodada revisando um recorte do sistema (segurança,
+responsividade, consistência entre perfis) — em vez de sprints cronometradas, o que é compatível com a
+natureza acadêmica do projeto, em que a equipe também assume o papel de usuário validador a cada entrega.
+</div>
+
+<!-- ══════════════════════════════════════
+     7 QUADRO KANBAN
+══════════════════════════════════════ -->
+<h1>7 Quadro Kanban</h1>
+
+<p>Para o acompanhamento visual do trabalho macro do PIM — que engloba não só o desenvolvimento do sistema,
+mas também elicitação de requisitos, modelagem e documentação —, a equipe mantém um <strong>quadro
+Kanban</strong> com três colunas de status (A Fazer, Em Andamento e Concluído), complementando o Product
+Backlog e o Sprint Backlog das Seções 3 e 5. Cada cartão traz o responsável pela tarefa, identificado pela
+sigla apresentada na Tabela 1.</p>
+
+<figure>
+<div class="kanban-board">
+    <div class="kanban-coluna">
+        <div class="kanban-coluna-titulo">A Fazer</div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Colocar banco de dados em nuvem</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · A definir</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Testes de usabilidade com usuário real</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · A definir</span>
+        </div>
+    </div>
+    <div class="kanban-coluna">
+        <div class="kanban-coluna-titulo">Em Andamento</div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Documentação do PIM</span>
+            <span class="kanban-cartao-meta">Prioridade Média · KSN, HHPN, MIBSS, NPS</span>
+        </div>
+    </div>
+    <div class="kanban-coluna">
+        <div class="kanban-coluna-titulo">Concluído</div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Elicitação de requisitos</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · KSN, HHPN, MIBSS, NPS</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Casos de Uso (UML)</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · HHPN</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Fluxo de Usuário</span>
+            <span class="kanban-cartao-meta">Prioridade Baixa · KSN, HHPN, MIBSS, NPS</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Implementar Classes de Entidade (C#)</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · KSN</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Modelar Base de Dados SQL</span>
+            <span class="kanban-cartao-meta">Prioridade Alta · KSN, HHPN</span>
+        </div>
+        <div class="kanban-cartao">
+            <span class="kanban-cartao-titulo">Criar Protótipo Web</span>
+            <span class="kanban-cartao-meta">Prioridade Média · MIBSS, KSN</span>
+        </div>
+    </div>
+</div>
+<figcaption>Figura 3 — Quadro Kanban do trabalho macro do PIM, atualizado conforme o andamento das tarefas.</figcaption>
+</figure>
+
+<p>O quadro evidencia dois padrões de alocação: tarefas de fundação — elicitação de requisitos e fluxo de
+usuário — foram conduzidas pelos quatro integrantes em conjunto, por dependerem de consenso sobre o escopo do
+sistema; já tarefas de execução técnica — modelagem de classes, banco de dados e protótipo — foram
+distribuídas entre pares ou indivíduos, reduzindo o custo de coordenação em atividades que exigem foco
+contínuo.</p>
+
+<p>Com a modelagem de classes, o banco de dados e o protótipo web concluídos, o trabalho restante do quadro
+macro se concentra em dois itens: levar o banco de dados para um provedor de nuvem e validar a usabilidade
+da plataforma com usuários reais — este último especialmente relevante por depender de pessoas de fora da
+equipe, e não apenas de tempo de desenvolvimento.</p>
+
+<!-- ══════════════════════════════════════
+     8 DEFINIÇÃO DAS ENTREGAS
+══════════════════════════════════════ -->
+<h1>8 Definição das Entregas</h1>
+
+<p>Cada sprint fecha com um incremento específico do sistema, verificável de forma independente — ou seja,
+algo que pode ser demonstrado funcionando, e não apenas código parcialmente pronto. A Tabela 6 define o que
+efetivamente é entregue ao final de cada sprint, associando o incremento ao seu critério de pronto
+("Definition of Done"): a funcionalidade precisa estar implementada, integrada ao restante do sistema e
+livre de erros bloqueantes conhecidos.</p>
+
+<p class="tbl-caption">Tabela 6 – Definição das entregas por sprint</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Sprint</th>
+                <th>Entrega (incremento)</th>
+                <th>Critério de pronto (Definition of Done)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Sprint 1</td><td>Autenticação funcional para os quatro perfis (Aluno, Professor, Coordenador, Administrador), com login, logout e senha protegida por hash BCrypt</td><td>Todo perfil consegue entrar e sair do sistema com suas próprias credenciais; senha nunca trafega nem é armazenada em texto plano</td></tr>
+            <tr><td>Sprint 2</td><td>Dashboard do aluno, listagem de materiais e avaliações disponíveis, e telas de gestão de turmas, cursos, usuários e vínculos para Coordenador e Administrador</td><td>Aluno visualiza seu resumo de desempenho; Coordenador e Administrador criam e mantêm turmas, cursos e vínculos sem depender de acesso direto ao banco de dados</td></tr>
+            <tr><td>Sprint 3</td><td>Fluxo completo de avaliação — aluno realiza e recebe o resultado detalhado; professor cria e edita avaliações — e aprovação de matrículas e vínculos pelo Coordenador</td><td>Uma avaliação criada pelo professor pode ser respondida pelo aluno dentro do prazo e o resultado é exibido com acertos e erros; uma matrícula pendente pode ser aprovada ou rejeitada</td></tr>
+            <tr><td>Sprint 4</td><td>Histórico de desempenho do aluno e relatórios individuais e gerais para Professor e Coordenador, além da gestão de materiais por curso/turma</td><td>Professor e Coordenador conseguem gerar um relatório de desempenho sem exportação manual de dados</td></tr>
+            <tr><td>Sprint 5</td><td>Registro de feedback do aluno sobre conteúdos e avaliações, e painel de uso da plataforma para o Administrador</td><td>Aluno registra feedback vinculado a um conteúdo ou avaliação específica; Administrador visualiza métricas de uso agregadas, não apenas registros brutos</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir do objetivo de cada sprint (Seção 6) e das User Stories associadas (Seção 5).</p>
+
+<!-- ══════════════════════════════════════
+     9 QUALIDADE E DEVSECOPS NO CICLO ÁGIL
+══════════════════════════════════════ -->
+<h1>9 Qualidade e DevSecOps Integrados ao Ciclo Ágil</h1>
+
+<p>Em vez de tratar segurança e qualidade como uma fase separada ao final do projeto, a equipe mapeou uma
+ação de segurança ou qualidade para cada fase do ciclo de vida do desenvolvimento — abordagem conhecida como
+<strong>DevSecOps</strong>, em que práticas de segurança são incorporadas desde o planejamento até a
+operação, e não auditadas apenas no fim.</p>
+
+<p class="tbl-caption">Tabela 7 – Ações de segurança e qualidade por fase do ciclo</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Fase do ciclo</th>
+                <th>Ação de segurança / qualidade</th>
+                <th>Requisito relacionado</th>
+                <th>Justificativa técnica</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Planejamento</td><td>Levantamento de requisitos focados na LGPD</td><td class="td-code">RS-01</td><td>Garantir que o tratamento e armazenamento de dados de alunos e professores estejam em conformidade legal desde o início</td></tr>
+            <tr><td>Desenvolvimento</td><td>Implementação em C# com encapsulamento</td><td class="td-code">RQ-01</td><td>Utilizar os pilares da POO para proteger a lógica do sistema e evitar exposição indevida de dados sensíveis</td></tr>
+            <tr><td>Testes</td><td>Validação de acessibilidade e UX/UI</td><td class="td-code">RQ-02</td><td>Atender aos requisitos de acessibilidade, garantindo uma interface funcional para todos os perfis de usuário</td></tr>
+            <tr><td>Operação</td><td>Coleta de indicadores para análise de dados</td><td class="td-code">RS-02</td><td>Gerar logs e dados de desempenho que sirvam de base para auditoria e melhoria contínua do sistema</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir do mapeamento de segurança e qualidade do ciclo de desenvolvimento.</p>
+
+<p>Esse mapeamento se reflete diretamente em decisões já implementadas no sistema: senhas são armazenadas
+com hash BCrypt (RNF03), nunca em texto plano; o acesso a dados de um Coordenador é restrito aos cursos sob
+sua responsabilidade, e não à base inteira; e o histórico de auditorias técnicas realizadas ao longo do
+projeto — cobrindo segurança, responsividade e consistência entre os quatro perfis — funciona como parte da
+etapa de "Testes" descrita na Tabela 7, ainda que executada de forma contínua, e não como um evento único.</p>
+
+<p>O controle de versão do código é feito integralmente no <strong>GitHub</strong>: cada alteração fica
+registrada em um commit, com histórico completo de quem alterou o quê e quando, o que permite reverter uma
+mudança problemática sem perder o restante do trabalho e dá suporte à rastreabilidade exigida entre uma
+User Story do backlog e o código que efetivamente a implementou.</p>
+
+<!-- ══════════════════════════════════════
+     10 MÉTRICAS E INDICADORES ÁGEIS
+══════════════════════════════════════ -->
+<h1>10 Métricas e Indicadores Ágeis</h1>
+
+<p>O acompanhamento do progresso do projeto usa três indicadores derivados diretamente do backlog: o volume
+total de trabalho planejado em story points, a distribuição desse volume por prioridade MoSCoW e a
+velocidade — quantos story points a equipe consegue concluir por sprint, métrica que só se consolida após a
+execução de sprints reais e serve de referência para o dimensionamento das seguintes.</p>
+
+<p class="tbl-caption">Tabela 8 – Distribuição de User Stories por prioridade (MoSCoW)</p>
+<div class="tbl-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Prioridade</th>
+                <th>Significado</th>
+                <th>User Stories</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Alta</td><td>Essencial para o MVP — sem isso o sistema não funciona</td><td>20 de 31</td></tr>
+            <tr><td>Média</td><td>Importante, mas o sistema funciona sem no lançamento</td><td>10 de 31</td></tr>
+            <tr><td>Baixa</td><td>Desejável — agrega valor, mas pode ser adiada</td><td>1 de 31</td></tr>
+        </tbody>
+    </table>
+</div>
+<p class="tbl-source">Fonte: elaborado pelos autores a partir do Product Backlog do projeto.</p>
+
+<p>A concentração de dois terços das histórias em prioridade alta é coerente com um MVP acadêmico: a maior
+parte do backlog é considerada indispensável para que os quatro perfis tenham, cada um, um fluxo completo e
+funcional dentro da plataforma — e não apenas o aluno, perfil mais visível do sistema.</p>
+
+<!-- ══════════════════════════════════════
+     CONCLUSÃO
+══════════════════════════════════════ -->
+<h1>Conclusão</h1>
+
+<p>Este documento cumpriu o objetivo de apresentar o planejamento de gerenciamento ágil da
+PlataformaEnsino, atendendo aos cinco itens exigidos pela Etapa 9 do PIM IV: Product Backlog, Sprint
+Backlog, cronograma das sprints, quadro Kanban e definição das entregas. A adoção do Scrum, apoiada
+pelo controle de versão via GitHub, mostrou-se adequada ao tamanho da equipe e à natureza incremental
+do projeto, permitindo priorizar entregas por valor de negócio em vez de seguir um plano fechado
+incompatível com o amadurecimento natural de requisitos ao longo de um projeto acadêmico.</p>
+
+<p>Do ponto de vista de execução, a equipe concluiu as etapas centrais do desenvolvimento técnico — a
+modelagem do banco de dados, a implementação das classes de entidade em C# e o protótipo web —,
+conforme registrado no quadro Kanban da Seção 7. Restam como pendências abertas a hospedagem do banco
+de dados em um provedor de nuvem (Azure, já decidido como provedor) e a validação de usabilidade da
+plataforma com usuários reais, ambas dependentes de fatores externos ao ritmo interno de
+desenvolvimento da equipe — a primeira de uma etapa de infraestrutura ainda não executada, a segunda
+da disponibilidade de pessoas de fora da equipe para os testes.</p>
+
+<p>A divergência encontrada entre os story points somados individualmente por User Story e os totais
+originalmente lançados na planilha de sprints — corrigida nesta versão do documento, de 190 para 197
+pontos — reforça a importância de tratar o backlog como fonte única da verdade: qualquer indicador
+agregado (cronograma, gráfico de story points, métricas) deve ser recalculado a partir dos itens
+individuais, não copiado manualmente entre planilhas. Essa lição fica registrada como prática
+recomendada para as próximas rodadas de planejamento do projeto.</p>
+
+<!-- ══════════════════════════════════════
+     REFERÊNCIAS
+══════════════════════════════════════ -->
+<h1>Referências</h1>
+
+<p class="no-indent">PRESSMAN, Roger S.; MAXIM, Bruce R. <strong>Engenharia de software</strong>: uma
+abordagem profissional. 9. ed. Porto Alegre: AMGH, 2021.</p>
+
+<p class="no-indent" style="margin-top: 6pt;">PROJECT MANAGEMENT INSTITUTE. <strong>Agile practice
+guide</strong>. Newtown Square: PMI, 2017.</p>
+
+<p class="no-indent" style="margin-top: 6pt;">SCHWABER, Ken; SUTHERLAND, Jeff. <strong>The Scrum
+Guide</strong>: o guia definitivo para o Scrum — as regras do jogo. [<em>S. l.</em>]: Scrum.org, 2020.
+Disponível em: https://scrumguides.org/. Acesso em: 17 set. 2026.</p>
+
+<p class="no-indent" style="margin-top: 6pt;">SOMMERVILLE, Ian. <strong>Engenharia de
+software</strong>. 10. ed. São Paulo: Pearson, 2019.</p>
+
+</body>
+</html>

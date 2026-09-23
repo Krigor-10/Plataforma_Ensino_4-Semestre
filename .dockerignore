@@ -1,0 +1,12 @@
+bin/
+obj/
+PlataformaEnsino.Tests/
+frontend/node_modules/
+frontend/dist/
+gateway/node_modules/
+mobile/node_modules/
+desktop/node_modules/
+.git/
+.vs/
+Storage/Uploads/
+*.user
