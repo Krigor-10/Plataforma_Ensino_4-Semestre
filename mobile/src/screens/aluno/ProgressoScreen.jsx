@@ -86,12 +86,12 @@ export default function ProgressoScreen({ snapshot }) {
   return (
     <View style={estilos.container}>
       <TouchableOpacity
-        accessibilityLabel="Voltar para a selecao de cursos"
+        accessibilityLabel="Trocar de curso"
         onPress={() => setCursoSelecionadoId(null)}
         style={estilos.voltar}
       >
         <Ionicons color={cores.destaque} name="chevron-back" size={18} />
-        <Text style={estilos.voltarTexto}>Cursos</Text>
+        <Text style={estilos.voltarTexto}>Trocar de curso</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={estilos.corpo}>

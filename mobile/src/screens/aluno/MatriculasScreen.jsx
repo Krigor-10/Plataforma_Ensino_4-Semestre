@@ -2,23 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import CapaCurso from "../../components/CapaCurso.jsx";
+import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
+import { corDoStatusMatricula, iconeDoStatusMatricula } from "../../lib/statusVisual.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
-
-const COR_STATUS = {
-  Pendente: cores.aviso,
-  Aprovada: cores.sucesso,
-  Rejeitada: cores.erro,
-  Cancelada: cores.textoSuave
-};
-
-const ICONE_STATUS = {
-  Pendente: "time-outline",
-  Aprovada: "checkmark-circle",
-  Rejeitada: "close-circle",
-  Cancelada: "ban-outline"
-};
 
 const PAGAMENTO_PENDENTE = 1;
 
@@ -39,7 +27,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
   const [aba, setAba] = useState("meus-cursos");
   const [busca, setBusca] = useState("");
   const [processando, setProcessando] = useState(null);
-  const [mensagem, setMensagem] = useState("");
+  const [mensagem, setMensagem] = useState(null);
 
   const turmasPorCursoId = useMemo(() => {
     const mapa = new Map();
@@ -78,24 +66,25 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
     }
 
     setProcessando(curso.id);
-    setMensagem("");
+    setMensagem(null);
 
     try {
       await apiRequest("/Matriculas", { method: "POST", body: JSON.stringify({ alunoId: usuario.id, cursoId: curso.id }) });
 
       const cursoEhPago = Number(curso.preco) > 0;
-      setMensagem(
-        cursoEhPago
+      setMensagem({
+        tipo: "sucesso",
+        texto: cursoEhPago
           ? `Matricula em ${curso.titulo} aprovada — confirme o pagamento pendente para liberar o acesso.`
           : `Matricula em ${curso.titulo} aprovada. Seu acesso ja esta liberado.`
-      );
+      });
       await onRecarregar();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setMensagem(err.message || "Nao foi possivel solicitar a matricula agora.");
+      setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel solicitar a matricula agora." });
     } finally {
       setProcessando(null);
     }
@@ -103,7 +92,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
 
   async function cancelar(matricula) {
     setProcessando(matricula.id);
-    setMensagem("");
+    setMensagem(null);
 
     try {
       await apiRequest(`/Matriculas/${matricula.id}/cancelar`, { method: "PUT" });
@@ -113,7 +102,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
         onSessionExpired?.();
         return;
       }
-      setMensagem(err.message || "Nao foi possivel cancelar a solicitacao agora.");
+      setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel cancelar a solicitacao agora." });
     } finally {
       setProcessando(null);
     }
@@ -121,18 +110,18 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
 
   async function confirmarPagamento(matricula) {
     setProcessando(matricula.id);
-    setMensagem("");
+    setMensagem(null);
 
     try {
       await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
-      setMensagem("Pagamento confirmado.");
+      setMensagem({ tipo: "sucesso", texto: "Pagamento confirmado." });
       await onRecarregar();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setMensagem(err.message || "Nao foi possivel confirmar o pagamento agora.");
+      setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel confirmar o pagamento agora." });
     } finally {
       setProcessando(null);
     }
@@ -140,7 +129,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
 
   async function reabrir(matricula) {
     setProcessando(matricula.id);
-    setMensagem("");
+    setMensagem(null);
 
     try {
       await apiRequest(`/Matriculas/${matricula.id}/reabrir`, { method: "PUT" });
@@ -150,7 +139,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
         onSessionExpired?.();
         return;
       }
-      setMensagem(err.message || "Nao foi possivel reabrir a solicitacao agora.");
+      setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel reabrir a solicitacao agora." });
     } finally {
       setProcessando(null);
     }
@@ -167,7 +156,11 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
         </TouchableOpacity>
       </View>
 
-      {mensagem ? <Text style={estilos.mensagem}>{mensagem}</Text> : null}
+      {mensagem ? (
+        <View style={estilos.mensagemContainer}>
+          <Toast mensagem={mensagem.texto} onFechar={() => setMensagem(null)} tipo={mensagem.tipo} />
+        </View>
+      ) : null}
 
       {aba === "catalogo" ? (
         <TextInput
@@ -196,8 +189,8 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                       <View style={estilos.cartaoTopo}>
                         <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
                         <View style={estilos.statusLinha}>
-                          <Ionicons color={COR_STATUS[status] || cores.textoSuave} name={ICONE_STATUS[status] || "help-circle-outline"} size={13} />
-                          <Text style={[estilos.status, { color: COR_STATUS[status] || cores.textoSuave }]}>{status}</Text>
+                          <Ionicons color={corDoStatusMatricula(status)} name={iconeDoStatusMatricula(status)} size={13} />
+                          <Text style={[estilos.status, { color: corDoStatusMatricula(status) }]}>{status}</Text>
                         </View>
                       </View>
                       <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
@@ -264,7 +257,7 @@ const estilos = StyleSheet.create({
   abaAtiva: { backgroundColor: cores.destaque },
   abaTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
   abaTextoAtivo: { color: cores.texto },
-  mensagem: { color: cores.destaque, paddingHorizontal: 20, paddingTop: 12 },
+  mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.md },
   busca: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
   corpo: { padding: espacamentos.xl, gap: espacamentos.md },
   cartaoLinha: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.md, backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.lg },

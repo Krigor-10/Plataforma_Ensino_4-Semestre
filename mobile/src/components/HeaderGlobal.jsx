@@ -43,7 +43,7 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
       </View>
       <View style={estilos.acoes}>
         <TouchableOpacity accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={estilos.botao}>
-          <Ionicons color={cores.textoSuave} name="notifications-outline" size={22} />
+          <Ionicons color={cores.textoSuave} name={notificacoesNaoLidas > 0 ? "notifications" : "notifications-outline"} size={22} />
           {notificacoesNaoLidas > 0 ? (
             <View style={estilos.badge}>
               <Text style={estilos.badgeTexto}>{notificacoesNaoLidas > 9 ? "9+" : notificacoesNaoLidas}</Text>

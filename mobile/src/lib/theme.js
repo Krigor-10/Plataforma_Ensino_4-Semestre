@@ -14,7 +14,15 @@ export const cores = {
   erro: "#ef4444",
   sucesso: "#22c55e",
   aviso: "#f59e0b",
-  bloqueado: "#5c5468"
+  informativo: "#3b82f6",
+  bloqueado: "#5c5468",
+  // Variantes translucidas (~15% opacidade) das cores semanticas acima —
+  // mesmo padrao do design system web (--cor-sucesso-fundo etc.), pra fundos
+  // suaves de icones/badges sem precisar de rgba(...) solto em cada tela.
+  sucessoFundo: "rgba(34, 197, 94, 0.15)",
+  erroFundo: "rgba(239, 68, 68, 0.15)",
+  avisoFundo: "rgba(245, 158, 11, 0.15)",
+  informativoFundo: "rgba(59, 130, 246, 0.15)"
 };
 
 export const raios = {

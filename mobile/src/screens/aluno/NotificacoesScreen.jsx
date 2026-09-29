@@ -85,7 +85,8 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
           <Text style={estilos.voltarTexto}>Voltar</Text>
         </TouchableOpacity>
         {naoLidas > 0 ? (
-          <TouchableOpacity onPress={marcarTodasComoLidas}>
+          <TouchableOpacity onPress={marcarTodasComoLidas} style={estilos.marcarTodas}>
+            <Ionicons color={cores.textoSuave} name="checkmark-done-outline" size={14} />
             <Text style={estilos.marcarTodasTexto}>Marcar todas como lidas</Text>
           </TouchableOpacity>
         ) : null}
@@ -128,6 +129,7 @@ const estilos = StyleSheet.create({
   cabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: espacamentos.sm },
   voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, marginLeft: -6 },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
+  marcarTodas: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
   marcarTodasTexto: { color: cores.textoSuave, fontSize: 12, fontWeight: "600" },
   titulo: { color: cores.texto, fontWeight: "700", fontSize: 20, marginBottom: espacamentos.lg },
   corpo: { gap: espacamentos.sm, paddingBottom: espacamentos.xxl },

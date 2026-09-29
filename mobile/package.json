@@ -11,6 +11,7 @@
     "@react-navigation/native": "^7.3.18",
     "expo": "~57.0.17",
     "expo-build-properties": "~57.0.17",
+    "expo-linear-gradient": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -32,6 +33,9 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "testPathIgnorePatterns": ["/node_modules/", "/dist/"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/"
+    ]
   }
 }

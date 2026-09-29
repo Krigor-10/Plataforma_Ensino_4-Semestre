@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatCep, onlyDigits } from "../../lib/format.js";
 import { cores, espacamentos } from "../../lib/theme.js";
@@ -23,11 +24,11 @@ const SENHA_INICIAL = { senhaAtual: "", novaSenha: "", confirmarNovaSenha: "" };
 
 export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtualizado, onVoltar, usuario }) {
   const [dados, setDados] = useState(() => estadoFormularioInicial(usuario));
-  const [mensagemPerfil, setMensagemPerfil] = useState("");
+  const [mensagemPerfil, setMensagemPerfil] = useState(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
 
   const [senha, setSenha] = useState(SENHA_INICIAL);
-  const [mensagemSenha, setMensagemSenha] = useState("");
+  const [mensagemSenha, setMensagemSenha] = useState(null);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
   useEffect(() => {
@@ -60,22 +61,22 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     const campoVazio = obrigatorios.find((campo) => !String(dados[campo] || "").trim());
 
     if (campoVazio) {
-      setMensagemPerfil("Preencha todos os campos para salvar seu perfil.");
+      setMensagemPerfil({ tipo: "erro", texto: "Preencha todos os campos para salvar seu perfil." });
       return;
     }
 
     if (onlyDigits(dados.cep).length !== 8) {
-      setMensagemPerfil("Informe um CEP com 8 digitos.");
+      setMensagemPerfil({ tipo: "erro", texto: "Informe um CEP com 8 digitos." });
       return;
     }
 
     if (dados.estado.trim().length !== 2) {
-      setMensagemPerfil("Informe a UF com 2 letras.");
+      setMensagemPerfil({ tipo: "erro", texto: "Informe a UF com 2 letras." });
       return;
     }
 
     setSalvandoPerfil(true);
-    setMensagemPerfil("");
+    setMensagemPerfil(null);
 
     try {
       const usuarioAtualizado = await apiRequest("/Usuarios/me", {
@@ -94,13 +95,13 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
       });
 
       onUsuarioAtualizado?.(usuarioAtualizado);
-      setMensagemPerfil("Perfil atualizado com sucesso.");
+      setMensagemPerfil({ tipo: "sucesso", texto: "Perfil atualizado com sucesso." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setMensagemPerfil(err.message || "Nao foi possivel salvar seu perfil agora.");
+      setMensagemPerfil({ tipo: "erro", texto: err.message || "Nao foi possivel salvar seu perfil agora." });
     } finally {
       setSalvandoPerfil(false);
     }
@@ -108,17 +109,17 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
 
   async function salvarSenha() {
     if (senha.novaSenha.length < 6) {
-      setMensagemSenha("A nova senha precisa ter pelo menos 6 caracteres.");
+      setMensagemSenha({ tipo: "erro", texto: "A nova senha precisa ter pelo menos 6 caracteres." });
       return;
     }
 
     if (senha.novaSenha !== senha.confirmarNovaSenha) {
-      setMensagemSenha("As senhas nao coincidem.");
+      setMensagemSenha({ tipo: "erro", texto: "As senhas nao coincidem." });
       return;
     }
 
     setSalvandoSenha(true);
-    setMensagemSenha("");
+    setMensagemSenha(null);
 
     try {
       await apiRequest("/Usuarios/me/senha", {
@@ -127,13 +128,13 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
       });
 
       setSenha(SENHA_INICIAL);
-      setMensagemSenha("Senha atualizada com sucesso.");
+      setMensagemSenha({ tipo: "sucesso", texto: "Senha atualizada com sucesso." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setMensagemSenha(err.message || "Nao foi possivel atualizar sua senha agora.");
+      setMensagemSenha({ tipo: "erro", texto: err.message || "Nao foi possivel atualizar sua senha agora." });
     } finally {
       setSalvandoSenha(false);
     }
@@ -158,7 +159,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         <Campo label="Cidade" onChangeText={(v) => atualizarCampo("cidade", v)} value={dados.cidade} />
         <Campo autoCapitalize="characters" label="UF" maxLength={2} onChangeText={(v) => atualizarCampo("estado", v)} placeholder="SP" value={dados.estado} />
 
-        {mensagemPerfil ? <Text style={estilos.mensagem}>{mensagemPerfil}</Text> : null}
+        <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
 
         <TouchableOpacity disabled={salvandoPerfil} onPress={salvarPerfil} style={estilos.botaoPrimario}>
           {salvandoPerfil ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Salvar alteracoes</Text>}
@@ -171,7 +172,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         <Campo label="Nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, novaSenha: v }))} secureTextEntry value={senha.novaSenha} />
         <Campo label="Confirmar nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, confirmarNovaSenha: v }))} secureTextEntry value={senha.confirmarNovaSenha} />
 
-        {mensagemSenha ? <Text style={estilos.mensagem}>{mensagemSenha}</Text> : null}
+        <Toast mensagem={mensagemSenha?.texto} onFechar={() => setMensagemSenha(null)} tipo={mensagemSenha?.tipo} />
 
         <TouchableOpacity disabled={salvandoSenha} onPress={salvarSenha} style={estilos.botaoPrimario}>
           {salvandoSenha ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Trocar senha</Text>}
@@ -213,7 +214,6 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderColor: cores.bordaCartao
   },
-  mensagem: { color: cores.destaque, fontSize: 13 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 12, alignItems: "center", marginTop: 4 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   botaoSair: {
