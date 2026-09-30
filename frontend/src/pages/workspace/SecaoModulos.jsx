@@ -290,6 +290,7 @@ export function SecaoModulos({
           <header className="cabecalho-pagina">
             <div>
               <h2 className="cabecalho-pagina__titulo">Modulos</h2>
+              <p className="cabecalho-pagina__subtitulo">Escolha o curso para ver seus modulos.</p>
             </div>
           </header>
 

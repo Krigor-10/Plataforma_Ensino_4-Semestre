@@ -98,7 +98,7 @@ export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmF
           <header className="cabecalho-pagina">
             <div>
               <h2 className="cabecalho-pagina__titulo">Progresso</h2>
-              <p className="cabecalho-pagina__subtitulo">Analise de progresso e desempenho dos cursos, modulos e materiais.</p>
+              <p className="cabecalho-pagina__subtitulo">Escolha o curso para ver seu progresso.</p>
             </div>
           </header>
 
@@ -140,7 +140,7 @@ export function SecaoDesempenhoCoordenador({ cursoEmFoco, cursoPorId, onCursoEmF
 
           <IndicadoresDesempenhoCurso curso={cursoSelecionado} />
 
-          <PainelModulosDesempenho curso={cursoSelecionado} />
+          <PainelModulosDesempenho contextoCoordenador curso={cursoSelecionado} />
         </>
       )}
     </div>

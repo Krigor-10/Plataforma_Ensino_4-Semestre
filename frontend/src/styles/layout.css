@@ -361,6 +361,7 @@
   font-weight: 800;
   color: var(--cor-texto-forte);
   line-height: 1;
+  white-space: nowrap;
 }
 
 .cartao-estatistica__rotulo {

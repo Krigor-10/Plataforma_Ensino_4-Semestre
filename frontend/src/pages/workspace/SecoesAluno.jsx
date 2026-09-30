@@ -1010,7 +1010,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
 
                     {ehUltimaQuestao ? (
                       <Botao disabled={enviandoRespostas} type="submit" variante="primario">
-                        {enviandoRespostas ? "Enviando..." : "Enviar avaliacao"}
+                        {enviandoRespostas ? "Enviando..." : ehQuizExecucao ? "Confirmar" : "Enviar avaliacao"}
                       </Botao>
                     ) : (
                       <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual + 1)} type="button" variante="primario">

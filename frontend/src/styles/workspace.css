@@ -3801,9 +3801,12 @@
 
 /* Mesmo raciocinio do cabecalho->KPI ja corrigido pro Coordenador (ver regra
    .cabecalho-curso-professor acima) — a tela irmã do Professor tinha o mesmo
-   bug (cabecalho colado nos KPIs) e nao tinha recebido a correcao. */
+   bug (cabecalho colado nos KPIs) e nao tinha recebido a correcao. Bump de
+   --espaco-md pra --espaco-lg na auditoria UX seguinte (2026-09): mesmo com a
+   correcao anterior, titulo+botao Exportar ainda ficavam visualmente colados
+   na grade de KPIs logo abaixo. */
 .tela-progresso-professor .atividades-curso__cabecalho {
-  margin-bottom: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
 }
 
 /* Cada avaliacao do ALUNO vira uma unidade visual com borda propria (cartao
@@ -3979,11 +3982,13 @@
 /* Respiro entre o cabecalho (titulo do curso + professor) e o inicio dos
    KPIs, exclusivo do Progresso do Coordenador — mesma tela sem o wrapper
    .conteudos-aluno (gap padrao entre blocos, ver comentario abaixo), entao
-   sem essa margem o cabecalho ficava colado no primeiro KPI. Mesmo token
-   (--espaco-md = 1rem) que o gap de .conteudos-aluno da "de graca" pro
-   Progresso do Aluno entre esses dois mesmos blocos. */
+   sem essa margem o cabecalho ficava colado no primeiro KPI. Bump de
+   --espaco-md pra --espaco-lg na auditoria UX seguinte (2026-09): o nome do
+   professor responsavel, na mesma linha do titulo, ainda ficava visualmente
+   colado nos indicadores logo abaixo — mesmo ajuste replicado no Professor
+   (ver .tela-progresso-professor .atividades-curso__cabecalho). */
 .tela-progresso-coordenador .atividades-curso__cabecalho {
-  margin-bottom: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
 }
 
 /* Respiro entre os KPIs (resumo geral do curso) e o que vem depois (bucket de

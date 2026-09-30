@@ -32,8 +32,16 @@ const ICONE_TIPO_MATERIAL = {
    Progresso do Coordenador (SecaoDesempenhoCoordenador.jsx) e Progresso do
    Professor (SecaoTurmasProfessor.jsx) - os dois consomem o mesmo formato de
    dado (CursoDesempenhoResponseDto), so a fonte/escopo dos cursos difere por
-   papel. So visualizacao/analise, sem nenhuma acao administrativa. */
-export default function PainelModulosDesempenho({ curso }) {
+   papel. So visualizacao/analise, sem nenhuma acao administrativa.
+   `contextoCoordenador` (auditoria UX 2026-09): o Coordenador acompanha
+   progresso PEDAGOGICO, nao operacional — oculta tipo de conteudo/status de
+   publicacao dos materiais (info de gestao de conteudo, mais relevante pro
+   Professor que edita) e troca "X% concluido" por "N alunos concluiram · X%",
+   usando `alunosConcluiram` que ja vem no DTO mas nao era exibido. Tipo de
+   AVALIACAO (Quiz/Prova/Exercicio) continua aparecendo pros dois papeis, pois
+   e contexto pedagogico (explica a metrica de nota ao lado), diferente de
+   tipo de ARQUIVO (PDF/TEXTO/etc), que e puramente operacional. */
+export default function PainelModulosDesempenho({ contextoCoordenador = false, curso }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
 
   function alternarModulo(moduloId) {
@@ -67,8 +75,12 @@ export default function PainelModulosDesempenho({ curso }) {
                     <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
                     <p className="atividades-curso__meta">
                       <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
-                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                      <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                      {contextoCoordenador ? null : (
+                        <>
+                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                          <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="atividades-curso__metrica">
@@ -158,14 +170,18 @@ export default function PainelModulosDesempenho({ curso }) {
                                 </span>
                                 <div className="atividades-curso__corpo">
                                   <strong className="atividades-curso__item-titulo">{material.titulo}</strong>
-                                  <p className="atividades-curso__meta">
-                                    <span>{normalizeContentType(material.tipoConteudo)}</span>
-                                    <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                    <Insignia texto={normalizePublicationStatus(material.statusPublicacao)} />
-                                  </p>
+                                  {contextoCoordenador ? null : (
+                                    <p className="atividades-curso__meta">
+                                      <span>{normalizeContentType(material.tipoConteudo)}</span>
+                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                      <Insignia texto={normalizePublicationStatus(material.statusPublicacao)} />
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="atividades-curso__metrica">
-                                  {formatPercent(material.percentualConclusao)} concluido
+                                  {contextoCoordenador
+                                    ? `${material.alunosConcluiram || 0} aluno${material.alunosConcluiram === 1 ? "" : "s"} concluiram · ${formatPercent(material.percentualConclusao)}`
+                                    : `${formatPercent(material.percentualConclusao)} concluido`}
                                 </div>
                               </div>
                             </li>
@@ -180,8 +196,12 @@ export default function PainelModulosDesempenho({ curso }) {
                                   <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
                                   <p className="atividades-curso__meta">
                                     <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
-                                    <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                    <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                                    {contextoCoordenador ? null : (
+                                      <>
+                                        <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                        <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                                      </>
+                                    )}
                                   </p>
                                 </div>
                                 <div className="atividades-curso__metrica">

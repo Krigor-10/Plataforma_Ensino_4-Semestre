@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbAward, TbCamera, TbEdit, TbLayoutGrid, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
-import { MdAttachMoney, MdSave } from "react-icons/md";
+import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbEdit, TbLayoutGrid, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -610,7 +610,7 @@ export function SecaoCursos({
             <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={22} />} rotulo="Media geral" valor={formatGrade(media)} />
             <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbLayoutGrid size={22} />} rotulo="Modulos" valor={resumo.modulos} />
             <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbUserCheck size={22} />} rotulo="Turma / Professor" valor={professorNome || turmaPadrao?.nomeTurma || "Sem turma"} />
-            <CartaoEstatistica icone={<MdAttachMoney size={22} />} rotulo="Valor do curso" valor={formatMoney(cursoSelecionado.preco)} />
+            <CartaoEstatistica corBorda="var(--cor-aviso)" icone={<TbCurrencyReal size={22} />} rotulo="Valor do curso" valor={formatMoney(cursoSelecionado.preco)} />
           </div>
 
           <section aria-label="Acoes do curso" className="painel-secao">

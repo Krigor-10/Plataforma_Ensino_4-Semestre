@@ -158,7 +158,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
 
           {erroExportacao ? <InlineMessage tone="error">{erroExportacao}</InlineMessage> : null}
 
-          <IndicadoresDesempenhoCurso curso={cursoSelecionado} />
+          <IndicadoresDesempenhoCurso curso={cursoSelecionado} ocultarAlunosAprovados />
 
           <PainelModulosDesempenho curso={cursoSelecionado} />
         </>
