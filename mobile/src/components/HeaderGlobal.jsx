@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { apiRequest } from "../lib/api.js";
+import { obterIniciais } from "../lib/format.js";
 import { cores, espacamentos } from "../lib/theme.js";
 
 /* Header global do Aluno — antes vivia so dentro de HomeScreen.jsx, entao
@@ -37,9 +38,9 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
 
   return (
     <View style={[estilos.container, { paddingTop: insets.top + 12 }]}>
-      <View>
-        <Text style={estilos.saudacao}>Ola, {usuario.nome}</Text>
-        <Text style={estilos.papel}>{usuario.tipoUsuario}</Text>
+      <View style={estilos.marca}>
+        <Text style={estilos.marcaCode}>Code</Text>
+        <Text style={estilos.marcaRyse}>Ryse</Text>
       </View>
       <View style={estilos.acoes}>
         <TouchableOpacity accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={estilos.botao}>
@@ -50,8 +51,13 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
             </View>
           ) : null}
         </TouchableOpacity>
-        <TouchableOpacity accessibilityLabel="Perfil" onPress={onAbrirPerfil} style={estilos.botao}>
-          <Ionicons color={cores.textoSuave} name="person-outline" size={22} />
+        <TouchableOpacity
+          accessibilityLabel="Perfil"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={onAbrirPerfil}
+          style={estilos.avatar}
+        >
+          <Text style={estilos.avatarTexto}>{obterIniciais(usuario.nome)}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -69,10 +75,21 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
-  saudacao: { color: cores.texto, fontSize: 20, fontWeight: "700" },
-  papel: { color: cores.textoSuave, marginTop: 2 },
+  marca: { flexDirection: "row", alignItems: "baseline" },
+  marcaCode: { color: cores.texto, fontSize: 20, fontWeight: "800" },
+  marcaRyse: { color: cores.destaque, fontSize: 20, fontWeight: "800" },
   acoes: { flexDirection: "row", alignItems: "center", gap: 4 },
   botao: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: cores.destaque,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4
+  },
+  avatarTexto: { color: cores.texto, fontSize: 13, fontWeight: "800" },
   badge: {
     position: "absolute",
     top: 4,

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
@@ -26,6 +28,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const [tempoRestante, setTempoRestante] = useState(null);
   const [tentativaOffset, setTentativaOffset] = useState(0);
   const prazoFinalRef = useRef(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visivel) {
@@ -184,7 +187,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   return (
     <Modal animationType="slide" onRequestClose={() => !enviando && onFechar()} presentationStyle="pageSheet" visible={visivel}>
       <View style={estilos.container}>
-        <View style={estilos.cabecalho}>
+        <View style={[estilos.cabecalho, { paddingTop: insets.top + 16 }]}>
           <Text numberOfLines={1} style={estilos.titulo}>{avaliacao.titulo}</Text>
           <TouchableOpacity
             accessibilityLabel="Fechar avaliacao"
@@ -210,7 +213,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                 ) : null}
                 <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
               </View>
-              {erro ? <Text style={estilos.erro}>{erro}</Text> : null}
+              <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
               <TouchableOpacity onPress={iniciar} style={estilos.botaoPrimario}>
                 <Text style={estilos.botaoPrimarioTexto}>Iniciar</Text>
               </TouchableOpacity>
@@ -249,7 +252,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                 ))}
               </View>
 
-              {erro ? <Text style={estilos.erro}>{erro}</Text> : null}
+              <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
 
               {questaoAtual.contexto ? (
                 <TouchableOpacity onPress={() => setApoioAberto((atual) => !atual)} style={estilos.apoioToggle}>
@@ -383,7 +386,7 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
@@ -397,7 +400,6 @@ const estilos = StyleSheet.create({
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
   resumoRotulo: { color: cores.textoSuave, fontSize: 12 },
   resumoValor: { color: cores.texto, fontWeight: "700" },
-  erro: { color: cores.erro, marginBottom: 12 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   botaoContorno: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },

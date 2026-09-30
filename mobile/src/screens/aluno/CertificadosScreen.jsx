@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import BannerGradiente from "../../components/BannerGradiente.jsx";
+import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
@@ -109,17 +110,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
 
   return (
     <View style={estilos.container}>
-      <LinearGradient
-        accessibilityLabel={`${desbloqueados} certificados conquistados de ${certificados.length} cursos`}
-        colors={["rgba(55, 10, 130, 0.88)", "rgba(123, 47, 247, 0.70)", "rgba(168, 85, 247, 0.52)"]}
-        end={{ x: 1, y: 1 }}
-        locations={[0, 0.55, 1]}
-        start={{ x: 0, y: 0 }}
-        style={estilos.resumo}
-      >
-        <View style={estilos.resumoIconeArea}>
-          <MaterialCommunityIcons color={cores.texto} name="trophy-outline" size={24} />
-        </View>
+      <BannerGradiente accessibilityLabel={`${desbloqueados} certificados conquistados de ${certificados.length} cursos`} icone="trophy-outline">
         <View style={estilos.resumoStats}>
           <View style={estilos.resumoStatItem}>
             <Text style={estilos.resumoValor}>{desbloqueados}</Text>
@@ -131,7 +122,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
             <Text style={estilos.resumoRotulo}>Cursos</Text>
           </View>
         </View>
-      </LinearGradient>
+      </BannerGradiente>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
         {certificados.map((certificado) => (
@@ -190,7 +181,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
               {emitindo ? (
                 <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
               ) : erroEmissao ? (
-                <Text style={estilos.erro}>{erroEmissao}</Text>
+                <Toast mensagem={erroEmissao} onFechar={() => setErroEmissao("")} tipo="erro" />
               ) : certificadoEmitido ? (
                 <View style={estilos.certificado}>
                   <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSAO</Text>
@@ -228,26 +219,6 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  resumo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: espacamentos.lg,
-    borderRadius: raios.lg,
-    overflow: "hidden",
-    paddingVertical: espacamentos.md,
-    paddingHorizontal: espacamentos.lg,
-    marginHorizontal: espacamentos.xl,
-    marginTop: espacamentos.lg,
-    marginBottom: espacamentos.md
-  },
-  resumoIconeArea: {
-    width: 44,
-    height: 44,
-    borderRadius: raios.md,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
-    alignItems: "center",
-    justifyContent: "center"
-  },
   resumoStats: { flexDirection: "row", alignItems: "center", gap: espacamentos.lg, flex: 1 },
   resumoStatItem: { alignItems: "center" },
   resumoSep: { width: 1, height: 28, backgroundColor: "rgba(255, 255, 255, 0.25)" },
@@ -266,7 +237,6 @@ const estilos = StyleSheet.create({
   botaoPrimario: { flex: 1, flexDirection: "row", backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, paddingHorizontal: 20, alignItems: "center", justifyContent: "center", gap: 8 },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
-  erro: { color: cores.erro, textAlign: "center", marginTop: 40, paddingHorizontal: 24 },
   modalFundo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   modalCaixa: { backgroundColor: cores.fundoCartao, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "85%", padding: 20 },
   modalCabecalho: {

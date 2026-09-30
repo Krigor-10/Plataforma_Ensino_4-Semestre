@@ -75,3 +75,17 @@ export function formatCep(value) {
 
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
+
+export function obterIniciais(nome) {
+  const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
+
+  if (partes.length === 0) {
+    return "?";
+  }
+
+  if (partes.length === 1) {
+    return partes[0].charAt(0).toUpperCase();
+  }
+
+  return (partes[0].charAt(0) + partes[partes.length - 1].charAt(0)).toUpperCase();
+}

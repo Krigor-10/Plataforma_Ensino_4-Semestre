@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import BannerGradiente from "../../components/BannerGradiente.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
+import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
@@ -22,7 +24,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [seletorCursoAberto, setSeletorCursoAberto] = useState(false);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
-  const [erro, setErro] = useState("");
+  const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
 
   const grupos = useMemo(
@@ -54,17 +56,18 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
   async function marcarConcluido(conteudoId) {
     setConteudoProcessando(conteudoId);
-    setErro("");
+    setMensagem(null);
 
     try {
       await apiRequest(`/Progressos/conteudos/${conteudoId}/concluir`, { method: "PUT" });
       await onRecarregar();
+      setMensagem({ tipo: "sucesso", texto: "Conteudo concluido." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setErro(err.message || "Nao foi possivel atualizar o progresso.");
+      setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel atualizar o progresso." });
     } finally {
       setConteudoProcessando(null);
     }
@@ -73,7 +76,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   function abrirConteudo(conteudo) {
     const url = resolverUrlArquivo(conteudo.arquivoUrl || conteudo.linkUrl, token);
     if (url) {
-      Linking.openURL(url).catch(() => setErro("Nao foi possivel abrir o arquivo."));
+      Linking.openURL(url).catch(() => setMensagem({ tipo: "erro", texto: "Nao foi possivel abrir o arquivo." }));
     }
   }
 
@@ -87,16 +90,18 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
   return (
     <View style={estilos.container}>
-      <TouchableOpacity
-        accessibilityLabel={`Curso atual: ${cursoAtivo.titulo}. Toque para trocar de curso`}
-        accessibilityRole="button"
+      <BannerGradiente
+        accessibilityLabel={`Curso em estudo: ${cursoAtivo.titulo}. Toque para trocar de curso`}
+        icone="school-outline"
         onPress={() => setSeletorCursoAberto(true)}
-        style={estilos.seletorCurso}
       >
-        <CapaCurso curso={cursoAtivo} size={40} />
-        <Text numberOfLines={1} style={estilos.seletorCursoTexto}>{cursoAtivo.titulo}</Text>
-        <Ionicons color={cores.destaque} name="chevron-down" size={18} />
-      </TouchableOpacity>
+        <Text style={estilos.seletorRotulo}>Curso em estudo</Text>
+        <View style={estilos.seletorLinha}>
+          <Text numberOfLines={1} style={estilos.seletorCursoTexto}>{cursoAtivo.titulo}</Text>
+          <Ionicons color={cores.texto} name="chevron-down" size={18} />
+        </View>
+        <Text style={estilos.seletorDica}>Toque para trocar de curso</Text>
+      </BannerGradiente>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
         <Text style={estilos.progressoCurso}>{formatPercent(cursoAtivo.progresso)} de progresso - {cursoAtivo.modulos.length} modulo(s)</Text>
@@ -110,7 +115,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
           </TouchableOpacity>
         ) : null}
 
-        {erro ? <Text style={estilos.erro}>{erro}</Text> : null}
+        <Toast mensagem={mensagem?.texto} onFechar={() => setMensagem(null)} tipo={mensagem?.tipo} />
 
         {cursoAtivo.modulos.map((modulo) => {
           const aberto = !modulo.bloqueado && modulosAbertos.has(modulo.id);
@@ -163,8 +168,19 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                         {conteudo.bloqueado ? (
                           <Text style={estilos.itemBloqueadoRotulo}>Bloqueado</Text>
                         ) : conteudo.concluido ? (
-                          <View accessibilityLabel="Concluido" accessible>
-                            <Ionicons color={cores.sucesso} name="checkmark-circle" size={20} />
+                          <View style={estilos.itemConcluidoAcoes}>
+                            <View accessibilityLabel="Concluido" accessible>
+                              <Ionicons color={cores.sucesso} name="checkmark-circle" size={20} />
+                            </View>
+                            {conteudo.arquivoUrl || conteudo.linkUrl ? (
+                              <TouchableOpacity
+                                accessibilityLabel={`Ver novamente: ${conteudo.titulo}`}
+                                onPress={() => abrirConteudo(conteudo)}
+                                style={estilos.botaoIconeSecundario}
+                              >
+                                <Ionicons color={cores.textoSuave} name="eye-outline" size={18} />
+                              </TouchableOpacity>
+                            ) : null}
                           </View>
                         ) : (
                           <View style={estilos.itemAcoes}>
@@ -278,16 +294,10 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  seletorCurso: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: espacamentos.sm,
-    paddingHorizontal: espacamentos.xl,
-    paddingVertical: espacamentos.lg,
-    minHeight: 44
-  },
-  seletorCursoTexto: { color: cores.texto, fontSize: 20, fontWeight: "700", flex: 1 },
+  seletorRotulo: { color: cores.textoRotulo, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  seletorLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: espacamentos.sm, marginTop: 4 },
+  seletorCursoTexto: { color: cores.texto, fontSize: 18, fontWeight: "700", flex: 1 },
+  seletorDica: { color: cores.textoRotulo, fontSize: 12, marginTop: 4 },
   seletorFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", paddingHorizontal: espacamentos.xl, paddingTop: 100 },
   seletorPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, maxHeight: "70%", overflow: "hidden" },
   seletorPainelTitulo: {
@@ -318,7 +328,6 @@ const estilos = StyleSheet.create({
   continuar: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: raios.lg, padding: 14, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: cores.destaque },
   continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: 12, marginBottom: 4 },
   continuarTitulo: { color: cores.texto, fontWeight: "600" },
-  erro: { color: cores.erro, marginBottom: 12 },
   modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
   moduloCabecalho: { flexDirection: "row", alignItems: "center", padding: 14 },
   moduloTitulo: { color: cores.texto, fontWeight: "700" },
@@ -342,6 +351,8 @@ const estilos = StyleSheet.create({
   itemMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
   itemBloqueadoRotulo: { color: cores.bloqueado, fontSize: 11, fontWeight: "700" },
   itemAcoes: { flexDirection: "row", gap: 8 },
+  itemConcluidoAcoes: { flexDirection: "row", alignItems: "center", gap: 10 },
+  botaoIconeSecundario: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   botaoSecundario: { borderWidth: 1, borderColor: cores.destaque, borderRadius: raios.sm, paddingHorizontal: 10, paddingVertical: 6 },
   botaoSecundarioTexto: { color: cores.destaque, fontWeight: "600", fontSize: 12 },
   vazioModulo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic" },
