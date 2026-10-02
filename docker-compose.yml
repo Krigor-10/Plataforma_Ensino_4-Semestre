@@ -18,6 +18,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
       ConnectionStrings__DefaultConnection: "Server=sqlserver;Database=PlataformaEnsinoDB;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;"
+      Jwt__Key: "${JWT_KEY:?defina JWT_KEY no .env (minimo 32 caracteres)}"
+      RunMigrationsOnStartup: "true"
     ports:
       - "5000:8080"
     volumes:

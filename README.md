@@ -120,7 +120,16 @@ E então configure (via `dotnet user-secrets` ou variável de ambiente `Connecti
 Server=localhost,1433;Database=PlataformaEnsinoDB;User Id=sa;Password=SuaSenhaForte123!;TrustServerCertificate=True;
 ```
 
-O projeto não inclui um `docker-compose.yml` hoje (não é necessário no Windows, onde LocalDB já resolve) — mas a arquitetura já está pronta pra isso, já que tudo passa pela connection string configurada, sem nenhuma dependência de LocalDB no código.
+### Subindo tudo via Docker Compose
+
+O `docker-compose.yml` na raiz sobe `sqlserver` + `api` + `gateway` de uma vez (útil em Linux/macOS, ou pra não depender do LocalDB):
+
+```bash
+cp .env.example .env   # preencha DB_SA_PASSWORD e JWT_KEY no .env
+docker-compose up --build
+```
+
+A API sobe com `ASPNETCORE_ENVIRONMENT=Production`, então o seeder de dados de desenvolvimento **não** roda — mas as migrations são aplicadas automaticamente no primeiro boot (via `RunMigrationsOnStartup=true`, só ativado nesse compose; um deploy real como Azure deve rodar `dotnet ef database update` manualmente/via pipeline de CI em vez de depender dessa flag).
 
 ## ▶️ Executando localmente
 

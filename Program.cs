@@ -174,13 +174,24 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Fora de Development (ex.: docker-compose, que sobe a API em Production contra um
+// SQL Server vazio), nao ha outro jeito de aplicar as migrations antes do primeiro
+// boot a nao ser essa flag explicita. Em um deploy real (Azure etc.) prefira rodar
+// 'dotnet ef database update' manualmente/via pipeline de CI e deixar a flag em false.
+var executarMigrationsNoStartup = app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>("RunMigrationsOnStartup");
+
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
 
-    if (app.Environment.IsDevelopment())
+    if (executarMigrationsNoStartup)
     {
         await dbContext.Database.MigrateAsync();
+    }
+
+    if (app.Environment.IsDevelopment())
+    {
         await DevelopmentDataSeeder.SeedAsync(dbContext);
     }
 }
