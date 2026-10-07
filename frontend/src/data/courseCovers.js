@@ -1,14 +1,14 @@
 import courseArchitectureCover from "../assets/course-arquitetura-soft.jpg";
 import courseAutomationTestingCover from "../assets/course-automacao-teste.jpg";
 import courseDataScienceCover from "../assets/course-ciencia-dados.jpg";
-import courseCyberSecurityCover from "../assets/course-cyber-sec.png";
+import courseCyberSecurityCover from "../assets/course-cyber-sec.jpg";
 import courseDevopsCloudCover from "../assets/course-devops-cloud.jpg";
 import courseMobileReactCover from "../assets/course-mobile-react.jpg";
-import coursePromptEngineeringCover from "../assets/course-eng-ia.png";
+import coursePromptEngineeringCover from "../assets/course-eng-ia.jpg";
 import coursePythonCover from "../assets/couse-python.jpg";
 import courseTestCover from "../assets/course-test-cover.svg";
 import courseUxDigitalCover from "../assets/course-ux-digitais.jpg";
-import courseWebFullstackCover from "../assets/course-web-fullstack.png";
+import courseWebFullstackCover from "../assets/course-web-fullstack.jpg";
 
 const COURSE_COVERS_BY_TITLE = {
   "arquitetura de software moderna": courseArchitectureCover,

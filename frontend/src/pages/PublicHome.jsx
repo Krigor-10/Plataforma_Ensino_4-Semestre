@@ -8,7 +8,7 @@ import { InlineMessage } from "../components/Primitives.jsx";
 import { CURATED_COURSES, PUBLIC_PILLARS, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
 import { getCourseCover } from "../data/courseCovers.js";
 import { formatMoney } from "../lib/format.js";
-import homeBannerImage from "../assets/home-publica-banner.png";
+import homeBannerImage from "../assets/home-publica-banner.jpg";
 import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
