@@ -6,16 +6,16 @@ using Xunit;
 
 namespace PlataformaEnsino.Tests;
 
-public class ArmazenamentoArquivoServiceTests : IDisposable
+public class ArmazenamentoArquivoLocalServiceTests : IDisposable
 {
     private readonly string _pastaTemporaria;
-    private readonly ArmazenamentoArquivoService _service;
+    private readonly ArmazenamentoArquivoLocalService _service;
 
-    public ArmazenamentoArquivoServiceTests()
+    public ArmazenamentoArquivoLocalServiceTests()
     {
         _pastaTemporaria = Path.Combine(Path.GetTempPath(), $"plataforma-ensino-testes-{Guid.NewGuid():N}");
         Directory.CreateDirectory(_pastaTemporaria);
-        _service = new ArmazenamentoArquivoService(new AmbienteFake(_pastaTemporaria));
+        _service = new ArmazenamentoArquivoLocalService(new AmbienteFake(_pastaTemporaria));
     }
 
     public void Dispose()
