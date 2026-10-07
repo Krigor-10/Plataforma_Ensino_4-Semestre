@@ -1,5 +1,6 @@
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Services;
@@ -33,21 +34,21 @@ public class EmailService : IEmailService
         var usarSsl = _configuration.GetValue("Smtp:UsarSsl", true);
         var remetente = _configuration["Smtp:Remetente"] ?? "no-reply@edtech.local";
 
-        using var cliente = new SmtpClient(host, porta)
-        {
-            EnableSsl = usarSsl
-        };
+        var mensagem = new MimeMessage();
+        mensagem.From.Add(MailboxAddress.Parse(remetente));
+        mensagem.To.Add(MailboxAddress.Parse(destinatario));
+        mensagem.Subject = assunto;
+        mensagem.Body = new BodyBuilder { HtmlBody = corpoHtml }.ToMessageBody();
+
+        using var cliente = new SmtpClient();
+        await cliente.ConnectAsync(host, porta, usarSsl ? SecureSocketOptions.StartTlsWhenAvailable : SecureSocketOptions.None);
 
         if (!string.IsNullOrWhiteSpace(usuario))
         {
-            cliente.Credentials = new NetworkCredential(usuario, senha);
+            await cliente.AuthenticateAsync(usuario, senha ?? string.Empty);
         }
 
-        using var mensagem = new MailMessage(remetente, destinatario, assunto, corpoHtml)
-        {
-            IsBodyHtml = true
-        };
-
-        await cliente.SendMailAsync(mensagem);
+        await cliente.SendAsync(mensagem);
+        await cliente.DisconnectAsync(quit: true);
     }
 }
