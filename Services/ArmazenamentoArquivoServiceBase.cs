@@ -1,17 +1,16 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
 using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Services;
 
-public class ArmazenamentoArquivoService : IArmazenamentoArquivoService
+/* Validacao (extensao, tamanho, assinatura binaria) e identica para qualquer
+   backend de armazenamento - so o "onde persistir os bytes" muda entre
+   disco local (Development/docker-compose) e Azure Blob Storage (Production).
+   Centralizar aqui evita duplicar a logica de seguranca em cada implementacao. */
+public abstract class ArmazenamentoArquivoServiceBase : IArmazenamentoArquivoService
 {
-    private readonly IWebHostEnvironment _ambiente;
-
-    public ArmazenamentoArquivoService(IWebHostEnvironment ambiente)
-    {
-        _ambiente = ambiente;
-    }
+    private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
     /* Assinatura binaria (magic bytes) por extensao — evita que um arquivo
        renomeado (ex.: um .html/.exe salvo como .jpg) passe so por ter a
@@ -87,17 +86,20 @@ public class ArmazenamentoArquivoService : IArmazenamentoArquivoService
             }
         }
 
-        var pastaDestino = Path.Combine(_ambiente.ContentRootPath, "Storage", "Uploads", subpasta);
-        Directory.CreateDirectory(pastaDestino);
-
         var nomeArquivo = $"{Guid.NewGuid()}{extensao}";
-        var caminhoCompleto = Path.Combine(pastaDestino, nomeArquivo);
-
-        await using (var stream = new FileStream(caminhoCompleto, FileMode.Create))
-        {
-            await arquivo.CopyToAsync(stream);
-        }
+        await PersistirAsync(arquivo, subpasta, nomeArquivo);
 
         return $"/uploads/{subpasta}/{nomeArquivo}";
+    }
+
+    public abstract Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo);
+
+    protected abstract Task PersistirAsync(IFormFile arquivo, string subpasta, string nomeArquivo);
+
+    protected static string ResolverContentType(string nomeArquivo)
+    {
+        return ContentTypeProvider.TryGetContentType(nomeArquivo, out var contentType)
+            ? contentType
+            : "application/octet-stream";
     }
 }

@@ -827,5 +827,8 @@ public class AvaliacaoServiceTests
     {
         public Task<string> SalvarArquivoAsync(IFormFile arquivo, string subpasta, string[] extensoesPermitidas, long tamanhoMaximoBytes)
             => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita upload de anexo ate agora.");
+
+        public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
+            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita leitura de anexo ate agora.");
     }
 }

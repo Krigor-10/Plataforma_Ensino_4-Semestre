@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Threading.RateLimiting;
@@ -74,7 +73,20 @@ builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
-builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoService>();
+// Azure App Service/Container Apps tem disco efemero e nao compartilhado entre
+// instancias - fora de Development, upload so e confiavel em Blob Storage.
+// AzureStorage:ConnectionString ausente mantem o backend local (docker-compose,
+// que resolve isso com um volume nomeado em um unico host).
+var azureStorageConnectionString = builder.Configuration["AzureStorage:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(azureStorageConnectionString))
+{
+    builder.Services.AddSingleton(_ => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
+    builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoBlobService>();
+}
+else
+{
+    builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoLocalService>();
+}
 builder.Services.AddScoped<ICertificadoService, CertificadoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -196,9 +208,12 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
-var pastaUploads = Path.Combine(app.Environment.ContentRootPath, "Storage", "Uploads");
-Directory.CreateDirectory(Path.Combine(pastaUploads, "conteudos"));
-Directory.CreateDirectory(Path.Combine(pastaUploads, "cursos"));
+if (string.IsNullOrWhiteSpace(azureStorageConnectionString))
+{
+    var pastaUploads = Path.Combine(app.Environment.ContentRootPath, "Storage", "Uploads");
+    Directory.CreateDirectory(Path.Combine(pastaUploads, "conteudos"));
+    Directory.CreateDirectory(Path.Combine(pastaUploads, "cursos"));
+}
 
 app.UseRequestLoggingMiddleware();
 app.UseDefaultFiles();
@@ -221,10 +236,15 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.UseStaticFiles(new StaticFileOptions
+// Le do backend configurado (disco local ou Azure Blob Storage) em vez de
+// StaticFileOptions contra um caminho fisico fixo - o gate de autenticacao
+// pro path "/uploads" continua sendo o middleware acima, inalterado.
+app.MapGet("/uploads/{subpasta}/{nomeArquivo}", async (string subpasta, string nomeArquivo, IArmazenamentoArquivoService armazenamento) =>
 {
-    FileProvider = new PhysicalFileProvider(pastaUploads),
-    RequestPath = "/uploads"
+    var arquivo = await armazenamento.AbrirArquivoAsync(subpasta, nomeArquivo);
+    return arquivo is null
+        ? Results.NotFound()
+        : Results.Stream(arquivo.Conteudo, arquivo.ContentType);
 });
 
 app.MapControllers();

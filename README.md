@@ -62,7 +62,10 @@ O projeto usa o sistema de configuração em camadas do ASP.NET Core:
    Jwt__Key="uma-chave-aleatoria-com-no-minimo-32-caracteres"
    Cors__AllowedOrigins__0="https://seu-dominio.com"
    Frontend__BaseUrl="https://seu-dominio.com"
+   AzureStorage__ConnectionString="DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+   AzureStorage__ContainerName="uploads"
    ```
+   `AzureStorage__ConnectionString` vazio/ausente faz a API usar disco local (`Storage/Uploads`) — correto em Development e no `docker-compose` local, mas **não em Azure**: App Service e Container Apps têm disco efêmero e não compartilhado entre instâncias, então um deploy real precisa dessa variável preenchida para persistir uploads (anexos de questão, imagem de curso) em Azure Blob Storage.
 4. `appsettings.example.json` — modelo de referência com todas as chaves existentes e exemplos de connection string alternativas (Docker, servidor remoto). Não é carregado pela aplicação, é só um gabarito.
 
 ### A chave JWT (`Jwt:Key`)
