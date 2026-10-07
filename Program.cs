@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -80,8 +82,22 @@ builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 var azureStorageConnectionString = builder.Configuration["AzureStorage:ConnectionString"];
 if (!string.IsNullOrWhiteSpace(azureStorageConnectionString))
 {
-    builder.Services.AddSingleton(_ => new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString));
+    var blobServiceClient = new Azure.Storage.Blobs.BlobServiceClient(azureStorageConnectionString);
+    builder.Services.AddSingleton(blobServiceClient);
     builder.Services.AddScoped<IArmazenamentoArquivoService, ArmazenamentoArquivoBlobService>();
+
+    // Sem isso, cada instancia/reinicio gera um chaveiro de Data Protection
+    // novo (fica so em /root/.aspnet/DataProtection-Keys, efemero no
+    // container) - qualquer coisa protegida por ele (hoje nada critico,
+    // mas antiforgery/cookies usariam) para de validar ao reiniciar ou ao
+    // escalar pra mais de uma instancia.
+    // A extensao exige que o container ja exista - diferente do backend de
+    // upload (ArmazenamentoArquivoBlobService), que cria o proprio.
+    blobServiceClient.GetBlobContainerClient("dataprotection-keys")
+        .CreateIfNotExists(Azure.Storage.Blobs.Models.PublicAccessType.None);
+
+    builder.Services.AddDataProtection()
+        .PersistKeysToAzureBlobStorage(azureStorageConnectionString, "dataprotection-keys", "chaves.xml");
 }
 else
 {
@@ -170,15 +186,27 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
+// appsettings.Production.json deixa Cors:AllowedOrigins vazio de proposito
+// (nunca hardcode dominio de producao no codigo) - mas se ninguem preencher
+// Cors__AllowedOrigins__N via variavel de ambiente antes do deploy, a API
+// sobe normalmente e o navegador bloqueia toda chamada do frontend por CORS,
+// uma falha silenciosa que so aparece em uso real. Falha o boot em vez disso,
+// no mesmo espirito do guard ja existente pra Jwt:Key.
+if (!builder.Environment.IsDevelopment() && (corsAllowedOrigins is null || corsAllowedOrigins.Length == 0))
+{
+    throw new InvalidOperationException(
+        "Cors:AllowedOrigins nao foi configurado para o ambiente '" + builder.Environment.EnvironmentName +
+        "'. Configure via variavel de ambiente Cors__AllowedOrigins__0 (e __1, __2... se houver mais de uma " +
+        "origem) com a URL real do frontend/app. Veja appsettings.example.json.");
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? ["http://localhost:5000", "https://localhost:5001"];
-
-        policy.WithOrigins(allowedOrigins)
+        policy.WithOrigins(corsAllowedOrigins ?? ["http://localhost:5000", "https://localhost:5001"])
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -213,6 +241,25 @@ if (string.IsNullOrWhiteSpace(azureStorageConnectionString))
     var pastaUploads = Path.Combine(app.Environment.ContentRootPath, "Storage", "Uploads");
     Directory.CreateDirectory(Path.Combine(pastaUploads, "conteudos"));
     Directory.CreateDirectory(Path.Combine(pastaUploads, "cursos"));
+}
+
+// Fora de Development a API normalmente fica atras de um proxy que termina
+// TLS (App Service, Application Gateway, Front Door) - sem isso,
+// Request.Scheme nunca chega como "https" e HSTS/redirect/geracao de URL
+// absoluta ficam errados. KnownNetworks/KnownProxies ficam vazios de
+// proposito: e a configuracao documentada da Microsoft pra App Service, que
+// ja garante (na borda) que X-Forwarded-* so chega do proprio proxy, nunca
+// direto do cliente.
+if (!app.Environment.IsDevelopment())
+{
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    };
+    forwardedHeadersOptions.KnownIPNetworks.Clear();
+    forwardedHeadersOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+    app.UseHsts();
 }
 
 app.UseRequestLoggingMiddleware();

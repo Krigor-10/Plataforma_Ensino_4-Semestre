@@ -80,6 +80,10 @@ dotnet user-secrets set "Jwt:Key" "gere-uma-chave-aleatoria-de-32-ou-mais-caract
 
 Isso nunca vai para o Git — fica fora do repositório, em `%APPDATA%\Microsoft\UserSecrets\` (Windows) ou `~/.microsoft/usersecrets/` (Linux/macOS).
 
+### Origens CORS (`Cors:AllowedOrigins`)
+
+Mesmo guard-rail do `Jwt:Key`: fora de `Development`, a aplicação recusa subir se `Cors:AllowedOrigins` vier vazio. Sem isso, a API subiria "funcionando" e só falharia em uso real — toda chamada do navegador seria bloqueada por CORS silenciosamente. Configure via `Cors__AllowedOrigins__0` (e `__1`, `__2`... se precisar de mais de uma origem).
+
 ## 🗄️ Banco de dados
 
 O banco é 100% reproduzível a partir do código: `Código + EF Core Migrations + Seed controlado = Banco reproduzível`. Não existe dependência de um `.bak`/dump externo.
