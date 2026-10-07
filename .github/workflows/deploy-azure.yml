@@ -1,0 +1,98 @@
+name: Deploy to Azure
+
+# So dispara depois que o workflow "CI" (ci.yml) terminar com sucesso na
+# main - nunca publica codigo que nao passou nos testes. workflow_dispatch
+# fica disponivel pra redisparar manualmente (ex.: reaplicar o mesmo build
+# sem precisar de um commit novo).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      # Builda a partir do codigo-fonte atual, nunca confia no wwwroot/
+      # commitado - ver Dockerfile (mesmo racional) e o relatorio de
+      # auditoria de prontidao para Azure.
+      - name: Build do frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configurar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Publish da API
+        run: dotnet publish "Sistema Academico Integrado.csproj" -c Release -o ./publish
+
+      - name: Login na Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # O Azure SQL so aceita conexao de IPs liberados no firewall. O runner
+      # do GitHub Actions nao tem IP fixo, entao liberamos so o IP dessa
+      # execucao, aplicamos as migrations, e removemos a regra no final
+      # (passo "Remover IP..." roda mesmo se um passo anterior falhar).
+      - name: Liberar IP do runner no firewall do Azure SQL
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "RUNNER_IP=$RUNNER_IP" >> "$GITHUB_ENV"
+          az sql server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.AZURE_SQL_SERVER_NAME }}" \
+            --name "github-actions-temp" \
+            --start-ip-address "$RUNNER_IP" \
+            --end-ip-address "$RUNNER_IP"
+
+      - name: Aplicar migrations pendentes no Azure SQL
+        run: |
+          dotnet tool install --global dotnet-ef
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef database update --project "Sistema Academico Integrado.csproj"
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+
+      - name: Remover IP do runner do firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.AZURE_SQL_SERVER_NAME }}" \
+            --name "github-actions-temp" \
+            --yes || true
+
+      - name: Deploy no App Service
+        run: |
+          cd publish
+          zip -r ../publish.zip . -x "*.pdb"
+          cd ..
+          az webapp deploy \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.AZURE_WEBAPP_NAME }}" \
+            --src-path publish.zip \
+            --type zip

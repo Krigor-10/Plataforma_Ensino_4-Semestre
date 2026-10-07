@@ -197,6 +197,20 @@ npm start
 
 Abre uma janela carregando `http://localhost:5000` (o mesmo backend, sem gateway). Para apontar pra outra URL: `DESKTOP_APP_URL=https://sua-url npm start`.
 
+## ☁️ Deploy na Azure
+
+Infraestrutura como código (Bicep) e pipeline de deploy (GitHub Actions)
+em [`infra/`](infra/README.md) — provisiona App Service + Azure SQL +
+Storage Account (uploads) e publica automaticamente a cada push na `main`
+que passar no CI. Veja [`infra/README.md`](infra/README.md) para o passo a
+passo completo (inclui os comandos de setup que não cabem em IaC, como
+criar a identidade OIDC do GitHub Actions).
+
+Alvo de deploy escolhido: só a API (serve a SPA web junto); o `gateway/`
+fica restrito ao desenvolvimento local. Uploads vão para Azure Blob
+Storage em produção (`AzureStorage:ConnectionString` configurado) em vez de
+disco local — ver `Services/ArmazenamentoArquivoBlobService.cs`.
+
 ## 🖥️ Abrindo no Visual Studio
 
 Abra `Sistema Academico Integrado.sln`. O projeto de start é `Sistema Academico Integrado` (perfil `http` ou `https` em `Properties/launchSettings.json`); `PlataformaEnsino.Tests` é o projeto de testes (xUnit + EF Core InMemory, não precisa de banco real). F5 já aplica migrations e seed automaticamente (ambiente `Development` por padrão nos dois profiles).
