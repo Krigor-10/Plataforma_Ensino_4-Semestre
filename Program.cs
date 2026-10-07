@@ -310,3 +310,7 @@ if (app.Environment.IsDevelopment())
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+// Expoe o Program gerado pelas top-level statements pra PlataformaEnsino.Tests
+// poder usar WebApplicationFactory<Program> em testes de integracao HTTP.
+public partial class Program { }

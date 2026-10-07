@@ -258,6 +258,8 @@ dotnet test
 
 Usa EF Core InMemory — não precisa de SQL Server/LocalDB configurado pra rodar os testes.
 
+A maioria dos testes exercita `Services/*` isoladamente; `PlataformaEnsino.Tests/Integration/` sobe o `Program.cs` real num `WebApplicationFactory<Program>` (pipeline HTTP completo — roteamento, JWT, `[Authorize(Roles=...)]`) pra cobrir login + rota autorizada + rota negada por tipo de usuário.
+
 ## 🔧 Troubleshooting
 
 | Problema | Causa provável | Solução |
