@@ -40,6 +40,14 @@ public class AlternativaQuestaoAlunoResponseDto
     public int Ordem { get; set; }
 }
 
+public class AfirmativaQuestaoAlunoResponseDto
+{
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
+    public string Texto { get; set; } = string.Empty;
+    public int Ordem { get; set; }
+}
+
 public class QuestaoAvaliacaoAlunoResponseDto
 {
     public int Id { get; set; }
@@ -50,6 +58,7 @@ public class QuestaoAvaliacaoAlunoResponseDto
     public TipoQuestao TipoQuestao { get; set; }
     public decimal Pontos { get; set; }
     public List<AlternativaQuestaoAlunoResponseDto> Alternativas { get; set; } = new();
+    public List<AfirmativaQuestaoAlunoResponseDto> Afirmativas { get; set; } = new();
 }
 
 public class RespostaAvaliacaoAlunoDto

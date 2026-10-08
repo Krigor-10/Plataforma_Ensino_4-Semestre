@@ -28,6 +28,7 @@ public class QuestaoBanco
     public byte Dificuldade { get; set; } = 1;
 
     public string ExplicacaoPosResposta { get; set; } = string.Empty;
+    public string ReferenciasBibliograficas { get; set; } = string.Empty;
     public bool Ativa { get; set; } = true;
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime? AtualizadoEm { get; set; }
@@ -39,6 +40,10 @@ public class QuestaoBanco
     [JsonIgnore]
     [ValidateNever]
     public List<AlternativaQuestaoBanco> Alternativas { get; set; } = new();
+
+    [JsonIgnore]
+    [ValidateNever]
+    public List<AfirmativaQuestaoBanco> Afirmativas { get; set; } = new();
 
     [JsonIgnore]
     [ValidateNever]

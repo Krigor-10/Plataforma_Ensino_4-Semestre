@@ -22,10 +22,12 @@ public class PlataformaContext : DbContext
     public DbSet<ConteudoDidatico> ConteudosDidaticos { get; set; }
     public DbSet<QuestaoBanco> QuestoesBanco { get; set; }
     public DbSet<AlternativaQuestaoBanco> AlternativasQuestoesBanco { get; set; }
+    public DbSet<AfirmativaQuestaoBanco> AfirmativasQuestoesBanco { get; set; }
     public DbSet<AnexoQuestaoBanco> AnexosQuestoesBanco { get; set; }
     public DbSet<Avaliacao> Avaliacoes { get; set; }
     public DbSet<QuestaoPublicada> QuestoesPublicadas { get; set; }
     public DbSet<AlternativaQuestaoPublicada> AlternativasQuestoesPublicadas { get; set; }
+    public DbSet<AfirmativaQuestaoPublicada> AfirmativasQuestoesPublicadas { get; set; }
     public DbSet<TentativaAvaliacao> TentativasAvaliacao { get; set; }
     public DbSet<RespostaAluno> RespostasAlunos { get; set; }
     public DbSet<LancamentoNotaAluno> LancamentosNotasAlunos { get; set; }

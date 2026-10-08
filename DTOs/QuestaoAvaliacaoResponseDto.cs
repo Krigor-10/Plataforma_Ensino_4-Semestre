@@ -12,7 +12,9 @@ public class QuestaoAvaliacaoResponseDto
     public string Enunciado { get; set; } = string.Empty;
     public TipoQuestao TipoQuestao { get; set; }
     public string Explicacao { get; set; } = string.Empty;
+    public string ReferenciasBibliograficas { get; set; } = string.Empty;
     public decimal Pontos { get; set; }
     public List<AlternativaAvaliacaoResponseDto> Alternativas { get; set; } = new();
+    public List<AfirmativaQuestaoResponseDto> Afirmativas { get; set; } = new();
     public List<AnexoQuestaoBancoResponseDto> Anexos { get; set; } = new();
 }

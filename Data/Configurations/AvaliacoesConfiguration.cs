@@ -25,6 +25,10 @@ public sealed class QuestaoBancoConfiguration : IEntityTypeConfiguration<Questao
         builder
             .Property(q => q.ExplicacaoPosResposta)
             .HasColumnType("nvarchar(max)");
+
+        builder
+            .Property(q => q.ReferenciasBibliograficas)
+            .HasColumnType("nvarchar(max)");
     }
 }
 
@@ -40,6 +44,30 @@ public sealed class AlternativaQuestaoBancoConfiguration : IEntityTypeConfigurat
 
         builder
             .HasIndex(a => new { a.QuestaoBancoId, a.Letra })
+            .IsUnique();
+
+        builder
+            .Property(a => a.Texto)
+            .HasColumnType("nvarchar(max)");
+
+        builder
+            .Property(a => a.Justificativa)
+            .HasColumnType("nvarchar(max)");
+    }
+}
+
+public sealed class AfirmativaQuestaoBancoConfiguration : IEntityTypeConfiguration<AfirmativaQuestaoBanco>
+{
+    public void Configure(EntityTypeBuilder<AfirmativaQuestaoBanco> builder)
+    {
+        builder
+            .HasOne(a => a.QuestaoBanco)
+            .WithMany(q => q.Afirmativas)
+            .HasForeignKey(a => a.QuestaoBancoId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasIndex(a => new { a.QuestaoBancoId, a.Numero })
             .IsUnique();
 
         builder
@@ -144,6 +172,10 @@ public sealed class QuestaoPublicadaConfiguration : IEntityTypeConfiguration<Que
             .HasColumnType("nvarchar(max)");
 
         builder
+            .Property(q => q.ReferenciasBibliograficasSnapshot)
+            .HasColumnType("nvarchar(max)");
+
+        builder
             .Property(q => q.Pontos)
             .HasPrecision(6, 2);
     }
@@ -161,6 +193,30 @@ public sealed class AlternativaQuestaoPublicadaConfiguration : IEntityTypeConfig
 
         builder
             .HasIndex(a => new { a.QuestaoPublicadaId, a.Letra })
+            .IsUnique();
+
+        builder
+            .Property(a => a.Texto)
+            .HasColumnType("nvarchar(max)");
+
+        builder
+            .Property(a => a.JustificativaSnapshot)
+            .HasColumnType("nvarchar(max)");
+    }
+}
+
+public sealed class AfirmativaQuestaoPublicadaConfiguration : IEntityTypeConfiguration<AfirmativaQuestaoPublicada>
+{
+    public void Configure(EntityTypeBuilder<AfirmativaQuestaoPublicada> builder)
+    {
+        builder
+            .HasOne(a => a.QuestaoPublicada)
+            .WithMany(q => q.Afirmativas)
+            .HasForeignKey(a => a.QuestaoPublicadaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasIndex(a => new { a.QuestaoPublicadaId, a.Numero })
             .IsUnique();
 
         builder

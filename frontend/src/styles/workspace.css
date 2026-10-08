@@ -5160,6 +5160,20 @@
   max-width: min(960px, 95vw);
 }
 
+/* Execucao da avaliacao pelo aluno (classe adicional, so nesse contexto —
+   .modal-caixa--avaliacao sozinha tambem e usada pelo modal de autoria do
+   Professor em AssistenteQuizAvaliacao.jsx, que nao deve ganhar altura fixa).
+   So a partir de Desktop (mesmo breakpoint de workspace.css:92) a caixa
+   ganha altura estavel — contexto/enunciado/alternativas de cada questao
+   passam a rolar dentro de .modal-conteudo em vez de fazer a caixa toda
+   crescer/encolher a cada troca de questao. Abaixo disso (tablet, mobile do
+   site, e o app mobile RN que nem usa este componente) nada muda. */
+@media (min-width: 901px) {
+  .modal-caixa--avaliacao-execucao {
+    height: min(40rem, 85dvh);
+  }
+}
+
 .criar-avaliacao__layout {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -5784,6 +5798,29 @@
   line-height: 1.75;
   white-space: pre-wrap;
   margin: 0;
+}
+
+.quiz-afirmativas {
+  list-style: none;
+  margin: 0 0 var(--espaco-md);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.quiz-afirmativas__item {
+  font-size: 0.9rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+}
+
+.quiz-afirmativas__item strong {
+  color: var(--cor-texto-forte);
 }
 
 .quiz-alternativas {
@@ -6957,4 +6994,314 @@
   accent-color: var(--cor-marca);
   cursor: pointer;
   display: block;
+}
+
+/* ------------------------------------------------------------
+   REVISAO POS-PROVA — gabarito comentado por questao, aberto
+   apenas sob acao explicita do aluno (botao "Ver revisao detalhada").
+   As regras abaixo (fora de @media) sao a base compacta que ja existia
+   e continuam valendo pra tablet/mobile do site sem nenhuma mudanca —
+   o app mobile (React Native) nem tem essa tela. O bloco
+   @media (min-width: 901px) no final e o UNICO lugar que amplia a
+   leitura pra Desktop (mesmo breakpoint usado em workspace.css:92 pro
+   mesmo propósito "so Desktop").
+   ------------------------------------------------------------ */
+.revisao-avaliacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-lg);
+}
+
+.revisao-avaliacao__resumo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espaco-sm);
+  margin: 0;
+}
+
+.revisao-avaliacao__resumo-rotulo {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-avaliacao__resumo-valor {
+  font-size: 1.05rem;
+  color: var(--cor-texto-forte);
+}
+
+.revisao-questao {
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.revisao-questao__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.revisao-questao__numero {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--cor-marca-clara);
+}
+
+.revisao-questao__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--raio-circular);
+}
+
+.revisao-questao__status--certo {
+  color: var(--cor-sucesso);
+  background: color-mix(in srgb, var(--cor-sucesso) 12%, transparent);
+}
+
+.revisao-questao__status--errado {
+  color: var(--cor-erro);
+  background: color-mix(in srgb, var(--cor-erro) 12%, transparent);
+}
+
+.revisao-questao__status--pendente {
+  color: var(--cor-texto-mudo);
+  background: color-mix(in srgb, var(--cor-texto-mudo) 12%, transparent);
+}
+
+.revisao-questao__enunciado {
+  margin: 0;
+  color: var(--cor-texto-forte);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.revisao-questao__resposta-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-questao__resposta-resumo strong {
+  color: var(--cor-texto-forte);
+}
+
+.revisao-questao__bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.revisao-questao__rotulo {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--cor-texto-mudo);
+}
+
+.revisao-questao__resposta-texto,
+.revisao-questao__explicacao,
+.revisao-questao__bibliografia {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.revisao-afirmativas,
+.revisao-alternativas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.revisao-afirmativas__item,
+.revisao-alternativas__item {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.revisao-alternativas__item--correta {
+  border-color: var(--cor-sucesso);
+  background: color-mix(in srgb, var(--cor-sucesso) 8%, var(--cor-fundo-elevado));
+}
+
+.revisao-alternativas__item--escolhida-errada {
+  border-color: var(--cor-erro);
+  background: color-mix(in srgb, var(--cor-erro) 8%, var(--cor-fundo-elevado));
+}
+
+.revisao-afirmativas__cabecalho,
+.revisao-alternativas__cabecalho {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--cor-texto-forte);
+}
+
+.revisao-afirmativas__justificativa,
+.revisao-alternativas__justificativa {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  line-height: 1.5;
+}
+
+.revisao-afirmativas__marca,
+.revisao-alternativas__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-alt);
+  color: var(--cor-texto-mudo);
+}
+
+.revisao-afirmativas__marca--certo,
+.revisao-alternativas__marca--certo {
+  color: var(--cor-sucesso);
+  background: color-mix(in srgb, var(--cor-sucesso) 12%, transparent);
+}
+
+.revisao-afirmativas__marca--errado {
+  color: var(--cor-erro);
+  background: color-mix(in srgb, var(--cor-erro) 12%, transparent);
+}
+
+/* Revisao pos-prova — Desktop (telas largas, >= 901px, mesmo breakpoint
+   de workspace.css:92). So aqui a tela ganha escala de leitura; abaixo
+   disso (tablet, mobile do site, e o app mobile React Native — que nem
+   tem essa tela) nada muda. */
+@media (min-width: 901px) {
+  .modal-caixa--revisao-avaliacao {
+    width: min(820px, 92vw);
+    max-width: min(820px, 92vw);
+  }
+
+  .revisao-avaliacao {
+    gap: var(--espaco-2xl);
+  }
+
+  .revisao-avaliacao__resumo {
+    padding-bottom: var(--espaco-md);
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .revisao-avaliacao__resumo-rotulo {
+    font-size: 0.9rem;
+  }
+
+  .revisao-avaliacao__resumo-valor {
+    font-size: 1.5rem;
+  }
+
+  .revisao-questao {
+    padding: var(--espaco-xl) var(--espaco-2xl);
+    gap: var(--espaco-lg);
+    border-radius: var(--raio-xl);
+  }
+
+  .revisao-questao__cabecalho {
+    padding-bottom: var(--espaco-md);
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .revisao-questao__numero {
+    font-size: 0.85rem;
+  }
+
+  .revisao-questao__status {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.9rem;
+  }
+
+  .revisao-questao__enunciado {
+    font-size: 1.15rem;
+    line-height: 1.75;
+  }
+
+  .revisao-questao__resposta-resumo {
+    font-size: 0.95rem;
+    gap: 0.5rem 1.75rem;
+  }
+
+  .revisao-questao__bloco {
+    gap: var(--espaco-sm);
+  }
+
+  .revisao-questao__rotulo {
+    font-size: 0.8rem;
+  }
+
+  .revisao-questao__resposta-texto,
+  .revisao-questao__explicacao,
+  .revisao-questao__bibliografia {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .revisao-afirmativas,
+  .revisao-alternativas {
+    gap: var(--espaco-md);
+  }
+
+  .revisao-afirmativas__item,
+  .revisao-alternativas__item {
+    padding: var(--espaco-md) var(--espaco-lg);
+    gap: 0.6rem;
+  }
+
+  .revisao-alternativas__item--correta {
+    border-left: 4px solid var(--cor-sucesso);
+  }
+
+  .revisao-alternativas__item--escolhida-errada {
+    border-left: 4px solid var(--cor-erro);
+  }
+
+  .revisao-afirmativas__cabecalho,
+  .revisao-alternativas__cabecalho {
+    font-size: 1.05rem;
+    line-height: 1.5;
+  }
+
+  .revisao-afirmativas__justificativa,
+  .revisao-alternativas__justificativa {
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+
+  .revisao-afirmativas__marca,
+  .revisao-alternativas__marca {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.7rem;
+  }
 }

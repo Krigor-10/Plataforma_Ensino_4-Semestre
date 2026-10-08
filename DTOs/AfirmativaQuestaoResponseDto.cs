@@ -1,17 +1,11 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace PlataformaEnsino.API.DTOs;
 
-public class CriarAlternativaAvaliacaoDto
+public class AfirmativaQuestaoResponseDto
 {
-    [Required]
-    [StringLength(1)]
-    public string Letra { get; set; } = string.Empty;
-
-    [Required]
+    public int Id { get; set; }
+    public string Numero { get; set; } = string.Empty;
     public string Texto { get; set; } = string.Empty;
-
     public bool EhCorreta { get; set; }
-
     public string Justificativa { get; set; } = string.Empty;
+    public int Ordem { get; set; }
 }

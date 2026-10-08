@@ -30,13 +30,16 @@ const OPCOES_STATUS_PUBLICACAO = [
 const OPCOES_TIPO_QUESTAO = [
   { value: "1", label: "Multipla escolha" },
   { value: "2", label: "Verdadeiro/Falso" },
-  { value: "3", label: "Dissertativa" }
+  { value: "3", label: "Dissertativa" },
+  { value: "4", label: "Afirmativas combinadas" }
 ];
 
 const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D"];
+const ALTERNATIVAS_AFIRMATIVAS_COMBINADAS = ["A", "B", "C", "D", "E"];
+const NUMERACAO_AFIRMATIVAS_PADRAO = ["I", "II", "III", "IV", "V", "VI"];
 
 function normalizeQuestionType(type) {
-  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa" };
+  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa", 4: "Afirmativas combinadas" };
   return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
 }
 
@@ -96,8 +99,10 @@ function criarEstadoInicialFormularioQuestao(overrides = {}) {
     subtema: "",
     dificuldade: "1",
     explicacaoPosResposta: "",
+    referenciasBibliograficas: "",
     pontos: "1",
     alternativas: criarAlternativasPorTipo(OPCOES_TIPO_QUESTAO[0].value),
+    afirmativas: [],
     ...overrides
   };
 }
@@ -111,16 +116,27 @@ function criarAlternativasPorTipo(tipoQuestao, alternativasAtuais = []) {
 
   if (tipo === 2) {
     return [
-      { letra: "V", texto: "Verdadeiro", ehCorreta: alternativasAtuais[0]?.ehCorreta ?? true },
-      { letra: "F", texto: "Falso", ehCorreta: alternativasAtuais[1]?.ehCorreta ?? false }
+      { letra: "V", texto: "Verdadeiro", ehCorreta: alternativasAtuais[0]?.ehCorreta ?? true, justificativa: alternativasAtuais[0]?.justificativa || "" },
+      { letra: "F", texto: "Falso", ehCorreta: alternativasAtuais[1]?.ehCorreta ?? false, justificativa: alternativasAtuais[1]?.justificativa || "" }
     ];
   }
 
-  return ALTERNATIVAS_MULTIPLA_ESCOLHA.map((letra, index) => ({
+  const letras = tipo === 4 ? ALTERNATIVAS_AFIRMATIVAS_COMBINADAS : ALTERNATIVAS_MULTIPLA_ESCOLHA;
+
+  return letras.map((letra, index) => ({
     letra,
     texto: alternativasAtuais[index]?.texto || "",
-    ehCorreta: alternativasAtuais[index]?.ehCorreta ?? index === 0
+    ehCorreta: alternativasAtuais[index]?.ehCorreta ?? index === 0,
+    justificativa: alternativasAtuais[index]?.justificativa || ""
   }));
+}
+
+function sugerirProximoNumeroAfirmativa(afirmativasAtuais) {
+  return NUMERACAO_AFIRMATIVAS_PADRAO[afirmativasAtuais.length] || String(afirmativasAtuais.length + 1);
+}
+
+function criarAfirmativaVazia(afirmativasAtuais) {
+  return { numero: sugerirProximoNumeroAfirmativa(afirmativasAtuais), texto: "", ehCorreta: false, justificativa: "" };
 }
 
 function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz) {
@@ -417,10 +433,12 @@ export function AssistenteQuizAvaliacao({
     const { name, value } = event.target;
 
     if (name === "tipoQuestao") {
+      const novoTipo = Number(value);
       setDadosFormularioQuestao((current) => ({
         ...current,
         tipoQuestao: value,
-        alternativas: criarAlternativasPorTipo(value, current.alternativas)
+        alternativas: criarAlternativasPorTipo(value, current.alternativas),
+        afirmativas: novoTipo === 4 ? current.afirmativas : []
       }));
       return;
     }
@@ -437,6 +455,15 @@ export function AssistenteQuizAvaliacao({
     }));
   }
 
+  function atualizarJustificativaAlternativa(index, value) {
+    setDadosFormularioQuestao((current) => ({
+      ...current,
+      alternativas: current.alternativas.map((alternativa, alternativeIndex) =>
+        alternativeIndex === index ? { ...alternativa, justificativa: value } : alternativa
+      )
+    }));
+  }
+
   function selecionarAlternativaCorreta(index) {
     setDadosFormularioQuestao((current) => ({
       ...current,
@@ -444,6 +471,29 @@ export function AssistenteQuizAvaliacao({
         ...alternativa,
         ehCorreta: alternativeIndex === index
       }))
+    }));
+  }
+
+  function adicionarAfirmativa() {
+    setDadosFormularioQuestao((current) => ({
+      ...current,
+      afirmativas: [...current.afirmativas, criarAfirmativaVazia(current.afirmativas)]
+    }));
+  }
+
+  function removerAfirmativa(index) {
+    setDadosFormularioQuestao((current) => ({
+      ...current,
+      afirmativas: current.afirmativas.filter((_, afirmativaIndex) => afirmativaIndex !== index)
+    }));
+  }
+
+  function atualizarAfirmativa(index, campo, valor) {
+    setDadosFormularioQuestao((current) => ({
+      ...current,
+      afirmativas: current.afirmativas.map((afirmativa, afirmativaIndex) =>
+        afirmativaIndex === index ? { ...afirmativa, [campo]: valor } : afirmativa
+      )
     }));
   }
 
@@ -461,8 +511,19 @@ export function AssistenteQuizAvaliacao({
         : dadosFormularioQuestao.alternativas.map((alternativa) => ({
             letra: alternativa.letra,
             texto: alternativa.texto.trim(),
-            ehCorreta: alternativa.ehCorreta
+            ehCorreta: alternativa.ehCorreta,
+            justificativa: (alternativa.justificativa || "").trim()
           }));
+
+    const afirmativas =
+      tipoQuestao === 4
+        ? dadosFormularioQuestao.afirmativas.map((afirmativa) => ({
+            numero: afirmativa.numero.trim(),
+            texto: afirmativa.texto.trim(),
+            ehCorreta: afirmativa.ehCorreta,
+            justificativa: (afirmativa.justificativa || "").trim()
+          }))
+        : [];
 
     const payload = {
       tituloInterno: dadosFormularioQuestao.tituloInterno.trim(),
@@ -473,8 +534,10 @@ export function AssistenteQuizAvaliacao({
       subtema: dadosFormularioQuestao.subtema.trim(),
       dificuldade: Number(dadosFormularioQuestao.dificuldade),
       explicacaoPosResposta: dadosFormularioQuestao.explicacaoPosResposta.trim(),
+      referenciasBibliograficas: dadosFormularioQuestao.referenciasBibliograficas.trim(),
       pontos: Number(dadosFormularioQuestao.pontos),
-      alternativas
+      alternativas,
+      afirmativas
     };
 
     if (!payload.tituloInterno) {
@@ -499,6 +562,16 @@ export function AssistenteQuizAvaliacao({
 
     if (tipoQuestao !== 3 && alternativas.filter((alternativa) => alternativa.ehCorreta).length !== 1) {
       setMensagemQuestoes({ tone: "error", message: "Marque exatamente uma alternativa correta." });
+      return;
+    }
+
+    if (tipoQuestao === 4 && afirmativas.length < 2) {
+      setMensagemQuestoes({ tone: "error", message: "Informe pelo menos duas afirmativas." });
+      return;
+    }
+
+    if (tipoQuestao === 4 && afirmativas.some((afirmativa) => !afirmativa.numero || !afirmativa.texto)) {
+      setMensagemQuestoes({ tone: "error", message: "Preencha numero e texto de todas as afirmativas." });
       return;
     }
 
@@ -904,29 +977,114 @@ export function AssistenteQuizAvaliacao({
                       <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-enunciado" name="enunciado" onChange={atualizarCampoFormularioQuestao} placeholder="Digite a pergunta." value={dadosFormularioQuestao.enunciado} />
                     </div>
 
+                    {Number(dadosFormularioQuestao.tipoQuestao) === 4 ? (
+                      <div className="campo">
+                        <span className="campo__rotulo">Afirmativas</span>
+                        <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                          Cada afirmativa e avaliada individualmente (certa ou errada), com sua propria justificativa. As alternativas abaixo combinam essas afirmativas (ex.: "I e II").
+                        </p>
+                        <ul className="detalhe-usuario__lista" role="list">
+                          {dadosFormularioQuestao.afirmativas.map((afirmativa, index) => (
+                            <li
+                              className="detalhe-usuario__item"
+                              key={index}
+                              style={{ alignItems: "stretch", flexDirection: "column", fontWeight: 400, gap: "0.5rem" }}
+                            >
+                              <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
+                                <input
+                                  aria-label={`Numero da afirmativa ${index + 1}`}
+                                  className="campo__entrada"
+                                  disabled={salvandoQuestao}
+                                  onChange={(event) => atualizarAfirmativa(index, "numero", event.target.value)}
+                                  placeholder="I"
+                                  style={{ width: "4rem" }}
+                                  type="text"
+                                  value={afirmativa.numero}
+                                />
+                                <input
+                                  aria-label={`Texto da afirmativa ${index + 1}`}
+                                  className="campo__entrada"
+                                  disabled={salvandoQuestao}
+                                  onChange={(event) => atualizarAfirmativa(index, "texto", event.target.value)}
+                                  placeholder="Texto da afirmativa"
+                                  style={{ flex: 1 }}
+                                  type="text"
+                                  value={afirmativa.texto}
+                                />
+                                <label style={{ alignItems: "center", display: "flex", gap: "0.3rem", whiteSpace: "nowrap" }}>
+                                  <input
+                                    checked={afirmativa.ehCorreta}
+                                    disabled={salvandoQuestao}
+                                    onChange={(event) => atualizarAfirmativa(index, "ehCorreta", event.target.checked)}
+                                    type="checkbox"
+                                  />
+                                  Correta
+                                </label>
+                                <Botao
+                                  aria-label={`Remover afirmativa ${index + 1}`}
+                                  disabled={salvandoQuestao}
+                                  onClick={() => removerAfirmativa(index)}
+                                  tamanho="pequeno"
+                                  type="button"
+                                  variante="perigo"
+                                >
+                                  <MdDelete aria-hidden="true" size={15} />
+                                </Botao>
+                              </div>
+                              <textarea
+                                aria-label={`Justificativa da afirmativa ${index + 1}`}
+                                className="campo__entrada"
+                                disabled={salvandoQuestao}
+                                onChange={(event) => atualizarAfirmativa(index, "justificativa", event.target.value)}
+                                placeholder="Justificativa (por que a afirmativa esta certa ou errada)"
+                                value={afirmativa.justificativa}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                        <Botao disabled={salvandoQuestao} onClick={adicionarAfirmativa} type="button" variante="secundario">
+                          + Adicionar afirmativa
+                        </Botao>
+                      </div>
+                    ) : null}
+
                     {Number(dadosFormularioQuestao.tipoQuestao) !== 3 ? (
                       <div className="campo">
                         <span className="campo__rotulo">Alternativas</span>
                         <ul className="detalhe-usuario__lista" role="list">
                           {dadosFormularioQuestao.alternativas.map((alternativa, index) => (
-                            <li className="detalhe-usuario__item" key={alternativa.letra} style={{ fontWeight: 400 }}>
-                              <strong>{alternativa.letra}</strong>
-                              <input
+                            <li
+                              className="detalhe-usuario__item"
+                              key={alternativa.letra}
+                              style={{ alignItems: "stretch", flexDirection: "column", fontWeight: 400, gap: "0.5rem" }}
+                            >
+                              <div style={{ alignItems: "center", display: "flex", gap: "0.5rem" }}>
+                                <strong>{alternativa.letra}</strong>
+                                <input
+                                  className="campo__entrada"
+                                  disabled={salvandoQuestao || Number(dadosFormularioQuestao.tipoQuestao) === 2}
+                                  onChange={(event) => atualizarAlternativaQuestao(index, event.target.value)}
+                                  placeholder={`Alternativa ${alternativa.letra}`}
+                                  style={{ flex: 1 }}
+                                  type="text"
+                                  value={alternativa.texto}
+                                />
+                                <input
+                                  aria-label={`Marcar alternativa ${alternativa.letra} como correta`}
+                                  checked={alternativa.ehCorreta}
+                                  disabled={salvandoQuestao}
+                                  name="alternativaCorreta"
+                                  onChange={() => selecionarAlternativaCorreta(index)}
+                                  type="radio"
+                                />
+                              </div>
+                              <textarea
+                                aria-label={`Justificativa da alternativa ${alternativa.letra}`}
                                 className="campo__entrada"
-                                disabled={salvandoQuestao || Number(dadosFormularioQuestao.tipoQuestao) === 2}
-                                onChange={(event) => atualizarAlternativaQuestao(index, event.target.value)}
-                                placeholder={`Alternativa ${alternativa.letra}`}
-                                style={{ flex: 1 }}
-                                type="text"
-                                value={alternativa.texto}
-                              />
-                              <input
-                                aria-label={`Marcar alternativa ${alternativa.letra} como correta`}
-                                checked={alternativa.ehCorreta}
                                 disabled={salvandoQuestao}
-                                name="alternativaCorreta"
-                                onChange={() => selecionarAlternativaCorreta(index)}
-                                type="radio"
+                                onChange={(event) => atualizarJustificativaAlternativa(index, event.target.value)}
+                                placeholder="Justificativa (opcional)"
+                                value={alternativa.justificativa}
                               />
                             </li>
                           ))}
@@ -937,6 +1095,11 @@ export function AssistenteQuizAvaliacao({
                     <div className="campo">
                       <label className="campo__rotulo" htmlFor="questao-explicacao">Explicacao pos-resposta</label>
                       <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-explicacao" name="explicacaoPosResposta" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: comentario para correcao." value={dadosFormularioQuestao.explicacaoPosResposta} />
+                    </div>
+
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="questao-bibliografia">Referencias bibliograficas</label>
+                      <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-bibliografia" name="referenciasBibliograficas" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: uma referencia por linha." value={dadosFormularioQuestao.referenciasBibliograficas} />
                     </div>
 
                     {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}

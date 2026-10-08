@@ -275,7 +275,20 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                   value={respostas[questaoAtual.id]?.respostaTexto || ""}
                 />
               ) : (
-                questaoAtual.alternativas.map((alternativa) => {
+                <>
+                  {Number(questaoAtual.tipoQuestao) === 4 && questaoAtual.afirmativas?.length > 0 ? (
+                    <View style={estilos.afirmativas}>
+                      {questaoAtual.afirmativas.map((afirmativa) => (
+                        <View key={afirmativa.id} style={estilos.afirmativaItem}>
+                          <Text style={estilos.afirmativaTexto}>
+                            <Text style={estilos.afirmativaNumero}>{afirmativa.numero}. </Text>
+                            {afirmativa.texto}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                  {questaoAtual.alternativas.map((alternativa) => {
                   const selecionada = respostas[questaoAtual.id]?.alternativaId === alternativa.id;
                   return (
                     <TouchableOpacity
@@ -295,7 +308,8 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                       )}
                     </TouchableOpacity>
                   );
-                })
+                  })}
+                </>
               )}
 
               <View style={estilos.acoesLinha}>
@@ -422,6 +436,10 @@ const estilos = StyleSheet.create({
   enunciadoTipo: { color: cores.informativo, fontSize: 12, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
   enunciado: { color: cores.texto, fontSize: 16, marginBottom: 16, lineHeight: 22 },
   textoResposta: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, color: cores.texto, padding: 12, minHeight: 100, textAlignVertical: "top", marginBottom: 20 },
+  afirmativas: { marginBottom: 16, gap: 8 },
+  afirmativaItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, padding: 12 },
+  afirmativaNumero: { fontWeight: "800", color: cores.texto },
+  afirmativaTexto: { color: cores.textoSuave, lineHeight: 20 },
   alternativa: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, padding: 14, marginBottom: 10 },
   alternativaSelecionada: { borderColor: cores.destaque, borderWidth: 2, backgroundColor: cores.fundoCartaoAtivo },
   alternativaLetra: { color: cores.textoRotulo, fontWeight: "800", width: 20 },

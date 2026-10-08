@@ -208,6 +208,7 @@ public class AvaliacaoService : IAvaliacaoService
             .AsNoTracking()
             .Where(questao => questao.AvaliacaoId == avaliacaoId)
             .Include(questao => questao.Alternativas)
+            .Include(questao => questao.Afirmativas)
             .Include(questao => questao.QuestaoBanco!)
                 .ThenInclude(questaoBanco => questaoBanco.Anexos)
             .OrderBy(questao => questao.Ordem)
@@ -242,11 +243,13 @@ public class AvaliacaoService : IAvaliacaoService
             Subtema = (dto.Subtema ?? string.Empty).Trim(),
             Dificuldade = dto.Dificuldade,
             ExplicacaoPosResposta = (dto.ExplicacaoPosResposta ?? string.Empty).Trim(),
+            ReferenciasBibliograficas = (dto.ReferenciasBibliograficas ?? string.Empty).Trim(),
             Ativa = true,
             CriadoEm = DateTime.UtcNow
         };
 
         questaoBanco.Alternativas = MontarAlternativasBanco(dto);
+        questaoBanco.Afirmativas = MontarAfirmativasBanco(dto);
         await _context.QuestoesBanco.AddAsync(questaoBanco);
         await _context.SaveChangesAsync();
 
@@ -269,8 +272,10 @@ public class AvaliacaoService : IAvaliacaoService
                 EnunciadoSnapshot = questaoBanco.Enunciado,
                 TipoQuestao = questaoBanco.TipoQuestao,
                 ExplicacaoSnapshot = questaoBanco.ExplicacaoPosResposta,
+                ReferenciasBibliograficasSnapshot = questaoBanco.ReferenciasBibliograficas,
                 Pontos = decimal.Round(dto.Pontos, 2, MidpointRounding.AwayFromZero),
-                Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas)
+                Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas),
+                Afirmativas = MontarAfirmativasPublicadas(questaoBanco.Afirmativas)
             };
 
             await _context.QuestoesPublicadas.AddAsync(questaoPublicada);
@@ -295,6 +300,7 @@ public class AvaliacaoService : IAvaliacaoService
         return await _context.QuestoesPublicadas
             .AsNoTracking()
             .Include(questao => questao.Alternativas)
+            .Include(questao => questao.Afirmativas)
             .FirstAsync(questao => questao.Id == questaoPublicada.Id);
     }
 
@@ -440,6 +446,91 @@ public class AvaliacaoService : IAvaliacaoService
         return MapTentativaAluno(tentativa, avaliacao);
     }
 
+    public async Task<RevisaoTentativaResponseDto> ObterRevisaoTentativaAsync(int tentativaId, int alunoId)
+    {
+        await ValidarAlunoAsync(alunoId);
+
+        var tentativa = await _context.TentativasAvaliacao
+            .AsNoTracking()
+            .Include(item => item.Avaliacao)
+            .Include(item => item.Matricula)
+            .Include(item => item.Respostas)
+                .ThenInclude(resposta => resposta.QuestaoPublicada!)
+                    .ThenInclude(questao => questao.Alternativas)
+            .Include(item => item.Respostas)
+                .ThenInclude(resposta => resposta.QuestaoPublicada!)
+                    .ThenInclude(questao => questao.Afirmativas)
+            .FirstOrDefaultAsync(item => item.Id == tentativaId)
+            ?? throw new KeyNotFoundException("Tentativa nao encontrada.");
+
+        if (tentativa.Matricula is null || tentativa.Matricula.AlunoId != alunoId)
+        {
+            throw new InvalidOperationException("Esta tentativa nao pertence ao aluno autenticado.");
+        }
+
+        if (tentativa.StatusTentativa != StatusTentativaAvaliacao.Corrigida)
+        {
+            throw new InvalidOperationException("Esta tentativa ainda nao foi corrigida.");
+        }
+
+        var avaliacao = tentativa.Avaliacao
+            ?? throw new InvalidOperationException("Avaliacao da tentativa nao encontrada.");
+
+        var questoes = tentativa.Respostas
+            .OrderBy(resposta => resposta.QuestaoPublicada!.Ordem)
+            .Select(resposta =>
+            {
+                var questao = resposta.QuestaoPublicada!;
+                return new RevisaoQuestaoResponseDto
+                {
+                    QuestaoId = questao.Id,
+                    Ordem = questao.Ordem,
+                    Contexto = questao.ContextoSnapshot,
+                    Enunciado = questao.EnunciadoSnapshot,
+                    TipoQuestao = questao.TipoQuestao,
+                    Pontos = questao.Pontos,
+                    PontosObtidos = resposta.PontosObtidos,
+                    Correta = resposta.Correta,
+                    AlternativaEscolhidaId = resposta.AlternativaQuestaoPublicadaId,
+                    RespostaTexto = questao.TipoQuestao == TipoQuestao.Dissertativa ? resposta.RespostaTexto : string.Empty,
+                    Explicacao = questao.ExplicacaoSnapshot,
+                    ReferenciasBibliograficas = questao.ReferenciasBibliograficasSnapshot,
+                    Alternativas = questao.Alternativas
+                        .OrderBy(alternativa => alternativa.Ordem)
+                        .Select(alternativa => new RevisaoAlternativaResponseDto
+                        {
+                            Id = alternativa.Id,
+                            Letra = alternativa.Letra,
+                            Texto = alternativa.Texto,
+                            EhCorreta = alternativa.EhCorreta,
+                            Justificativa = alternativa.JustificativaSnapshot
+                        })
+                        .ToList(),
+                    Afirmativas = questao.Afirmativas
+                        .OrderBy(afirmativa => afirmativa.Ordem)
+                        .Select(afirmativa => new RevisaoAfirmativaResponseDto
+                        {
+                            Numero = afirmativa.Numero,
+                            Texto = afirmativa.Texto,
+                            EhCorreta = afirmativa.EhCorreta,
+                            Justificativa = afirmativa.JustificativaSnapshot
+                        })
+                        .ToList()
+                };
+            })
+            .ToList();
+
+        return new RevisaoTentativaResponseDto
+        {
+            TentativaId = tentativa.Id,
+            AvaliacaoId = tentativa.AvaliacaoId,
+            StatusTentativa = tentativa.StatusTentativa,
+            NotaBruta = tentativa.NotaBruta,
+            NotaMaxima = avaliacao.NotaMaxima,
+            Questoes = questoes
+        };
+    }
+
     private async Task<Avaliacao?> ObterDetalheAsync(int id)
     {
         return await _context.Avaliacoes
@@ -464,6 +555,8 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(item => item.ConteudoDidatico)
             .Include(item => item.Questoes)
                 .ThenInclude(questao => questao.Alternativas)
+            .Include(item => item.Questoes)
+                .ThenInclude(questao => questao.Afirmativas)
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException("Avaliacao publicada nao encontrada.");
 
@@ -792,6 +885,19 @@ public class AvaliacaoService : IAvaliacaoService
         {
             throw new ArgumentException("Todas as alternativas precisam de letra e texto.");
         }
+
+        if (dto.TipoQuestao == TipoQuestao.AfirmativasCombinadas)
+        {
+            if (dto.Afirmativas.Count < 2)
+            {
+                throw new ArgumentException("Informe pelo menos duas afirmativas.");
+            }
+
+            if (dto.Afirmativas.Any(afirmativa => string.IsNullOrWhiteSpace(afirmativa.Numero) || string.IsNullOrWhiteSpace(afirmativa.Texto)))
+            {
+                throw new ArgumentException("Todas as afirmativas precisam de numero e texto.");
+            }
+        }
     }
 
     private static List<AlternativaQuestaoBanco> MontarAlternativasBanco(CriarQuestaoAvaliacaoDto dto)
@@ -807,7 +913,7 @@ public class AvaliacaoService : IAvaliacaoService
                 Letra = alternativa.Letra.Trim().ToUpperInvariant()[..1],
                 Texto = alternativa.Texto.Trim(),
                 EhCorreta = alternativa.EhCorreta,
-                Justificativa = string.Empty,
+                Justificativa = (alternativa.Justificativa ?? string.Empty).Trim(),
                 Ordem = index + 1
             })
             .ToList();
@@ -824,6 +930,40 @@ public class AvaliacaoService : IAvaliacaoService
                 EhCorreta = alternativa.EhCorreta,
                 JustificativaSnapshot = alternativa.Justificativa,
                 Ordem = alternativa.Ordem
+            })
+            .ToList();
+    }
+
+    private static List<AfirmativaQuestaoBanco> MontarAfirmativasBanco(CriarQuestaoAvaliacaoDto dto)
+    {
+        if (dto.TipoQuestao != TipoQuestao.AfirmativasCombinadas)
+        {
+            return new List<AfirmativaQuestaoBanco>();
+        }
+
+        return dto.Afirmativas
+            .Select((afirmativa, index) => new AfirmativaQuestaoBanco
+            {
+                Numero = afirmativa.Numero.Trim(),
+                Texto = afirmativa.Texto.Trim(),
+                EhCorreta = afirmativa.EhCorreta,
+                Justificativa = (afirmativa.Justificativa ?? string.Empty).Trim(),
+                Ordem = index + 1
+            })
+            .ToList();
+    }
+
+    private static List<AfirmativaQuestaoPublicada> MontarAfirmativasPublicadas(IEnumerable<AfirmativaQuestaoBanco> afirmativas)
+    {
+        return afirmativas
+            .OrderBy(afirmativa => afirmativa.Ordem)
+            .Select(afirmativa => new AfirmativaQuestaoPublicada
+            {
+                Numero = afirmativa.Numero,
+                Texto = afirmativa.Texto,
+                EhCorreta = afirmativa.EhCorreta,
+                JustificativaSnapshot = afirmativa.Justificativa,
+                Ordem = afirmativa.Ordem
             })
             .ToList();
     }
@@ -899,6 +1039,16 @@ public class AvaliacaoService : IAvaliacaoService
                     Letra = alternativa.Letra,
                     Texto = alternativa.Texto,
                     Ordem = alternativa.Ordem
+                })
+                .ToList(),
+            Afirmativas = questao.Afirmativas
+                .OrderBy(afirmativa => afirmativa.Ordem)
+                .Select(afirmativa => new AfirmativaQuestaoAlunoResponseDto
+                {
+                    Id = afirmativa.Id,
+                    Numero = afirmativa.Numero,
+                    Texto = afirmativa.Texto,
+                    Ordem = afirmativa.Ordem
                 })
                 .ToList()
         };

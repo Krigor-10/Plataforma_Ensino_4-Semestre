@@ -58,7 +58,7 @@ export function normalizeEvaluationType(type) {
 }
 
 export function normalizeQuestionType(type) {
-  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa" };
+  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa", 4: "Afirmativas combinadas" };
   return typeof type === "number" ? labels[type] || "Questao" : type || "Questao";
 }
 

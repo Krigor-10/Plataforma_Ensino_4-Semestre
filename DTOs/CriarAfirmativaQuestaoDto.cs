@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PlataformaEnsino.API.DTOs;
 
-public class CriarAlternativaAvaliacaoDto
+public class CriarAfirmativaQuestaoDto
 {
     [Required]
-    [StringLength(1)]
-    public string Letra { get; set; } = string.Empty;
+    [StringLength(10)]
+    public string Numero { get; set; } = string.Empty;
 
     [Required]
     public string Texto { get; set; } = string.Empty;

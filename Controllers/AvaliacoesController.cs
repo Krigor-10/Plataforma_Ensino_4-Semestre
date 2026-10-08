@@ -192,6 +192,25 @@ public class AvaliacoesController : ControllerBase
         return Ok(tentativa);
     }
 
+    [HttpGet("{id:int}/aluno/tentativas/{tentativaId:int}/revisao")]
+    [Authorize(Roles = "Aluno")]
+    public async Task<IActionResult> ObterRevisaoTentativa(int id, int tentativaId)
+    {
+        var alunoId = ObterAlunoId();
+        if (!alunoId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o aluno autenticado." });
+        }
+
+        var revisao = await _avaliacaoService.ObterRevisaoTentativaAsync(tentativaId, alunoId.Value);
+        if (revisao.AvaliacaoId != id)
+        {
+            return NotFound(new { mensagem = "Tentativa nao encontrada para esta avaliacao." });
+        }
+
+        return Ok(revisao);
+    }
+
     [HttpPost("questoes-banco/{questaoBancoId:int}/anexos")]
     [Authorize(Roles = "Professor")]
     [RequestSizeLimit(105_000_000)]
@@ -280,6 +299,7 @@ public class AvaliacoesController : ControllerBase
             Enunciado = questao.EnunciadoSnapshot,
             TipoQuestao = questao.TipoQuestao,
             Explicacao = questao.ExplicacaoSnapshot,
+            ReferenciasBibliograficas = questao.ReferenciasBibliograficasSnapshot,
             Pontos = questao.Pontos,
             Anexos = (questao.QuestaoBanco?.Anexos ?? new List<AnexoQuestaoBanco>())
                 .OrderBy(anexo => anexo.Ordem)
@@ -302,6 +322,18 @@ public class AvaliacoesController : ControllerBase
                     EhCorreta = alternativa.EhCorreta,
                     Justificativa = alternativa.JustificativaSnapshot,
                     Ordem = alternativa.Ordem
+                })
+                .ToList(),
+            Afirmativas = questao.Afirmativas
+                .OrderBy(afirmativa => afirmativa.Ordem)
+                .Select(afirmativa => new AfirmativaQuestaoResponseDto
+                {
+                    Id = afirmativa.Id,
+                    Numero = afirmativa.Numero,
+                    Texto = afirmativa.Texto,
+                    EhCorreta = afirmativa.EhCorreta,
+                    Justificativa = afirmativa.JustificativaSnapshot,
+                    Ordem = afirmativa.Ordem
                 })
                 .ToList()
         };

@@ -28,7 +28,11 @@ public class CriarQuestaoAvaliacaoDto
 
     public string ExplicacaoPosResposta { get; set; } = string.Empty;
 
+    public string ReferenciasBibliograficas { get; set; } = string.Empty;
+
     public decimal Pontos { get; set; } = 1;
 
     public List<CriarAlternativaAvaliacaoDto> Alternativas { get; set; } = new();
+
+    public List<CriarAfirmativaQuestaoDto> Afirmativas { get; set; } = new();
 }

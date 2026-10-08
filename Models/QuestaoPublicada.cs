@@ -13,6 +13,7 @@ public class QuestaoPublicada
     public string EnunciadoSnapshot { get; set; } = string.Empty;
     public TipoQuestao TipoQuestao { get; set; } = TipoQuestao.MultiplaEscolha;
     public string ExplicacaoSnapshot { get; set; } = string.Empty;
+    public string ReferenciasBibliograficasSnapshot { get; set; } = string.Empty;
     public decimal Pontos { get; set; } = 1;
 
     [JsonIgnore]
@@ -26,6 +27,10 @@ public class QuestaoPublicada
     [JsonIgnore]
     [ValidateNever]
     public List<AlternativaQuestaoPublicada> Alternativas { get; set; } = new();
+
+    [JsonIgnore]
+    [ValidateNever]
+    public List<AfirmativaQuestaoPublicada> Afirmativas { get; set; } = new();
 
     [JsonIgnore]
     [ValidateNever]

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   TbAlertTriangle,
@@ -35,6 +35,7 @@ import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
+import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
@@ -532,6 +533,29 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   const [apoioAberto, setApoioAberto] = useState(true);
   const [resultadoTentativa, setResultadoTentativa] = useState(null);
   const [tempoRestanteSegundos, setTempoRestanteSegundos] = useState(null);
+  const [revisaoAberta, setRevisaoAberta] = useState(false);
+  const tempoRestanteRef = useRef(null);
+  tempoRestanteRef.current = tempoRestanteSegundos;
+
+  // Persiste o progresso (respostas + questao atual + prazo) a cada mudanca,
+  // pra sobreviver a fechar a aba/recarregar/navegar pra outra tela — nunca
+  // marca a avaliacao como concluida nem cria tentativa nenhuma, so evita
+  // perder o que o aluno ja tinha respondido. So roda enquanto a tentativa
+  // esta realmente em andamento (questoes carregadas, ainda sem resultado).
+  useEffect(() => {
+    if (!avaliacaoEmExecucao || resultadoTentativa || carregandoQuestoes || !questoes.length) {
+      return;
+    }
+
+    salvarRascunhoAvaliacao(avaliacaoEmExecucao.id, {
+      indiceAtual,
+      respostas,
+      tentativasRealizadasNoMomento: avaliacaoEmExecucao.tentativasRealizadas || 0,
+      prazoFinal: tempoRestanteRef.current !== null ? Date.now() + tempoRestanteRef.current * 1000 : null,
+      salvoEm: Date.now()
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avaliacaoEmExecucao, resultadoTentativa, carregandoQuestoes, questoes, indiceAtual, respostas]);
 
   useEffect(() => {
     if (!avaliacaoEmExecucao) {
@@ -583,21 +607,42 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   }
 
   async function abrirExecucaoAvaliacao(avaliacao) {
+    const rascunho = rascunhoAvaliacaoValido(avaliacao);
+
     setAvaliacaoParaConfirmar(null);
     setAvaliacaoEmExecucao(avaliacao);
     setQuestoes([]);
-    setRespostas({});
+    setRespostas(rascunho?.respostas || {});
     setMensagem({ tone: "", message: "" });
-    setIndiceAtual(0);
+    setIndiceAtual(rascunho?.indiceAtual || 0);
     setApoioAberto(true);
     setResultadoTentativa(null);
-    setTempoRestanteSegundos(avaliacao.tempoLimiteMinutos > 0 ? avaliacao.tempoLimiteMinutos * 60 : null);
+    setRevisaoAberta(false);
+
+    if (rascunho?.prazoFinal) {
+      setTempoRestanteSegundos(Math.max(0, Math.round((rascunho.prazoFinal - Date.now()) / 1000)));
+    } else {
+      setTempoRestanteSegundos(avaliacao.tempoLimiteMinutos > 0 ? avaliacao.tempoLimiteMinutos * 60 : null);
+    }
+
     setCarregandoQuestoes(true);
 
     try {
       const proximasQuestoes = await apiRequest(`/Avaliacoes/${avaliacao.id}/aluno/questoes`);
       setQuestoes(proximasQuestoes);
-      setRespostas(criarRespostasIniciais(proximasQuestoes));
+
+      if (rascunho) {
+        // Mantem as respostas restauradas, descartando qualquer id de questao
+        // que nao exista mais (ex.: professor removeu uma questao depois que
+        // o rascunho foi salvo) e garantindo que o indice continua valido.
+        const idsValidos = new Set(proximasQuestoes.map((questao) => questao.id));
+        setRespostas((atual) =>
+          Object.fromEntries(Object.entries(atual).filter(([id]) => idsValidos.has(Number(id))))
+        );
+        setIndiceAtual((atual) => Math.max(0, Math.min(atual, proximasQuestoes.length - 1)));
+      } else {
+        setRespostas(criarRespostasIniciais(proximasQuestoes));
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
@@ -621,6 +666,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     setMensagem({ tone: "", message: "" });
     setIndiceAtual(0);
     setResultadoTentativa(null);
+    setRevisaoAberta(false);
     setTempoRestanteSegundos(null);
   }
 
@@ -633,6 +679,22 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   function irParaQuestao(indice) {
     setIndiceAtual(Math.max(0, Math.min(indice, questoes.length - 1)));
     setApoioAberto(true);
+    setMensagem({ tone: "", message: "" });
+  }
+
+  // Validacao do botao "Proxima questao": verifica SOMENTE a questao atual
+  // (a que o aluno esta tentando deixar), nunca a proxima que ainda vai
+  // carregar. Navegacao livre pelos indicadores de progresso continua sem
+  // essa checagem — e so um atalho de revisao, nao o fluxo principal.
+  function avancarQuestao() {
+    const atual = questoes[indiceAtual];
+
+    if (atual && !questaoRespondida(atual)) {
+      setMensagem({ tone: "error", message: `Responda a questao ${atual.ordem} antes de avancar.` });
+      return;
+    }
+
+    irParaQuestao(indiceAtual + 1);
   }
 
   function questaoRespondida(questao) {
@@ -723,6 +785,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
       });
 
       setResultadoTentativa(tentativa);
+      removerRascunhoAvaliacao(avaliacaoEmExecucao.id);
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -815,8 +878,9 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
         const podeRefazer = tentativasUsadas < tentativasPermitidas;
 
         return (
+        <>
         <Modal
-          className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : "modal-caixa--avaliacao"}
+          className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : "modal-caixa--avaliacao modal-caixa--avaliacao-execucao"}
           onFechar={fecharExecucaoAvaliacao}
           titulo={avaliacaoEmExecucao.titulo}
           rodape={
@@ -843,6 +907,34 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                 ) : (
                   <span className="resultado-avaliacao__tentativas">Limite de tentativas atingido</span>
                 )}
+              </footer>
+            ) : questaoAtual && !carregandoQuestoes ? (
+              <footer className="modal-rodape">
+                <div className="quiz-acoes">
+                  {indiceAtual > 0 ? (
+                    <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual - 1)} type="button" variante="fantasma">
+                      <TbArrowLeft aria-hidden="true" size={16} /> Voltar
+                    </Botao>
+                  ) : (
+                    <span />
+                  )}
+
+                  {ehUltimaQuestao ? (
+                    <Botao
+                      disabled={enviandoRespostas}
+                      form="quiz-form-execucao"
+                      key="enviar-avaliacao"
+                      type="submit"
+                      variante="primario"
+                    >
+                      {enviandoRespostas ? "Enviando..." : ehQuizExecucao ? "Confirmar" : "Enviar avaliacao"}
+                    </Botao>
+                  ) : (
+                    <Botao disabled={enviandoRespostas} key="proxima-questao" onClick={avancarQuestao} type="button" variante="primario">
+                      Proxima questao <TbArrowRight aria-hidden="true" size={16} />
+                    </Botao>
+                  )}
+                </div>
               </footer>
             ) : null
           }
@@ -896,6 +988,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                       <dd>{tentativasUsadas} de {tentativasPermitidas}</dd>
                     </div>
                   </dl>
+
+                  {corrigida ? (
+                    <Botao onClick={() => setRevisaoAberta(true)} type="button" variante="secundario">
+                      Ver revisao detalhada
+                    </Botao>
+                  ) : null}
                 </section>
           ) : carregandoQuestoes ? (
             <EmptyState message="Carregando questoes da avaliacao." />
@@ -947,7 +1045,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
               {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
 
               {questaoAtual ? (
-                <form className="quiz-corpo" onSubmit={enviarRespostas}>
+                <form className="quiz-corpo" id="quiz-form-execucao" onSubmit={enviarRespostas}>
                   {questaoAtual.contexto ? (
                     <section className="quiz-apoio">
                       <button aria-expanded={apoioAberto} className="quiz-apoio__toggle" onClick={() => setApoioAberto((atual) => !atual)} type="button">
@@ -982,9 +1080,19 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                       />
                     </div>
                   ) : (
-                    <fieldset className="quiz-alternativas" disabled={enviandoRespostas}>
-                      <legend className="visualmente-oculto">Alternativas da questao {indiceAtual + 1}</legend>
-                      {questaoAtual.alternativas.map((alternativa) => (
+                    <>
+                      {Number(questaoAtual.tipoQuestao) === 4 && questaoAtual.afirmativas?.length > 0 ? (
+                        <ol className="quiz-afirmativas">
+                          {questaoAtual.afirmativas.map((afirmativa) => (
+                            <li className="quiz-afirmativas__item" key={afirmativa.id}>
+                              <strong>{afirmativa.numero}.</strong> {afirmativa.texto}
+                            </li>
+                          ))}
+                        </ol>
+                      ) : null}
+                      <fieldset className="quiz-alternativas" disabled={enviandoRespostas}>
+                        <legend className="visualmente-oculto">Alternativas da questao {indiceAtual + 1}</legend>
+                        {questaoAtual.alternativas.map((alternativa) => (
                         <button
                           aria-pressed={respostas[questaoAtual.id]?.alternativaId === alternativa.id}
                           className={`quiz-alternativa${respostas[questaoAtual.id]?.alternativaId === alternativa.id ? " quiz-alternativa--selecionada" : ""}`}
@@ -996,33 +1104,23 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                           <span className="quiz-alternativa__texto">{alternativa.texto}</span>
                         </button>
                       ))}
-                    </fieldset>
+                      </fieldset>
+                    </>
                   )}
-
-                  <div className="quiz-acoes">
-                    {indiceAtual > 0 ? (
-                      <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual - 1)} type="button" variante="fantasma">
-                        <TbArrowLeft aria-hidden="true" size={16} /> Voltar
-                      </Botao>
-                    ) : (
-                      <span />
-                    )}
-
-                    {ehUltimaQuestao ? (
-                      <Botao disabled={enviandoRespostas} type="submit" variante="primario">
-                        {enviandoRespostas ? "Enviando..." : ehQuizExecucao ? "Confirmar" : "Enviar avaliacao"}
-                      </Botao>
-                    ) : (
-                      <Botao disabled={enviandoRespostas} onClick={() => irParaQuestao(indiceAtual + 1)} type="button" variante="primario">
-                        Proxima questao <TbArrowRight aria-hidden="true" size={16} />
-                      </Botao>
-                    )}
-                  </div>
                 </form>
               ) : null}
             </>
           )}
         </Modal>
+        {revisaoAberta && resultadoTentativa ? (
+          <RevisaoTentativaAvaliacao
+            avaliacaoId={avaliacaoEmExecucao.id}
+            onFechar={() => setRevisaoAberta(false)}
+            onSessionExpired={onSessionExpired}
+            tentativaId={resultadoTentativa.id}
+          />
+        ) : null}
+        </>
         );
       })() : null}
     </>
@@ -1154,6 +1252,13 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
       {avaliacoes.map((avaliacao, indice) => {
         const aberta = avaliacaoAbertaId === avaliacao.id;
         const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+        // "Em andamento" nao vem do backend (nao existe tentativa em aberto
+        // la — ver nota em rascunhoAvaliacaoValido); e so um rascunho local
+        // ainda valido pra essa avaliacao, com a mesma contagem de tentativas
+        // que o servidor conhece agora.
+        const emAndamento = disponibilidade.podeRealizar && Boolean(rascunhoAvaliacaoValido(avaliacao));
+        const statusLabel = emAndamento ? "Em andamento" : disponibilidade.label;
+        const statusTone = emAndamento ? "info" : disponibilidade.tone;
         const idDetalhe = `avaliacao-aluno-detalhe-${avaliacao.id}`;
         const ehQuiz = Number(avaliacao.tipoAvaliacao) === 1;
         const temNota = !ehQuiz && avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
@@ -1176,7 +1281,7 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                     <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
                     <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
                     <span className="conteudos-modulo__contagem">
-                      {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"} · {disponibilidade.label}
+                      {avaliacao.totalQuestoes || 0} questa{avaliacao.totalQuestoes === 1 ? "o" : "oes"} · {statusLabel}
                     </span>
                   </div>
                   <TbChevronDown
@@ -1202,7 +1307,7 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                   <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
                     <div className="lista-detalhes__item">
                       <dt>Status</dt>
-                      <dd><StatusPill tone={disponibilidade.tone}>{disponibilidade.label}</StatusPill></dd>
+                      <dd><StatusPill tone={statusTone}>{statusLabel}</StatusPill></dd>
                     </div>
                     <div className="lista-detalhes__item">
                       <dt>Questoes</dt>
@@ -1235,7 +1340,7 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                         variante="primario"
                       >
                         <TbPlayerPlay aria-hidden="true" size={14} />
-                        Iniciar avaliacao
+                        {emAndamento ? "Continuar avaliacao" : "Iniciar avaliacao"}
                       </Botao>
                     ) : (
                       <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
@@ -1985,7 +2090,8 @@ function normalizeQuestionType(type) {
   const labels = {
     1: "Multipla escolha",
     2: "Verdadeiro/Falso",
-    3: "Dissertativa"
+    3: "Dissertativa",
+    4: "Afirmativas combinadas"
   };
 
   if (typeof type === "number") {
@@ -2006,6 +2112,82 @@ function criarRespostasIniciais(questoes) {
       }
     ])
   );
+}
+
+/* Rascunho de tentativa em andamento — persistido no localStorage pra
+   sobreviver a fechar aba/recarregar/navegar pra outra tela. Nao existe
+   conceito de "tentativa em andamento" no backend (a TentativaAvaliacao so
+   e criada no envio final, atomicamente — ver AvaliacaoService.EnviarRespostasAlunoAsync),
+   entao reabrir a mesma avaliacao nunca cria uma tentativa nova por si so;
+   o rascunho so evita que o aluno perca as respostas que ja tinha dado.
+   Escopado por usuario (mesmo navegador pode ter sessoes demo diferentes)
+   e invalidado se o numero de tentativas ja usadas no servidor mudou desde
+   que o rascunho foi salvo (ex.: enviada por outra aba/dispositivo). */
+const CHAVE_RASCUNHO_AVALIACAO = "edtech.rascunhoAvaliacao";
+
+function obterIdUsuarioLogado() {
+  try {
+    const bruto = window.localStorage.getItem("usuarioLogado");
+    const usuario = bruto ? JSON.parse(bruto) : null;
+    return usuario?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function montarChaveRascunho(avaliacaoId) {
+  const usuarioId = obterIdUsuarioLogado();
+  return usuarioId ? `${CHAVE_RASCUNHO_AVALIACAO}.${usuarioId}.${avaliacaoId}` : null;
+}
+
+function lerRascunhoAvaliacao(avaliacaoId) {
+  const chave = montarChaveRascunho(avaliacaoId);
+  if (!chave) {
+    return null;
+  }
+
+  try {
+    const bruto = window.localStorage.getItem(chave);
+    return bruto ? JSON.parse(bruto) : null;
+  } catch {
+    return null;
+  }
+}
+
+function salvarRascunhoAvaliacao(avaliacaoId, dados) {
+  const chave = montarChaveRascunho(avaliacaoId);
+  if (!chave) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(chave, JSON.stringify(dados));
+  } catch {
+    // localStorage indisponivel (modo privado, quota) - progresso fica so em memoria.
+  }
+}
+
+function removerRascunhoAvaliacao(avaliacaoId) {
+  const chave = montarChaveRascunho(avaliacaoId);
+  if (!chave) {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(chave);
+  } catch {
+    // ignora
+  }
+}
+
+function rascunhoAvaliacaoValido(avaliacao) {
+  const rascunho = lerRascunhoAvaliacao(avaliacao.id);
+  if (!rascunho) {
+    return null;
+  }
+
+  const tentativasAtuais = avaliacao.tentativasRealizadas || 0;
+  return rascunho.tentativasRealizadasNoMomento === tentativasAtuais ? rascunho : null;
 }
 
 function formatScore(value) {
