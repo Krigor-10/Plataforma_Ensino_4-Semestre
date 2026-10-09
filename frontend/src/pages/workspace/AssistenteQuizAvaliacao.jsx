@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbCheck, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbClipboardList, TbPencil, TbX } from "react-icons/tb";
 import { MdDelete, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -139,6 +139,36 @@ function criarAfirmativaVazia(afirmativasAtuais) {
   return { numero: sugerirProximoNumeroAfirmativa(afirmativasAtuais), texto: "", ehCorreta: false, justificativa: "" };
 }
 
+// Converte a questao devolvida pela API (QuestaoAvaliacaoResponseDto) de volta
+// pro formato editavel do formulario - usado ao abrir uma questao ja salva
+// pra edicao.
+function mapearQuestaoParaFormulario(questao) {
+  return {
+    tituloInterno: questao.tituloInterno || "",
+    contexto: questao.contexto || "",
+    enunciado: questao.enunciado || "",
+    tipoQuestao: String(questao.tipoQuestao),
+    tema: questao.tema || "",
+    subtema: questao.subtema || "",
+    dificuldade: String(questao.dificuldade || 1),
+    explicacaoPosResposta: questao.explicacao || "",
+    referenciasBibliograficas: questao.referenciasBibliograficas || "",
+    pontos: String(questao.pontos ?? 1),
+    alternativas: (questao.alternativas || []).map((alternativa) => ({
+      letra: alternativa.letra,
+      texto: alternativa.texto || "",
+      ehCorreta: alternativa.ehCorreta,
+      justificativa: alternativa.justificativa || ""
+    })),
+    afirmativas: (questao.afirmativas || []).map((afirmativa) => ({
+      numero: afirmativa.numero,
+      texto: afirmativa.texto || "",
+      ehCorreta: afirmativa.ehCorreta,
+      justificativa: afirmativa.justificativa || ""
+    }))
+  };
+}
+
 function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz) {
   if (avaliacaoParaEditar) {
     return {
@@ -201,6 +231,7 @@ export function AssistenteQuizAvaliacao({
   const [etapaAtiva, setEtapaAtiva] = useState("dados");
   const [questoesAvaliacao, setQuestoesAvaliacao] = useState([]);
   const [dadosFormularioQuestao, setDadosFormularioQuestao] = useState(() => criarEstadoInicialFormularioQuestao());
+  const [questaoEmEdicaoId, setQuestaoEmEdicaoId] = useState(null);
   const [carregandoQuestoes, setCarregandoQuestoes] = useState(false);
   const [salvandoQuestao, setSalvandoQuestao] = useState(false);
   const [mensagemQuestoes, setMensagemQuestoes] = useState({ tone: "", message: "" });
@@ -424,9 +455,50 @@ export function AssistenteQuizAvaliacao({
   }
 
   function abrirNovaQuestao() {
+    setQuestaoEmEdicaoId(null);
     setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
     setMensagemQuestoes({ tone: "", message: "" });
     setEtapaAtiva("nova-questao");
+  }
+
+  function abrirEdicaoQuestao(questao) {
+    setQuestaoEmEdicaoId(questao.id);
+    setDadosFormularioQuestao(mapearQuestaoParaFormulario(questao));
+    setMensagemQuestoes({ tone: "", message: "" });
+    setEtapaAtiva("nova-questao");
+  }
+
+  function voltarDaEdicaoQuestao() {
+    setQuestaoEmEdicaoId(null);
+    setEtapaAtiva(questoesAvaliacao.length > 0 ? "resumo" : "dados");
+  }
+
+  async function moverQuestao(indice, direcao) {
+    const destino = indice + direcao;
+    if (destino < 0 || destino >= questoesAvaliacao.length || salvandoQuestao) {
+      return;
+    }
+
+    const novaOrdem = [...questoesAvaliacao];
+    [novaOrdem[indice], novaOrdem[destino]] = [novaOrdem[destino], novaOrdem[indice]];
+    const posicoes = novaOrdem.map((questao, novoIndice) => ({ questaoId: questao.id, novaOrdem: novoIndice + 1 }));
+
+    setSalvandoQuestao(true);
+    setMensagemQuestoes({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes/ordem`, { method: "PUT", body: JSON.stringify({ posicoes }) });
+      await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel reordenar as questoes agora." });
+    } finally {
+      setSalvandoQuestao(false);
+    }
   }
 
   function atualizarCampoFormularioQuestao(event) {
@@ -579,11 +651,18 @@ export function AssistenteQuizAvaliacao({
     setMensagemQuestoes({ tone: "", message: "" });
 
     try {
-      await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes`, { method: "POST", body: JSON.stringify(payload) });
-
-      setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
-      setMensagemQuestoes({ tone: "success", message: "Questao adicionada. Pode cadastrar a proxima." });
-      await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+      if (questaoEmEdicaoId) {
+        await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes/${questaoEmEdicaoId}`, { method: "PUT", body: JSON.stringify(payload) });
+        setQuestaoEmEdicaoId(null);
+        setMensagemQuestoes({ tone: "success", message: "Questao atualizada." });
+        await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+        setEtapaAtiva("resumo");
+      } else {
+        await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes`, { method: "POST", body: JSON.stringify(payload) });
+        setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
+        setMensagemQuestoes({ tone: "success", message: "Questao adicionada. Pode cadastrar a proxima." });
+        await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+      }
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -609,8 +688,9 @@ export function AssistenteQuizAvaliacao({
     try {
       await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes/${questao.id}`, { method: "DELETE" });
       setMensagemQuestoes({ tone: "success", message: "Questao removida da avaliacao." });
-      if (etapaAtiva === questao.id) {
-        setEtapaAtiva("dados");
+      if (questaoEmEdicaoId === questao.id) {
+        setQuestaoEmEdicaoId(null);
+        setEtapaAtiva("resumo");
       }
       setQuestaoParaExcluir(null);
       await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
@@ -659,24 +739,35 @@ export function AssistenteQuizAvaliacao({
             </footer>
           ) : etapaAtiva === "nova-questao" ? (
             <footer className="criar-avaliacao__rodape">
-              <Botao disabled={salvandoQuestao} onClick={() => setEtapaAtiva("dados")} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Voltar
-              </Botao>
-              <div className="criar-avaliacao__rodape-direita">
-                <Botao disabled={salvandoQuestao} form="form-avaliacao-questao" type="submit" variante="primario">
-                  <MdSave aria-hidden="true" size={17} /> {salvandoQuestao ? "Salvando..." : "Adicionar questao"}
-                </Botao>
-              </div>
-            </footer>
-          ) : typeof etapaAtiva === "number" && questoesAvaliacao.some((item) => item.id === etapaAtiva) ? (
-            <footer className="criar-avaliacao__rodape">
               <Botao
                 disabled={salvandoQuestao}
-                onClick={() => setQuestaoParaExcluir(questoesAvaliacao.find((item) => item.id === etapaAtiva))}
+                onClick={questaoEmEdicaoId ? voltarDaEdicaoQuestao : () => setEtapaAtiva("dados")}
                 type="button"
                 variante="perigo"
               >
-                <MdDelete aria-hidden="true" size={17} /> Excluir questao
+                <TbX aria-hidden="true" size={15} /> {questaoEmEdicaoId ? "Cancelar edicao" : "Voltar"}
+              </Botao>
+              <div className="criar-avaliacao__rodape-direita">
+                {questaoEmEdicaoId ? (
+                  <Botao
+                    disabled={salvandoQuestao}
+                    onClick={() => setQuestaoParaExcluir(questoesAvaliacao.find((item) => item.id === questaoEmEdicaoId))}
+                    type="button"
+                    variante="perigo"
+                  >
+                    <MdDelete aria-hidden="true" size={17} /> Excluir
+                  </Botao>
+                ) : null}
+                <Botao disabled={salvandoQuestao} form="form-avaliacao-questao" type="submit" variante="primario">
+                  <MdSave aria-hidden="true" size={17} />{" "}
+                  {salvandoQuestao ? "Salvando..." : questaoEmEdicaoId ? "Salvar alteracoes" : "Adicionar questao"}
+                </Botao>
+              </div>
+            </footer>
+          ) : etapaAtiva === "resumo" ? (
+            <footer className="criar-avaliacao__rodape">
+              <Botao disabled={salvandoQuestao} onClick={fecharAssistente} type="button" variante="primario">
+                <TbCheck aria-hidden="true" size={15} /> Fechar
               </Botao>
             </footer>
           ) : null
@@ -705,10 +796,10 @@ export function AssistenteQuizAvaliacao({
 
                   {questoesAvaliacao.map((questao, indice) => (
                     <button
-                      aria-label={`Ir para questao ${indice + 1}`}
-                      className={`criar-avaliacao__step criar-avaliacao__step--questao${etapaAtiva === questao.id ? " criar-avaliacao__step--ativo" : ""}`}
+                      aria-label={`Editar questao ${indice + 1}`}
+                      className={`criar-avaliacao__step criar-avaliacao__step--questao${questaoEmEdicaoId === questao.id ? " criar-avaliacao__step--ativo" : ""}`}
                       key={questao.id}
-                      onClick={() => setEtapaAtiva(questao.id)}
+                      onClick={() => abrirEdicaoQuestao(questao)}
                       type="button"
                     >
                       <span className="criar-avaliacao__step-num">{indice + 1}</span>
@@ -720,6 +811,17 @@ export function AssistenteQuizAvaliacao({
                     <span aria-hidden="true" className="criar-avaliacao__step-num criar-avaliacao__step-num--mais">+</span>
                     Adicionar questao
                   </button>
+
+                  {questoesAvaliacao.length > 0 ? (
+                    <button
+                      className={`criar-avaliacao__step${etapaAtiva === "resumo" ? " criar-avaliacao__step--ativo" : ""}`}
+                      onClick={() => setEtapaAtiva("resumo")}
+                      type="button"
+                    >
+                      <span aria-hidden="true" className="criar-avaliacao__step-icone"><TbClipboardList size={15} /></span>
+                      Ver resumo
+                    </button>
+                  ) : null}
                 </>
               ) : null}
             </aside>
@@ -918,7 +1020,7 @@ export function AssistenteQuizAvaliacao({
 
               {etapaAtiva === "nova-questao" ? (
                 <section className="criar-avaliacao__secao">
-                  <h3 className="criar-avaliacao__secao-titulo">Nova questao</h3>
+                  <h3 className="criar-avaliacao__secao-titulo">{questaoEmEdicaoId ? "Editar questao" : "Nova questao"}</h3>
                   <form className="criar-avaliacao__secao-corpo" id="form-avaliacao-questao" onSubmit={salvarQuestao}>
                     <div className="grade-3">
                       <div className="campo">
@@ -1107,30 +1209,74 @@ export function AssistenteQuizAvaliacao({
                 </section>
               ) : null}
 
-              {typeof etapaAtiva === "number"
-                ? (() => {
-                    const indiceQuestao = questoesAvaliacao.findIndex((item) => item.id === etapaAtiva);
-                    const questao = questoesAvaliacao[indiceQuestao];
+              {etapaAtiva === "resumo" ? (
+                <section className="criar-avaliacao__secao">
+                  <h3 className="criar-avaliacao__secao-titulo">Resumo da avaliacao</h3>
+                  <div className="criar-avaliacao__secao-corpo">
+                    <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                      {questoesAvaliacao.length} questao(oes) cadastrada(s). Revise, edite, reordene ou remova antes de fechar.
+                    </p>
 
-                    if (!questao) {
-                      return null;
-                    }
+                    <ul className="detalhe-usuario__lista" role="list">
+                      {questoesAvaliacao.map((questao, indice) => (
+                        <li className="detalhe-usuario__item" key={questao.id} style={{ alignItems: "center", fontWeight: 400, gap: "0.75rem" }}>
+                          <span className="criar-avaliacao__step-num">{indice + 1}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{questao.enunciado}</p>
+                            <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.82rem" }}>
+                              {normalizeQuestionType(questao.tipoQuestao)} - {formatDecimal(questao.pontos)} ponto(s)
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", flexShrink: 0, gap: "0.3rem" }}>
+                            <Botao
+                              aria-label={`Mover questao ${indice + 1} para cima`}
+                              disabled={salvandoQuestao || indice === 0}
+                              onClick={() => moverQuestao(indice, -1)}
+                              tamanho="pequeno"
+                              type="button"
+                              variante="secundario"
+                            >
+                              <TbChevronUp aria-hidden="true" size={15} />
+                            </Botao>
+                            <Botao
+                              aria-label={`Mover questao ${indice + 1} para baixo`}
+                              disabled={salvandoQuestao || indice === questoesAvaliacao.length - 1}
+                              onClick={() => moverQuestao(indice, 1)}
+                              tamanho="pequeno"
+                              type="button"
+                              variante="secundario"
+                            >
+                              <TbChevronDown aria-hidden="true" size={15} />
+                            </Botao>
+                            <Botao
+                              aria-label={`Editar questao ${indice + 1}`}
+                              disabled={salvandoQuestao}
+                              onClick={() => abrirEdicaoQuestao(questao)}
+                              tamanho="pequeno"
+                              type="button"
+                              variante="secundario"
+                            >
+                              <TbPencil aria-hidden="true" size={15} />
+                            </Botao>
+                            <Botao
+                              aria-label={`Excluir questao ${indice + 1}`}
+                              disabled={salvandoQuestao}
+                              onClick={() => setQuestaoParaExcluir(questao)}
+                              tamanho="pequeno"
+                              type="button"
+                              variante="perigo"
+                            >
+                              <MdDelete aria-hidden="true" size={15} />
+                            </Botao>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
 
-                    return (
-                      <section className="criar-avaliacao__secao">
-                        <h3 className="criar-avaliacao__secao-titulo">Questao {indiceQuestao + 1}</h3>
-                        <div className="criar-avaliacao__secao-corpo">
-                          <p style={{ color: "var(--cor-texto-suave)", margin: 0 }}>{questao.enunciado}</p>
-                          <span style={{ color: "var(--cor-texto-mudo)", fontSize: "0.82rem" }}>
-                            {normalizeQuestionType(questao.tipoQuestao)} - {formatDecimal(questao.pontos)} ponto(s)
-                          </span>
-
-                          {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
-                        </div>
-                      </section>
-                    );
-                  })()
-                : null}
+                    {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
+                  </div>
+                </section>
+              ) : null}
             </div>
           </div>
         )}
@@ -1152,7 +1298,7 @@ export function AssistenteQuizAvaliacao({
           }
         >
           <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
-            Deseja excluir a questao <strong>{questaoParaExcluir.ordem}</strong>? Esta acao nao pode ser desfeita.
+            Deseja excluir a questao <strong>&ldquo;{questaoParaExcluir.enunciado}&rdquo;</strong>? Esta acao nao pode ser desfeita.
           </p>
         </Modal>
       ) : null}

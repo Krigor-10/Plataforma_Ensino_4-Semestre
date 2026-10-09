@@ -146,6 +146,34 @@ public class AuthService : IAuthService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<AuthResponseDto> BootstrapAdminAsync(BootstrapAdminDto dto)
+    {
+        if (await _context.Admins.AnyAsync())
+        {
+            throw new InvalidOperationException("Já existe um administrador cadastrado. O bootstrap só pode ser usado uma vez.");
+        }
+
+        var admin = new Admin
+        {
+            Nome = dto.Nome.Trim(),
+            Email = dto.Email.Trim().ToLower(),
+            Cpf = dto.Cpf,
+            Telefone = dto.Telefone,
+            Cep = dto.Cep,
+            Rua = dto.Rua.Trim(),
+            Numero = dto.Numero.Trim(),
+            Bairro = dto.Bairro.Trim(),
+            Cidade = dto.Cidade.Trim(),
+            Estado = dto.Estado.Trim().ToUpper()
+        };
+        admin.ConfigurarAcesso("Admin", BCrypt.Net.BCrypt.HashPassword(dto.Senha));
+
+        _context.Admins.Add(admin);
+        await _context.SaveChangesAsync();
+
+        return await MontarRespostaAsync(admin);
+    }
+
     private static string GerarTokenUrlSeguro()
     {
         return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))

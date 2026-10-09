@@ -9,4 +9,5 @@ public interface IAuthService
     Task LogoutAsync(string refreshToken);
     Task SolicitarRecuperacaoSenhaAsync(string email);
     Task RedefinirSenhaAsync(string token, string novaSenha);
+    Task<AuthResponseDto> BootstrapAdminAsync(BootstrapAdminDto dto);
 }

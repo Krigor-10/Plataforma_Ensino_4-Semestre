@@ -123,17 +123,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     return agrupados;
   }, [modulosDoProfessor]);
 
-  const materiaisPorModuloId = useMemo(() => {
-    const agrupados = new Map();
-    conteudos.forEach((material) => {
-      const atuais = agrupados.get(material.moduloId) || [];
-      atuais.push(material);
-      agrupados.set(material.moduloId, atuais);
-    });
-    agrupados.forEach((lista) => lista.sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR")));
-    return agrupados;
-  }, [conteudos]);
-
   /* Um professor tem no maximo 1 turma por curso — mesma premissa usada na
      Trilha de Conteudos (ver SecaoConteudosProfessor.jsx). */
   const cursosDoProfessor = useMemo(() => {
@@ -773,61 +762,4 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
       })}
     </div>
   );
-}
-
-function criarEstadoInicialFormulario(overrides = {}) {
-  return {
-    turmaId: "",
-    moduloId: "",
-    conteudoDidaticoId: "",
-    titulo: "",
-    descricao: "",
-    tipoAvaliacao: OPCOES_TIPO_AVALIACAO[0].value,
-    statusPublicacao: OPCOES_STATUS_PUBLICACAO[0].value,
-    dataAbertura: "",
-    dataFechamento: "",
-    tentativasPermitidas: "1",
-    tempoLimiteMinutos: "",
-    notaMaxima: "10",
-    pesoNota: "1",
-    pesoProgresso: "1",
-    ...overrides
-  };
-}
-
-function criarEstadoInicialFormularioQuestao(overrides = {}) {
-  return {
-    tituloInterno: "",
-    contexto: "",
-    enunciado: "",
-    tipoQuestao: OPCOES_TIPO_QUESTAO[0].value,
-    tema: "",
-    subtema: "",
-    dificuldade: "1",
-    explicacaoPosResposta: "",
-    pontos: "1",
-    alternativas: criarAlternativasPorTipo(OPCOES_TIPO_QUESTAO[0].value),
-    ...overrides
-  };
-}
-
-function criarAlternativasPorTipo(tipoQuestao, alternativasAtuais = []) {
-  const tipo = Number(tipoQuestao);
-
-  if (tipo === 3) {
-    return [];
-  }
-
-  if (tipo === 2) {
-    return [
-      { letra: "V", texto: "Verdadeiro", ehCorreta: alternativasAtuais[0]?.ehCorreta ?? true },
-      { letra: "F", texto: "Falso", ehCorreta: alternativasAtuais[1]?.ehCorreta ?? false }
-    ];
-  }
-
-  return ALTERNATIVAS_MULTIPLA_ESCOLHA.map((letra, index) => ({
-    letra,
-    texto: alternativasAtuais[index]?.texto || "",
-    ehCorreta: alternativasAtuais[index]?.ehCorreta ?? index === 0
-  }));
 }

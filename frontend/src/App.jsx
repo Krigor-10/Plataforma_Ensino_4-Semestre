@@ -11,7 +11,7 @@ import NotFoundScreen from "./pages/NotFoundScreen.jsx";
 import PublicHome from "./pages/PublicHome.jsx";
 import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
 import WorkspaceScreen from "./pages/WorkspaceScreen.jsx";
-import { createDemoSession, disableDemoMode, enableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
+import { disableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
 import { apiRequest } from "./lib/api.js";
 import { applyPageMetadata } from "./lib/pageMetadata.js";
 import { navigate, readRoute } from "./lib/router.js";
@@ -70,12 +70,6 @@ export default function App() {
     handleNavigate("/app", { replace: true });
   }
 
-  function handleDemoSessionStart(accountKey) {
-    enableDemoMode();
-    setIsDemoMode(true);
-    handleSessionStart(createDemoSession(accountKey));
-  }
-
   function handleDemoModeExit(nextPath = "/login") {
     clearSession();
     setSession({ token: "", user: null });
@@ -131,7 +125,6 @@ export default function App() {
         canDisableDemoMode={canDisableDemoMode}
         isDemoMode={isDemoMode}
         onDemoModeExit={handleDemoModeExit}
-        onDemoSessionStart={handleDemoSessionStart}
         onNavigate={handleNavigate}
         onSessionStart={handleSessionStart}
       />

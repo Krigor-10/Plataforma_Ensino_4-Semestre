@@ -83,4 +83,16 @@ public class AuthController : ControllerBase
 
         return Ok(new { mensagem = "Senha redefinida com sucesso. Faca login com a nova senha." });
     }
+
+    // Uso único: só cria o Admin enquanto o banco não tiver nenhum. Depois do
+    // primeiro uso fica permanentemente bloqueado (ver AuthService.BootstrapAdminAsync).
+    [HttpPost("bootstrap-admin")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> BootstrapAdmin([FromBody] BootstrapAdminDto dto)
+    {
+        var resposta = await _authService.BootstrapAdminAsync(dto);
+
+        return Ok(resposta);
+    }
 }

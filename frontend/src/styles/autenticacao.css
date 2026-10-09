@@ -193,23 +193,6 @@
   margin-top: calc(-1 * var(--espaco-sm));
 }
 
-.tela-login__divisor {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-md);
-  color: var(--cor-texto-suave);
-  font-size: 0.8rem;
-  margin: var(--espaco-sm) 0;
-}
-
-.tela-login__divisor::before,
-.tela-login__divisor::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--cor-borda);
-}
-
 .tela-login__rodape-texto {
   font-size: 0.85rem;
   color: var(--cor-texto-suave);
@@ -272,63 +255,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.tela-login__perfis {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-sm);
-  border: none;
-  padding: 0;
-}
-
-.cartao-perfil {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-md);
-  padding: var(--espaco-lg) var(--espaco-xl);
-  border: 2px solid var(--cor-borda);
-  border-radius: var(--raio-lg);
-  background: var(--cor-cartao);
-  cursor: pointer;
-  transition: all var(--transicao-normal);
-  text-align: left;
-  width: 100%;
-  position: relative;
-}
-
-.cartao-perfil:hover {
-  border-color: var(--cor-borda-forte);
-}
-
-.cartao-perfil--selecionado {
-  border-color: var(--cor-marca);
-  background: rgba(123, 47, 247, 0.08);
-  box-shadow: 0 0 0 4px rgba(123, 47, 247, 0.1);
-}
-
-.cartao-perfil__icone {
-  color: var(--cor-marca-clara);
-  display: inline-flex;
-  flex-shrink: 0;
-}
-
-.cartao-perfil__info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-}
-
-.cartao-perfil__rotulo {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--cor-texto-forte);
-}
-
-.cartao-perfil__descricao {
-  font-size: 0.8rem;
-  color: var(--cor-texto-suave);
 }
 
 .cartao-perfil__check {

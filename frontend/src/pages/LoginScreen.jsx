@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { TbUserFilled } from "react-icons/tb";
 import { InlineMessage } from "../components/Primitives.jsx";
 import Botao from "../components/Botao.jsx";
 import { apiRequest } from "../lib/api.js";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../lib/demoMode.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 export default function LoginScreen({
   canDisableDemoMode,
   isDemoMode,
   onDemoModeExit,
-  onDemoSessionStart,
   onNavigate,
   onSessionStart
 }) {
@@ -130,34 +127,6 @@ export default function LoginScreen({
           </form>
 
           {message ? <InlineMessage tone={tone}>{message}</InlineMessage> : null}
-
-          <div className="tela-login__divisor">
-            <span>ou entre com um perfil demo</span>
-          </div>
-
-          <fieldset className="tela-login__perfis">
-            <legend className="visualmente-oculto">Perfis de demonstracao</legend>
-            {DEMO_ACCOUNTS.map((account) => (
-              <button
-                className="cartao-perfil"
-                key={account.key}
-                onClick={() => onDemoSessionStart(account.key)}
-                type="button"
-              >
-                <span className="cartao-perfil__icone" aria-hidden="true">
-                  <TbUserFilled size={22} />
-                </span>
-                <span className="cartao-perfil__info">
-                  <span className="cartao-perfil__rotulo">{account.label}</span>
-                  <span className="cartao-perfil__descricao">{account.description}</span>
-                </span>
-              </button>
-            ))}
-          </fieldset>
-
-          <p className="tela-login__rodape-texto">
-            Contas demo: {DEMO_ACCOUNTS.map((account) => account.email).join(" | ")}. Senha unica: {DEMO_PASSWORD}
-          </p>
 
           {isDemoMode && canDisableDemoMode ? (
             <div className="tela-login__acoes-rodape">

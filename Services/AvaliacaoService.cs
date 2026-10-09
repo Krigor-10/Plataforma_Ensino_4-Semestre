@@ -14,19 +14,25 @@ public class AvaliacaoService : IAvaliacaoService
     private readonly INotificacaoService _notificacaoService;
     private readonly IAcessoAcademicoService _acessoAcademicoService;
     private readonly IArmazenamentoArquivoService _armazenamentoService;
+    private readonly IExtratorTextoMaterialService _extratorTextoService;
+    private readonly IAvaliacaoIAService _avaliacaoIAService;
 
     public AvaliacaoService(
         PlataformaContext context,
         IProgressoAlunoService progressoAlunoService,
         INotificacaoService notificacaoService,
         IAcessoAcademicoService acessoAcademicoService,
-        IArmazenamentoArquivoService armazenamentoService)
+        IArmazenamentoArquivoService armazenamentoService,
+        IExtratorTextoMaterialService extratorTextoService,
+        IAvaliacaoIAService avaliacaoIAService)
     {
         _context = context;
         _progressoAlunoService = progressoAlunoService;
         _notificacaoService = notificacaoService;
         _acessoAcademicoService = acessoAcademicoService;
         _armazenamentoService = armazenamentoService;
+        _extratorTextoService = extratorTextoService;
+        _avaliacaoIAService = avaliacaoIAService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -301,7 +307,238 @@ public class AvaliacaoService : IAvaliacaoService
             .AsNoTracking()
             .Include(questao => questao.Alternativas)
             .Include(questao => questao.Afirmativas)
+            .Include(questao => questao.QuestaoBanco)
             .FirstAsync(questao => questao.Id == questaoPublicada.Id);
+    }
+
+    public async Task<IEnumerable<QuestaoPublicada>> AdicionarQuestoesEmLoteAsync(int avaliacaoId, int professorId, CriarQuestoesEmLoteDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (dto.Questoes.Count == 0)
+        {
+            throw new ArgumentException("Informe ao menos uma questao para adicionar.");
+        }
+
+        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+
+        // Valida TODAS as questoes antes de persistir qualquer uma - tudo-ou-nada,
+        // sem risco de o professor confirmar N questoes na revisao e o backend
+        // gravar so parte delas porque uma no meio da lista falhou validacao.
+        foreach (var questaoDto in dto.Questoes)
+        {
+            ValidarDadosQuestao(questaoDto);
+        }
+
+        const int tentativasMaximas = 3;
+        List<QuestaoPublicada>? questoesPublicadas = null;
+
+        for (var tentativa = 1; tentativa <= tentativasMaximas; tentativa++)
+        {
+            var proximaOrdem = await _context.QuestoesPublicadas
+                .Where(questao => questao.AvaliacaoId == avaliacaoId)
+                .Select(questao => (int?)questao.Ordem)
+                .MaxAsync() ?? 0;
+
+            questoesPublicadas = new List<QuestaoPublicada>();
+
+            foreach (var questaoDto in dto.Questoes)
+            {
+                var questaoBanco = new QuestaoBanco
+                {
+                    ProfessorAutorId = professorId,
+                    TituloInterno = questaoDto.TituloInterno.Trim(),
+                    Contexto = (questaoDto.Contexto ?? string.Empty).Trim(),
+                    Enunciado = questaoDto.Enunciado.Trim(),
+                    TipoQuestao = questaoDto.TipoQuestao,
+                    Tema = (questaoDto.Tema ?? string.Empty).Trim(),
+                    Subtema = (questaoDto.Subtema ?? string.Empty).Trim(),
+                    Dificuldade = questaoDto.Dificuldade,
+                    ExplicacaoPosResposta = (questaoDto.ExplicacaoPosResposta ?? string.Empty).Trim(),
+                    ReferenciasBibliograficas = (questaoDto.ReferenciasBibliograficas ?? string.Empty).Trim(),
+                    Ativa = true,
+                    CriadoEm = DateTime.UtcNow
+                };
+                questaoBanco.Alternativas = MontarAlternativasBanco(questaoDto);
+                questaoBanco.Afirmativas = MontarAfirmativasBanco(questaoDto);
+
+                proximaOrdem += 1;
+
+                var questaoPublicada = new QuestaoPublicada
+                {
+                    AvaliacaoId = avaliacaoId,
+                    QuestaoBanco = questaoBanco,
+                    Ordem = proximaOrdem,
+                    ContextoSnapshot = questaoBanco.Contexto,
+                    EnunciadoSnapshot = questaoBanco.Enunciado,
+                    TipoQuestao = questaoBanco.TipoQuestao,
+                    ExplicacaoSnapshot = questaoBanco.ExplicacaoPosResposta,
+                    ReferenciasBibliograficasSnapshot = questaoBanco.ReferenciasBibliograficas,
+                    Pontos = decimal.Round(questaoDto.Pontos, 2, MidpointRounding.AwayFromZero),
+                    Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas),
+                    Afirmativas = MontarAfirmativasPublicadas(questaoBanco.Afirmativas)
+                };
+
+                await _context.QuestoesBanco.AddAsync(questaoBanco);
+                await _context.QuestoesPublicadas.AddAsync(questaoPublicada);
+                questoesPublicadas.Add(questaoPublicada);
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException) when (tentativa < tentativasMaximas)
+            {
+                foreach (var questaoPublicada in questoesPublicadas)
+                {
+                    _context.Entry(questaoPublicada).State = EntityState.Detached;
+                    if (questaoPublicada.QuestaoBanco is not null)
+                    {
+                        _context.Entry(questaoPublicada.QuestaoBanco).State = EntityState.Detached;
+                    }
+                }
+                questoesPublicadas = null;
+            }
+        }
+
+        if (questoesPublicadas is null)
+        {
+            throw new InvalidOperationException("Nao foi possivel definir a ordem das questoes agora. Tente novamente.");
+        }
+
+        var idsGerados = questoesPublicadas.Select(questao => questao.Id).ToList();
+        return await _context.QuestoesPublicadas
+            .AsNoTracking()
+            .Include(questao => questao.Alternativas)
+            .Include(questao => questao.Afirmativas)
+            .Include(questao => questao.QuestaoBanco)
+            .Where(questao => idsGerados.Contains(questao.Id))
+            .OrderBy(questao => questao.Ordem)
+            .ToListAsync();
+    }
+
+    public async Task<QuestaoPublicada> AtualizarQuestaoAsync(int avaliacaoId, int questaoId, int professorId, AtualizarQuestaoAvaliacaoDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        ValidarDadosQuestao(dto);
+
+        var questaoPublicada = await _context.QuestoesPublicadas
+            .Include(questao => questao.Alternativas)
+            .Include(questao => questao.Afirmativas)
+            .Include(questao => questao.QuestaoBanco)
+            .FirstOrDefaultAsync(questao => questao.Id == questaoId && questao.AvaliacaoId == avaliacaoId)
+            ?? throw new KeyNotFoundException("Questao da avaliacao nao encontrada.");
+
+        // Mesma guarda ja usada em ExcluirAvaliacaoAsync: depois que um aluno
+        // respondeu, a questao nao pode mudar de baixo dos pes de uma correcao ja
+        // registrada.
+        var possuiTentativas = await _context.TentativasAvaliacao.AnyAsync(tentativa => tentativa.AvaliacaoId == avaliacaoId);
+        if (possuiTentativas)
+        {
+            throw new InvalidOperationException("Esta avaliacao ja possui tentativas de alunos registradas e as questoes nao podem mais ser editadas.");
+        }
+
+        var questaoBanco = questaoPublicada.QuestaoBanco
+            ?? throw new InvalidOperationException("Questao de origem nao encontrada.");
+
+        questaoBanco.TituloInterno = dto.TituloInterno.Trim();
+        questaoBanco.Contexto = (dto.Contexto ?? string.Empty).Trim();
+        questaoBanco.Enunciado = dto.Enunciado.Trim();
+        questaoBanco.TipoQuestao = dto.TipoQuestao;
+        questaoBanco.Tema = (dto.Tema ?? string.Empty).Trim();
+        questaoBanco.Subtema = (dto.Subtema ?? string.Empty).Trim();
+        questaoBanco.Dificuldade = dto.Dificuldade;
+        questaoBanco.ExplicacaoPosResposta = (dto.ExplicacaoPosResposta ?? string.Empty).Trim();
+        questaoBanco.ReferenciasBibliograficas = (dto.ReferenciasBibliograficas ?? string.Empty).Trim();
+
+        // Substitui as listas por completo em vez de casar item a item com o que ja
+        // existia - mais simples, e seguro porque a guarda acima garante que ainda
+        // nao ha nenhuma resposta de aluno presa a essas alternativas/afirmativas.
+        _context.AlternativasQuestoesBanco.RemoveRange(questaoBanco.Alternativas);
+        _context.AfirmativasQuestoesBanco.RemoveRange(questaoBanco.Afirmativas);
+        questaoBanco.Alternativas = MontarAlternativasBanco(dto);
+        questaoBanco.Afirmativas = MontarAfirmativasBanco(dto);
+
+        _context.AlternativasQuestoesPublicadas.RemoveRange(questaoPublicada.Alternativas);
+        _context.AfirmativasQuestoesPublicadas.RemoveRange(questaoPublicada.Afirmativas);
+
+        questaoPublicada.ContextoSnapshot = questaoBanco.Contexto;
+        questaoPublicada.EnunciadoSnapshot = questaoBanco.Enunciado;
+        questaoPublicada.TipoQuestao = questaoBanco.TipoQuestao;
+        questaoPublicada.ExplicacaoSnapshot = questaoBanco.ExplicacaoPosResposta;
+        questaoPublicada.ReferenciasBibliograficasSnapshot = questaoBanco.ReferenciasBibliograficas;
+        questaoPublicada.Pontos = decimal.Round(dto.Pontos, 2, MidpointRounding.AwayFromZero);
+        questaoPublicada.Alternativas = MontarAlternativasPublicadas(questaoBanco.Alternativas);
+        questaoPublicada.Afirmativas = MontarAfirmativasPublicadas(questaoBanco.Afirmativas);
+
+        await _context.SaveChangesAsync();
+
+        return await _context.QuestoesPublicadas
+            .AsNoTracking()
+            .Include(questao => questao.Alternativas)
+            .Include(questao => questao.Afirmativas)
+            .Include(questao => questao.QuestaoBanco)
+            .FirstAsync(questao => questao.Id == questaoPublicada.Id);
+    }
+
+    public async Task ReordenarQuestoesAsync(int avaliacaoId, int professorId, ReordenarQuestoesDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+
+        var questaoIds = dto.Posicoes.Select(posicao => posicao.QuestaoId).ToList();
+        if (questaoIds.Count != questaoIds.Distinct().Count())
+        {
+            throw new ArgumentException("Cada questao so pode aparecer uma vez na nova ordenacao.");
+        }
+
+        var novasOrdens = dto.Posicoes.Select(posicao => posicao.NovaOrdem).ToList();
+        if (novasOrdens.Count != novasOrdens.Distinct().Count())
+        {
+            throw new ArgumentException("As novas posicoes nao podem se repetir.");
+        }
+
+        var questoes = await _context.QuestoesPublicadas
+            .Where(questao => questao.AvaliacaoId == avaliacaoId && questaoIds.Contains(questao.Id))
+            .ToListAsync();
+
+        if (questoes.Count != questaoIds.Count)
+        {
+            throw new KeyNotFoundException("Uma ou mais questoes informadas nao pertencem a esta avaliacao.");
+        }
+
+        var totalQuestoes = await _context.QuestoesPublicadas.CountAsync(questao => questao.AvaliacaoId == avaliacaoId);
+        if (questaoIds.Count != totalQuestoes)
+        {
+            throw new ArgumentException("Informe a nova posicao de todas as questoes da avaliacao.");
+        }
+
+        if (!novasOrdens.OrderBy(ordem => ordem).SequenceEqual(Enumerable.Range(1, totalQuestoes)))
+        {
+            throw new ArgumentException("As novas posicoes devem formar uma sequencia de 1 a N sem repeticoes nem lacunas.");
+        }
+
+        // Offset temporario antes de aplicar a ordem final - sem isso, trocar duas
+        // questoes de posicao colide consigo mesmo no indice unico (AvaliacaoId, Ordem)
+        // no meio da operacao.
+        var offsetTemporario = totalQuestoes + 1000;
+        foreach (var questao in questoes)
+        {
+            questao.Ordem += offsetTemporario;
+        }
+        await _context.SaveChangesAsync();
+
+        var posicaoPorQuestaoId = dto.Posicoes.ToDictionary(posicao => posicao.QuestaoId, posicao => posicao.NovaOrdem);
+        foreach (var questao in questoes)
+        {
+            questao.Ordem = posicaoPorQuestaoId[questao.Id];
+        }
+        await _context.SaveChangesAsync();
     }
 
     public async Task ExcluirQuestaoAsync(int avaliacaoId, int questaoId, int professorId)
@@ -611,6 +848,46 @@ public class AvaliacaoService : IAvaliacaoService
         return turma;
     }
 
+    public async Task<ResultadoGeracaoIA> GerarQuestoesComIaAsync(int avaliacaoId, int professorId, IFormFile arquivo, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(configuracao);
+
+        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+
+        if (arquivo is null || arquivo.Length == 0)
+        {
+            throw new ArgumentException("Envie um arquivo PDF ou DOCX com o material didatico.");
+        }
+
+        var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+        if (extensao != ".pdf" && extensao != ".docx")
+        {
+            throw new ArgumentException("Apenas arquivos PDF ou DOCX sao aceitos para geracao por IA.");
+        }
+
+        ResultadoExtracaoMaterial resultadoExtracao;
+        await using (var streamLeitura = arquivo.OpenReadStream())
+        {
+            resultadoExtracao = await _extratorTextoService.ExtrairTextoAsync(streamLeitura, extensao, cancellationToken);
+        }
+
+        if (!resultadoExtracao.TemTextoExtraivel)
+        {
+            var motivo = resultadoExtracao.Avisos.FirstOrDefault()
+                ?? "O material enviado nao tem texto suficiente para gerar questoes.";
+            throw new ArgumentException(motivo);
+        }
+
+        // Guardado indefinidamente, mesmo padrao dos demais uploads do sistema
+        // (decisao 6 da proposta aprovada) - IFormFile.OpenReadStream() devolve um
+        // stream novo a cada chamada, reaberto do inicio, entao reusar "arquivo" aqui
+        // depois da extracao acima e seguro.
+        await _armazenamentoService.SalvarArquivoAsync(arquivo, "avaliacoes-ia-fontes", new[] { ".pdf", ".docx" }, 20_000_000);
+
+        var textoCompleto = string.Join("\n\n", resultadoExtracao.TextoPorPagina);
+        return await _avaliacaoIAService.GerarQuestoesAsync(textoCompleto, configuracao, cancellationToken);
+    }
+
     public async Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo)
     {
         await ValidarQuestaoBancoDoProfessorAsync(professorId, questaoBancoId);
@@ -844,7 +1121,9 @@ public class AvaliacaoService : IAvaliacaoService
         }
     }
 
-    private static void ValidarDadosQuestao(CriarQuestaoAvaliacaoDto dto)
+    // internal (nao private) porque IValidadorQuestaoIaService reaproveita essa mesma
+    // regra de negocio antes de aceitar qualquer questao gerada por IA.
+    internal static void ValidarDadosQuestao(CriarQuestaoAvaliacaoDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.TituloInterno))
         {

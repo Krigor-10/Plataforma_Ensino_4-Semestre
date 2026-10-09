@@ -11,7 +11,7 @@ namespace PlataformaEnsino.Tests;
 
 public class AvaliacaoServiceTests
 {
-    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake());
+    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
@@ -368,13 +368,181 @@ public class AvaliacaoServiceTests
         Assert.Empty(questao.Alternativas);
     }
 
+    // ---------- AdicionarQuestoesEmLoteAsync ----------
+
+    [Fact]
+    public async Task AdicionarQuestoesEmLoteAsync_DuasQuestoesValidas_CriaAmbasComOrdemSequencial()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+
+        var dto = new CriarQuestoesEmLoteDto
+        {
+            Questoes = new List<CriarQuestaoAvaliacaoDto> { NovaQuestaoObjetivaDto(), NovaQuestaoObjetivaDto() }
+        };
+
+        var questoes = (await service.AdicionarQuestoesEmLoteAsync(avaliacao.Id, professor.Id, dto)).ToList();
+
+        Assert.Equal(2, questoes.Count);
+        Assert.Equal(new[] { 1, 2 }, questoes.Select(questao => questao.Ordem).OrderBy(ordem => ordem));
+    }
+
+    [Fact]
+    public async Task AdicionarQuestoesEmLoteAsync_UmaQuestaoInvalida_NaoPersisteNenhuma()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+
+        var questaoInvalida = NovaQuestaoObjetivaDto(letraCorreta: "nenhuma");
+        var dto = new CriarQuestoesEmLoteDto
+        {
+            Questoes = new List<CriarQuestaoAvaliacaoDto> { NovaQuestaoObjetivaDto(), questaoInvalida }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.AdicionarQuestoesEmLoteAsync(avaliacao.Id, professor.Id, dto));
+
+        var questoesPersistidas = await service.ListarQuestoesAsync(avaliacao.Id, professor.Id);
+        Assert.Empty(questoesPersistidas);
+    }
+
+    // ---------- AtualizarQuestaoAsync ----------
+
+    [Fact]
+    public async Task AtualizarQuestaoAsync_AlteraEnunciadoEAlternativas()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dto = new AtualizarQuestaoAvaliacaoDto
+        {
+            TituloInterno = "Questao editada",
+            Enunciado = "Enunciado editado",
+            TipoQuestao = TipoQuestao.MultiplaEscolha,
+            Pontos = 8,
+            Alternativas = new List<CriarAlternativaAvaliacaoDto>
+            {
+                new() { Letra = "A", Texto = "Nova certa", EhCorreta = true },
+                new() { Letra = "B", Texto = "Nova errada", EhCorreta = false },
+                new() { Letra = "C", Texto = "Outra errada", EhCorreta = false }
+            }
+        };
+
+        var atualizada = await service.AtualizarQuestaoAsync(avaliacao.Id, questao.Id, professor.Id, dto);
+
+        Assert.Equal("Enunciado editado", atualizada.EnunciadoSnapshot);
+        Assert.Equal(8, atualizada.Pontos);
+        Assert.Equal(3, atualizada.Alternativas.Count);
+    }
+
+    [Fact]
+    public async Task AtualizarQuestaoAsync_ComTentativaRegistrada_LancaInvalidOperationException()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        context.TentativasAvaliacao.Add(new TentativaAvaliacao { AvaliacaoId = avaliacao.Id, MatriculaId = 1 });
+        await context.SaveChangesAsync();
+
+        var dto = new AtualizarQuestaoAvaliacaoDto
+        {
+            TituloInterno = "Questao editada",
+            Enunciado = "Enunciado editado",
+            TipoQuestao = TipoQuestao.MultiplaEscolha,
+            Pontos = 8,
+            Alternativas = new List<CriarAlternativaAvaliacaoDto>
+            {
+                new() { Letra = "A", Texto = "Nova certa", EhCorreta = true },
+                new() { Letra = "B", Texto = "Nova errada", EhCorreta = false }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarQuestaoAsync(avaliacao.Id, questao.Id, professor.Id, dto));
+    }
+
+    // ---------- ReordenarQuestoesAsync ----------
+
+    [Fact]
+    public async Task ReordenarQuestoesAsync_InverteOrdem_AplicaCorretamente()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var primeira = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var segunda = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dto = new ReordenarQuestoesDto
+        {
+            Posicoes = new List<PosicaoQuestaoDto>
+            {
+                new() { QuestaoId = primeira.Id, NovaOrdem = 2 },
+                new() { QuestaoId = segunda.Id, NovaOrdem = 1 }
+            }
+        };
+
+        await service.ReordenarQuestoesAsync(avaliacao.Id, professor.Id, dto);
+
+        var questoes = (await service.ListarQuestoesAsync(avaliacao.Id, professor.Id)).ToList();
+        Assert.Equal(segunda.Id, questoes.Single(questao => questao.Ordem == 1).Id);
+        Assert.Equal(primeira.Id, questoes.Single(questao => questao.Ordem == 2).Id);
+    }
+
+    [Fact]
+    public async Task ReordenarQuestoesAsync_PosicoesIncompletas_LancaArgumentException()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var primeira = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dto = new ReordenarQuestoesDto
+        {
+            Posicoes = new List<PosicaoQuestaoDto> { new() { QuestaoId = primeira.Id, NovaOrdem = 1 } }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.ReordenarQuestoesAsync(avaliacao.Id, professor.Id, dto));
+    }
+
     // ---------- EnviarRespostasAlunoAsync (motor de correcao) ----------
 
     private static async Task<(AvaliacaoService Service, PlataformaContext Context, Professor Professor, Aluno Aluno, Turma Turma, Modulo Modulo, Avaliacao Avaliacao)> CriarCenarioComAvaliacaoPublicada(
         int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
         var professor = CriarProfessor(context);
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
@@ -535,7 +703,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_AlunoSemMatriculaAprovadaNaTurma_LancaInvalidOperation()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
@@ -797,7 +965,7 @@ public class AvaliacaoServiceTests
     public async Task ListarAvaliacoesPorAlunoAsync_SemMatriculaAprovada_RetornaVazio()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
         var aluno = CriarAluno(context);
 
         var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
@@ -830,5 +998,17 @@ public class AvaliacaoServiceTests
 
         public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
             => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita leitura de anexo ate agora.");
+    }
+
+    private class ExtratorTextoMaterialServiceFake : IExtratorTextoMaterialService
+    {
+        public Task<ResultadoExtracaoMaterial> ExtrairTextoAsync(Stream conteudo, string extensao, CancellationToken cancellationToken)
+            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
+    }
+
+    private class AvaliacaoIAServiceFake : IAvaliacaoIAService
+    {
+        public Task<ResultadoGeracaoIA> GerarQuestoesAsync(string textoFonte, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
     }
 }

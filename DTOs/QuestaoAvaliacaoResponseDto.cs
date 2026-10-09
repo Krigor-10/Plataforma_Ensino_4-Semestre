@@ -8,6 +8,10 @@ public class QuestaoAvaliacaoResponseDto
     public int AvaliacaoId { get; set; }
     public int QuestaoBancoId { get; set; }
     public int Ordem { get; set; }
+    public string TituloInterno { get; set; } = string.Empty;
+    public string Tema { get; set; } = string.Empty;
+    public string Subtema { get; set; } = string.Empty;
+    public byte Dificuldade { get; set; }
     public string Contexto { get; set; } = string.Empty;
     public string Enunciado { get; set; } = string.Empty;
     public TipoQuestao TipoQuestao { get; set; }

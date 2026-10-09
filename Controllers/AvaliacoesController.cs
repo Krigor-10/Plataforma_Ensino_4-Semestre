@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
@@ -159,6 +160,65 @@ public class AvaliacoesController : ControllerBase
         return CreatedAtAction(nameof(ListarQuestoes), new { id }, MapQuestaoResponse(questao));
     }
 
+    // Uso principal: confirmar de uma vez as questoes revisadas no fluxo de geracao
+    // por IA. Tudo-ou-nada - se qualquer questao falhar validacao, nenhuma e salva.
+    [HttpPost("{id:int}/questoes/lote")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> AdicionarQuestoesEmLote(int id, [FromBody] CriarQuestoesEmLoteDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        var questoes = await _avaliacaoService.AdicionarQuestoesEmLoteAsync(id, professorId.Value, dto);
+        return CreatedAtAction(nameof(ListarQuestoes), new { id }, questoes.Select(MapQuestaoResponse));
+    }
+
+    [HttpPut("{id:int}/questoes/{questaoId:int}")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> AtualizarQuestao(int id, int questaoId, [FromBody] AtualizarQuestaoAvaliacaoDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        var questao = await _avaliacaoService.AtualizarQuestaoAsync(id, questaoId, professorId.Value, dto);
+        return Ok(MapQuestaoResponse(questao));
+    }
+
+    [HttpPut("{id:int}/questoes/ordem")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> ReordenarQuestoes(int id, [FromBody] ReordenarQuestoesDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        await _avaliacaoService.ReordenarQuestoesAsync(id, professorId.Value, dto);
+        return NoContent();
+    }
+
     [HttpDelete("{id:int}/questoes/{questaoId:int}")]
     [Authorize(Roles = "Professor")]
     public async Task<IActionResult> ExcluirQuestao(int id, int questaoId)
@@ -209,6 +269,69 @@ public class AvaliacoesController : ControllerBase
         }
 
         return Ok(revisao);
+    }
+
+    // Gera um rascunho de questoes a partir de um PDF/DOCX - NADA aqui e persistido.
+    // O professor revisa no frontend e so confirma via POST {id}/questoes/lote.
+    [HttpPost("{id:int}/ia/gerar-questoes")]
+    [Authorize(Roles = "Professor")]
+    [EnableRateLimiting("ia-geracao")]
+    [RequestSizeLimit(20_000_000)]
+    public async Task<IActionResult> GerarQuestoesComIa(
+        int id,
+        [FromForm] IFormFile arquivo,
+        [FromForm] int quantidadeQuestoes,
+        [FromForm] byte dificuldade,
+        [FromForm] string tiposPermitidos,
+        [FromForm] string? assunto,
+        CancellationToken cancellationToken)
+    {
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        List<TipoQuestao> tipos;
+        try
+        {
+            tipos = (tiposPermitidos ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(valor => Enum.Parse<TipoQuestao>(valor, ignoreCase: true))
+                .Distinct()
+                .ToList();
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { mensagem = "tiposPermitidos contem um tipo de questao invalido." });
+        }
+
+        if (tipos.Count == 0)
+        {
+            return BadRequest(new { mensagem = "Informe ao menos um tipo de questao permitido." });
+        }
+
+        var configuracao = new GerarQuestoesIaRequestDto
+        {
+            QuantidadeQuestoes = quantidadeQuestoes,
+            Dificuldade = dificuldade,
+            TiposPermitidos = tipos,
+            Assunto = assunto
+        };
+
+        if (!TryValidateModel(configuracao))
+        {
+            return BadRequest(ModelState);
+        }
+
+        var resultado = await _avaliacaoService.GerarQuestoesComIaAsync(id, professorId.Value, arquivo, configuracao, cancellationToken);
+
+        return Ok(new
+        {
+            questoes = resultado.Questoes,
+            avisos = resultado.Avisos,
+            limitacaoDetectada = resultado.LimitacaoDetectada
+        });
     }
 
     [HttpPost("questoes-banco/{questaoBancoId:int}/anexos")]
@@ -295,6 +418,10 @@ public class AvaliacoesController : ControllerBase
             AvaliacaoId = questao.AvaliacaoId,
             QuestaoBancoId = questao.QuestaoBancoId,
             Ordem = questao.Ordem,
+            TituloInterno = questao.QuestaoBanco?.TituloInterno ?? string.Empty,
+            Tema = questao.QuestaoBanco?.Tema ?? string.Empty,
+            Subtema = questao.QuestaoBanco?.Subtema ?? string.Empty,
+            Dificuldade = questao.QuestaoBanco?.Dificuldade ?? 1,
             Contexto = questao.ContextoSnapshot,
             Enunciado = questao.EnunciadoSnapshot,
             TipoQuestao = questao.TipoQuestao,

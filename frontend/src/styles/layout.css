@@ -313,7 +313,7 @@
    ------------------------------------------------------------ */
 .grade-estatisticas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: var(--espaco-lg);
 }
 
@@ -360,8 +360,9 @@
   font-size: 1.75rem;
   font-weight: 800;
   color: var(--cor-texto-forte);
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.15;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .cartao-estatistica__rotulo {

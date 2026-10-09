@@ -75,6 +75,17 @@ builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
+builder.Services.AddScoped<IExtratorTextoMaterialService, ExtratorTextoMaterialService>();
+builder.Services.AddScoped<IValidadorQuestaoIaService, ValidadorQuestaoIaService>();
+builder.Services.AddScoped<IAvaliacaoIAService, AvaliacaoIAService>();
+// Primeiro uso de IHttpClientFactory no projeto - molde do BlobServiceClient singleton
+// (Program.cs, registro condicional de storage acima) para uma integracao externa
+// nova, so que via HTTP simples em vez de SDK (ver proposta aprovada, decisao 3).
+builder.Services.AddHttpClient(AvaliacaoIAService.NomeHttpClient, cliente =>
+{
+    cliente.BaseAddress = new Uri("https://api.anthropic.com/");
+    cliente.Timeout = TimeSpan.FromSeconds(90);
+});
 // Azure App Service/Container Apps tem disco efemero e nao compartilhado entre
 // instancias - fora de Development, upload so e confiavel em Blob Storage.
 // AzureStorage:ConnectionString ausente mantem o backend local (docker-compose,
@@ -182,6 +193,21 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 10,
                 Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Policy dedicada (nao a de "auth") para o endpoint de geracao por IA - cada
+    // chamada custa dinheiro de verdade no provedor, entao o limite e por professor
+    // autenticado (nao por IP) e bem mais apertado que qualquer outra rota hoje.
+    // 10/hora cobre uso legitimo (testar, regenerar questao individual na revisao)
+    // sem abrir espaco pra loop acidental ou abuso (decisao 9 da proposta aprovada).
+    options.AddPolicy("ia-geracao", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirst("usuarioId")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
                 QueueLimit = 0
             }));
 });
