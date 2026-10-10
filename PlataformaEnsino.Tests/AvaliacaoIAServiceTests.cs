@@ -114,13 +114,13 @@ public class AvaliacaoIAServiceTests
                 },
                 {
                   "tituloInterno": "Questao invalida",
-                  "enunciado": "Enunciado sem gabarito",
+                  "enunciado": "",
                   "tipoQuestao": "MultiplaEscolha",
                   "dificuldade": 2,
                   "pontos": 1,
                   "alternativas": [
-                    { "letra": "A", "texto": "Nenhuma marcada", "ehCorreta": false },
-                    { "letra": "B", "texto": "Nenhuma marcada", "ehCorreta": false }
+                    { "letra": "A", "texto": "Certa", "ehCorreta": true },
+                    { "letra": "B", "texto": "Errada", "ehCorreta": false }
                   ],
                   "afirmativas": []
                 }
@@ -141,6 +141,43 @@ public class AvaliacaoIAServiceTests
         Assert.Single(resultado.Questoes);
         Assert.Equal("Questao valida", resultado.Questoes[0].TituloInterno);
         Assert.Contains(resultado.Avisos, aviso => aviso.Contains("descartada"));
+    }
+
+    [Fact]
+    public async Task GerarQuestoesAsync_QuestaoSemGabaritoIdentificavel_NaoDescarta_MarcaComoIncerta()
+    {
+        const string jsonModelo = """
+            {
+              "questoes": [
+                {
+                  "tituloInterno": "Questao sem gabarito no material",
+                  "enunciado": "Enunciado presente, mas o material nao indica a resposta certa",
+                  "tipoQuestao": "MultiplaEscolha",
+                  "dificuldade": 2,
+                  "pontos": 1,
+                  "gabaritoIncerto": true,
+                  "alternativas": [
+                    { "letra": "A", "texto": "Opcao 1", "ehCorreta": false },
+                    { "letra": "B", "texto": "Opcao 2", "ehCorreta": false }
+                  ],
+                  "afirmativas": []
+                }
+              ],
+              "avisos": [],
+              "limitacaoDetectada": false
+            }
+            """;
+        var handler = new FakeHttpMessageHandler(_ => CriarRespostaAnthropic(jsonModelo));
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        var resultado = await service.GerarQuestoesAsync("texto qualquer", ConfiguracaoPadrao(), CancellationToken.None);
+
+        Assert.Single(resultado.Questoes);
+        Assert.True(resultado.Questoes[0].GabaritoIncerto);
     }
 
     [Fact]

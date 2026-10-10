@@ -1123,7 +1123,7 @@ public class AvaliacaoService : IAvaliacaoService
 
     // internal (nao private) porque IValidadorQuestaoIaService reaproveita essa mesma
     // regra de negocio antes de aceitar qualquer questao gerada por IA.
-    internal static void ValidarDadosQuestao(CriarQuestaoAvaliacaoDto dto)
+    internal static void ValidarDadosQuestao(CriarQuestaoAvaliacaoDto dto, bool exigirGabarito = true)
     {
         if (string.IsNullOrWhiteSpace(dto.TituloInterno))
         {
@@ -1155,7 +1155,7 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("Informe pelo menos duas alternativas.");
         }
 
-        if (dto.Alternativas.Count(alternativa => alternativa.EhCorreta) != 1)
+        if (exigirGabarito && dto.Alternativas.Count(alternativa => alternativa.EhCorreta) != 1)
         {
             throw new ArgumentException("Marque exatamente uma alternativa correta.");
         }

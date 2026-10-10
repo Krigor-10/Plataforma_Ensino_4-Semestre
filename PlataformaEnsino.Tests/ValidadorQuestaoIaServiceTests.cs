@@ -95,7 +95,55 @@ public class ValidadorQuestaoIaServiceTests
         questao.PaginaReferencia = 3;
         questao.TrechoReferencia = "trecho qualquer do material";
         questao.Aviso = "confianca baixa";
+        questao.Origem = "extraida";
 
         _service.ValidarOuLancar(questao);
+    }
+
+    [Fact]
+    public void ValidarOuLancar_NenhumaAlternativaCorreta_NaoLanca_MarcaGabaritoIncerto()
+    {
+        var questao = CriarQuestaoValida();
+        foreach (var alternativa in questao.Alternativas)
+        {
+            alternativa.EhCorreta = false;
+        }
+
+        _service.ValidarOuLancar(questao);
+
+        Assert.True(questao.GabaritoIncerto);
+    }
+
+    [Fact]
+    public void ValidarOuLancar_DuasAlternativasCorretas_NaoLanca_MarcaGabaritoIncerto()
+    {
+        var questao = CriarQuestaoValida();
+        questao.Alternativas[1].EhCorreta = true;
+
+        _service.ValidarOuLancar(questao);
+
+        Assert.True(questao.GabaritoIncerto);
+    }
+
+    [Fact]
+    public void ValidarOuLancar_Dissertativa_NaoAplicaGabaritoIncerto()
+    {
+        var questao = CriarQuestaoValida();
+        questao.TipoQuestao = TipoQuestao.Dissertativa;
+        questao.Alternativas = new List<CriarAlternativaAvaliacaoDto>();
+
+        _service.ValidarOuLancar(questao);
+
+        Assert.False(questao.GabaritoIncerto);
+    }
+
+    [Fact]
+    public void ValidarOuLancar_QuestaoComGabaritoDefinido_NaoMarcaComoIncerta()
+    {
+        var questao = CriarQuestaoValida();
+
+        _service.ValidarOuLancar(questao);
+
+        Assert.False(questao.GabaritoIncerto);
     }
 }

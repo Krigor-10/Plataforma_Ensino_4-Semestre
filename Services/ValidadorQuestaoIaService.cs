@@ -1,5 +1,6 @@
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
+using PlataformaEnsino.API.Models;
 
 namespace PlataformaEnsino.API.Services;
 
@@ -13,8 +14,23 @@ public class ValidadorQuestaoIaService : IValidadorQuestaoIaService
         ArgumentNullException.ThrowIfNull(dto);
 
         // Reaproveita a regra de negocio ja usada na criacao manual - qualquer coisa
-        // que vale para o professor digitando vale para a IA gerando.
-        AvaliacaoService.ValidarDadosQuestao(dto);
+        // que vale para o professor digitando vale para a IA gerando - EXCETO a
+        // exigencia de gabarito definido: aqui a questao nao e descartada so porque
+        // a IA nao conseguiu identificar a resposta correta com seguranca (ou a
+        // contagem veio errada por algum motivo) - ela continua valida para revisao,
+        // so marcada como incerta logo abaixo. A exigencia de gabarito volta a valer
+        // no momento da persistencia final (AdicionarQuestoesEmLoteAsync chama
+        // ValidarDadosQuestao sem esse parametro, ou seja, com o default exigindo).
+        AvaliacaoService.ValidarDadosQuestao(dto, exigirGabarito: false);
+
+        // Recalculado de forma defensiva em vez de confiar so no "gabaritoIncerto"
+        // que a IA devolveu - cobre tanto o caso dela sinalizar certo quanto o caso
+        // dela esquecer de sinalizar mas a contagem de corretas vir 0 ou >1 mesmo assim.
+        if (dto.TipoQuestao != TipoQuestao.Dissertativa &&
+            dto.Alternativas.Count(alternativa => alternativa.EhCorreta) != 1)
+        {
+            dto.GabaritoIncerto = true;
+        }
 
         VerificarTamanho(nameof(dto.Enunciado), dto.Enunciado);
         VerificarTamanho(nameof(dto.Contexto), dto.Contexto);

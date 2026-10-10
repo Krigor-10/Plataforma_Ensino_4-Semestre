@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbTrophy, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
 import { MdDelete } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
@@ -13,6 +13,7 @@ import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
+import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 
 function formatDecimal(value) {
@@ -26,6 +27,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   // SecaoConteudosProfessor.jsx no botao "Adicionar/Editar quiz" (sem
   // navegar pra esta tela, ver historico do arquivo).
   const [assistenteAberto, setAssistenteAberto] = useState(false);
+  const [escolhaNovaAvaliacaoAberta, setEscolhaNovaAvaliacaoAberta] = useState(false);
+  const [geracaoIaAberta, setGeracaoIaAberta] = useState(false);
   const [avaliacaoParaEditar, setAvaliacaoParaEditar] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState(null);
@@ -180,9 +183,27 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     onNavigate?.("/app/avaliacoes");
   }
 
-  function abrirFormularioNovaAvaliacao() {
+  function abrirEscolhaNovaAvaliacao() {
+    setEscolhaNovaAvaliacaoAberta(true);
+  }
+
+  function fecharEscolhaNovaAvaliacao() {
+    setEscolhaNovaAvaliacaoAberta(false);
+  }
+
+  function escolherCriacaoManual() {
+    setEscolhaNovaAvaliacaoAberta(false);
     setAvaliacaoParaEditar(null);
     setAssistenteAberto(true);
+  }
+
+  function escolherGeracaoIa() {
+    setEscolhaNovaAvaliacaoAberta(false);
+    setGeracaoIaAberta(true);
+  }
+
+  function fecharGeracaoIa() {
+    setGeracaoIaAberta(false);
   }
 
   function abrirEdicaoAvaliacao(avaliacao) {
@@ -348,7 +369,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
           <header className="atividades-curso__cabecalho">
             <h2 className="atividades-curso__titulo">{cursoAtivo.curso.titulo}</h2>
-            <Botao onClick={abrirFormularioNovaAvaliacao} variante="primario">
+            <Botao onClick={abrirEscolhaNovaAvaliacao} variante="primario">
               <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
                 <TbPlus aria-hidden="true" size={18} />
               </motion.span>{" "}
@@ -617,6 +638,31 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
           onRefresh={onRefresh}
           onSessionExpired={onSessionExpired}
         />
+      ) : null}
+
+      {escolhaNovaAvaliacaoAberta ? (
+        <Modal onFechar={fecharEscolhaNovaAvaliacao} titulo="Nova avaliacao">
+          <div className="gerar-ia__escolha">
+            <button className="gerar-ia__escolha-cartao" onClick={escolherCriacaoManual} type="button">
+              <span aria-hidden="true" className="gerar-ia__escolha-icone">
+                <TbPencil size={22} />
+              </span>
+              <span className="gerar-ia__escolha-titulo">Criar manualmente</span>
+              <span className="gerar-ia__escolha-descricao">Monte a avaliacao do zero, cadastrando cada questao voce mesmo.</span>
+            </button>
+            <button className="gerar-ia__escolha-cartao" onClick={escolherGeracaoIa} type="button">
+              <span aria-hidden="true" className="gerar-ia__escolha-icone">
+                <TbSparkles size={22} />
+              </span>
+              <span className="gerar-ia__escolha-titulo">Gerar com IA</span>
+              <span className="gerar-ia__escolha-descricao">Envie um PDF ou DOCX e revise as questoes que a IA sugerir a partir dele.</span>
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+
+      {geracaoIaAberta ? (
+        <AssistenteGeracaoIA cursoAtivo={cursoAtivo} onFechar={fecharGeracaoIa} onRefresh={onRefresh} onSessionExpired={onSessionExpired} />
       ) : null}
 
     </div>

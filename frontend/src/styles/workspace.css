@@ -5376,6 +5376,150 @@
   }
 }
 
+/* ------------------------------------------------------------
+   ASSISTENTE DE GERACAO DE AVALIACAO POR IA — reusa o layout de
+   steps/painel do assistente manual (.criar-avaliacao__*, acima);
+   estas classes cobrem so o que e especifico desta tela: grid de
+   tipos de questao, cada questao gerada como card editavel, e o
+   spinner do passo de geracao/regeneracao.
+   ------------------------------------------------------------ */
+.gerar-ia__escolha {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-lg);
+}
+
+.gerar-ia__escolha-cartao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-xl);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  background: var(--cor-fundo-elevado);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida), transform var(--transicao-rapida);
+}
+
+.gerar-ia__escolha-cartao:hover {
+  border-color: var(--cor-marca);
+  transform: translateY(-2px);
+}
+
+.gerar-ia__escolha-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--raio-md);
+  background: rgba(123, 47, 247, 0.1);
+  color: var(--cor-marca);
+}
+
+.gerar-ia__escolha-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.gerar-ia__escolha-descricao {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.gerar-ia__tipos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--espaco-sm);
+}
+
+.gerar-ia__tipo-opcao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-sm) var(--espaco-md);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
+}
+
+.gerar-ia__tipo-opcao:has(input:checked) {
+  border-color: var(--cor-marca);
+  background: rgba(123, 47, 247, 0.08);
+}
+
+.gerar-ia__spinner-bloco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding: var(--espaco-xl) 0;
+  color: var(--cor-texto-suave);
+  text-align: center;
+}
+
+.gerar-ia__spinner-icone {
+  animation: gerarIaGiro 1s linear infinite;
+  color: var(--cor-marca);
+}
+
+@keyframes gerarIaGiro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.gerar-ia__lista-questoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-lg);
+}
+
+.gerar-ia__questao {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.gerar-ia__questao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm);
+}
+
+.gerar-ia__questao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-xs);
+}
+
+.gerar-ia__questao-aviso {
+  font-size: 0.78rem;
+  color: var(--cor-texto-mudo);
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .gerar-ia__escolha {
+    grid-template-columns: 1fr;
+  }
+
+  .gerar-ia__tipos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Seletor visual de tipo de anexo (modal Novo/Editar conteudo) */
 .novo-cont__preview {
   display: flex;
