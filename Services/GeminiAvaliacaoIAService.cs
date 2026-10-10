@@ -6,25 +6,28 @@ using PlataformaEnsino.API.Interfaces;
 
 namespace PlataformaEnsino.API.Services;
 
-public class AvaliacaoIAService : IAvaliacaoIAService
+/// <summary>
+/// Provedor alternativo de geracao por IA, usando a Generative Language API do
+/// Google (Gemini) em vez da Anthropic - mesmo prompt (PromptGeracaoQuestoesIa),
+/// mesma validacao/filtragem (RespostaIaUtil), so muda a chamada HTTP e como o
+/// texto vem envelopado na resposta. Qual provedor fica ativo e decidido em
+/// Program.cs via configuracao "IA:Provedor", nao aqui.
+/// </summary>
+public class GeminiAvaliacaoIAService : IAvaliacaoIAService
 {
-    public const string NomeHttpClient = "Anthropic";
-    private const string VersaoApiAnthropic = "2023-06-01";
-    private const int MaxTokensResposta = 8000;
-    // Limite grosseiro de caracteres enviados por chamada - protege custo/tempo
-    // contra um material muito grande (risco #3 da proposta aprovada).
+    public const string NomeHttpClient = "Gemini";
     private const int TamanhoMaximoTextoFonte = 60_000;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly IValidadorQuestaoIaService _validador;
-    private readonly ILogger<AvaliacaoIAService> _logger;
+    private readonly ILogger<GeminiAvaliacaoIAService> _logger;
 
-    public AvaliacaoIAService(
+    public GeminiAvaliacaoIAService(
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         IValidadorQuestaoIaService validador,
-        ILogger<AvaliacaoIAService> logger)
+        ILogger<GeminiAvaliacaoIAService> logger)
     {
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
@@ -36,11 +39,9 @@ public class AvaliacaoIAService : IAvaliacaoIAService
     {
         ArgumentNullException.ThrowIfNull(configuracao);
 
-        var apiKey = _configuration["IA:ApiKey"];
+        var apiKey = _configuration["Gemini:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            // Degrada graciosamente (molde de EmailService): feature opcional, nao
-            // derruba o boot da aplicacao - so fica indisponivel quando chamada.
             throw new InvalidOperationException("A geracao de avaliacoes por IA nao esta configurada neste ambiente.");
         }
 
@@ -53,23 +54,22 @@ public class AvaliacaoIAService : IAvaliacaoIAService
             ? textoFonte[..TamanhoMaximoTextoFonte]
             : textoFonte;
 
-        var modelo = _configuration["IA:Modelo"] ?? "claude-sonnet-5";
+        var modelo = _configuration["Gemini:Modelo"] ?? "gemini-3.8-flash";
         var prompt = PromptGeracaoQuestoesIa.Montar(textoTruncado, configuracao);
         var corpoRequisicao = new
         {
-            model = modelo,
-            max_tokens = MaxTokensResposta,
-            messages = new[]
+            contents = new[]
             {
-                new { role = "user", content = prompt }
+                new
+                {
+                    parts = new[] { new { text = prompt } }
+                }
             }
         };
 
         var cliente = _httpClientFactory.CreateClient(NomeHttpClient);
-        cliente.DefaultRequestHeaders.Remove("x-api-key");
-        cliente.DefaultRequestHeaders.Add("x-api-key", apiKey);
-        cliente.DefaultRequestHeaders.Remove("anthropic-version");
-        cliente.DefaultRequestHeaders.Add("anthropic-version", VersaoApiAnthropic);
+        cliente.DefaultRequestHeaders.Remove("x-goog-api-key");
+        cliente.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
 
         using var conteudo = new StringContent(JsonSerializer.Serialize(corpoRequisicao), Encoding.UTF8);
         conteudo.Headers.ContentType = new MediaTypeHeaderValue("application/json");
@@ -77,23 +77,23 @@ public class AvaliacaoIAService : IAvaliacaoIAService
         HttpResponseMessage resposta;
         try
         {
-            resposta = await cliente.PostAsync("v1/messages", conteudo, cancellationToken);
+            resposta = await cliente.PostAsync($"v1beta/models/{modelo}:generateContent", conteudo, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogWarning(ex, "Falha de rede ao chamar o provedor de IA.");
+            _logger.LogWarning(ex, "Falha de rede ao chamar o provedor de IA (Gemini).");
             throw new InvalidOperationException("O servico de geracao por IA esta indisponivel agora. Tente novamente em alguns minutos.");
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Timeout ao chamar o provedor de IA.");
+            _logger.LogWarning(ex, "Timeout ao chamar o provedor de IA (Gemini).");
             throw new InvalidOperationException("O servico de geracao por IA demorou demais para responder. Tente novamente.");
         }
 
         if (!resposta.IsSuccessStatusCode)
         {
             var corpoErro = await RespostaIaUtil.LerCorpoSeguramenteAsync(resposta, cancellationToken);
-            _logger.LogWarning("Provedor de IA retornou {StatusCode}: {Corpo}", resposta.StatusCode, corpoErro);
+            _logger.LogWarning("Provedor de IA (Gemini) retornou {StatusCode}: {Corpo}", resposta.StatusCode, corpoErro);
             throw new InvalidOperationException("O servico de geracao por IA esta indisponivel agora. Tente novamente em alguns minutos.");
         }
 
@@ -103,21 +103,31 @@ public class AvaliacaoIAService : IAvaliacaoIAService
         return RespostaIaUtil.ValidarEFiltrar(bruto, _validador);
     }
 
-    // Formato de resposta especifico da Anthropic: content e um array de blocos
-    // tipados, so os do tipo "text" interessam aqui (o modelo nao usa tool-use nem
-    // outros tipos de bloco nessa chamada).
+    // Formato de resposta especifico do Gemini: texto gerado fica em
+    // candidates[0].content.parts[*].text (varios blocos de texto possiveis,
+    // concatenados, mesmo padrao defensivo usado no parsing da Anthropic).
     private static async Task<string> ExtrairTextoDaRespostaAsync(HttpResponseMessage resposta, CancellationToken cancellationToken)
     {
         var json = await resposta.Content.ReadAsStringAsync(cancellationToken);
 
         using var documento = JsonDocument.Parse(json);
-        var blocos = documento.RootElement.GetProperty("content");
+
+        if (!documento.RootElement.TryGetProperty("candidates", out var candidatos) || candidatos.GetArrayLength() == 0)
+        {
+            return string.Empty;
+        }
+
+        var primeiroCandidato = candidatos[0];
+        if (!primeiroCandidato.TryGetProperty("content", out var conteudoResposta) ||
+            !conteudoResposta.TryGetProperty("parts", out var partes))
+        {
+            return string.Empty;
+        }
 
         var construtor = new StringBuilder();
-        foreach (var bloco in blocos.EnumerateArray())
+        foreach (var parte in partes.EnumerateArray())
         {
-            if (bloco.TryGetProperty("type", out var tipo) && tipo.GetString() == "text" &&
-                bloco.TryGetProperty("text", out var texto))
+            if (parte.TryGetProperty("text", out var texto))
             {
                 construtor.Append(texto.GetString());
             }

@@ -77,13 +77,30 @@ builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IExtratorTextoMaterialService, ExtratorTextoMaterialService>();
 builder.Services.AddScoped<IValidadorQuestaoIaService, ValidadorQuestaoIaService>();
-builder.Services.AddScoped<IAvaliacaoIAService, AvaliacaoIAService>();
+// Provedor de IA trocavel por configuracao ("IA:Provedor" = "Anthropic" | "Gemini",
+// padrao Anthropic) - os dois implementam a mesma interface e compartilham prompt
+// (PromptGeracaoQuestoesIa) e validacao (RespostaIaUtil), so a chamada HTTP muda.
+// Permite testar/trocar de provedor sem mexer no resto do pipeline de geracao.
+var provedorIa = builder.Configuration["IA:Provedor"] ?? "Anthropic";
+if (string.Equals(provedorIa, "Gemini", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<IAvaliacaoIAService, GeminiAvaliacaoIAService>();
+}
+else
+{
+    builder.Services.AddScoped<IAvaliacaoIAService, AvaliacaoIAService>();
+}
 // Primeiro uso de IHttpClientFactory no projeto - molde do BlobServiceClient singleton
 // (Program.cs, registro condicional de storage acima) para uma integracao externa
 // nova, so que via HTTP simples em vez de SDK (ver proposta aprovada, decisao 3).
 builder.Services.AddHttpClient(AvaliacaoIAService.NomeHttpClient, cliente =>
 {
     cliente.BaseAddress = new Uri("https://api.anthropic.com/");
+    cliente.Timeout = TimeSpan.FromSeconds(90);
+});
+builder.Services.AddHttpClient(GeminiAvaliacaoIAService.NomeHttpClient, cliente =>
+{
+    cliente.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
     cliente.Timeout = TimeSpan.FromSeconds(90);
 });
 // Azure App Service/Container Apps tem disco efemero e nao compartilhado entre

@@ -399,6 +399,34 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
       };
 
       await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/questoes/lote`, { method: "POST", body: JSON.stringify(payload) });
+
+      // A avaliacao-casca nasce com notaMaxima fixa em 10 (etapa de configuracao,
+      // antes de saber quantas questoes/pontos a IA ia devolver) - sem este ajuste,
+      // a soma dos "pontos" das questoes confirmadas quase nunca bate com 10, e a
+      // nota do aluno sai errada (ex.: acertar tudo e tirar 30% em vez de 100%).
+      // Recalcula pelo valor de "pontos" de verdade usado em cada questao, incluindo
+      // edicoes feitas na revisao.
+      const notaMaximaFinal = payload.questoes.reduce((soma, questao) => soma + questao.pontos, 0);
+      await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          titulo: titulo.trim(),
+          descricao: "",
+          turmaId: Number(cursoAtivo.turma.id),
+          moduloId: null,
+          conteudoDidaticoId: null,
+          tipoAvaliacao: 2,
+          statusPublicacao: 1,
+          dataAbertura: null,
+          dataFechamento: null,
+          tentativasPermitidas: 1,
+          tempoLimiteMinutos: null,
+          notaMaxima: notaMaximaFinal > 0 ? notaMaximaFinal : 10,
+          pesoNota: 1,
+          pesoProgresso: 1
+        })
+      });
+
       onRefresh?.();
       onFechar?.();
     } catch (err) {
