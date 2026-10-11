@@ -118,9 +118,7 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
     setTiposSelecionados((atual) => (atual.includes(valor) ? atual.filter((item) => item !== valor) : [...atual, valor]));
   }
 
-  async function gerarQuestoes(event) {
-    event.preventDefault();
-
+  async function gerarQuestoes() {
     const tituloTratado = titulo.trim();
     if (!tituloTratado) {
       setMensagem({ tone: "error", message: "Informe um titulo para a avaliacao." });
@@ -461,7 +459,7 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
             <Botao disabled={gerando} onClick={() => setEtapa("selecao")} type="button" variante="perigo">
               <TbX aria-hidden="true" size={15} /> Voltar
             </Botao>
-            <Botao disabled={gerando} form="form-gerar-ia-configuracao" type="submit" variante="primario">
+            <Botao disabled={gerando} onClick={() => gerarQuestoes()} type="button" variante="primario">
               <TbSparkles aria-hidden="true" size={16} /> {gerando ? "Gerando..." : "Gerar questoes"}
             </Botao>
           </footer>
@@ -532,7 +530,25 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
           {etapa === "configuracao" ? (
             <section className="criar-avaliacao__secao">
               <h3 className="criar-avaliacao__secao-titulo">Configurar geracao</h3>
-              <form className="criar-avaliacao__secao-corpo" id="form-gerar-ia-configuracao" onSubmit={gerarQuestoes}>
+              <form
+                className="criar-avaliacao__secao-corpo"
+                id="form-gerar-ia-configuracao"
+                onKeyDown={(event) => {
+                  // Defesa extra: o botao "Gerar questoes" nao e mais type="submit"
+                  // associado a este form (ver rodape), entao o navegador nao tem
+                  // mais um botao padrao pra ativar com Enter - isso sozinho ja
+                  // evita o envio prematuro. Mesmo assim, bloqueia Enter explicitamente
+                  // nos campos de texto/numero (titulo, quantidade, assunto) por
+                  // seguranca, caso algum navegador se comporte diferente.
+                  if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") {
+                    event.preventDefault();
+                  }
+                }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  gerarQuestoes();
+                }}
+              >
                 <p className="campo__ajuda" style={{ marginTop: 0 }}>
                   Material enviado: <strong>{arquivo?.name}</strong>
                 </p>
