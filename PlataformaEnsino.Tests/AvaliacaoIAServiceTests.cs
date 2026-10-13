@@ -33,7 +33,7 @@ public class AvaliacaoIAServiceTests
             NullLogger<AvaliacaoIAService>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.GerarQuestoesAsync("texto de um material qualquer", ConfiguracaoPadrao(), CancellationToken.None));
+            () => service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto de um material qualquer"), ConfiguracaoPadrao(), CancellationToken.None));
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class AvaliacaoIAServiceTests
             new ValidadorQuestaoIaService(),
             NullLogger<AvaliacaoIAService>.Instance);
 
-        var resultado = await service.GerarQuestoesAsync("Texto sobre fotossintese...", ConfiguracaoPadrao(), CancellationToken.None);
+        var resultado = await service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("Texto sobre fotossintese..."), ConfiguracaoPadrao(), CancellationToken.None);
 
         Assert.Single(resultado.Questoes);
         Assert.False(resultado.LimitacaoDetectada);
@@ -91,7 +91,7 @@ public class AvaliacaoIAServiceTests
             NullLogger<AvaliacaoIAService>.Instance);
 
         await Assert.ThrowsAsync<ArgumentException>(
-            () => service.GerarQuestoesAsync("texto qualquer", ConfiguracaoPadrao(), CancellationToken.None));
+            () => service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None));
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class AvaliacaoIAServiceTests
             new ValidadorQuestaoIaService(),
             NullLogger<AvaliacaoIAService>.Instance);
 
-        var resultado = await service.GerarQuestoesAsync("texto qualquer", ConfiguracaoPadrao(), CancellationToken.None);
+        var resultado = await service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None);
 
         Assert.Single(resultado.Questoes);
         Assert.Equal("Questao valida", resultado.Questoes[0].TituloInterno);
@@ -174,7 +174,7 @@ public class AvaliacaoIAServiceTests
             new ValidadorQuestaoIaService(),
             NullLogger<AvaliacaoIAService>.Instance);
 
-        var resultado = await service.GerarQuestoesAsync("texto qualquer", ConfiguracaoPadrao(), CancellationToken.None);
+        var resultado = await service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None);
 
         Assert.Single(resultado.Questoes);
         Assert.True(resultado.Questoes[0].GabaritoIncerto);
@@ -194,7 +194,31 @@ public class AvaliacaoIAServiceTests
             NullLogger<AvaliacaoIAService>.Instance);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.GerarQuestoesAsync("texto qualquer", ConfiguracaoPadrao(), CancellationToken.None));
+            () => service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GerarQuestoesAsync_MaterialDocumento_EnviaBlocoDeDocumentoBase64()
+    {
+        string? corpoRequisicaoCapturado = null;
+        var handler = new FakeHttpMessageHandler(request =>
+        {
+            corpoRequisicaoCapturado = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            return CriarRespostaAnthropic("""{ "questoes": [], "avisos": [], "limitacaoDetectada": true }""");
+        });
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        var bytesFalsos = new byte[] { 1, 2, 3, 4 };
+        await service.GerarQuestoesAsync(MaterialParaIaDto.DeDocumento(bytesFalsos, "application/pdf"), ConfiguracaoPadrao(), CancellationToken.None);
+
+        Assert.NotNull(corpoRequisicaoCapturado);
+        Assert.Contains("\"type\":\"document\"", corpoRequisicaoCapturado);
+        Assert.Contains("\"media_type\":\"application/pdf\"", corpoRequisicaoCapturado);
+        Assert.Contains(Convert.ToBase64String(bytesFalsos), corpoRequisicaoCapturado);
     }
 
     private static HttpResponseMessage CriarRespostaAnthropic(string textoDoModelo)

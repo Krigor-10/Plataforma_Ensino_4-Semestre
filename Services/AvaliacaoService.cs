@@ -871,7 +871,9 @@ public class AvaliacaoService : IAvaliacaoService
             resultadoExtracao = await _extratorTextoService.ExtrairTextoAsync(streamLeitura, extensao, cancellationToken);
         }
 
-        if (!resultadoExtracao.TemTextoExtraivel)
+        var ehPdfEscaneado = resultadoExtracao.MotivoFalha == MotivoFalhaExtracao.PdfEscaneado;
+
+        if (!resultadoExtracao.TemTextoExtraivel && !ehPdfEscaneado)
         {
             var motivo = resultadoExtracao.Avisos.FirstOrDefault()
                 ?? "O material enviado nao tem texto suficiente para gerar questoes.";
@@ -884,8 +886,31 @@ public class AvaliacaoService : IAvaliacaoService
         // depois da extracao acima e seguro.
         await _armazenamentoService.SalvarArquivoAsync(arquivo, "avaliacoes-ia-fontes", new[] { ".pdf", ".docx" }, 20_000_000);
 
-        var textoCompleto = string.Join("\n\n", resultadoExtracao.TextoPorPagina);
-        return await _avaliacaoIAService.GerarQuestoesAsync(textoCompleto, configuracao, cancellationToken);
+        MaterialParaIaDto material;
+        if (ehPdfEscaneado)
+        {
+            // PDF escaneado, sem texto extraivel por OCR local - em vez de bloquear,
+            // o documento vai direto pro modelo de IA, que le a pagina via visao
+            // nativa (suportado tanto pela Anthropic quanto pelo Gemini).
+            await using var streamBytes = arquivo.OpenReadStream();
+            using var buffer = new MemoryStream();
+            await streamBytes.CopyToAsync(buffer, cancellationToken);
+            material = MaterialParaIaDto.DeDocumento(buffer.ToArray(), "application/pdf");
+        }
+        else
+        {
+            material = MaterialParaIaDto.DeTexto(string.Join("\n\n", resultadoExtracao.TextoPorPagina));
+        }
+
+        var resultado = await _avaliacaoIAService.GerarQuestoesAsync(material, configuracao, cancellationToken);
+
+        if (ehPdfEscaneado)
+        {
+            const string avisoVisao = "Este PDF escaneado foi lido diretamente pela IA (sem OCR tradicional) - revise as questoes geradas com atencao, a leitura de texto em imagem pode conter erros.";
+            resultado = resultado with { Avisos = resultado.Avisos.Append(avisoVisao).ToList() };
+        }
+
+        return resultado;
     }
 
     public async Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo)

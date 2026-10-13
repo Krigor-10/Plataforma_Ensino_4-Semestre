@@ -10,12 +10,12 @@ public record ResultadoGeracaoIA(
 public interface IAvaliacaoIAService
 {
     /// <summary>
-    /// Gera questoes a partir do texto ja extraido do material (nunca do arquivo
-    /// binario - a extracao e responsabilidade de IExtratorTextoMaterialService).
+    /// Gera questoes a partir do material-fonte (texto ja extraido, ou os bytes
+    /// crus do documento quando nao ha texto extraivel - ver MaterialParaIaDto).
     /// O resultado NUNCA e persistido aqui - e so um rascunho para a tela de revisao
     /// do professor, que decide o que confirmar via POST .../questoes/lote.
     /// Lanca InvalidOperationException (422) se a IA nao estiver configurada ou
     /// estiver indisponivel.
     /// </summary>
-    Task<ResultadoGeracaoIA> GerarQuestoesAsync(string textoFonte, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken);
+    Task<ResultadoGeracaoIA> GerarQuestoesAsync(MaterialParaIaDto material, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken);
 }

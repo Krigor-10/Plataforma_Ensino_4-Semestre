@@ -35,8 +35,9 @@ public class GeminiAvaliacaoIAService : IAvaliacaoIAService
         _logger = logger;
     }
 
-    public async Task<ResultadoGeracaoIA> GerarQuestoesAsync(string textoFonte, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+    public async Task<ResultadoGeracaoIA> GerarQuestoesAsync(MaterialParaIaDto material, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(material);
         ArgumentNullException.ThrowIfNull(configuracao);
 
         var apiKey = _configuration["Gemini:ApiKey"];
@@ -45,25 +46,43 @@ public class GeminiAvaliacaoIAService : IAvaliacaoIAService
             throw new InvalidOperationException("A geracao de avaliacoes por IA nao esta configurada neste ambiente.");
         }
 
-        if (string.IsNullOrWhiteSpace(textoFonte))
+        object[] partes;
+        if (material.EhDocumento)
         {
-            throw new ArgumentException("Nao ha texto extraido do material para gerar questoes.");
+            var promptDocumento = PromptGeracaoQuestoesIa.MontarParaDocumentoAnexado(configuracao);
+            partes = new object[]
+            {
+                new
+                {
+                    inlineData = new
+                    {
+                        mimeType = material.MediaType,
+                        data = Convert.ToBase64String(material.DocumentoBytes!)
+                    }
+                },
+                new { text = promptDocumento }
+            };
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(material.TextoFonte))
+            {
+                throw new ArgumentException("Nao ha texto extraido do material para gerar questoes.");
+            }
+
+            var textoTruncado = material.TextoFonte.Length > TamanhoMaximoTextoFonte
+                ? material.TextoFonte[..TamanhoMaximoTextoFonte]
+                : material.TextoFonte;
+
+            partes = new object[] { new { text = PromptGeracaoQuestoesIa.MontarComTexto(textoTruncado, configuracao) } };
         }
 
-        var textoTruncado = textoFonte.Length > TamanhoMaximoTextoFonte
-            ? textoFonte[..TamanhoMaximoTextoFonte]
-            : textoFonte;
-
         var modelo = _configuration["Gemini:Modelo"] ?? "gemini-3.8-flash";
-        var prompt = PromptGeracaoQuestoesIa.Montar(textoTruncado, configuracao);
         var corpoRequisicao = new
         {
             contents = new[]
             {
-                new
-                {
-                    parts = new[] { new { text = prompt } }
-                }
+                new { parts = partes }
             }
         };
 

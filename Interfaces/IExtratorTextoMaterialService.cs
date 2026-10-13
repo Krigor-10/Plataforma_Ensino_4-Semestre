@@ -1,10 +1,24 @@
 namespace PlataformaEnsino.API.Interfaces;
 
+/// <summary>
+/// Motivo de TemTextoExtraivel=false. Distingue o unico caso recuperavel via
+/// visao (PdfEscaneado) dos demais, que sao bloqueios definitivos de
+/// seguranca/integridade e nunca devem cair no fallback de visao.
+/// </summary>
+public enum MotivoFalhaExtracao
+{
+    Nenhum,
+    PdfEscaneado,
+    DocxVazio,
+    Seguranca
+}
+
 public record ResultadoExtracaoMaterial(
     IReadOnlyList<string> TextoPorPagina,
     int QuantidadePaginas,
     bool TemTextoExtraivel,
-    IReadOnlyList<string> Avisos);
+    IReadOnlyList<string> Avisos,
+    MotivoFalhaExtracao MotivoFalha = MotivoFalhaExtracao.Nenhum);
 
 public interface IExtratorTextoMaterialService
 {

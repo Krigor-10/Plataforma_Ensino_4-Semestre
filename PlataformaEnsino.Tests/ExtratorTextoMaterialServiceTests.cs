@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Services;
 using Xunit;
 
@@ -21,6 +22,7 @@ public class ExtratorTextoMaterialServiceTests
         Assert.Equal(1, resultado.QuantidadePaginas);
         Assert.Contains("fotossintese", resultado.TextoPorPagina[0], StringComparison.OrdinalIgnoreCase);
         Assert.Empty(resultado.Avisos);
+        Assert.Equal(MotivoFalhaExtracao.Nenhum, resultado.MotivoFalha);
     }
 
     [Fact]
@@ -32,6 +34,7 @@ public class ExtratorTextoMaterialServiceTests
 
         Assert.False(resultado.TemTextoExtraivel);
         Assert.NotEmpty(resultado.Avisos);
+        Assert.Equal(MotivoFalhaExtracao.PdfEscaneado, resultado.MotivoFalha);
     }
 
     [Fact]
@@ -44,6 +47,19 @@ public class ExtratorTextoMaterialServiceTests
         Assert.True(resultado.TemTextoExtraivel);
         Assert.Equal(1, resultado.QuantidadePaginas);
         Assert.Contains("estruturas de dados", resultado.TextoPorPagina[0], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(MotivoFalhaExtracao.Nenhum, resultado.MotivoFalha);
+    }
+
+    [Fact]
+    public async Task ExtrairTextoAsync_DocxVazio_SinalizaNaoExtraivel()
+    {
+        using var docx = CriarDocxComTexto(string.Empty);
+
+        var resultado = await _service.ExtrairTextoAsync(docx, ".docx", CancellationToken.None);
+
+        Assert.False(resultado.TemTextoExtraivel);
+        Assert.NotEmpty(resultado.Avisos);
+        Assert.Equal(MotivoFalhaExtracao.DocxVazio, resultado.MotivoFalha);
     }
 
     [Fact]
@@ -55,6 +71,7 @@ public class ExtratorTextoMaterialServiceTests
 
         Assert.False(resultado.TemTextoExtraivel);
         Assert.Contains(resultado.Avisos, aviso => aviso.Contains("JavaScript"));
+        Assert.Equal(MotivoFalhaExtracao.Seguranca, resultado.MotivoFalha);
     }
 
     [Fact]
@@ -75,6 +92,7 @@ public class ExtratorTextoMaterialServiceTests
 
         Assert.False(resultado.TemTextoExtraivel);
         Assert.Contains(resultado.Avisos, aviso => aviso.Contains("nao e um DOCX valido"));
+        Assert.Equal(MotivoFalhaExtracao.Seguranca, resultado.MotivoFalha);
     }
 
     [Fact]

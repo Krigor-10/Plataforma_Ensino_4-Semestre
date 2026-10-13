@@ -32,8 +32,9 @@ public class AvaliacaoIAService : IAvaliacaoIAService
         _logger = logger;
     }
 
-    public async Task<ResultadoGeracaoIA> GerarQuestoesAsync(string textoFonte, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+    public async Task<ResultadoGeracaoIA> GerarQuestoesAsync(MaterialParaIaDto material, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(material);
         ArgumentNullException.ThrowIfNull(configuracao);
 
         var apiKey = _configuration["IA:ApiKey"];
@@ -44,24 +45,47 @@ public class AvaliacaoIAService : IAvaliacaoIAService
             throw new InvalidOperationException("A geracao de avaliacoes por IA nao esta configurada neste ambiente.");
         }
 
-        if (string.IsNullOrWhiteSpace(textoFonte))
+        object conteudoMensagem;
+        if (material.EhDocumento)
         {
-            throw new ArgumentException("Nao ha texto extraido do material para gerar questoes.");
+            var promptDocumento = PromptGeracaoQuestoesIa.MontarParaDocumentoAnexado(configuracao);
+            conteudoMensagem = new object[]
+            {
+                new
+                {
+                    type = "document",
+                    source = new
+                    {
+                        type = "base64",
+                        media_type = material.MediaType,
+                        data = Convert.ToBase64String(material.DocumentoBytes!)
+                    }
+                },
+                new { type = "text", text = promptDocumento }
+            };
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(material.TextoFonte))
+            {
+                throw new ArgumentException("Nao ha texto extraido do material para gerar questoes.");
+            }
+
+            var textoTruncado = material.TextoFonte.Length > TamanhoMaximoTextoFonte
+                ? material.TextoFonte[..TamanhoMaximoTextoFonte]
+                : material.TextoFonte;
+
+            conteudoMensagem = PromptGeracaoQuestoesIa.MontarComTexto(textoTruncado, configuracao);
         }
 
-        var textoTruncado = textoFonte.Length > TamanhoMaximoTextoFonte
-            ? textoFonte[..TamanhoMaximoTextoFonte]
-            : textoFonte;
-
         var modelo = _configuration["IA:Modelo"] ?? "claude-sonnet-5";
-        var prompt = PromptGeracaoQuestoesIa.Montar(textoTruncado, configuracao);
         var corpoRequisicao = new
         {
             model = modelo,
             max_tokens = MaxTokensResposta,
             messages = new[]
             {
-                new { role = "user", content = prompt }
+                new { role = "user", content = conteudoMensagem }
             }
         };
 

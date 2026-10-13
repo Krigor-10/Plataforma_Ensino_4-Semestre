@@ -86,8 +86,9 @@ public class ExtratorTextoMaterialService : IExtratorTextoMaterialService
         var avisos = temTextoExtraivel
             ? Array.Empty<string>()
             : new[] { "Este PDF parece ser uma versao escaneada, sem texto selecionavel suficiente para gerar questoes." };
+        var motivoFalha = temTextoExtraivel ? MotivoFalhaExtracao.Nenhum : MotivoFalhaExtracao.PdfEscaneado;
 
-        return new ResultadoExtracaoMaterial(textoPorPagina, quantidadePaginas, temTextoExtraivel, avisos);
+        return new ResultadoExtracaoMaterial(textoPorPagina, quantidadePaginas, temTextoExtraivel, avisos, motivoFalha);
     }
 
     private static bool ContemConteudoAtivo(byte[] bytes)
@@ -99,7 +100,7 @@ public class ExtratorTextoMaterialService : IExtratorTextoMaterialService
     }
 
     private static ResultadoExtracaoMaterial Rejeitar(string motivo) =>
-        new(TextoPorPagina: Array.Empty<string>(), QuantidadePaginas: 0, TemTextoExtraivel: false, Avisos: new[] { motivo });
+        new(TextoPorPagina: Array.Empty<string>(), QuantidadePaginas: 0, TemTextoExtraivel: false, Avisos: new[] { motivo }, MotivoFalha: MotivoFalhaExtracao.Seguranca);
 
     private static ResultadoExtracaoMaterial ExtrairDeDocx(Stream conteudo)
     {
@@ -128,15 +129,17 @@ public class ExtratorTextoMaterialService : IExtratorTextoMaterialService
         // DOCX nao tem um conceito estrutural fixo de "pagina" (paginacao depende de
         // layout/renderizacao, nao do arquivo) - tratamos o documento inteiro como uma
         // unica "pagina" em vez de inventar uma paginacao falsa.
-        var avisos = string.IsNullOrWhiteSpace(texto)
+        var textoVazio = string.IsNullOrWhiteSpace(texto);
+        var avisos = textoVazio
             ? new[] { "O DOCX nao tem texto para extrair." }
             : Array.Empty<string>();
 
         return new ResultadoExtracaoMaterial(
             TextoPorPagina: new[] { texto },
             QuantidadePaginas: 1,
-            TemTextoExtraivel: !string.IsNullOrWhiteSpace(texto),
-            Avisos: avisos);
+            TemTextoExtraivel: !textoVazio,
+            Avisos: avisos,
+            MotivoFalha: textoVazio ? MotivoFalhaExtracao.DocxVazio : MotivoFalhaExtracao.Nenhum);
     }
 
     private static bool ContemDocumentoWordValido(byte[] bytes)

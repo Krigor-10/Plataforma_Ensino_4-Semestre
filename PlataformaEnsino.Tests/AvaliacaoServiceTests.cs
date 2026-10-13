@@ -991,10 +991,66 @@ public class AvaliacaoServiceTests
         Assert.Equal(2, item.TentativasRestantes);
     }
 
+    // ---------- GerarQuestoesComIaAsync ----------
+
+    [Fact]
+    public async Task GerarQuestoesComIaAsync_PdfEscaneado_NaoBloqueiaEEnviaDocumentoParaIA()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var extrator = new ExtratorTextoMaterialServiceFake(() =>
+            new ResultadoExtracaoMaterial(
+                TextoPorPagina: Array.Empty<string>(),
+                QuantidadePaginas: 1,
+                TemTextoExtraivel: false,
+                Avisos: new[] { "Este PDF parece ser uma versao escaneada, sem texto selecionavel suficiente para gerar questoes." },
+                MotivoFalha: MotivoFalhaExtracao.PdfEscaneado));
+        var iaFake = new AvaliacaoIAServiceFake(_ =>
+            new ResultadoGeracaoIA(Array.Empty<QuestaoGeradaIaDto>(), Array.Empty<string>(), false));
+        var armazenamento = new ArmazenamentoArquivoServiceFake(() => "/uploads/avaliacoes-ia-fontes/fake.pdf");
+
+        var service = new AvaliacaoService(
+            context,
+            new ProgressoAlunoService(context, new AcessoAcademicoService(context)),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            armazenamento,
+            extrator,
+            iaFake);
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        var bytesFalsos = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nconteudo escaneado de teste");
+        var arquivo = new FormFile(new MemoryStream(bytesFalsos), 0, bytesFalsos.Length, "arquivo", "prova-escaneada.pdf")
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/pdf"
+        };
+
+        var resultado = await service.GerarQuestoesComIaAsync(avaliacao.Id, professor.Id, arquivo, new GerarQuestoesIaRequestDto(), CancellationToken.None);
+
+        Assert.True(iaFake.MaterialRecebido!.EhDocumento);
+        Assert.Equal("application/pdf", iaFake.MaterialRecebido.MediaType);
+        Assert.Contains(resultado.Avisos, aviso => aviso.Contains("lido diretamente pela IA", StringComparison.OrdinalIgnoreCase));
+    }
+
     private class ArmazenamentoArquivoServiceFake : IArmazenamentoArquivoService
     {
-        public Task<string> SalvarArquivoAsync(IFormFile arquivo, string subpasta, string[] extensoesPermitidas, long tamanhoMaximoBytes)
-            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita upload de anexo ate agora.");
+        private readonly Func<string>? _urlRetornada;
+
+        public ArmazenamentoArquivoServiceFake(Func<string>? urlRetornada = null)
+        {
+            _urlRetornada = urlRetornada;
+        }
+
+        public Task<string> SalvarArquivoAsync(IFormFile arquivo, string subpasta, string[] extensoesPermitidas, long tamanhoMaximoBytes) =>
+            _urlRetornada is not null
+                ? Task.FromResult(_urlRetornada())
+                : throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita upload de anexo ate agora.");
 
         public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
             => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita leitura de anexo ate agora.");
@@ -1002,13 +1058,36 @@ public class AvaliacaoServiceTests
 
     private class ExtratorTextoMaterialServiceFake : IExtratorTextoMaterialService
     {
-        public Task<ResultadoExtracaoMaterial> ExtrairTextoAsync(Stream conteudo, string extensao, CancellationToken cancellationToken)
-            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
+        private readonly Func<ResultadoExtracaoMaterial>? _resultado;
+
+        public ExtratorTextoMaterialServiceFake(Func<ResultadoExtracaoMaterial>? resultado = null)
+        {
+            _resultado = resultado;
+        }
+
+        public Task<ResultadoExtracaoMaterial> ExtrairTextoAsync(Stream conteudo, string extensao, CancellationToken cancellationToken) =>
+            _resultado is not null
+                ? Task.FromResult(_resultado())
+                : throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
     }
 
     private class AvaliacaoIAServiceFake : IAvaliacaoIAService
     {
-        public Task<ResultadoGeracaoIA> GerarQuestoesAsync(string textoFonte, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
-            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
+        private readonly Func<MaterialParaIaDto, ResultadoGeracaoIA>? _resultado;
+
+        public MaterialParaIaDto? MaterialRecebido { get; private set; }
+
+        public AvaliacaoIAServiceFake(Func<MaterialParaIaDto, ResultadoGeracaoIA>? resultado = null)
+        {
+            _resultado = resultado;
+        }
+
+        public Task<ResultadoGeracaoIA> GerarQuestoesAsync(MaterialParaIaDto material, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+        {
+            MaterialRecebido = material;
+            return _resultado is not null
+                ? Task.FromResult(_resultado(material))
+                : throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita geracao por IA ate agora.");
+        }
     }
 }
