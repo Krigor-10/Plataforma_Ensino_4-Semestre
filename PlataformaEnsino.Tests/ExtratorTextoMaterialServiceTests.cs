@@ -63,14 +63,39 @@ public class ExtratorTextoMaterialServiceTests
     }
 
     [Fact]
-    public async Task ExtrairTextoAsync_PdfComJavaScriptEmbutido_Rejeita()
+    public async Task ExtrairTextoAsync_TokenDeSegurancaDentroDoConteudoDaPagina_NaoBloqueia()
     {
-        using var pdf = CriarPdfComTexto("Conteudo normal da prova, mas com /JavaScript escondido em algum lugar do arquivo.");
+        // Antes, qualquer ocorrencia do token em QUALQUER lugar do arquivo bloqueava
+        // o PDF - inclusive texto normal da pagina que so MENCIONA "/JavaScript" como
+        // palavra (nao e uma acao real, e so o texto sendo desenhado dentro do bloco
+        // stream/endstream). Isso causava falso-positivo real com PDF escaneado (ver
+        // memoria pendencia_falso_positivo_aa_contemconteudoativo, achado em
+        // 2026-10-12): o token "/AA" aparecia por acaso dentro do stream de imagem
+        // comprimida. Agora so bloqueia quando o token esta fora de blocos
+        // stream/endstream - onde uma acao PDF de verdade precisa estar pra ser
+        // executavel pelo leitor (ver teste abaixo).
+        using var pdf = CriarPdfComTexto("Conteudo normal da prova, mas com /JavaScript mencionado em algum lugar do arquivo.");
+
+        var resultado = await _service.ExtrairTextoAsync(pdf, ".pdf", CancellationToken.None);
+
+        Assert.True(resultado.TemTextoExtraivel);
+        Assert.Equal(MotivoFalhaExtracao.Nenhum, resultado.MotivoFalha);
+    }
+
+    [Fact]
+    public async Task ExtrairTextoAsync_PdfComAcaoJavaScriptNoCatalogo_Rejeita()
+    {
+        // Ataque de verdade: /OpenAction como chave real do dicionario do Catalogo,
+        // fora de qualquer stream - exatamente onde o leitor de PDF precisa encontrar
+        // a acao pra executa-la. Continua bloqueado depois do fix do falso-positivo.
+        using var pdf = CriarPdfComTexto(
+            "Conteudo normal, sem nada suspeito no texto da pagina.",
+            extraCatalogo: "/OpenAction << /S /JavaScript /JS (app.alert(1)) >>");
 
         var resultado = await _service.ExtrairTextoAsync(pdf, ".pdf", CancellationToken.None);
 
         Assert.False(resultado.TemTextoExtraivel);
-        Assert.Contains(resultado.Avisos, aviso => aviso.Contains("JavaScript"));
+        Assert.Contains(resultado.Avisos, aviso => aviso.Contains("JavaScript") || aviso.Contains("acoes automaticas"));
         Assert.Equal(MotivoFalhaExtracao.Seguranca, resultado.MotivoFalha);
     }
 
@@ -104,7 +129,7 @@ public class ExtratorTextoMaterialServiceTests
             () => _service.ExtrairTextoAsync(stream, ".txt", CancellationToken.None));
     }
 
-    private static MemoryStream CriarPdfComTexto(string texto)
+    private static MemoryStream CriarPdfComTexto(string texto, string? extraCatalogo = null)
     {
         // PDF minimo valido de 1 pagina, escrito a mao byte a byte (PdfPig e so
         // leitor, nao tem API de escrita). A tabela xref precisa dos offsets REAIS
@@ -127,7 +152,9 @@ public class ExtratorTextoMaterialServiceTests
 
         offsets[1] = buffer.Position;
         Escrever("1 0 obj");
-        Escrever("<< /Type /Catalog /Pages 2 0 R >>");
+        Escrever(extraCatalogo is null
+            ? "<< /Type /Catalog /Pages 2 0 R >>"
+            : $"<< /Type /Catalog /Pages 2 0 R {extraCatalogo} >>");
         Escrever("endobj");
 
         offsets[2] = buffer.Position;

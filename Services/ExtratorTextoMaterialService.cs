@@ -96,7 +96,48 @@ public class ExtratorTextoMaterialService : IExtratorTextoMaterialService
         // Latin1 preserva 1 byte = 1 char, suficiente para procurar tokens ASCII
         // dentro do PDF sem se preocupar com encoding de verdade do arquivo.
         var textoCru = Encoding.Latin1.GetString(bytes);
-        return AssinaturasConteudoAtivoPdf.Any(assinatura => textoCru.Contains(assinatura, StringComparison.Ordinal));
+        var textoForaDosStreams = RemoverConteudoDeStreams(textoCru);
+        return AssinaturasConteudoAtivoPdf.Any(assinatura => textoForaDosStreams.Contains(assinatura, StringComparison.Ordinal));
+    }
+
+    // Uma acao PDF de verdade (JavaScript/OpenAction/AA) só e executavel pelo leitor
+    // se existir como chave de dicionario real (ex: catalogo, pagina, campo de
+    // formulario) - nunca dentro do conteudo binario entre "stream" e "endstream"
+    // (imagens, fontes, texto/graficos comprimidos). Streams comprimidos (Flate/DCT)
+    // sao bytes de alta entropia e tem chance real de colidir por acaso com um token
+    // curto como "/AA" (3 bytes) - foi exatamente isso que causou um falso-positivo
+    // real com PDF escaneado (ver memoria pendencia_falso_positivo_aa_contemconteudoativo,
+    // achado em 2026-10-12). Remover esse trecho antes de procurar os tokens elimina a
+    // fonte do falso-positivo sem abrir mao de detectar uma acao de verdade.
+    private static string RemoverConteudoDeStreams(string texto)
+    {
+        var resultado = new StringBuilder(texto.Length);
+        var posicao = 0;
+
+        while (true)
+        {
+            var inicioStream = texto.IndexOf("stream", posicao, StringComparison.Ordinal);
+            if (inicioStream < 0)
+            {
+                resultado.Append(texto, posicao, texto.Length - posicao);
+                break;
+            }
+
+            resultado.Append(texto, posicao, inicioStream - posicao);
+
+            var fimStream = texto.IndexOf("endstream", inicioStream, StringComparison.Ordinal);
+            if (fimStream < 0)
+            {
+                // "stream" sem "endstream" correspondente - arquivo truncado/malformado.
+                // Para de confiar na estrutura em vez de arriscar escanear binario como
+                // se fosse dicionario.
+                break;
+            }
+
+            posicao = fimStream + "endstream".Length;
+        }
+
+        return resultado.ToString();
     }
 
     private static ResultadoExtracaoMaterial Rejeitar(string motivo) =>
