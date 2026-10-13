@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { MdLogout } from "react-icons/md";
+import { TbX } from "react-icons/tb";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
@@ -876,9 +878,11 @@ function ConfirmacaoSessaoModal({ confirmLabel, description, onCancel, onConfirm
         <PanelCard description={description} title={title}>
           <div className="session-confirmation-modal__actions">
             <button className="button button--secondary" onClick={onCancel} type="button">
+              <TbX aria-hidden="true" size={15} />
               Cancelar
             </button>
             <button className="button button--danger" onClick={onConfirm} type="button">
+              <MdLogout aria-hidden="true" size={15} />
               {confirmLabel}
             </button>
           </div>

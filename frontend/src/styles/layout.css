@@ -119,12 +119,6 @@
   color: var(--cor-texto-forte);
 }
 
-.topbar__cargo {
-  font-size: var(--texto-xs);
-  color: var(--cor-texto-suave);
-  font-weight: 500;
-}
-
 .topbar__perfil-chevron {
   color: var(--cor-texto-mudo);
   transition: transform var(--transicao-rapida), color var(--transicao-rapida);
@@ -1116,8 +1110,7 @@
     display: none;
   }
 
-  .topbar__nome,
-  .topbar__cargo {
+  .topbar__nome {
     display: none;
   }
 

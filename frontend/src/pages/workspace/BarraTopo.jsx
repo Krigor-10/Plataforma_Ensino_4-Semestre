@@ -465,7 +465,6 @@ export default function BarraTopo({
               </div>
               <div className="topbar__info">
                 <span className="topbar__nome">{(usuario.nome ?? "").split(" ")[0]}</span>
-                <span className="topbar__cargo">{role}</span>
               </div>
               <TbChevronDown
                 size={14}
