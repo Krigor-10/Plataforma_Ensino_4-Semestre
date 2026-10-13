@@ -5162,15 +5162,30 @@
 
 /* Execucao da avaliacao pelo aluno (classe adicional, so nesse contexto —
    .modal-caixa--avaliacao sozinha tambem e usada pelo modal de autoria do
-   Professor em AssistenteQuizAvaliacao.jsx, que nao deve ganhar altura fixa).
-   So a partir de Desktop (mesmo breakpoint de workspace.css:92) a caixa
-   ganha altura estavel — contexto/enunciado/alternativas de cada questao
-   passam a rolar dentro de .modal-conteudo em vez de fazer a caixa toda
-   crescer/encolher a cada troca de questao. Abaixo disso (tablet, mobile do
-   site, e o app mobile RN que nem usa este componente) nada muda. */
-@media (min-width: 901px) {
+   Professor em AssistenteQuizAvaliacao.jsx, que nao deve herdar nada daqui).
+   Ocupa quase toda a altura da viewport em qualquer tamanho de tela (mesma
+   folga vertical que .modal-fundo ja reserva, 2x --espaco-md) — contexto/
+   enunciado/alternativas de cada questao rolam dentro de .modal-conteudo,
+   nunca a caixa inteira cresce/encolhe a cada troca de questao. Largura
+   fluida com teto mais generoso que o padrao de .modal-caixa--avaliacao,
+   dando mais espaco de leitura pro enunciado/alternativas. */
+.modal-caixa--avaliacao-execucao {
+  width: min(100%, 64rem);
+  max-width: min(100%, 64rem);
+  height: calc(100dvh - 2 * var(--espaco-md));
+  max-height: calc(100dvh - 2 * var(--espaco-md));
+}
+
+@media (max-width: 480px) {
+  /* .modal-fundo some com o padding nesse breakpoint (componentes.css) —
+     a folga de 2x --espaco-md deixa de existir, entao a caixa usa a
+     viewport inteira, so descontando area segura (notch/status bar/home
+     indicator) via env(safe-area-inset-*), com fallback 0px em quem nao
+     suporta. */
   .modal-caixa--avaliacao-execucao {
-    height: min(40rem, 85dvh);
+    width: 100%;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 }
 
