@@ -5,6 +5,7 @@ import CapaCurso from "../../components/CapaCurso.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
+import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 /* Progresso do Aluno segue o mesmo contexto Curso->conteudo ja usado em
    Avaliacoes/Conteudos: primeiro o aluno escolhe o curso (mesmo cartao
@@ -55,25 +56,11 @@ export default function ProgressoScreen({ snapshot }) {
   if (!cursoSelecionadoId) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.tituloSecao}>Selecione um curso</Text>
-        <ScrollView contentContainerStyle={estilos.listaCursos}>
-          {progressosPorCurso.map((progresso) => {
-            const curso = cursoPorId.get(progresso.cursoId);
-            const tituloCurso = curso?.titulo || `Curso #${progresso.cursoId}`;
-            return (
-              <TouchableOpacity
-                accessibilityLabel={`Ver progresso de ${tituloCurso}`}
-                key={progresso.cursoId}
-                onPress={() => setCursoSelecionadoId(progresso.cursoId)}
-                style={estilos.cartaoCurso}
-              >
-                <CapaCurso curso={curso} size={56} />
-                <Text numberOfLines={2} style={estilos.cartaoCursoTitulo}>{tituloCurso}</Text>
-                <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <SeletorCurso
+          accessibilityLabelPrefix="Ver progresso de"
+          itens={progressosPorCurso.map((progresso) => ({ curso: cursoPorId.get(progresso.cursoId), id: progresso.cursoId }))}
+          onSelecionar={setCursoSelecionadoId}
+        />
       </View>
     );
   }
@@ -159,19 +146,6 @@ function Metrica({ rotulo, valor }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: 16, padding: espacamentos.xl, paddingBottom: espacamentos.md },
-  listaCursos: { paddingHorizontal: espacamentos.xl, paddingBottom: espacamentos.xl, gap: espacamentos.md },
-  cartaoCurso: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: espacamentos.md,
-    backgroundColor: cores.fundoCartao,
-    borderRadius: raios.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: cores.destaque,
-    padding: 14
-  },
-  cartaoCursoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1 },
   voltar: {
     flexDirection: "row",
     alignItems: "center",

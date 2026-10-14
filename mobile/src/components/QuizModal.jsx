@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
@@ -181,8 +181,11 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const ehUltimaQuestao = indiceAtual === questoes.length - 1;
   const corrigida = resultado ? Number(resultado.statusTentativa) === 3 : false;
   const porcentagem = resultado && Number(resultado.notaMaxima) > 0 ? (Number(resultado.notaBruta) / Number(resultado.notaMaxima)) * 100 : 0;
-  const tentativaNumeroAtual = (avaliacao.tentativasRealizadas || 0) + 1 + tentativaOffset;
-  const podeRefazer = Boolean(resultado) && tentativaNumeroAtual < (avaliacao.tentativasPermitidas || 1);
+  const tentativasPermitidas = avaliacao.tentativasPermitidas || 1;
+  const tentativasRealizadas = avaliacao.tentativasRealizadas || 0;
+  const tentativasEsgotadas = tentativasRealizadas >= tentativasPermitidas;
+  const tentativaNumeroAtual = Math.min(tentativasRealizadas + 1 + tentativaOffset, tentativasPermitidas);
+  const podeRefazer = Boolean(resultado) && tentativaNumeroAtual < tentativasPermitidas;
 
   return (
     <Modal animationType="slide" onRequestClose={() => !enviando && onFechar()} presentationStyle="pageSheet" visible={visivel}>
@@ -197,7 +200,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
             onPress={onFechar}
             style={estilos.botaoFechar}
           >
-            <MaterialCommunityIcons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
+            <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
           </TouchableOpacity>
         </View>
 
@@ -207,16 +210,20 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <Text style={estilos.secaoTitulo}>Antes de comecar</Text>
               <View style={estilos.resumo}>
                 <ResumoItem icone="help-circle-outline" rotulo="Questoes" valor={String(avaliacao.totalQuestoes || 0)} />
-                <ResumoItem icone="clock-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+                <ResumoItem icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
                 {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
                   <ResumoItem icone="trophy-outline" rotulo="Nota maxima" valor={formatScore(avaliacao.notaMaxima)} />
                 ) : null}
-                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${(avaliacao.tentativasRealizadas || 0) + 1} de ${avaliacao.tentativasPermitidas || 1}`} />
+                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
               </View>
               <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
-              <TouchableOpacity onPress={iniciar} style={estilos.botaoPrimario}>
-                <Text style={estilos.botaoPrimarioTexto}>Iniciar</Text>
-              </TouchableOpacity>
+              {tentativasEsgotadas ? (
+                <Text style={estilos.tentativasEsgotadasTexto}>Voce ja utilizou todas as tentativas permitidas para esta avaliacao.</Text>
+              ) : (
+                <TouchableOpacity onPress={iniciar} style={estilos.botaoPrimario}>
+                  <Text style={estilos.botaoPrimarioTexto}>Iniciar</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : null}
 
@@ -228,7 +235,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                 <Text style={estilos.contador}>Questao {indiceAtual + 1} de {questoes.length}</Text>
                 {tempoRestante !== null ? (
                   <View style={estilos.cronometroLinha}>
-                    <MaterialCommunityIcons color={tempoRestante <= 60 ? cores.erro : cores.texto} name="clock-outline" size={16} />
+                    <Ionicons color={tempoRestante <= 60 ? cores.erro : cores.texto} name="time-outline" size={16} />
                     <Text style={[estilos.cronometro, tempoRestante <= 60 ? estilos.cronometroUrgente : null]}>
                       {formatarTempoRestante(tempoRestante)}
                     </Text>
@@ -302,7 +309,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                       <Text style={estilos.alternativaLetra}>{alternativa.letra}</Text>
                       <Text style={[estilos.alternativaTexto, selecionada ? estilos.alternativaTextoSelecionado : null]}>{alternativa.texto}</Text>
                       {selecionada ? (
-                        <MaterialCommunityIcons color={cores.sucesso} name="check-circle" size={20} />
+                        <Ionicons color={cores.sucesso} name="checkmark-circle" size={20} />
                       ) : (
                         <View style={estilos.alternativaCheckEspaco} />
                       )}
@@ -335,9 +342,9 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
           {fase === "resultado" && resultado ? (
             <View style={estilos.resultado}>
               <View style={[estilos.resultadoIconeContorno, corrigida ? estilos.resultadoIconeSucesso : estilos.resultadoIconePendente]}>
-                <MaterialCommunityIcons
+                <Ionicons
                   color={corrigida ? cores.sucesso : cores.aviso}
-                  name={corrigida ? "check-circle-outline" : "file-document-outline"}
+                  name={corrigida ? "checkmark-circle-outline" : "document-text-outline"}
                   size={40}
                 />
               </View>
@@ -362,7 +369,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
               <View style={estilos.resumo}>
                 <ResumoItem icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
-                <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${tentativaNumeroAtual} de ${avaliacao.tentativasPermitidas || 1}`} />
+                <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${tentativaNumeroAtual} de ${tentativasPermitidas}`} />
               </View>
 
               {podeRefazer ? (
@@ -385,7 +392,7 @@ function ResumoItem({ icone, rotulo, valor }) {
   return (
     <View style={estilos.resumoItem}>
       <View style={estilos.resumoRotuloLinha}>
-        {icone ? <MaterialCommunityIcons color={cores.textoSuave} name={icone} size={18} /> : null}
+        {icone ? <Ionicons color={cores.textoSuave} name={icone} size={18} /> : null}
         <Text style={estilos.resumoRotulo}>{rotulo}</Text>
       </View>
       <Text style={estilos.resumoValor}>{valor}</Text>
@@ -414,6 +421,7 @@ const estilos = StyleSheet.create({
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
   resumoRotulo: { color: cores.textoSuave, fontSize: 12 },
   resumoValor: { color: cores.texto, fontWeight: "700" },
+  tentativasEsgotadasTexto: { color: cores.erro, textAlign: "center", lineHeight: 20 },
   botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
   botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
   botaoContorno: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },

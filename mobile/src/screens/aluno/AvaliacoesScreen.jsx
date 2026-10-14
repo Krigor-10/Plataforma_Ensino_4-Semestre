@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import CapaCurso from "../../components/CapaCurso.jsx";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
+import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 /* Avaliacoes agora segue o mesmo contexto Curso->conteudo ja usado em
    Conteudos/Progresso: primeiro o aluno escolhe o curso (mesmo cartao
@@ -54,25 +54,11 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   if (!cursoSelecionadoId) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.tituloSecao}>Selecione um curso</Text>
-        <ScrollView contentContainerStyle={estilos.listaCursos}>
-          {cursosMatriculados.map((progresso) => {
-            const curso = cursoPorId.get(progresso.cursoId);
-            const tituloCurso = curso?.titulo || `Curso #${progresso.cursoId}`;
-            return (
-              <TouchableOpacity
-                accessibilityLabel={`Ver avaliacoes de ${tituloCurso}`}
-                key={progresso.cursoId}
-                onPress={() => setCursoSelecionadoId(progresso.cursoId)}
-                style={estilos.cartaoCurso}
-              >
-                <CapaCurso curso={curso} size={56} />
-                <Text numberOfLines={2} style={estilos.cartaoCursoTitulo}>{tituloCurso}</Text>
-                <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <SeletorCurso
+          accessibilityLabelPrefix="Ver avaliacoes de"
+          itens={cursosMatriculados.map((progresso) => ({ curso: cursoPorId.get(progresso.cursoId), id: progresso.cursoId }))}
+          onSelecionar={setCursoSelecionadoId}
+        />
       </View>
     );
   }
@@ -151,19 +137,6 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: 16, padding: espacamentos.xl, paddingBottom: espacamentos.md },
-  listaCursos: { paddingHorizontal: espacamentos.xl, paddingBottom: espacamentos.xl, gap: espacamentos.md },
-  cartaoCurso: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: espacamentos.md,
-    backgroundColor: cores.fundoCartao,
-    borderRadius: raios.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: cores.destaque,
-    padding: 14
-  },
-  cartaoCursoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1 },
   voltar: {
     flexDirection: "row",
     alignItems: "center",

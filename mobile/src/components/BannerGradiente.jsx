@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { cores, espacamentos, raios } from "../lib/theme.js";
@@ -17,7 +17,7 @@ export default function BannerGradiente({ accessibilityLabel, accessibilityRole,
       style={[estilos.container, estiloContainer]}
     >
       <View style={estilos.iconeArea}>
-        <MaterialCommunityIcons color={cores.texto} name={icone} size={24} />
+        <Ionicons color={cores.texto} name={icone} size={24} />
       </View>
       <View style={estilos.conteudo}>{children}</View>
     </LinearGradient>

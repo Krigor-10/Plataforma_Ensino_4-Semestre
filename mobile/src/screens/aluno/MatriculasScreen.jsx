@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -28,6 +28,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
   const [busca, setBusca] = useState("");
   const [processando, setProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
+  const [cancelamentoPendente, setCancelamentoPendente] = useState(null);
 
   const turmasPorCursoId = useMemo(() => {
     const mapa = new Map();
@@ -87,6 +88,14 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
       setMensagem({ tipo: "erro", texto: err.message || "Nao foi possivel solicitar a matricula agora." });
     } finally {
       setProcessando(null);
+    }
+  }
+
+  function confirmarCancelamento() {
+    const matricula = cancelamentoPendente?.matricula;
+    setCancelamentoPendente(null);
+    if (matricula) {
+      cancelar(matricula);
     }
   }
 
@@ -211,7 +220,11 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                       ) : null}
 
                       {status === "Pendente" ? (
-                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => cancelar(matricula)} style={estilos.botaoPerigo}>
+                        <TouchableOpacity
+                          disabled={processando === matricula.id}
+                          onPress={() => setCancelamentoPendente({ matricula, tituloCurso: curso.titulo })}
+                          style={estilos.botaoPerigo}
+                        >
                           {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPerigoTexto}>Cancelar solicitacao</Text>}
                         </TouchableOpacity>
                       ) : null}
@@ -246,6 +259,27 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
                 );
               })}
       </ScrollView>
+
+      <Modal animationType="fade" onRequestClose={() => setCancelamentoPendente(null)} transparent visible={Boolean(cancelamentoPendente)}>
+        <View style={estilos.confirmacaoFundo}>
+          <View style={estilos.confirmacaoPainel}>
+            <Text style={estilos.confirmacaoTitulo}>Cancelar solicitacao</Text>
+            <Text style={estilos.confirmacaoTexto}>
+              Deseja realmente cancelar a solicitacao de matricula em {cancelamentoPendente?.tituloCurso}? Voce pode reabri-la depois, se mudar de ideia.
+            </Text>
+            <View style={estilos.confirmacaoAcoes}>
+              <TouchableOpacity onPress={() => setCancelamentoPendente(null)} style={estilos.botaoCancelar}>
+                <Ionicons color={cores.erro} name="close" size={16} />
+                <Text style={estilos.botaoCancelarTexto}>Voltar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmarCancelamento} style={estilos.botaoConfirmar}>
+                <Ionicons color={cores.texto} name="checkmark" size={16} />
+                <Text style={estilos.botaoConfirmarTexto}>Cancelar solicitacao</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -276,5 +310,35 @@ const estilos = StyleSheet.create({
   botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
   botaoPerigoTexto: { color: cores.erro, fontWeight: "700" },
   semTurma: { color: cores.textoSuave, fontSize: 12, marginTop: 12, fontStyle: "italic" },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 }
+  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 },
+  confirmacaoFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", alignItems: "center", justifyContent: "center", padding: espacamentos.xl },
+  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm },
+  confirmacaoTitulo: { color: cores.texto, fontSize: 16, fontWeight: "700" },
+  confirmacaoTexto: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
+  confirmacaoAcoes: { flexDirection: "row", gap: espacamentos.sm, marginTop: espacamentos.sm },
+  botaoCancelar: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: cores.erro,
+    borderRadius: raios.sm,
+    paddingVertical: 12,
+    minHeight: 44
+  },
+  botaoCancelarTexto: { color: cores.erro, fontWeight: "700" },
+  botaoConfirmar: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: cores.sucesso,
+    borderRadius: raios.sm,
+    paddingVertical: 12,
+    minHeight: 44
+  },
+  botaoConfirmarTexto: { color: cores.texto, fontWeight: "700" }
 });

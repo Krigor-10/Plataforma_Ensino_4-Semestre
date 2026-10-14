@@ -42,3 +42,28 @@ export const espacamentos = {
   xl: 20,
   xxl: 24
 };
+
+// Escala tipografica - nomeia os tamanhos de fonte que ja apareciam soltos
+// nas telas (10 a 40), sem alterar nenhuma tela existente; telas novas
+// devem usar estes tokens em vez de numeros ad-hoc.
+export const tipografia = {
+  legenda: 11,
+  rotulo: 12,
+  corpo: 13,
+  subtitulo: 16,
+  titulo: 18,
+  destaque: 20,
+  numeroGrande: 40
+};
+
+// Elevacao - preset unico de sombra pra cartoes/modais que precisam se
+// destacar do fundo preto da tela; ainda nao aplicado em nenhum lugar.
+export const sombra = {
+  cartao: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4
+  }
+};
