@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BannerGradiente from "../../components/BannerGradiente.jsx";
 import Botao from "../../components/Botao.jsx";
 import Toast from "../../components/Toast.jsx";
@@ -13,6 +14,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   const [certificadoEmitido, setCertificadoEmitido] = useState(null);
   const [emitindo, setEmitindo] = useState(false);
   const [erroEmissao, setErroEmissao] = useState("");
+  const insets = useSafeAreaInsets();
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
   const turmaPorId = useMemo(() => new Map(snapshot.turmas.map((turma) => [turma.id, turma])), [snapshot.turmas]);
@@ -162,50 +164,48 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
         ))}
       </ScrollView>
 
-      <Modal animationType="slide" onRequestClose={fechar} transparent visible={Boolean(certificadoAberto)}>
-        <View style={estilos.modalFundo}>
-          <View style={estilos.modalCaixa}>
-            <View style={estilos.modalCabecalho}>
-              <Text numberOfLines={1} style={estilos.modalTitulo}>{certificadoAberto?.cursoTitulo}</Text>
-              <TouchableOpacity
-                accessibilityLabel="Fechar certificado"
-                accessibilityRole="button"
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={fechar}
-                style={estilos.modalBotaoFechar}
-              >
-                <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
-              </TouchableOpacity>
-            </View>
+      <Modal animationType="slide" onRequestClose={fechar} presentationStyle="pageSheet" visible={Boolean(certificadoAberto)}>
+        <View style={estilos.modalContainer}>
+          <View style={[estilos.modalCabecalho, { paddingTop: insets.top + 16 }]}>
+            <Text numberOfLines={1} style={estilos.modalTitulo}>{certificadoAberto?.cursoTitulo}</Text>
+            <TouchableOpacity
+              accessibilityLabel="Fechar certificado"
+              accessibilityRole="button"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={fechar}
+              style={estilos.modalBotaoFechar}
+            >
+              <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView contentContainerStyle={estilos.modalConteudo} style={estilos.modalScroll}>
-              {emitindo ? (
-                <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
-              ) : erroEmissao ? (
-                <Toast mensagem={erroEmissao} onFechar={() => setErroEmissao("")} tipo="erro" />
-              ) : certificadoEmitido ? (
-                <View style={estilos.certificado}>
-                  <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSAO</Text>
-                  <Text style={estilos.certificadoIntro}>Outorgado a</Text>
-                  <Text style={estilos.certificadoNome}>{certificadoEmitido.alunoNome}</Text>
-                  <Text style={estilos.certificadoTexto}>
-                    Por ter concluido com aproveitamento o curso de{" "}
-                    <Text style={estilos.certificadoDestaque}>{certificadoEmitido.cursoTitulo}</Text>
-                    {certificadoEmitido.turmaNome ? ` na turma ${certificadoEmitido.turmaNome}` : ""}, com nota final{" "}
-                    {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
-                  </Text>
-                  <Text style={estilos.certificadoData}>{formatDate(certificadoEmitido.emitidoEm)}</Text>
-                  <Text style={estilos.certificadoEscola}>Oferecido pela escola: CodeRyse Academy</Text>
-                  <Text style={estilos.certificadoVerificacao}>Codigo de verificacao: {certificadoEmitido.codigoVerificacao}</Text>
-                </View>
-              ) : null}
-            </ScrollView>
+          <ScrollView contentContainerStyle={estilos.modalConteudo} style={estilos.modalScroll}>
+            {emitindo ? (
+              <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
+            ) : erroEmissao ? (
+              <Toast mensagem={erroEmissao} onFechar={() => setErroEmissao("")} tipo="erro" />
+            ) : certificadoEmitido ? (
+              <View style={estilos.certificado}>
+                <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSAO</Text>
+                <Text style={estilos.certificadoIntro}>Outorgado a</Text>
+                <Text style={estilos.certificadoNome}>{certificadoEmitido.alunoNome}</Text>
+                <Text style={estilos.certificadoTexto}>
+                  Por ter concluido com aproveitamento o curso de{" "}
+                  <Text style={estilos.certificadoDestaque}>{certificadoEmitido.cursoTitulo}</Text>
+                  {certificadoEmitido.turmaNome ? ` na turma ${certificadoEmitido.turmaNome}` : ""}, com nota final{" "}
+                  {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
+                </Text>
+                <Text style={estilos.certificadoData}>{formatDate(certificadoEmitido.emitidoEm)}</Text>
+                <Text style={estilos.certificadoEscola}>Oferecido pela escola: CodeRyse Academy</Text>
+                <Text style={estilos.certificadoVerificacao}>Codigo de verificacao: {certificadoEmitido.codigoVerificacao}</Text>
+              </View>
+            ) : null}
+          </ScrollView>
 
-            <View style={estilos.modalAcoes}>
-              <Botao disabled={!certificadoEmitido} icone="share-social-outline" onPress={() => compartilhar()} variante="primario">
-                Compartilhar
-              </Botao>
-            </View>
+          <View style={estilos.modalAcoes}>
+            <Botao disabled={!certificadoEmitido} icone="share-social-outline" onPress={() => compartilhar()} variante="primario">
+              Compartilhar
+            </Botao>
           </View>
         </View>
       </Modal>
@@ -231,14 +231,13 @@ const estilos = StyleSheet.create({
   botaoIconeDesabilitado: { opacity: 0.4 },
   bloqueadoTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: espacamentos.sm },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
-  modalFundo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-  modalCaixa: { backgroundColor: cores.fundoCartao, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "85%", padding: 20 },
+  modalContainer: { flex: 1, backgroundColor: cores.fundo },
   modalCabecalho: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: espacamentos.md,
-    marginBottom: espacamentos.md,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
@@ -246,8 +245,8 @@ const estilos = StyleSheet.create({
   modalBotaoFechar: { padding: 4 },
   iconeFechar: { opacity: 0.75 },
   modalScroll: { flexShrink: 1 },
-  modalConteudo: { paddingBottom: 12 },
-  modalAcoes: { flexDirection: "row", gap: 10, marginTop: 8, alignItems: "center" },
+  modalConteudo: { padding: espacamentos.xl, paddingBottom: 12 },
+  modalAcoes: { flexDirection: "row", gap: 10, padding: espacamentos.xl, paddingTop: 0 },
   certificado: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 14, padding: 20, alignItems: "center", gap: 10 },
   certificadoEyebrow: { color: cores.destaque, fontWeight: "800", fontSize: tipografia.rotulo, letterSpacing: 1 },
   certificadoIntro: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 8 },
