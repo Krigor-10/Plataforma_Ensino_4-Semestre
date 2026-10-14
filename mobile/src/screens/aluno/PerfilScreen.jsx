@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Botao from "../../components/Botao.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatCep, obterIniciais, onlyDigits } from "../../lib/format.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios, sombra, tipografia } from "../../lib/theme.js";
 
 function estadoFormularioInicial(usuario) {
   return {
@@ -143,7 +144,8 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
   }
 
   return (
-    <ScrollView contentContainerStyle={estilos.corpo} style={estilos.container}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.container}>
+    <ScrollView contentContainerStyle={estilos.corpo}>
       <TouchableOpacity onPress={onVoltar} style={estilos.voltar}>
         <Ionicons color={cores.destaque} name="chevron-back" size={18} />
         <Text style={estilos.voltarTexto}>Voltar</Text>
@@ -171,9 +173,9 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
 
         <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
 
-        <TouchableOpacity disabled={salvandoPerfil} onPress={salvarPerfil} style={estilos.botaoPrimario}>
-          {salvandoPerfil ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Salvar alteracoes</Text>}
-        </TouchableOpacity>
+        <Botao carregando={salvandoPerfil} onPress={salvarPerfil} style={estilos.botaoFormulario} variante="primario">
+          Salvar alteracoes
+        </Botao>
       </View>
 
       <Text style={estilos.tituloSecao}>Trocar senha</Text>
@@ -184,15 +186,14 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
 
         <Toast mensagem={mensagemSenha?.texto} onFechar={() => setMensagemSenha(null)} tipo={mensagemSenha?.tipo} />
 
-        <TouchableOpacity disabled={salvandoSenha} onPress={salvarSenha} style={estilos.botaoPrimario}>
-          {salvandoSenha ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Trocar senha</Text>}
-        </TouchableOpacity>
+        <Botao carregando={salvandoSenha} onPress={salvarSenha} style={estilos.botaoFormulario} variante="primario">
+          Trocar senha
+        </Botao>
       </View>
 
-      <TouchableOpacity accessibilityLabel="Sair da conta" onPress={() => setConfirmandoSaida(true)} style={estilos.botaoSair}>
-        <Ionicons color={cores.erro} name="log-out-outline" size={18} />
-        <Text style={estilos.botaoSairTexto}>Sair</Text>
-      </TouchableOpacity>
+      <Botao accessibilityLabel="Sair da conta" icone="log-out-outline" onPress={() => setConfirmandoSaida(true)} style={estilos.botaoSair} variante="perigo">
+        Sair
+      </Botao>
 
       <Modal animationType="fade" onRequestClose={() => setConfirmandoSaida(false)} transparent visible={confirmandoSaida}>
         <View style={estilos.confirmacaoFundo}>
@@ -200,19 +201,18 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
             <Text style={estilos.confirmacaoTitulo}>Sair da conta</Text>
             <Text style={estilos.confirmacaoTexto}>Deseja realmente sair da sua conta?</Text>
             <View style={estilos.confirmacaoAcoes}>
-              <TouchableOpacity onPress={() => setConfirmandoSaida(false)} style={estilos.botaoCancelar}>
-                <Ionicons color={cores.erro} name="close" size={16} />
-                <Text style={estilos.botaoCancelarTexto}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onLogout} style={estilos.botaoConfirmar}>
-                <Ionicons color={cores.texto} name="log-out-outline" size={16} />
-                <Text style={estilos.botaoConfirmarTexto}>Sair</Text>
-              </TouchableOpacity>
+              <Botao icone="close" onPress={() => setConfirmandoSaida(false)} style={estilos.botaoDialogo} variante="perigo">
+                Cancelar
+              </Botao>
+              <Botao icone="log-out-outline" onPress={onLogout} style={estilos.botaoDialogo} variante="sucesso">
+                Sair
+              </Botao>
             </View>
           </View>
         </View>
       </Modal>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -233,12 +233,12 @@ const estilos = StyleSheet.create({
   identidadeCartao: { alignItems: "center", backgroundColor: cores.fundoCartao, borderRadius: raios.lg, paddingVertical: espacamentos.xl, marginBottom: espacamentos.sm },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: cores.destaque, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
   avatarTexto: { color: cores.texto, fontSize: 22, fontWeight: "800" },
-  identidadeNome: { color: cores.texto, fontSize: 18, fontWeight: "700", maxWidth: "85%", textAlign: "center" },
-  identidadePapel: { color: cores.textoSuave, fontSize: 13, marginTop: 2 },
-  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: 16, marginTop: 12, marginBottom: 8 },
+  identidadeNome: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", maxWidth: "85%", textAlign: "center" },
+  identidadePapel: { color: cores.textoSuave, fontSize: tipografia.corpo, marginTop: 2 },
+  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 12, marginBottom: 8 },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16, gap: 12 },
   campo: { gap: 6 },
-  rotulo: { color: cores.textoRotulo, fontSize: 13 },
+  rotulo: { color: cores.textoRotulo, fontSize: tipografia.corpo },
   entrada: {
     backgroundColor: cores.fundo,
     borderRadius: 10,
@@ -248,49 +248,12 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderColor: cores.bordaCartao
   },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 8, paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoSair: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 28,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: cores.erro,
-    minHeight: 44
-  },
-  botaoSairTexto: { color: cores.erro, fontWeight: "700" },
+  botaoFormulario: { marginTop: 4 },
+  botaoSair: { marginTop: 28 },
   confirmacaoFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", alignItems: "center", justifyContent: "center", padding: espacamentos.xl },
-  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm },
-  confirmacaoTitulo: { color: cores.texto, fontSize: 16, fontWeight: "700" },
+  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm, ...sombra.cartao },
+  confirmacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700" },
   confirmacaoTexto: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
   confirmacaoAcoes: { flexDirection: "row", gap: espacamentos.sm, marginTop: espacamentos.sm },
-  botaoCancelar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: cores.erro,
-    borderRadius: raios.sm,
-    paddingVertical: 12,
-    minHeight: 44
-  },
-  botaoCancelarTexto: { color: cores.erro, fontWeight: "700" },
-  botaoConfirmar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: cores.sucesso,
-    borderRadius: raios.sm,
-    paddingVertical: 12,
-    minHeight: 44
-  },
-  botaoConfirmarTexto: { color: cores.texto, fontWeight: "700" }
+  botaoDialogo: { flex: 1 }
 });

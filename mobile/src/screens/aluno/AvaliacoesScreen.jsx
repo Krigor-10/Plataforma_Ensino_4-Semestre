@@ -2,9 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { formatScore } from "../../lib/format.js";
+import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
+
+const TIPO_QUIZ = 1;
 
 /* Avaliacoes agora segue o mesmo contexto Curso->conteudo ja usado em
    Conteudos/Progresso: primeiro o aluno escolhe o curso (mesmo cartao
@@ -87,6 +90,8 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
             const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
             const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "sucesso";
             const contexto = avaliacao.moduloTitulo;
+            const temTentativa = Number(avaliacao.tentativasRealizadas || 0) > 0;
+            const mostrarNota = temTentativa && Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ && avaliacao.ultimaNota != null;
 
             return (
               <View
@@ -101,6 +106,12 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                   <View style={estilos.cartaoTextos}>
                     <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
                     <Text style={estilos.cartaoContexto}>{contexto}</Text>
+                    {temTentativa ? (
+                      <Text style={estilos.cartaoMeta}>
+                        {mostrarNota ? `Nota ${formatScore(avaliacao.ultimaNota)} / ${formatScore(avaliacao.notaMaxima)} · ` : ""}
+                        Tentativas {avaliacao.tentativasRealizadas} de {avaliacao.tentativasPermitidas || 1}
+                      </Text>
+                    ) : null}
                   </View>
 
                   {disponibilidade.podeRealizar ? (
@@ -150,7 +161,7 @@ const estilos = StyleSheet.create({
   tituloCursoAtivo: {
     color: cores.texto,
     fontWeight: "700",
-    fontSize: 18,
+    fontSize: tipografia.titulo,
     paddingHorizontal: espacamentos.xl,
     paddingTop: espacamentos.sm,
     paddingBottom: espacamentos.sm
@@ -159,8 +170,9 @@ const estilos = StyleSheet.create({
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.lg },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: espacamentos.sm },
   cartaoTextos: { flex: 1 },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 16 },
-  cartaoContexto: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
+  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
+  cartaoContexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
+  cartaoMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "600" },
   botaoPlay: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   iconeEstado: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }

@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleSheet, Text, TouchableOpacity } from "react-native";
 import CapaCurso from "./CapaCurso.jsx";
-import { cores, espacamentos, raios } from "../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 /* Padrao "escolha um curso antes de ver o conteudo" compartilhado por
    Avaliacoes e Progresso (cada tela so entra em detalhe depois que o aluno
@@ -33,7 +33,7 @@ export default function SeletorCurso({ accessibilityLabelPrefix, itens, onSeleci
 }
 
 const estilos = StyleSheet.create({
-  titulo: { color: cores.texto, fontWeight: "700", fontSize: 16, padding: espacamentos.xl, paddingBottom: espacamentos.md },
+  titulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, padding: espacamentos.xl, paddingBottom: espacamentos.md },
   lista: { paddingHorizontal: espacamentos.xl, paddingBottom: espacamentos.xl, gap: espacamentos.md },
   cartao: {
     flexDirection: "row",

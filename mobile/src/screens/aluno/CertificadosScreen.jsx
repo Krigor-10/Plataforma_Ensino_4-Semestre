@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import BannerGradiente from "../../components/BannerGradiente.jsx";
+import Botao from "../../components/Botao.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
 export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   const [certificadoAberto, setCertificadoAberto] = useState(null);
@@ -201,14 +202,9 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
             </ScrollView>
 
             <View style={estilos.modalAcoes}>
-              <TouchableOpacity
-                disabled={!certificadoEmitido}
-                onPress={() => compartilhar()}
-                style={estilos.botaoPrimario}
-              >
-                <Ionicons color={cores.texto} name="share-social-outline" size={18} />
-                <Text style={estilos.botaoPrimarioTexto}>Compartilhar</Text>
-              </TouchableOpacity>
+              <Botao disabled={!certificadoEmitido} icone="share-social-outline" onPress={() => compartilhar()} variante="primario">
+                Compartilhar
+              </Botao>
             </View>
           </View>
         </View>
@@ -222,20 +218,18 @@ const estilos = StyleSheet.create({
   resumoStats: { flexDirection: "row", alignItems: "center", gap: espacamentos.lg, flex: 1 },
   resumoStatItem: { alignItems: "center" },
   resumoSep: { width: 1, height: 28, backgroundColor: "rgba(255, 255, 255, 0.25)" },
-  resumoValor: { color: cores.texto, fontSize: 20, fontWeight: "800" },
-  resumoRotulo: { color: cores.textoRotulo, fontSize: 11, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  resumoValor: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800" },
+  resumoRotulo: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.xs, gap: espacamentos.md },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, padding: espacamentos.lg },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15 },
-  cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
+  cartaoMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
   notaTexto: { color: cores.sucesso, fontWeight: "700", marginTop: 8 },
-  percentualTexto: { color: cores.textoSuave, fontSize: 12, marginTop: 8 },
+  percentualTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 8 },
   cartaoAcoes: { flexDirection: "row", gap: espacamentos.md, marginTop: espacamentos.md },
   botaoIcone: { minWidth: 44, minHeight: 44, borderRadius: raios.sm, backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
   botaoIconeDesabilitado: { opacity: 0.4 },
-  bloqueadoTexto: { color: cores.textoSuave, fontSize: 12, marginTop: espacamentos.sm },
-  botaoPrimario: { flex: 1, flexDirection: "row", backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, paddingHorizontal: 20, alignItems: "center", justifyContent: "center", gap: 8 },
-  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
+  bloqueadoTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: espacamentos.sm },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
   modalFundo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   modalCaixa: { backgroundColor: cores.fundoCartao, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "85%", padding: 20 },
@@ -248,19 +242,19 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
-  modalTitulo: { color: cores.texto, fontSize: 16, fontWeight: "700", flex: 1, marginRight: espacamentos.md },
+  modalTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1, marginRight: espacamentos.md },
   modalBotaoFechar: { padding: 4 },
   iconeFechar: { opacity: 0.75 },
   modalScroll: { flexShrink: 1 },
   modalConteudo: { paddingBottom: 12 },
   modalAcoes: { flexDirection: "row", gap: 10, marginTop: 8, alignItems: "center" },
   certificado: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 14, padding: 20, alignItems: "center", gap: 10 },
-  certificadoEyebrow: { color: cores.destaque, fontWeight: "800", fontSize: 12, letterSpacing: 1 },
-  certificadoIntro: { color: cores.textoSuave, fontSize: 12, marginTop: 8 },
-  certificadoNome: { color: cores.texto, fontWeight: "800", fontSize: 20, textAlign: "center" },
-  certificadoTexto: { color: cores.textoRotulo, fontSize: 13, textAlign: "center", lineHeight: 19 },
+  certificadoEyebrow: { color: cores.destaque, fontWeight: "800", fontSize: tipografia.rotulo, letterSpacing: 1 },
+  certificadoIntro: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 8 },
+  certificadoNome: { color: cores.texto, fontWeight: "800", fontSize: tipografia.destaque, textAlign: "center" },
+  certificadoTexto: { color: cores.textoRotulo, fontSize: tipografia.corpo, textAlign: "center", lineHeight: 19 },
   certificadoDestaque: { color: cores.texto, fontWeight: "700" },
-  certificadoData: { color: cores.textoSuave, fontSize: 12, marginTop: 6 },
-  certificadoEscola: { color: cores.textoSuave, fontSize: 12 },
-  certificadoVerificacao: { color: cores.textoSuave, fontSize: 11, marginTop: 8, textAlign: "center" }
+  certificadoData: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 6 },
+  certificadoEscola: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  certificadoVerificacao: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 8, textAlign: "center" }
 });

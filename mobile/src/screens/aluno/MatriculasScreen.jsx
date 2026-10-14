@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Botao from "../../components/Botao.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate, formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
 import { corDoStatusMatricula, iconeDoStatusMatricula } from "../../lib/statusVisual.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios, sombra, tipografia } from "../../lib/theme.js";
 
 const PAGAMENTO_PENDENTE = 1;
 
@@ -155,7 +156,7 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
   }
 
   return (
-    <View style={estilos.container}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.container}>
       <View style={estilos.abas}>
         <TouchableOpacity onPress={() => setAba("meus-cursos")} style={[estilos.aba, aba === "meus-cursos" ? estilos.abaAtiva : null]}>
           <Text style={[estilos.abaTexto, aba === "meus-cursos" ? estilos.abaTextoAtivo : null]}>Meus cursos</Text>
@@ -181,84 +182,44 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
         />
       ) : null}
 
-      <ScrollView contentContainerStyle={estilos.corpo}>
-        {aba === "meus-cursos"
-          ? cursosMatriculados.length === 0
-            ? <Text style={estilos.vazio}>Voce ainda nao esta matriculado em nenhum curso. Explore o catalogo.</Text>
-            : cursosMatriculados.map((curso) => {
-                const matricula = matriculaPorCursoId.get(curso.id);
-                const status = normalizeStatus(matricula.status);
-                const pagamento = pagamentoPorMatriculaId.get(matricula.id);
-                const temPagamentoPendente = status === "Aprovada" && pagamento?.status === PAGAMENTO_PENDENTE;
-
-                return (
-                  <View key={curso.id} style={estilos.cartaoLinha}>
-                    <CapaCurso curso={curso} size={56} />
-                    <View style={estilos.cartao}>
-                      <View style={estilos.cartaoTopo}>
-                        <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
-                        <View style={estilos.statusLinha}>
-                          <Ionicons color={corDoStatusMatricula(status)} name={iconeDoStatusMatricula(status)} size={13} />
-                          <Text style={[estilos.status, { color: corDoStatusMatricula(status) }]}>{status}</Text>
-                        </View>
-                      </View>
-                      <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
-                      <Text style={estilos.cartaoMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
-                      {status === "Aprovada" ? <Text style={estilos.cartaoMeta}>Nota final: {formatGrade(matricula.notaFinal)}</Text> : null}
-
-                      {temPagamentoPendente ? (
-                        <View style={estilos.pagamentoLinha}>
-                          <Text style={estilos.pagamentoPendente}>Pendente (simulado): {formatMoney(pagamento.valor)}</Text>
-                          <TouchableOpacity disabled={processando === matricula.id} onPress={() => confirmarPagamento(matricula)} style={estilos.botaoSucessoCompacto}>
-                            {processando === matricula.id ? (
-                              <ActivityIndicator color={cores.texto} size="small" />
-                            ) : (
-                              <Text style={estilos.botaoSucessoCompactoTexto}>Confirmar</Text>
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      ) : null}
-
-                      {status === "Pendente" ? (
-                        <TouchableOpacity
-                          disabled={processando === matricula.id}
-                          onPress={() => setCancelamentoPendente({ matricula, tituloCurso: curso.titulo })}
-                          style={estilos.botaoPerigo}
-                        >
-                          {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPerigoTexto}>Cancelar solicitacao</Text>}
-                        </TouchableOpacity>
-                      ) : null}
-                      {status === "Rejeitada" ? (
-                        <TouchableOpacity disabled={processando === matricula.id} onPress={() => reabrir(matricula)} style={estilos.botaoPrimario}>
-                          {processando === matricula.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Reabrir solicitacao</Text>}
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  </View>
-                );
-              })
-          : cursosCatalogo.length === 0
-            ? <Text style={estilos.vazio}>Nenhum curso encontrado.</Text>
-            : cursosCatalogo.map((curso) => {
-                const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
-                return (
-                  <View key={curso.id} style={estilos.cartaoLinha}>
-                    <CapaCurso curso={curso} size={56} />
-                    <View style={estilos.cartao}>
-                      <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
-                      <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
-                      {temTurma ? (
-                        <TouchableOpacity disabled={processando === curso.id} onPress={() => solicitar(curso)} style={estilos.botaoPrimario}>
-                          {processando === curso.id ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Solicitar matricula</Text>}
-                        </TouchableOpacity>
-                      ) : (
-                        <Text style={estilos.semTurma}>Sem turma disponivel</Text>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-      </ScrollView>
+      {aba === "meus-cursos" ? (
+        <FlatList
+          ListEmptyComponent={<Text style={estilos.vazio}>Voce ainda nao esta matriculado em nenhum curso. Explore o catalogo.</Text>}
+          contentContainerStyle={estilos.corpo}
+          data={cursosMatriculados}
+          keyExtractor={(curso) => String(curso.id)}
+          renderItem={({ item: curso }) => {
+            const matricula = matriculaPorCursoId.get(curso.id);
+            const pagamento = pagamentoPorMatriculaId.get(matricula.id);
+            return (
+              <ItemCursoMatriculado
+                curso={curso}
+                matricula={matricula}
+                onCancelar={() => setCancelamentoPendente({ matricula, tituloCurso: curso.titulo })}
+                onConfirmarPagamento={() => confirmarPagamento(matricula)}
+                onReabrir={() => reabrir(matricula)}
+                pagamento={pagamento}
+                processando={processando === matricula.id}
+              />
+            );
+          }}
+        />
+      ) : (
+        <FlatList
+          ListEmptyComponent={<Text style={estilos.vazio}>Nenhum curso encontrado.</Text>}
+          contentContainerStyle={estilos.corpo}
+          data={cursosCatalogo}
+          keyExtractor={(curso) => String(curso.id)}
+          renderItem={({ item: curso }) => (
+            <ItemCursoCatalogo
+              curso={curso}
+              onSolicitar={() => solicitar(curso)}
+              processando={processando === curso.id}
+              temTurma={(turmasPorCursoId.get(curso.id) || []).length > 0}
+            />
+          )}
+        />
+      )}
 
       <Modal animationType="fade" onRequestClose={() => setCancelamentoPendente(null)} transparent visible={Boolean(cancelamentoPendente)}>
         <View style={estilos.confirmacaoFundo}>
@@ -268,18 +229,78 @@ export default function MatriculasScreen({ onRecarregar, onSessionExpired, snaps
               Deseja realmente cancelar a solicitacao de matricula em {cancelamentoPendente?.tituloCurso}? Voce pode reabri-la depois, se mudar de ideia.
             </Text>
             <View style={estilos.confirmacaoAcoes}>
-              <TouchableOpacity onPress={() => setCancelamentoPendente(null)} style={estilos.botaoCancelar}>
-                <Ionicons color={cores.erro} name="close" size={16} />
-                <Text style={estilos.botaoCancelarTexto}>Voltar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={confirmarCancelamento} style={estilos.botaoConfirmar}>
-                <Ionicons color={cores.texto} name="checkmark" size={16} />
-                <Text style={estilos.botaoConfirmarTexto}>Cancelar solicitacao</Text>
-              </TouchableOpacity>
+              <Botao icone="close" onPress={() => setCancelamentoPendente(null)} style={estilos.botaoDialogo} variante="perigo">
+                Voltar
+              </Botao>
+              <Botao icone="checkmark" onPress={confirmarCancelamento} style={estilos.botaoDialogo} variante="sucesso">
+                Cancelar solicitacao
+              </Botao>
             </View>
           </View>
         </View>
       </Modal>
+    </KeyboardAvoidingView>
+  );
+}
+
+function ItemCursoMatriculado({ curso, matricula, onCancelar, onConfirmarPagamento, onReabrir, pagamento, processando }) {
+  const status = normalizeStatus(matricula.status);
+  const temPagamentoPendente = status === "Aprovada" && pagamento?.status === PAGAMENTO_PENDENTE;
+
+  return (
+    <View style={estilos.cartaoLinha}>
+      <CapaCurso curso={curso} size={56} />
+      <View style={estilos.cartao}>
+        <View style={estilos.cartaoTopo}>
+          <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
+          <View style={estilos.statusLinha}>
+            <Ionicons color={corDoStatusMatricula(status)} name={iconeDoStatusMatricula(status)} size={13} />
+            <Text style={[estilos.status, { color: corDoStatusMatricula(status) }]}>{status}</Text>
+          </View>
+        </View>
+        <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
+        <Text style={estilos.cartaoMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
+        {status === "Aprovada" ? <Text style={estilos.cartaoMeta}>Nota final: {formatGrade(matricula.notaFinal)}</Text> : null}
+
+        {temPagamentoPendente ? (
+          <View style={estilos.pagamentoLinha}>
+            <Text style={estilos.pagamentoPendente}>Pendente (simulado): {formatMoney(pagamento.valor)}</Text>
+            <Botao carregando={processando} onPress={onConfirmarPagamento} style={estilos.botaoPagamento} variante="sucesso">
+              Confirmar
+            </Botao>
+          </View>
+        ) : null}
+
+        {status === "Pendente" ? (
+          <Botao carregando={processando} onPress={onCancelar} style={estilos.botaoAcaoCartao} variante="perigo">
+            Cancelar solicitacao
+          </Botao>
+        ) : null}
+        {status === "Rejeitada" ? (
+          <Botao carregando={processando} onPress={onReabrir} style={estilos.botaoAcaoCartao} variante="primario">
+            Reabrir solicitacao
+          </Botao>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ItemCursoCatalogo({ curso, onSolicitar, processando, temTurma }) {
+  return (
+    <View style={estilos.cartaoLinha}>
+      <CapaCurso curso={curso} size={56} />
+      <View style={estilos.cartao}>
+        <Text style={estilos.cartaoTitulo}>{curso.titulo}</Text>
+        <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text>
+        {temTurma ? (
+          <Botao carregando={processando} onPress={onSolicitar} style={estilos.botaoAcaoCartao} variante="primario">
+            Solicitar matricula
+          </Botao>
+        ) : (
+          <Text style={estilos.semTurma}>Sem turma disponivel</Text>
+        )}
+      </View>
     </View>
   );
 }
@@ -289,7 +310,7 @@ const estilos = StyleSheet.create({
   abas: { flexDirection: "row", paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, gap: espacamentos.sm },
   aba: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: cores.fundoCartao },
   abaAtiva: { backgroundColor: cores.destaque },
-  abaTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: 13 },
+  abaTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.corpo },
   abaTextoAtivo: { color: cores.texto },
   mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.md },
   busca: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, marginHorizontal: 20, marginTop: 12, paddingHorizontal: 14, paddingVertical: 10, color: cores.texto, borderWidth: 1, borderColor: cores.bordaCartao },
@@ -299,46 +320,18 @@ const estilos = StyleSheet.create({
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1, marginRight: 10 },
   statusLinha: { flexDirection: "row", alignItems: "center", gap: 4 },
-  status: { fontWeight: "700", fontSize: 12 },
-  cartaoMeta: { color: cores.textoSuave, fontSize: 12, marginTop: 4 },
+  status: { fontWeight: "700", fontSize: tipografia.rotulo },
+  cartaoMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
   pagamentoLinha: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10 },
-  pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: 12, flexShrink: 1 },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
-  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoSucessoCompacto: { backgroundColor: cores.sucesso, borderRadius: raios.sm, minHeight: 40, paddingHorizontal: 14, alignItems: "center", justifyContent: "center" },
-  botaoSucessoCompactoTexto: { color: cores.texto, fontWeight: "700", fontSize: 12 },
-  botaoPerigo: { backgroundColor: "transparent", borderWidth: 1, borderColor: cores.erro, borderRadius: raios.sm, paddingVertical: 10, alignItems: "center", marginTop: 12 },
-  botaoPerigoTexto: { color: cores.erro, fontWeight: "700" },
-  semTurma: { color: cores.textoSuave, fontSize: 12, marginTop: 12, fontStyle: "italic" },
+  pagamentoPendente: { color: cores.aviso, fontWeight: "700", fontSize: tipografia.rotulo, flexShrink: 1 },
+  botaoAcaoCartao: { marginTop: 12 },
+  botaoPagamento: { paddingHorizontal: 14 },
+  semTurma: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 12, fontStyle: "italic" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 },
   confirmacaoFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", alignItems: "center", justifyContent: "center", padding: espacamentos.xl },
-  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm },
-  confirmacaoTitulo: { color: cores.texto, fontSize: 16, fontWeight: "700" },
+  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm, ...sombra.cartao },
+  confirmacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700" },
   confirmacaoTexto: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
   confirmacaoAcoes: { flexDirection: "row", gap: espacamentos.sm, marginTop: espacamentos.sm },
-  botaoCancelar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: cores.erro,
-    borderRadius: raios.sm,
-    paddingVertical: 12,
-    minHeight: 44
-  },
-  botaoCancelarTexto: { color: cores.erro, fontWeight: "700" },
-  botaoConfirmar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: cores.sucesso,
-    borderRadius: raios.sm,
-    paddingVertical: 12,
-    minHeight: 44
-  },
-  botaoConfirmarTexto: { color: cores.texto, fontWeight: "700" }
+  botaoDialogo: { flex: 1 }
 });

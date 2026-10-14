@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate } from "../../lib/format.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
 const ICONE_TIPO = {
   MatriculaAprovada: "checkmark-circle",
@@ -101,26 +101,41 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
       ) : notificacoes.length === 0 ? (
         <Text style={estilos.vazio}>Nenhuma notificacao por aqui.</Text>
       ) : (
-        <ScrollView contentContainerStyle={estilos.corpo}>
-          {notificacoes.map((notificacao) => (
-            <TouchableOpacity
-              key={notificacao.id}
-              onPress={() => marcarComoLida(notificacao)}
-              style={[estilos.cartao, !notificacao.lida ? estilos.cartaoNaoLido : null]}
-            >
-              <View style={estilos.iconeCirculo}>
-                <Ionicons color={cores.destaque} name={ICONE_TIPO[notificacao.tipo] || "notifications-outline"} size={18} />
-              </View>
-              <View style={estilos.cartaoConteudo}>
-                <Text style={estilos.cartaoTitulo}>{notificacao.titulo}</Text>
-                <Text style={estilos.cartaoMensagem}>{notificacao.mensagem}</Text>
-                <Text style={estilos.cartaoData}>{formatDate(notificacao.criadoEm)}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <FlatList
+          contentContainerStyle={estilos.corpo}
+          data={notificacoes}
+          keyExtractor={(notificacao) => String(notificacao.id)}
+          renderItem={({ item: notificacao }) => <ItemNotificacao notificacao={notificacao} onPress={() => marcarComoLida(notificacao)} />}
+        />
       )}
     </View>
+  );
+}
+
+function ItemNotificacao({ notificacao, onPress }) {
+  return (
+    <TouchableOpacity
+      accessibilityLabel={`${notificacao.lida ? "Notificacao lida" : "Notificacao nova"}: ${notificacao.titulo}. ${notificacao.mensagem}`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[estilos.cartao, !notificacao.lida ? estilos.cartaoNaoLido : null]}
+    >
+      <View style={estilos.iconeCirculo}>
+        <Ionicons color={cores.destaque} name={ICONE_TIPO[notificacao.tipo] || "notifications-outline"} size={18} />
+      </View>
+      <View style={estilos.cartaoConteudo}>
+        <View style={estilos.cartaoTopo}>
+          <Text style={estilos.cartaoTitulo}>{notificacao.titulo}</Text>
+          {!notificacao.lida ? (
+            <View accessibilityElementsHidden importantForAccessibility="no" style={estilos.pillNova}>
+              <Text style={estilos.pillNovaTexto}>Nova</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={estilos.cartaoMensagem}>{notificacao.mensagem}</Text>
+        <Text style={estilos.cartaoData}>{formatDate(notificacao.criadoEm)}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -130,8 +145,8 @@ const estilos = StyleSheet.create({
   voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, marginLeft: -6 },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
   marcarTodas: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
-  marcarTodasTexto: { color: cores.textoSuave, fontSize: 12, fontWeight: "600" },
-  titulo: { color: cores.texto, fontWeight: "700", fontSize: 20, marginBottom: espacamentos.lg },
+  marcarTodasTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontWeight: "600" },
+  titulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.destaque, marginBottom: espacamentos.lg },
   corpo: { gap: espacamentos.sm, paddingBottom: espacamentos.xxl },
   cartao: {
     flexDirection: "row",
@@ -145,9 +160,12 @@ const estilos = StyleSheet.create({
   cartaoNaoLido: { borderLeftColor: cores.destaque },
   iconeCirculo: { width: 32, height: 32, borderRadius: 16, backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
   cartaoConteudo: { flex: 1 },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 14 },
-  cartaoMensagem: { color: cores.textoRotulo, fontSize: 13, marginTop: 4 },
-  cartaoData: { color: cores.textoSuave, fontSize: 11, marginTop: 6 },
+  cartaoTopo: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm },
+  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 14, flexShrink: 1 },
+  pillNova: { backgroundColor: cores.informativoFundo, borderRadius: raios.sm, paddingHorizontal: 6, paddingVertical: 2 },
+  pillNovaTexto: { color: cores.informativo, fontSize: 10, fontWeight: "800", letterSpacing: 0.3 },
+  cartaoMensagem: { color: cores.textoRotulo, fontSize: tipografia.corpo, marginTop: 4 },
+  cartaoData: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 6 },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60 },
   erro: { color: cores.erro, textAlign: "center", marginTop: 40 }
 });

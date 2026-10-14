@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
+import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Botao from "./Botao.jsx";
 import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
-import { cores, espacamentos } from "../lib/theme.js";
+import { cores, espacamentos, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
@@ -204,6 +205,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
           </TouchableOpacity>
         </View>
 
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.corpoFlex}>
         <ScrollView contentContainerStyle={estilos.corpo}>
           {fase === "confirmar" ? (
             <View>
@@ -220,9 +222,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               {tentativasEsgotadas ? (
                 <Text style={estilos.tentativasEsgotadasTexto}>Voce ja utilizou todas as tentativas permitidas para esta avaliacao.</Text>
               ) : (
-                <TouchableOpacity onPress={iniciar} style={estilos.botaoPrimario}>
-                  <Text style={estilos.botaoPrimarioTexto}>Iniciar</Text>
-                </TouchableOpacity>
+                <Botao onPress={iniciar} variante="primario">Iniciar</Botao>
               )}
             </View>
           ) : null}
@@ -321,19 +321,19 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
               <View style={estilos.acoesLinha}>
                 {indiceAtual > 0 ? (
-                  <TouchableOpacity disabled={enviando} onPress={() => setIndiceAtual((atual) => atual - 1)} style={estilos.botaoFantasma}>
-                    <Text style={estilos.botaoFantasmaTexto}>Voltar</Text>
-                  </TouchableOpacity>
+                  <Botao disabled={enviando} onPress={() => setIndiceAtual((atual) => atual - 1)} variante="fantasma">
+                    Voltar
+                  </Botao>
                 ) : <View />}
 
                 {ehUltimaQuestao ? (
-                  <TouchableOpacity disabled={enviando} onPress={enviarManual} style={estilos.botaoPrimario}>
-                    {enviando ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoPrimarioTexto}>Enviar avaliacao</Text>}
-                  </TouchableOpacity>
+                  <Botao carregando={enviando} onPress={enviarManual} variante="primario">
+                    Enviar avaliacao
+                  </Botao>
                 ) : (
-                  <TouchableOpacity disabled={enviando} onPress={() => setIndiceAtual((atual) => atual + 1)} style={estilos.botaoPrimario}>
-                    <Text style={estilos.botaoPrimarioTexto}>Proxima questao</Text>
-                  </TouchableOpacity>
+                  <Botao disabled={enviando} onPress={() => setIndiceAtual((atual) => atual + 1)} variante="primario">
+                    Proxima questao
+                  </Botao>
                 )}
               </View>
             </View>
@@ -373,16 +373,17 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               </View>
 
               {podeRefazer ? (
-                <TouchableOpacity onPress={refazer} style={[estilos.botaoPrimario, estilos.resultadoBotaoRefazer]}>
-                  <Text style={estilos.botaoPrimarioTexto}>Refazer avaliacao</Text>
-                </TouchableOpacity>
+                <Botao onPress={refazer} style={estilos.resultadoBotaoRefazer} variante="primario">
+                  Refazer avaliacao
+                </Botao>
               ) : null}
-              <TouchableOpacity onPress={onFechar} style={podeRefazer ? estilos.botaoContorno : estilos.botaoPrimario}>
-                <Text style={podeRefazer ? estilos.botaoContornoTexto : estilos.botaoPrimarioTexto}>Fechar</Text>
-              </TouchableOpacity>
+              <Botao onPress={onFechar} variante={podeRefazer ? "secundario" : "primario"}>
+                Fechar
+              </Botao>
             </View>
           ) : null}
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -411,23 +412,18 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
-  titulo: { color: cores.texto, fontSize: 16, fontWeight: "700", flex: 1, marginRight: 12 },
+  titulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1, marginRight: 12 },
   botaoFechar: { padding: 4 },
   iconeFechar: { opacity: 0.75 },
+  corpoFlex: { flex: 1 },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  secaoTitulo: { color: cores.texto, fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  secaoTitulo: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", marginBottom: 16 },
   resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
   resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
-  resumoRotulo: { color: cores.textoSuave, fontSize: 12 },
+  resumoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
   resumoValor: { color: cores.texto, fontWeight: "700" },
   tentativasEsgotadasTexto: { color: cores.erro, textAlign: "center", lineHeight: 20 },
-  botaoPrimario: { backgroundColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
-  botaoPrimarioTexto: { color: cores.texto, fontWeight: "700" },
-  botaoContorno: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 24, alignItems: "center", justifyContent: "center" },
-  botaoContornoTexto: { color: cores.destaque, fontWeight: "700" },
-  botaoFantasma: { paddingVertical: 14, paddingHorizontal: 12 },
-  botaoFantasmaTexto: { color: cores.textoSuave, fontWeight: "600" },
   passos: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   contador: { color: cores.textoSuave },
   cronometroLinha: { flexDirection: "row", alignItems: "center", gap: 4 },
@@ -437,12 +433,12 @@ const estilos = StyleSheet.create({
   pill: { width: 32, height: 32, borderRadius: 16, backgroundColor: cores.fundoCartao, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: cores.bordaCartao },
   pillAtiva: { borderColor: cores.destaque },
   pillRespondida: { backgroundColor: cores.destaque },
-  pillTexto: { color: cores.texto, fontWeight: "600", fontSize: 12 },
+  pillTexto: { color: cores.texto, fontWeight: "600", fontSize: tipografia.rotulo },
   apoioToggle: { marginBottom: 8 },
   apoioToggleTexto: { color: cores.destaque, fontWeight: "600" },
   apoioTexto: { color: cores.textoSuave, marginBottom: 16, lineHeight: 20 },
-  enunciadoTipo: { color: cores.informativo, fontSize: 12, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
-  enunciado: { color: cores.texto, fontSize: 16, marginBottom: 16, lineHeight: 22 },
+  enunciadoTipo: { color: cores.informativo, fontSize: tipografia.rotulo, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
+  enunciado: { color: cores.texto, fontSize: tipografia.subtitulo, marginBottom: 16, lineHeight: 22 },
   textoResposta: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, color: cores.texto, padding: 12, minHeight: 100, textAlignVertical: "top", marginBottom: 20 },
   afirmativas: { marginBottom: 16, gap: 8 },
   afirmativaItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, padding: 12 },
@@ -467,9 +463,9 @@ const estilos = StyleSheet.create({
   },
   resultadoIconeSucesso: { backgroundColor: cores.sucessoFundo },
   resultadoIconePendente: { backgroundColor: cores.avisoFundo },
-  resultadoTitulo: { color: cores.texto, fontSize: 20, fontWeight: "800", marginBottom: espacamentos.sm, textAlign: "center" },
+  resultadoTitulo: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800", marginBottom: espacamentos.sm, textAlign: "center" },
   resultadoDescricao: { color: cores.textoSuave, textAlign: "center", marginBottom: espacamentos.xl, lineHeight: 20 },
-  resultadoPorcentagem: { color: cores.destaque, fontSize: 40, fontWeight: "800", marginBottom: espacamentos.md, textAlign: "center" },
+  resultadoPorcentagem: { color: cores.destaque, fontSize: tipografia.numeroGrande, fontWeight: "800", marginBottom: espacamentos.md, textAlign: "center" },
   resultadoBarraFundo: { height: 8, borderRadius: 4, backgroundColor: cores.bordaCartao, overflow: "hidden", marginBottom: espacamentos.xl },
   resultadoBarraPreenchida: { height: 8, borderRadius: 4 },
   resultadoDivisor: { height: 1, backgroundColor: cores.bordaCartao, marginBottom: espacamentos.xl },

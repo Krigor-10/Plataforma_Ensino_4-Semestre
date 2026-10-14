@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { AccessibilityInfo, StyleSheet, Text, View } from "react-native";
 import { cores, espacamentos, raios } from "../lib/theme.js";
 
 const ICONE_POR_TIPO = {
@@ -26,6 +26,7 @@ export default function Toast({ duracao = 4000, mensagem, onFechar, tipo = "info
     if (!mensagem) {
       return undefined;
     }
+    AccessibilityInfo.announceForAccessibility(mensagem);
     const temporizador = setTimeout(() => onFechar?.(), duracao);
     return () => clearTimeout(temporizador);
   }, [mensagem, duracao, onFechar]);
@@ -37,7 +38,7 @@ export default function Toast({ duracao = 4000, mensagem, onFechar, tipo = "info
   const cor = COR_POR_TIPO[tipo] || cores.informativo;
 
   return (
-    <View style={[estilos.container, { borderLeftColor: cor }]}>
+    <View accessibilityLiveRegion="polite" style={[estilos.container, { borderLeftColor: cor }]}>
       <Ionicons color={cor} name={ICONE_POR_TIPO[tipo] || "information-circle"} size={18} />
       <Text style={estilos.texto}>{mensagem}</Text>
     </View>

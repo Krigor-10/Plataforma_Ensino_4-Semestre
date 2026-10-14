@@ -1,3 +1,5 @@
+import { inferirTomStatus } from "../lib/statusVariant.js";
+
 export function InlineMessage({ children, tone }) {
   const isError = tone === "error";
 
@@ -13,7 +15,8 @@ export function InlineMessage({ children, tone }) {
 }
 
 export function StatusPill({ children, tone }) {
-  return <span className={`status-pill status-pill--${tone}`}>{children}</span>;
+  const tomResolvido = tone || (typeof children === "string" ? inferirTomStatus(children) : "info");
+  return <span className={`status-pill status-pill--${tomResolvido}`}>{children}</span>;
 }
 
 export function EmptyState({ message }) {

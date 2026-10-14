@@ -160,6 +160,12 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     {
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
 
+        var possuiAvaliacaoVinculada = await _context.Avaliacoes.AnyAsync(avaliacao => avaliacao.ConteudoDidaticoId == id);
+        if (possuiAvaliacaoVinculada)
+        {
+            throw new InvalidOperationException("Este conteudo possui uma avaliacao vinculada e nao pode ser excluido.");
+        }
+
         _conteudoRepository.Deletar(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
     }

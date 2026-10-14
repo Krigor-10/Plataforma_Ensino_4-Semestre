@@ -1,7 +1,8 @@
+import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CapaCurso from "../components/CapaCurso.jsx";
 import { formatPercent } from "../lib/format.js";
-import { cores, espacamentos, raios } from "../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 /* Tela "Inicio" do Aluno — resumo real (cursos matriculados + progresso),
    nao mais o catalogo inteiro do sistema. Recebe snapshot ja carregado pelo
@@ -31,8 +32,12 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
             const curso = cursoPorId.get(progresso.cursoId);
             const percentual = Math.max(0, Math.min(Number(progresso.percentualConclusao) || 0, 100));
 
+            const tituloCurso = curso?.titulo || `Curso #${progresso.cursoId}`;
+
             return (
               <TouchableOpacity
+                accessibilityLabel={`Ver conteudos de ${tituloCurso}, ${formatPercent(percentual)} concluido`}
+                accessibilityRole="button"
                 disabled={!onAbrirAba}
                 key={progresso.id}
                 onPress={() => onAbrirAba?.("conteudos")}
@@ -40,7 +45,7 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
               >
                 <CapaCurso curso={curso} size={56} />
                 <View style={styles.cartaoConteudo}>
-                  <Text style={styles.cartaoTitulo}>{curso?.titulo || `Curso #${progresso.cursoId}`}</Text>
+                  <Text style={styles.cartaoTitulo}>{tituloCurso}</Text>
                   <View style={styles.barraFundo}>
                     <View style={[styles.barraPreenchida, { width: `${percentual}%` }]} />
                   </View>
@@ -48,6 +53,7 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
                     {formatPercent(percentual)} concluido - {progresso.modulosConcluidos}/{progresso.totalModulos} modulo(s)
                   </Text>
                 </View>
+                <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
               </TouchableOpacity>
             );
           })}
@@ -66,7 +72,7 @@ const styles = StyleSheet.create({
   },
   tituloSecao: {
     color: cores.texto,
-    fontSize: 16,
+    fontSize: tipografia.subtitulo,
     fontWeight: "700",
     marginBottom: 12
   },
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
   },
   cartaoMeta: {
     color: cores.textoSuave,
-    fontSize: 12
+    fontSize: tipografia.rotulo
   },
   vazio: {
     color: cores.textoSuave,

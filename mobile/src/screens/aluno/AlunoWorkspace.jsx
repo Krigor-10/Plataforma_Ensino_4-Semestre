@@ -71,6 +71,11 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
     recarregar();
   }, [recarregar]);
 
+  function tentarNovamente() {
+    setCarregando(true);
+    recarregar();
+  }
+
   return (
     <View style={estilos.container}>
       <HeaderGlobal
@@ -86,7 +91,13 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
         {carregando ? (
           <ActivityIndicator color={cores.destaque} style={{ marginTop: 60 }} />
         ) : erro ? (
-          <Text style={estilos.erro}>{erro}</Text>
+          <View style={estilos.erroContainer}>
+            <Text style={estilos.erro}>{erro}</Text>
+            <TouchableOpacity accessibilityLabel="Tentar novamente" onPress={tentarNovamente} style={estilos.botaoTentarNovamente}>
+              <Ionicons color={cores.texto} name="refresh" size={16} />
+              <Text style={estilos.botaoTentarNovamenteTexto}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             {abaAtiva === "inicio" ? <HomeScreen onAbrirAba={setAbaAtiva} snapshot={snapshot} /> : null}
@@ -148,7 +159,19 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { flex: 1 },
-  erro: { color: cores.erro, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
+  erroContainer: { marginTop: 60, paddingHorizontal: 24, alignItems: "center", gap: 16 },
+  erro: { color: cores.erro, textAlign: "center" },
+  botaoTentarNovamente: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: cores.destaque,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    minHeight: 44
+  },
+  botaoTentarNovamenteTexto: { color: cores.texto, fontWeight: "700" },
   tabBar: {
     flexDirection: "row",
     borderTopWidth: 1,
