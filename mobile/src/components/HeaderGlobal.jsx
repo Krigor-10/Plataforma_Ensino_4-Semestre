@@ -7,13 +7,14 @@ import { obterIniciais } from "../lib/format.js";
 import { cores, espacamentos } from "../lib/theme.js";
 
 /* Header global do Aluno — antes vivia so dentro de HomeScreen.jsx, entao
-   notificacoes/perfil sumiam ao navegar pras outras abas (AlunoWorkspace.jsx
-   nao usa Stack/Tab/Drawer Navigator, e um switcher proprio por state). Agora e
-   montado uma unica vez acima da area trocada por aba, preservando exatamente o
-   visual/comportamento que a Home ja tinha. notificacoesVersao muda quando
-   NotificacoesScreen marca algo como lido, pra badge acompanhar sem precisar
-   remontar o header inteiro. "Sair" nao mora aqui de proposito — e uma acao
-   destrutiva, fica no Perfil pra nao virar tap acidental ao lado de Notificacoes. */
+   notificacoes/perfil sumiam ao navegar pras outras abas. Hoje e o `header`
+   custom do AlunoStack (ver AlunoHeaderBar.jsx/AlunoWorkspace.jsx), montado uma
+   unica vez acima de qualquer tela do Aluno (abas ou Perfil/Notificacoes),
+   preservando exatamente o visual/comportamento que a Home ja tinha.
+   notificacoesVersao muda quando NotificacoesScreen marca algo como lido, pra
+   badge acompanhar sem precisar remontar o header inteiro. "Sair" nao mora aqui
+   de proposito — e uma acao destrutiva, fica no Perfil pra nao virar tap
+   acidental ao lado de Notificacoes. */
 export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
