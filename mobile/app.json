@@ -30,7 +30,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {

@@ -9,10 +9,13 @@ import AlunoWorkspace from "./src/screens/aluno/AlunoWorkspace.jsx";
 import { apiRequest } from "./src/lib/api.js";
 import { clearSession, persistSession, readSession } from "./src/lib/session.js";
 import { ROUTES } from "./src/lib/routes.js";
+import { envolverComSentry, inicializarSentry } from "./src/lib/sentry.js";
 
 const RootStack = createNativeStackNavigator();
 
-export default function App() {
+inicializarSentry();
+
+function App() {
   const [session, setSession] = useState({ token: "", user: null });
   const [pronto, setPronto] = useState(false);
 
@@ -87,3 +90,5 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+export default envolverComSentry(App);
