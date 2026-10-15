@@ -794,6 +794,9 @@ public class AvaliacaoService : IAvaliacaoService
                 .ThenInclude(questao => questao.Alternativas)
             .Include(item => item.Questoes)
                 .ThenInclude(questao => questao.Afirmativas)
+            .Include(item => item.Questoes)
+                .ThenInclude(questao => questao.QuestaoBanco)
+                    .ThenInclude(banco => banco!.Anexos)
             .FirstOrDefaultAsync()
             ?? throw new KeyNotFoundException("Avaliacao publicada nao encontrada.");
 
@@ -1353,6 +1356,17 @@ public class AvaliacaoService : IAvaliacaoService
                     Numero = afirmativa.Numero,
                     Texto = afirmativa.Texto,
                     Ordem = afirmativa.Ordem
+                })
+                .ToList(),
+            Anexos = (questao.QuestaoBanco?.Anexos ?? new List<AnexoQuestaoBanco>())
+                .OrderBy(anexo => anexo.Ordem)
+                .Select(anexo => new AnexoQuestaoBancoResponseDto
+                {
+                    Id = anexo.Id,
+                    Titulo = anexo.Titulo,
+                    TipoAnexo = anexo.TipoAnexo,
+                    ArquivoUrl = anexo.ArquivoUrl,
+                    Ordem = anexo.Ordem
                 })
                 .ToList()
         };

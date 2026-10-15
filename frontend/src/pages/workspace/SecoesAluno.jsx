@@ -1067,6 +1067,29 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                     </div>
                   </section>
 
+                  {questaoAtual.anexos?.length > 0 ? (
+                    <section className="quiz-anexos">
+                      {questaoAtual.anexos.map((anexo) =>
+                        anexo.tipoAnexo === "Imagem" ? (
+                          <figure className="quiz-anexo-imagem" key={anexo.id}>
+                            <img alt={anexo.titulo} src={resolverUrlArquivo(anexo.arquivoUrl)} />
+                            <figcaption>{anexo.titulo}</figcaption>
+                          </figure>
+                        ) : (
+                          <a
+                            className="quiz-anexo-arquivo"
+                            href={resolverUrlArquivo(anexo.arquivoUrl)}
+                            key={anexo.id}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {anexo.titulo}
+                          </a>
+                        )
+                      )}
+                    </section>
+                  ) : null}
+
                   {Number(questaoAtual.tipoQuestao) === 3 ? (
                     <div className="campo">
                       <label className="campo__rotulo" htmlFor={`resposta-${questaoAtual.id}`}>Resposta</label>

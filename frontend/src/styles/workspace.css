@@ -5959,6 +5959,54 @@
   margin: 0;
 }
 
+.quiz-anexos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.quiz-anexo-imagem {
+  margin: 0;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-sm);
+}
+
+.quiz-anexo-imagem img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--raio-md);
+}
+
+.quiz-anexo-imagem figcaption {
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+  text-align: center;
+}
+
+.quiz-anexo-arquivo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+  font-size: 0.85rem;
+  color: var(--cor-marca-clara);
+  text-decoration: none;
+  width: fit-content;
+}
+
+.quiz-anexo-arquivo:hover {
+  text-decoration: underline;
+}
+
 .quiz-afirmativas {
   list-style: none;
   margin: 0 0 var(--espaco-md);

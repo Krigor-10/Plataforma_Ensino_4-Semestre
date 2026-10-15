@@ -34,7 +34,7 @@ const OPCOES_TIPO_QUESTAO = [
   { value: "4", label: "Afirmativas combinadas" }
 ];
 
-const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D"];
+const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D", "E"];
 const ALTERNATIVAS_AFIRMATIVAS_COMBINADAS = ["A", "B", "C", "D", "E"];
 const NUMERACAO_AFIRMATIVAS_PADRAO = ["I", "II", "III", "IV", "V", "VI"];
 

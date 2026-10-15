@@ -59,6 +59,7 @@ public class QuestaoAvaliacaoAlunoResponseDto
     public decimal Pontos { get; set; }
     public List<AlternativaQuestaoAlunoResponseDto> Alternativas { get; set; } = new();
     public List<AfirmativaQuestaoAlunoResponseDto> Afirmativas { get; set; } = new();
+    public List<AnexoQuestaoBancoResponseDto> Anexos { get; set; } = new();
 }
 
 public class RespostaAvaliacaoAlunoDto
