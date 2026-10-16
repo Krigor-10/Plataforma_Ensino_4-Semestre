@@ -5,6 +5,7 @@ export const ROUTES = {
   ALUNO_TABS: "AlunoTabs",
   PERFIL: "Perfil",
   NOTIFICACOES: "Notificacoes",
+  BUSCA: "Busca",
   INICIO: "inicio",
   CONTEUDOS: "conteudos",
   AVALIACOES: "avaliacoes",

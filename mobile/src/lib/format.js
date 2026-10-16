@@ -76,6 +76,16 @@ export function formatCep(value) {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
 
+// Mesmo criterio de normalizarBusca em frontend/SecaoCursos.jsx — minusculas
+// + sem acentos, pra "avaliacao"/"Avaliação" baterem na mesma busca.
+export function normalizarTermoBusca(valor) {
+  return String(valor || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
 export function obterIniciais(nome) {
   const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
 

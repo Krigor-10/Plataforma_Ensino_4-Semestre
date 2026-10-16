@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
+import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatCep, obterIniciais, onlyDigits } from "../../lib/format.js";
-import { cores, espacamentos, raios, sombra, tipografia } from "../../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
 function estadoFormularioInicial(usuario) {
   return {
@@ -195,22 +196,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         Sair
       </Botao>
 
-      <Modal animationType="fade" onRequestClose={() => setConfirmandoSaida(false)} transparent visible={confirmandoSaida}>
-        <View style={estilos.confirmacaoFundo}>
-          <View style={estilos.confirmacaoPainel}>
-            <Text style={estilos.confirmacaoTitulo}>Sair da conta</Text>
-            <Text style={estilos.confirmacaoTexto}>Deseja realmente sair da sua conta?</Text>
-            <View style={estilos.confirmacaoAcoes}>
-              <Botao icone="close" onPress={() => setConfirmandoSaida(false)} style={estilos.botaoDialogo} variante="perigo">
-                Cancelar
-              </Botao>
-              <Botao icone="log-out-outline" onPress={onLogout} style={estilos.botaoDialogo} variante="sucesso">
-                Sair
-              </Botao>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <ModalConfirmarSaida onCancelar={() => setConfirmandoSaida(false)} onConfirmar={onLogout} visivel={confirmandoSaida} />
     </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -249,11 +235,5 @@ const estilos = StyleSheet.create({
     borderColor: cores.bordaCartao
   },
   botaoFormulario: { marginTop: 4 },
-  botaoSair: { marginTop: 28 },
-  confirmacaoFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", alignItems: "center", justifyContent: "center", padding: espacamentos.xl },
-  confirmacaoPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.xl, width: "100%", maxWidth: 340, gap: espacamentos.sm, ...sombra.cartao },
-  confirmacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700" },
-  confirmacaoTexto: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
-  confirmacaoAcoes: { flexDirection: "row", gap: espacamentos.sm, marginTop: espacamentos.sm },
-  botaoDialogo: { flex: 1 }
+  botaoSair: { marginTop: 28 }
 });

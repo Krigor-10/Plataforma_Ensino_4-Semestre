@@ -7,6 +7,7 @@ import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
+import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
 import { cores, espacamentos, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
@@ -33,6 +34,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
   useEffect(() => {
     if (visivel) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional do estado interno do modal toda vez que ele reabre (nova avaliacao ou reabertura da mesma); nao ha forma de computar isso como estado derivado porque o modal precisa permitir editar fase/respostas depois.
       setFase("confirmar");
       setQuestoes([]);
       setRespostas({});
@@ -45,6 +47,42 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       prazoFinalRef.current = null;
     }
   }, [visivel, avaliacao?.id]);
+
+  async function enviar(porTempoEsgotado) {
+    if (enviando) {
+      return;
+    }
+
+    setEnviando(true);
+    setErro(porTempoEsgotado ? "Tempo esgotado. Enviando suas respostas automaticamente." : "");
+
+    const payload = {
+      respostas: questoes.map((questao) => {
+        const resposta = respostas[questao.id];
+        return {
+          questaoId: questao.id,
+          alternativaId: resposta?.alternativaId || null,
+          respostaTexto: String(resposta?.respostaTexto || "").trim()
+        };
+      })
+    };
+
+    try {
+      const tentativa = await apiRequest(`/Avaliacoes/${avaliacao.id}/aluno/respostas`, { method: "POST", body: JSON.stringify(payload) });
+      setResultado(tentativa);
+      setFase("resultado");
+      removerRascunhoAvaliacao(avaliacao.id);
+      onConcluido?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      setErro(err.message || "Nao foi possivel enviar a avaliacao agora.");
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   useEffect(() => {
     if (fase !== "execucao" || prazoFinalRef.current === null) {
@@ -79,12 +117,39 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       clearInterval(intervalo);
       assinatura.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- enviar/recalcular sao recriados a cada render (nao usam useCallback de proposito), mas o cronometro so deve reiniciar quando a fase mudar, nao a cada resposta selecionada.
   }, [fase]);
+
+  // Persiste o progresso (respostas + questao atual + prazo) a cada mudanca,
+  // pra sobreviver a fechar o modal/app sem enviar — nunca marca a avaliacao
+  // como concluida nem cria tentativa nenhuma, so evita perder o que o aluno
+  // ja tinha respondido. So roda enquanto a tentativa esta realmente em
+  // andamento (questoes carregadas, fase de execucao). Mesma logica do
+  // rascunho web, ver quizRascunho.js.
+  useEffect(() => {
+    if (!avaliacao || fase !== "execucao" || !questoes.length) {
+      return;
+    }
+
+    salvarRascunhoAvaliacao(avaliacao.id, {
+      indiceAtual,
+      respostas,
+      tentativasRealizadasNoMomento: avaliacao.tentativasRealizadas || 0,
+      prazoFinal: prazoFinalRef.current,
+      salvoEm: Date.now()
+    });
+  }, [avaliacao, fase, questoes, indiceAtual, respostas]);
 
   async function iniciar() {
     setFase("carregando");
     setErro("");
-    if (avaliacao.tempoLimiteMinutos > 0) {
+
+    const rascunho = await rascunhoAvaliacaoValido(avaliacao);
+
+    if (rascunho?.prazoFinal) {
+      prazoFinalRef.current = rascunho.prazoFinal;
+      setTempoRestante(Math.max(0, Math.round((rascunho.prazoFinal - Date.now()) / 1000)));
+    } else if (avaliacao.tempoLimiteMinutos > 0) {
       prazoFinalRef.current = Date.now() + avaliacao.tempoLimiteMinutos * 60000;
       setTempoRestante(avaliacao.tempoLimiteMinutos * 60);
     } else {
@@ -95,7 +160,21 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
     try {
       const proximasQuestoes = await apiRequest(`/Avaliacoes/${avaliacao.id}/aluno/questoes`);
       setQuestoes(proximasQuestoes);
-      setRespostas(criarRespostasIniciais(proximasQuestoes));
+
+      if (rascunho) {
+        // Mantem as respostas restauradas, descartando qualquer id de questao
+        // que nao exista mais (ex.: professor removeu uma questao depois que
+        // o rascunho foi salvo) e garantindo que o indice continua valido —
+        // mesma logica do rascunho web, ver quizRascunho.js.
+        const idsValidos = new Set(proximasQuestoes.map((questao) => questao.id));
+        setRespostas(
+          Object.fromEntries(Object.entries(rascunho.respostas || {}).filter(([id]) => idsValidos.has(Number(id))))
+        );
+        setIndiceAtual(Math.max(0, Math.min(rascunho.indiceAtual || 0, proximasQuestoes.length - 1)));
+      } else {
+        setRespostas(criarRespostasIniciais(proximasQuestoes));
+      }
+
       setFase("execucao");
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -130,41 +209,6 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       return;
     }
     enviar(false);
-  }
-
-  async function enviar(porTempoEsgotado) {
-    if (enviando) {
-      return;
-    }
-
-    setEnviando(true);
-    setErro(porTempoEsgotado ? "Tempo esgotado. Enviando suas respostas automaticamente." : "");
-
-    const payload = {
-      respostas: questoes.map((questao) => {
-        const resposta = respostas[questao.id];
-        return {
-          questaoId: questao.id,
-          alternativaId: resposta?.alternativaId || null,
-          respostaTexto: String(resposta?.respostaTexto || "").trim()
-        };
-      })
-    };
-
-    try {
-      const tentativa = await apiRequest(`/Avaliacoes/${avaliacao.id}/aluno/respostas`, { method: "POST", body: JSON.stringify(payload) });
-      setResultado(tentativa);
-      setFase("resultado");
-      onConcluido?.();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired?.();
-        return;
-      }
-      setErro(err.message || "Nao foi possivel enviar a avaliacao agora.");
-    } finally {
-      setEnviando(false);
-    }
   }
 
   function refazer() {

@@ -2,7 +2,11 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import AlunoHeaderBar from "../../components/AlunoHeaderBar.jsx";
+import MenuLateral from "../../components/MenuLateral.jsx";
+import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import AlunoTabsNavigator from "./AlunoTabsNavigator.jsx";
+import BuscaScreen from "./BuscaScreen.jsx";
+import CertificadosScreen from "./CertificadosScreen.jsx";
 import PerfilScreen from "./PerfilScreen.jsx";
 import NotificacoesScreen from "./NotificacoesScreen.jsx";
 import { ApiError } from "../../lib/api.js";
@@ -17,13 +21,21 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [notificacoesVersao, setNotificacoesVersao] = useState(0);
+  const [menuAberto, setMenuAberto] = useState(false);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  // Guarda o `navigation` do AlunoStack recebido via screenOptions (o mesmo
+  // objeto que cada tela ja recebe) pra poder navegar a partir do menu
+  // lateral, que fica fora da arvore do Navigator (nao e um Screen).
+  const navigationRef = useRef(null);
 
   // Ref em vez de dependencia direta: onSessionExpired e recriada a cada
   // render do App raiz (nao usa useCallback la), entao inclui-la nas
   // dependencias de recarregar faria o useEffect de carregamento inicial
   // (abaixo) refazer a busca a cada render em vez de so no mount.
   const onSessionExpiredRef = useRef(onSessionExpired);
-  onSessionExpiredRef.current = onSessionExpired;
+  useEffect(() => {
+    onSessionExpiredRef.current = onSessionExpired;
+  });
 
   const recarregar = useCallback(async () => {
     try {
@@ -43,6 +55,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
   }, [usuario]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- busca inicial dos dados do Aluno ao montar o workspace; e o padrao recomendado de fetch-on-mount, nao ha estado derivado alternativo aqui.
     recarregar();
   }, [recarregar]);
 
@@ -51,19 +64,33 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
     recarregar();
   }
 
+  function navegarDoMenu(rota) {
+    setMenuAberto(false);
+    navigationRef.current?.navigate(rota);
+  }
+
+  function solicitarSairDoMenu() {
+    setMenuAberto(false);
+    setConfirmandoSaida(true);
+  }
+
   return (
     <View style={estilos.container}>
       <AlunoStack.Navigator
-        screenOptions={({ route, navigation }) => ({
-          header: () => (
-            <AlunoHeaderBar
-              navigation={navigation}
-              notificacoesVersao={notificacoesVersao}
-              route={route}
-              usuario={usuario}
-            />
-          )
-        })}
+        screenOptions={({ route, navigation }) => {
+          navigationRef.current = navigation;
+          return {
+            header: () => (
+              <AlunoHeaderBar
+                navigation={navigation}
+                notificacoesVersao={notificacoesVersao}
+                onAbrirMenu={() => setMenuAberto(true)}
+                route={route}
+                usuario={usuario}
+              />
+            )
+          };
+        }}
       >
         <AlunoStack.Screen name={ROUTES.ALUNO_TABS}>
           {() => (
@@ -99,7 +126,23 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
             />
           )}
         </AlunoStack.Screen>
+        <AlunoStack.Screen name={ROUTES.CERTIFICADOS}>
+          {() => <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />}
+        </AlunoStack.Screen>
+        <AlunoStack.Screen name={ROUTES.BUSCA}>
+          {({ navigation }) => <BuscaScreen navigation={navigation} onVoltar={() => navigation.goBack()} snapshot={snapshot} />}
+        </AlunoStack.Screen>
       </AlunoStack.Navigator>
+
+      <MenuLateral
+        aberto={menuAberto}
+        onFechar={() => setMenuAberto(false)}
+        onNavegar={navegarDoMenu}
+        onSolicitarSair={solicitarSairDoMenu}
+        usuario={usuario}
+      />
+
+      <ModalConfirmarSaida onCancelar={() => setConfirmandoSaida(false)} onConfirmar={onLogout} visivel={confirmandoSaida} />
     </View>
   );
 }

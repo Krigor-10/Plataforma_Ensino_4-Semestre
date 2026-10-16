@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import BannerGradiente from "../../components/BannerGradiente.jsx";
@@ -26,6 +27,21 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
+  const route = useRoute();
+  const navigation = useNavigation();
+
+  // Resultado de busca (BuscaScreen.jsx) pode navegar aqui ja com um curso
+  // escolhido via route.params — consome o param uma unica vez e limpa com
+  // setParams, senao reabrir essa aba manualmente depois sempre voltaria
+  // forcado pro mesmo curso da ultima busca.
+  useEffect(() => {
+    if (route.params?.cursoId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- consome um param de navegacao vindo de fora (BuscaScreen.jsx) uma unica vez; nao e estado derivavel de props/state local, so existe no objeto route.
+      setCursoAtivoId(route.params.cursoId);
+      navigation.setParams({ cursoId: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer reagir quando um novo cursoId chega via navegacao, nao a cada render.
+  }, [route.params?.cursoId]);
 
   const grupos = useMemo(
     () =>

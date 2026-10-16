@@ -12,15 +12,17 @@ const TELAS_INFO = {
   [ROUTES.MATRICULAS]: { icone: "school", titulo: "Matriculas" },
   [ROUTES.CERTIFICADOS]: { icone: "ribbon", titulo: "Certificados" },
   [ROUTES.PERFIL]: { icone: "person", titulo: "Meu perfil" },
-  [ROUTES.NOTIFICACOES]: { icone: "notifications", titulo: "Notificacoes" }
+  [ROUTES.NOTIFICACOES]: { icone: "notifications", titulo: "Notificacoes" },
+  [ROUTES.BUSCA]: { icone: "search", titulo: "Buscar" }
 };
 
 /* Header custom do AlunoStack (ver AlunoWorkspace.jsx) — compoe HeaderGlobal +
-   ScreenIndicator e descobre qual das 8 telas esta focada: quando a rota ativa
+   ScreenIndicator e descobre qual das telas esta focada: quando a rota ativa
    e o Tab Navigator (AlunoTabs), getFocusedRouteNameFromRoute devolve o nome da
-   aba focada dentro dele; nas demais rotas (Perfil/Notificacoes), route.name ja
-   e o suficiente. */
-export default function AlunoHeaderBar({ navigation, notificacoesVersao, route, usuario }) {
+   aba focada dentro dele; nas demais rotas (Perfil/Notificacoes/Certificados/
+   Busca) route.name ja e o suficiente. onAbrirMenu vem de AlunoWorkspace.jsx
+   (o menu lateral fica fora da arvore do Navigator, precisa do estado la). */
+export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrirMenu, route, usuario }) {
   const nomeAtivo = route.name === ROUTES.ALUNO_TABS
     ? getFocusedRouteNameFromRoute(route) ?? ROUTES.INICIO
     : route.name;
@@ -30,6 +32,8 @@ export default function AlunoHeaderBar({ navigation, notificacoesVersao, route, 
     <View>
       <HeaderGlobal
         notificacoesVersao={notificacoesVersao}
+        onAbrirBusca={() => navigation.navigate(ROUTES.BUSCA)}
+        onAbrirMenu={onAbrirMenu}
         onAbrirNotificacoes={() => navigation.navigate(ROUTES.NOTIFICACOES)}
         onAbrirPerfil={() => navigation.navigate(ROUTES.PERFIL)}
         usuario={usuario}

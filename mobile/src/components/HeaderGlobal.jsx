@@ -13,9 +13,10 @@ import { cores, espacamentos } from "../lib/theme.js";
    preservando exatamente o visual/comportamento que a Home ja tinha.
    notificacoesVersao muda quando NotificacoesScreen marca algo como lido, pra
    badge acompanhar sem precisar remontar o header inteiro. "Sair" nao mora aqui
-   de proposito — e uma acao destrutiva, fica no Perfil pra nao virar tap
-   acidental ao lado de Notificacoes. */
-export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
+   de proposito — e uma acao destrutiva, fica no menu lateral/Perfil pra nao
+   virar tap acidental ao lado de Notificacoes. Hamburguer (abre o menu lateral,
+   ver MenuLateral.jsx) e busca (ver BuscaScreen.jsx) sao os dois botoes novos. */
+export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrirMenu, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -39,12 +40,20 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
 
   return (
     <View style={[estilos.container, { paddingTop: insets.top + 12 }]}>
-      <View style={estilos.marca}>
-        <Text style={estilos.marcaCode}>Code</Text>
-        <Text style={estilos.marcaRyse}>Ryse</Text>
+      <View style={estilos.esquerda}>
+        <TouchableOpacity accessibilityHint="Abre o menu lateral" accessibilityLabel="Menu" onPress={onAbrirMenu} style={estilos.botao}>
+          <Ionicons color={cores.textoSuave} name="menu" size={24} />
+        </TouchableOpacity>
+        <View style={estilos.marca}>
+          <Text style={estilos.marcaCode}>Code</Text>
+          <Text style={estilos.marcaRyse}>Ryse</Text>
+        </View>
       </View>
       <View style={estilos.acoes}>
-        <TouchableOpacity accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={estilos.botao}>
+        <TouchableOpacity accessibilityHint="Abre a busca de cursos, conteudos e avaliacoes" accessibilityLabel="Buscar" onPress={onAbrirBusca} style={estilos.botao}>
+          <Ionicons color={cores.textoSuave} name="search-outline" size={22} />
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityHint="Abre a lista de notificacoes" accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name={notificacoesNaoLidas > 0 ? "notifications" : "notifications-outline"} size={22} />
           {notificacoesNaoLidas > 0 ? (
             <View style={estilos.badge}>
@@ -53,6 +62,7 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirNotificacoes, 
           ) : null}
         </TouchableOpacity>
         <TouchableOpacity
+          accessibilityHint="Abre a tela de perfil"
           accessibilityLabel="Perfil"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={onAbrirPerfil}
@@ -76,6 +86,7 @@ const estilos = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },
+  esquerda: { flexDirection: "row", alignItems: "center", gap: 4, marginLeft: -10 },
   marca: { flexDirection: "row", alignItems: "baseline" },
   marcaCode: { color: cores.texto, fontSize: 20, fontWeight: "800" },
   marcaRyse: { color: cores.destaque, fontSize: 20, fontWeight: "800" },
