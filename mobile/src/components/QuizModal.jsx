@@ -78,7 +78,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         onSessionExpired?.();
         return;
       }
-      setErro(err.message || "Nao foi possivel enviar a avaliacao agora.");
+      setErro(err.message || "Não foi possível enviar a avaliação agora.");
     } finally {
       setEnviando(false);
     }
@@ -181,7 +181,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         onSessionExpired?.();
         return;
       }
-      setErro(err.message || "Nao foi possivel carregar as questoes agora.");
+      setErro(err.message || "Não foi possível carregar as questões agora.");
       setFase("confirmar");
     }
   }
@@ -205,7 +205,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   function enviarManual() {
     const pendente = questoes.find((questao) => !questaoRespondida(questao));
     if (pendente) {
-      setErro(`Responda a questao ${pendente.ordem} antes de enviar.`);
+      setErro(`Responda a questão ${pendente.ordem} antes de enviar.`);
       return;
     }
     enviar(false);
@@ -238,7 +238,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         <View style={[estilos.cabecalho, { paddingTop: insets.top + 16 }]}>
           <Text numberOfLines={1} style={estilos.titulo}>{avaliacao.titulo}</Text>
           <TouchableOpacity
-            accessibilityLabel="Fechar avaliacao"
+            accessibilityLabel="Fechar avaliação"
             accessibilityRole="button"
             disabled={enviando}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -253,18 +253,18 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         <ScrollView contentContainerStyle={estilos.corpo}>
           {fase === "confirmar" ? (
             <View>
-              <Text style={estilos.secaoTitulo}>Antes de comecar</Text>
+              <Text style={estilos.secaoTitulo}>Antes de começar</Text>
               <View style={estilos.resumo}>
-                <ResumoItem icone="help-circle-outline" rotulo="Questoes" valor={String(avaliacao.totalQuestoes || 0)} />
+                <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
                 <ResumoItem icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
                 {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-                  <ResumoItem icone="trophy-outline" rotulo="Nota maxima" valor={formatScore(avaliacao.notaMaxima)} />
+                  <ResumoItem icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
                 ) : null}
                 <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
               </View>
               <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
               {tentativasEsgotadas ? (
-                <Text style={estilos.tentativasEsgotadasTexto}>Voce ja utilizou todas as tentativas permitidas para esta avaliacao.</Text>
+                <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
               ) : (
                 <Botao onPress={iniciar} variante="primario">Iniciar</Botao>
               )}
@@ -276,7 +276,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
           {fase === "execucao" && questaoAtual ? (
             <View>
               <View style={estilos.passos}>
-                <Text style={estilos.contador}>Questao {indiceAtual + 1} de {questoes.length}</Text>
+                <Text style={estilos.contador}>Questão {indiceAtual + 1} de {questoes.length}</Text>
                 {tempoRestante !== null ? (
                   <View style={estilos.cronometroLinha}>
                     <Ionicons color={tempoRestante <= 60 ? cores.erro : cores.texto} name="time-outline" size={16} />
@@ -372,11 +372,11 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
                 {ehUltimaQuestao ? (
                   <Botao carregando={enviando} onPress={enviarManual} variante="primario">
-                    Enviar avaliacao
+                    Enviar avaliação
                   </Botao>
                 ) : (
                   <Botao disabled={enviando} onPress={() => setIndiceAtual((atual) => atual + 1)} variante="primario">
-                    Proxima questao
+                    Próxima questão
                   </Botao>
                 )}
               </View>
@@ -393,11 +393,11 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                 />
               </View>
 
-              <Text style={estilos.resultadoTitulo}>{corrigida ? "Avaliacao corrigida" : "Respostas enviadas"}</Text>
+              <Text style={estilos.resultadoTitulo}>{corrigida ? "Avaliação corrigida" : "Respostas enviadas"}</Text>
               <Text style={estilos.resultadoDescricao}>
                 {corrigida
-                  ? "A correcao automatica foi concluida e sua nota ja esta disponivel abaixo."
-                  : "Suas respostas foram registradas. Questoes dissertativas aguardam correcao do professor."}
+                  ? "A correção automática foi concluída e sua nota já está disponível abaixo."
+                  : "Suas respostas foram registradas. Questões dissertativas aguardam correção do professor."}
               </Text>
               <Text style={estilos.resultadoPorcentagem}>{formatPercent(porcentagem)}</Text>
               <View style={estilos.resultadoBarraFundo}>
@@ -418,7 +418,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
               {podeRefazer ? (
                 <Botao onPress={refazer} style={estilos.resultadoBotaoRefazer} variante="primario">
-                  Refazer avaliacao
+                  Refazer avaliação
                 </Botao>
               ) : null}
               <Botao onPress={onFechar} variante={podeRefazer ? "secundario" : "primario"}>

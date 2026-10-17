@@ -6,13 +6,14 @@ import { cores, espacamentos, raios } from "../lib/theme.js";
 /* Banner com gradiente roxo + chip de icone, extraido do banner de
    Certificados (troféu) pra virar um padrao visual reutilizavel — usado tanto
    em Certificados quanto no seletor de curso de Conteudos. Vira tocavel
-   quando `onPress` e passado. */
+   quando `onPress` e passado. Gradiente deliberadamente sutil (2 tons perto
+   da cor de marca, baixa opacidade) — a versao anterior usava 3 paradas de
+   roxo saturado que destoava do resto do app, mais escuro/opaco demais. */
 export default function BannerGradiente({ accessibilityLabel, accessibilityRole, children, estiloContainer, icone, onPress }) {
   const conteudo = (
     <LinearGradient
-      colors={["rgba(55, 10, 130, 0.88)", "rgba(123, 47, 247, 0.70)", "rgba(168, 85, 247, 0.52)"]}
+      colors={["rgba(123, 47, 247, 0.5)", "rgba(123, 47, 247, 0.28)"]}
       end={{ x: 1, y: 1 }}
-      locations={[0, 0.55, 1]}
       start={{ x: 0, y: 0 }}
       style={[estilos.container, estiloContainer]}
     >

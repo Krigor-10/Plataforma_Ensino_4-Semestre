@@ -42,14 +42,20 @@ describe("formatPercent", () => {
 });
 
 describe("formatGrade / formatScore", () => {
-  it("formata com uma casa decimal", () => {
-    expect(formatGrade(8)).toBe("8.0");
-    expect(formatScore(7.25)).toBe("7.3");
+  it("formata com uma casa decimal e virgula pt-BR", () => {
+    expect(formatGrade(8)).toBe("8,0");
+    expect(formatScore(7.25)).toBe("7,3");
   });
 
-  it("trata valores ausentes como zero", () => {
-    expect(formatGrade(undefined)).toBe("0.0");
-    expect(formatScore(null)).toBe("0.0");
+  it("formatGrade trata valor ausente/zero como traco, nao '0,0'", () => {
+    expect(formatGrade(undefined)).toBe("-");
+    expect(formatGrade(null)).toBe("-");
+    expect(formatGrade(0)).toBe("-");
+  });
+
+  it("formatScore mantem zero real como '0,0' (resultado ja confirmado)", () => {
+    expect(formatScore(null)).toBe("0,0");
+    expect(formatScore(0)).toBe("0,0");
   });
 });
 
@@ -87,7 +93,7 @@ describe("normalizeContentType", () => {
   it("mapeia os tipos conhecidos", () => {
     expect(normalizeContentType(1)).toBe("Texto");
     expect(normalizeContentType(2)).toBe("PDF");
-    expect(normalizeContentType(3)).toBe("Video");
+    expect(normalizeContentType(3)).toBe("Vídeo");
     expect(normalizeContentType(4)).toBe("Link");
     expect(normalizeContentType(5)).toBe("Imagem");
   });
@@ -99,13 +105,13 @@ describe("normalizeContentType", () => {
 
 describe("normalizeProgressStatus", () => {
   it("mapeia os status conhecidos", () => {
-    expect(normalizeProgressStatus(1)).toBe("Nao iniciado");
+    expect(normalizeProgressStatus(1)).toBe("Não iniciado");
     expect(normalizeProgressStatus(2)).toBe("Em andamento");
-    expect(normalizeProgressStatus(3)).toBe("Concluido");
+    expect(normalizeProgressStatus(3)).toBe("Concluído");
   });
 
-  it("cai em Nao iniciado quando o valor e vazio", () => {
-    expect(normalizeProgressStatus(null)).toBe("Nao iniciado");
+  it("cai em Não iniciado quando o valor e vazio", () => {
+    expect(normalizeProgressStatus(null)).toBe("Não iniciado");
   });
 });
 
@@ -113,13 +119,13 @@ describe("normalizeEvaluationType", () => {
   it("mapeia os tipos conhecidos", () => {
     expect(normalizeEvaluationType(1)).toBe("Quiz");
     expect(normalizeEvaluationType(2)).toBe("Prova");
-    expect(normalizeEvaluationType(3)).toBe("Exercicio");
+    expect(normalizeEvaluationType(3)).toBe("Exercício");
   });
 });
 
 describe("normalizeQuestionType", () => {
   it("mapeia os tipos conhecidos, incluindo dissertativa", () => {
-    expect(normalizeQuestionType(1)).toBe("Multipla escolha");
+    expect(normalizeQuestionType(1)).toBe("Múltipla escolha");
     expect(normalizeQuestionType(2)).toBe("Verdadeiro/Falso");
     expect(normalizeQuestionType(3)).toBe("Dissertativa");
   });

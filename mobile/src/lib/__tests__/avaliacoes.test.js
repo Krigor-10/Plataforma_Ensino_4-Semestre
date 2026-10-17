@@ -24,12 +24,12 @@ describe("obterDisponibilidadeAvaliacao", () => {
 
   it("bloqueia quando nao ha questoes publicadas", () => {
     const resultado = obterDisponibilidadeAvaliacao({ ...base, totalQuestoes: 0 });
-    expect(resultado).toMatchObject({ podeRealizar: false, label: "Sem questoes" });
+    expect(resultado).toMatchObject({ podeRealizar: false, label: "Sem questões" });
   });
 
-  it("bloqueia quando as tentativas se esgotaram", () => {
+  it("bloqueia quando as tentativas se esgotaram, com tom neutro (sem criterio de aprovacao pra julgar sucesso)", () => {
     const resultado = obterDisponibilidadeAvaliacao({ ...base, tentativasRestantes: 0 });
-    expect(resultado).toMatchObject({ podeRealizar: false, label: "Concluida" });
+    expect(resultado).toMatchObject({ podeRealizar: false, label: "Concluída", tone: "neutro" });
   });
 
   it("bloqueia quando a avaliacao ainda nao abriu", () => {
@@ -46,6 +46,6 @@ describe("obterDisponibilidadeAvaliacao", () => {
 
   it("libera quando nada impede", () => {
     const resultado = obterDisponibilidadeAvaliacao(base);
-    expect(resultado).toMatchObject({ podeRealizar: true, label: "Disponivel" });
+    expect(resultado).toMatchObject({ podeRealizar: true, label: "Disponível" });
   });
 });

@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import CapaCurso from "../../components/CapaCurso.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
-import { cores, espacamentos, raios } from "../../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 /* Progresso do Aluno segue o mesmo contexto Curso->conteudo ja usado em
@@ -48,7 +48,7 @@ export default function ProgressoScreen({ snapshot }) {
   if (progressosPorCurso.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Assim que sua matricula for aprovada e voce comecar a trilha, seu progresso aparecera aqui.</Text>
+        <Text style={estilos.vazio}>Assim que sua matrícula for aprovada e você começar a trilha, seu progresso aparecerá aqui.</Text>
       </View>
     );
   }
@@ -100,14 +100,23 @@ export default function ProgressoScreen({ snapshot }) {
 
           <View style={estilos.linhaMetricas}>
             <Metrica rotulo="Progresso" valor={formatPercent(progresso?.percentualConclusao)} />
-            <Metrica rotulo="Modulos" valor={`${progresso?.modulosConcluidos || 0}/${progresso?.totalModulos || 0}`} />
-            <Metrica rotulo="Media" valor={formatGrade(progresso?.mediaCurso)} />
+            <Metrica rotulo="Módulos" valor={`${progresso?.modulosConcluidos || 0}/${progresso?.totalModulos || 0}`} />
+            <Metrica
+              rotulo="Média"
+              valor={Number(progresso?.mediaCurso) > 0 ? `${formatGrade(progresso.mediaCurso)} / 10` : "-"}
+            />
           </View>
+          {/* O percentual de "Progresso" soma conteudos+quizzes (ver
+              ProgressoAlunoService.RecalcularProgressoCursoAsync no backend) —
+              provas/exercicios NAO entram aqui, so entram na Media. Por isso
+              100% de progresso pode coexistir com uma avaliacao (prova) ainda
+              pendente, de proposito: sao dois indicadores diferentes. */}
+          <Text style={estilos.legendaMetricas}>Progresso considera conteúdos e quizzes. Provas e exercícios contam na média, não no percentual.</Text>
         </View>
 
         <View style={estilos.modulosLista}>
           {!grupo || grupo.modulos.length === 0 ? (
-            <Text style={estilos.vazioModulo}>Nenhum modulo publicado neste curso ainda.</Text>
+            <Text style={estilos.vazioModulo}>Nenhum módulo publicado neste curso ainda.</Text>
           ) : (
             grupo.modulos.map((modulo) => {
               const totalConteudos = modulo.conteudos.length;
@@ -115,7 +124,7 @@ export default function ProgressoScreen({ snapshot }) {
 
               return (
                 <View
-                  accessibilityLabel={`${modulo.titulo}. ${moduloConcluido ? "Modulo concluido. " : ""}${modulo.concluidos} de ${totalConteudos} conteudos concluidos.`}
+                  accessibilityLabel={`${modulo.titulo}. ${moduloConcluido ? "Módulo concluído. " : ""}${modulo.concluidos} de ${totalConteudos} conteúdos concluídos.`}
                   accessible
                   key={modulo.id}
                   style={estilos.modulo}
@@ -167,6 +176,7 @@ const estilos = StyleSheet.create({
   metrica: { alignItems: "center", flex: 1 },
   metricaValor: { color: cores.texto, fontWeight: "700", fontSize: 15 },
   metricaRotulo: { color: cores.textoSuave, fontSize: 11, marginTop: 2 },
+  legendaMetricas: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md, lineHeight: 16 },
   modulosLista: { gap: 8 },
   modulo: {
     flexDirection: "row",

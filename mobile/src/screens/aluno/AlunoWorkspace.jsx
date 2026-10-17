@@ -22,6 +22,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
   const [erro, setErro] = useState("");
   const [notificacoesVersao, setNotificacoesVersao] = useState(0);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [rotaAtivaChave, setRotaAtivaChave] = useState(null);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   // Guarda o `navigation` do AlunoStack recebido via screenOptions (o mesmo
   // objeto que cada tela ja recebe) pra poder navegar a partir do menu
@@ -66,6 +67,14 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
 
   function navegarDoMenu(rota) {
     setMenuAberto(false);
+    // Matriculas e uma aba dentro do AlunoTabsNavigator (nested), nao uma
+    // Screen direta do AlunoStack como Certificados/Perfil/Notificacoes —
+    // precisa do shorthand {screen} pra navegacao descer um nivel.
+    if (rota === ROUTES.MATRICULAS) {
+      navigationRef.current?.navigate(ROUTES.ALUNO_TABS, { screen: rota });
+      return;
+    }
+
     navigationRef.current?.navigate(rota);
   }
 
@@ -85,6 +94,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
                 navigation={navigation}
                 notificacoesVersao={notificacoesVersao}
                 onAbrirMenu={() => setMenuAberto(true)}
+                onRotaAtivaMudou={setRotaAtivaChave}
                 route={route}
                 usuario={usuario}
               />
@@ -139,6 +149,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
         onFechar={() => setMenuAberto(false)}
         onNavegar={navegarDoMenu}
         onSolicitarSair={solicitarSairDoMenu}
+        rotaAtiva={rotaAtivaChave}
         usuario={usuario}
       />
 

@@ -70,7 +70,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     }
 
     if (onlyDigits(dados.cep).length !== 8) {
-      setMensagemPerfil({ tipo: "erro", texto: "Informe um CEP com 8 digitos." });
+      setMensagemPerfil({ tipo: "erro", texto: "Informe um CEP com 8 dígitos." });
       return;
     }
 
@@ -105,7 +105,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         onSessionExpired?.();
         return;
       }
-      setMensagemPerfil({ tipo: "erro", texto: err.message || "Nao foi possivel salvar seu perfil agora." });
+      setMensagemPerfil({ tipo: "erro", texto: err.message || "Não foi possível salvar seu perfil agora." });
     } finally {
       setSalvandoPerfil(false);
     }
@@ -118,7 +118,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     }
 
     if (senha.novaSenha !== senha.confirmarNovaSenha) {
-      setMensagemSenha({ tipo: "erro", texto: "As senhas nao coincidem." });
+      setMensagemSenha({ tipo: "erro", texto: "As senhas não coincidem." });
       return;
     }
 
@@ -138,7 +138,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         onSessionExpired?.();
         return;
       }
-      setMensagemSenha({ tipo: "erro", texto: err.message || "Nao foi possivel atualizar sua senha agora." });
+      setMensagemSenha({ tipo: "erro", texto: err.message || "Não foi possível atualizar sua senha agora." });
     } finally {
       setSalvandoSenha(false);
     }

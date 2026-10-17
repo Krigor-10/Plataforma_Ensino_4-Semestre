@@ -13,11 +13,11 @@ import { cores } from "../../lib/theme.js";
 const Tab = createBottomTabNavigator();
 
 const ABAS = [
-  { chave: ROUTES.INICIO, icone: "home-outline", iconeAtivo: "home", rotulo: "Inicio" },
-  { chave: ROUTES.CONTEUDOS, icone: "book-outline", iconeAtivo: "book", rotulo: "Conteudos" },
-  { chave: ROUTES.AVALIACOES, icone: "clipboard-outline", iconeAtivo: "clipboard", rotulo: "Avaliacoes" },
+  { chave: ROUTES.INICIO, icone: "home-outline", iconeAtivo: "home", rotulo: "Início" },
+  { chave: ROUTES.CONTEUDOS, icone: "book-outline", iconeAtivo: "book", rotulo: "Conteúdos" },
+  { chave: ROUTES.AVALIACOES, icone: "clipboard-outline", iconeAtivo: "clipboard", rotulo: "Avaliações" },
   { chave: ROUTES.PROGRESSO, icone: "bar-chart-outline", iconeAtivo: "bar-chart", rotulo: "Progresso" },
-  { chave: ROUTES.MATRICULAS, icone: "school-outline", iconeAtivo: "school", rotulo: "Matriculas" }
+  { chave: ROUTES.MATRICULAS, icone: "school-outline", iconeAtivo: "school", rotulo: "Matrículas" }
 ];
 const ABAS_POR_CHAVE = Object.fromEntries(ABAS.map((aba) => [aba.chave, aba]));
 
@@ -87,7 +87,15 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
         {() => <ProgressoScreen snapshot={snapshot} />}
       </Tab.Screen>
       <Tab.Screen name={ROUTES.MATRICULAS}>
-        {() => <MatriculasScreen onRecarregar={onRecarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} usuario={usuario} />}
+        {({ navigation }) => (
+          <MatriculasScreen
+            navigation={navigation}
+            onRecarregar={onRecarregar}
+            onSessionExpired={onSessionExpired}
+            snapshot={snapshot}
+            usuario={usuario}
+          />
+        )}
       </Tab.Screen>
     </Tab.Navigator>
   );

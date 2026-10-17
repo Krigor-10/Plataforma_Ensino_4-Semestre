@@ -9,7 +9,15 @@ import { cores, espacamentos } from "../lib/theme.js";
    icone da aba ativa no menu inferior) pra reforcar contexto sem virar
    outro titulo grande. accessibilityRole="header" avisa leitores de tela
    que este texto identifica a secao atual; o icone e aria-hidden porque o
-   texto sozinho ja transmite a mesma informacao. */
+   texto sozinho ja transmite a mesma informacao.
+
+   backgroundColor precisa ser explicito (nao herdar transparencia): este
+   componente e renderizado dentro do `header` customizado do
+   AlunoStack.Navigator (ver AlunoHeaderBar.jsx) — no Android nativo, a area
+   do header do native-stack mantem um fundo claro padrao do Material Design
+   por baixo de qualquer conteudo que nao cubra 100% com cor propria, mesmo
+   com header totalmente customizado. Sem isso, a faixa aparecia clara/fora
+   do tema escuro mesmo com o texto certo por cima. */
 export default function ScreenIndicator({ icone, titulo }) {
   return (
     <View style={estilos.container}>
@@ -26,6 +34,7 @@ const estilos = StyleSheet.create({
     gap: espacamentos.xs,
     paddingHorizontal: espacamentos.xl,
     paddingVertical: espacamentos.sm,
+    backgroundColor: cores.fundo,
     borderBottomWidth: 1,
     borderBottomColor: cores.bordaCartao
   },

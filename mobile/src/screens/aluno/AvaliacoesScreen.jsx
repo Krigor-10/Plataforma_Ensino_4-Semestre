@@ -11,6 +11,24 @@ import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 const TIPO_QUIZ = 1;
 
+// Icone de categoria por tipo de avaliacao — mesmo "help-circle-outline" que
+// ConteudosScreen.jsx ja usa pra quiz, pra nao inventar um segundo simbolo
+// pro mesmo conceito. Provas/trabalhos (qualquer tipo != quiz) usam o icone
+// de prancheta, igual ao que BuscaScreen.jsx ja usa pra categoria "Avaliações".
+const ICONE_CATEGORIA_AVALIACAO = { [TIPO_QUIZ]: "help-circle-outline" };
+const ICONE_CATEGORIA_PADRAO = "clipboard-outline";
+
+// obterDisponibilidadeAvaliacao() ja calcula tone+label pros estados
+// Agendada/Encerrada/Sem questoes, mas o card so usava isso no
+// accessibilityLabel — ninguem enxergava o estado, so quem usa leitor de
+// tela. Esse mapa da uma cor+icone visivel pra cada tone, no mesmo padrao
+// chave->{cor,icone} de statusVisual.js (matricula). Tone "neutro"
+// (tentativas esgotadas) e tratado a parte, ver variavel `concluida` abaixo.
+const TONE_VISUAL = {
+  aviso: { cor: cores.aviso, icone: "time-outline" },
+  erro: { cor: cores.erro, icone: "lock-closed-outline" }
+};
+
 /* Avaliacoes agora segue o mesmo contexto Curso->conteudo ja usado em
    Conteudos/Progresso: primeiro o aluno escolhe o curso (mesmo cartao
    CapaCurso+titulo da Home), so depois ve as avaliacoes daquele curso —
@@ -20,10 +38,12 @@ const TIPO_QUIZ = 1;
    segunda implementacao desnecessaria pro mesmo padrao.
 
    Cards de avaliacao continuam compactos: so identificam a avaliacao
-   (titulo + modulo) e o estado (Play se disponivel, check verde se
-   concluida — mesmo padrao de Conteudos). Detalhes (tempo, questoes, nota,
-   tentativas) ficam pro Modal de confirmacao, o QuizModal.jsx ja existente
-   (fase "confirmar"), reaproveitado sem alteracao. */
+   (titulo + modulo) e o estado (Play se disponivel, check neutro — nao
+   verde de sucesso — se concluida, ja que o sistema nao tem nota minima de
+   aprovacao em lugar nenhum pra julgar se o resultado foi satisfatorio).
+   Detalhes (tempo, questoes, nota, tentativas) ficam pro Modal de
+   confirmacao, o QuizModal.jsx ja existente (fase "confirmar"), reaproveitado
+   sem alteracao. */
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
@@ -118,7 +138,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   if (cursosMatriculados.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Voce ainda nao possui cursos com avaliacoes disponiveis.</Text>
+        <Text style={estilos.vazio}>Você ainda não possui cursos com avaliações disponíveis.</Text>
       </View>
     );
   }
@@ -127,7 +147,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     return (
       <View style={estilos.container}>
         <SeletorCurso
-          accessibilityLabelPrefix="Ver avaliacoes de"
+          accessibilityLabelPrefix="Ver avaliações de"
           itens={cursosMatriculados.map((progresso) => ({ curso: cursoPorId.get(progresso.cursoId), id: progresso.cursoId }))}
           onSelecionar={setCursoSelecionadoId}
         />
@@ -141,23 +161,23 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   return (
     <View style={estilos.container}>
       <TouchableOpacity
-        accessibilityLabel="Voltar para a selecao de cursos"
+        accessibilityLabel="Voltar para a seleção de cursos"
         onPress={() => setCursoSelecionadoId(null)}
         style={estilos.voltar}
       >
         <Ionicons color={cores.destaque} name="chevron-back" size={18} />
-        <Text style={estilos.voltarTexto}>Cursos</Text>
+        <Text style={estilos.voltarTexto}>Trocar de curso</Text>
       </TouchableOpacity>
 
       <Text numberOfLines={1} style={estilos.tituloCursoAtivo}>{tituloCursoAtivo}</Text>
 
       {avaliacoesDoCurso.length === 0 ? (
-        <Text style={estilos.vazio}>Este curso ainda nao possui avaliacoes disponiveis.</Text>
+        <Text style={estilos.vazio}>Este curso ainda não possui avaliações disponíveis.</Text>
       ) : (
         <ScrollView contentContainerStyle={estilos.corpo}>
           {avaliacoesDoCurso.map((avaliacao) => {
             const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
-            const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "sucesso";
+            const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
             const infoEmAndamento = disponibilidade.podeRealizar ? emAndamentoInfo.get(avaliacao.id) : undefined;
             const emAndamento = Boolean(infoEmAndamento);
             const tempoRestanteEmAndamento = infoEmAndamento?.prazoFinal
@@ -166,6 +186,9 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
             const contexto = avaliacao.moduloTitulo;
             const temTentativa = Number(avaliacao.tentativasRealizadas || 0) > 0;
             const mostrarNota = temTentativa && Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ && avaliacao.ultimaNota != null;
+            const iconeCategoria = ICONE_CATEGORIA_AVALIACAO[Number(avaliacao.tipoAvaliacao)] || ICONE_CATEGORIA_PADRAO;
+            const mostrarStatusPendente = !disponibilidade.podeRealizar && !concluida && !emAndamento;
+            const statusVisual = TONE_VISUAL[disponibilidade.tone] || TONE_VISUAL.aviso;
 
             return (
               <View
@@ -177,6 +200,10 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                 style={estilos.cartao}
               >
                 <View style={estilos.cartaoTopo}>
+                  <View style={estilos.cartaoIcone}>
+                    <Ionicons color={cores.destaque} name={iconeCategoria} size={20} />
+                  </View>
+
                   <View style={estilos.cartaoTextos}>
                     <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
                     <Text style={estilos.cartaoContexto}>{contexto}</Text>
@@ -194,6 +221,12 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                             : "Tempo esgotado"}
                       </Text>
                     ) : null}
+                    {mostrarStatusPendente ? (
+                      <View style={estilos.cartaoStatusLinha}>
+                        <Ionicons color={statusVisual.cor} name={statusVisual.icone} size={13} />
+                        <Text style={[estilos.cartaoStatusTexto, { color: statusVisual.cor }]}>{disponibilidade.label}</Text>
+                      </View>
+                    ) : null}
                     {temTentativa ? (
                       <Text style={estilos.cartaoMeta}>
                         {mostrarNota ? `Nota ${formatScore(avaliacao.ultimaNota)} / ${formatScore(avaliacao.notaMaxima)} · ` : ""}
@@ -204,7 +237,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
                   {disponibilidade.podeRealizar ? (
                     <TouchableOpacity
-                      accessibilityLabel={`Iniciar avaliacao ${avaliacao.titulo}`}
+                      accessibilityLabel={`Iniciar avaliação ${avaliacao.titulo}`}
                       accessibilityRole="button"
                       onPress={() => setAvaliacaoSelecionada(avaliacao)}
                       style={estilos.botaoPlay}
@@ -212,8 +245,8 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                       <Ionicons color={cores.destaque} name="play-circle" size={30} />
                     </TouchableOpacity>
                   ) : concluida ? (
-                    <View accessibilityLabel="Concluida" accessible style={estilos.iconeEstado}>
-                      <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
+                    <View accessibilityLabel="Concluída" accessible style={estilos.iconeEstado}>
+                      <Ionicons color={cores.textoSuave} name="checkmark-circle" size={22} />
                     </View>
                   ) : null}
                 </View>
@@ -260,12 +293,22 @@ const estilos = StyleSheet.create({
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.sm, gap: espacamentos.md },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.lg },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: espacamentos.sm },
+  cartaoIcone: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: cores.fundoCartaoAtivo,
+    alignItems: "center",
+    justifyContent: "center"
+  },
   cartaoTextos: { flex: 1 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   cartaoContexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
   cartaoMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "600" },
   cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "700" },
   cartaoEmAndamentoUrgente: { color: cores.erro },
+  cartaoStatusLinha: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
+  cartaoStatusTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
   botaoPlay: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   iconeEstado: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }

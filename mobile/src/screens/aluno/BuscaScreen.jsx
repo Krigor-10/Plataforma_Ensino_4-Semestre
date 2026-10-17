@@ -65,8 +65,8 @@ export default function BuscaScreen({ navigation, onVoltar, snapshot }) {
 
     return [
       { chave: "cursos", itens: cursos, titulo: "Cursos" },
-      { chave: "conteudos", itens: conteudos, titulo: "Conteudos" },
-      { chave: "avaliacoes", itens: avaliacoes, titulo: "Avaliacoes" }
+      { chave: "conteudos", itens: conteudos, titulo: "Conteúdos" },
+      { chave: "avaliacoes", itens: avaliacoes, titulo: "Avaliações" }
     ].filter((grupo) => grupo.itens.length > 0);
   }, [cursoPorId, navigation, snapshot.avaliacoes, snapshot.conteudos, snapshot.cursos, termoNormalizado]);
 
@@ -87,11 +87,11 @@ export default function BuscaScreen({ navigation, onVoltar, snapshot }) {
         <View style={estilos.campoBusca}>
           <Ionicons color={cores.textoSuave} name="search" size={18} />
           <TextInput
-            accessibilityHint="Digite pra filtrar cursos, conteudos e avaliacoes"
-            accessibilityLabel="Buscar cursos, conteudos, avaliacoes"
+            accessibilityHint="Digite pra filtrar cursos, conteúdos e avaliações"
+            accessibilityLabel="Buscar cursos, conteúdos, avaliações"
             autoFocus
             onChangeText={setTermo}
-            placeholder="Buscar cursos, conteudos, avaliacoes..."
+            placeholder="Buscar cursos, conteúdos, avaliações..."
             placeholderTextColor={cores.textoSuave}
             returnKeyType="search"
             style={estilos.entrada}
@@ -113,7 +113,7 @@ export default function BuscaScreen({ navigation, onVoltar, snapshot }) {
       {!termoNormalizado ? (
         <View style={estilos.estadoVazio}>
           <Ionicons color={cores.textoSuave} name="search-outline" size={32} />
-          <Text style={estilos.estadoVazioTexto}>Digite pra buscar nos seus cursos, conteudos e avaliacoes.</Text>
+          <Text style={estilos.estadoVazioTexto}>Digite pra buscar nos seus cursos, conteúdos e avaliações.</Text>
         </View>
       ) : totalResultados === 0 ? (
         <View style={estilos.estadoVazio}>

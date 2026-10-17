@@ -35,7 +35,7 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
           onSessionExpired?.();
           return;
         }
-        setErro(err.message || "Nao foi possivel carregar suas notificacoes agora.");
+        setErro(err.message || "Não foi possível carregar suas notificações agora.");
       })
       .finally(() => {
         if (ativo) {
@@ -92,14 +92,14 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
         ) : null}
       </View>
 
-      <Text style={estilos.titulo}>Notificacoes</Text>
+      <Text style={estilos.titulo}>Notificações</Text>
 
       {carregando ? (
         <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
       ) : erro ? (
         <Text style={estilos.erro}>{erro}</Text>
       ) : notificacoes.length === 0 ? (
-        <Text style={estilos.vazio}>Nenhuma notificacao por aqui.</Text>
+        <Text style={estilos.vazio}>Nenhuma notificação por aqui.</Text>
       ) : (
         <FlatList
           contentContainerStyle={estilos.corpo}
@@ -115,7 +115,7 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
 function ItemNotificacao({ notificacao, onPress }) {
   return (
     <TouchableOpacity
-      accessibilityLabel={`${notificacao.lida ? "Notificacao lida" : "Notificacao nova"}: ${notificacao.titulo}. ${notificacao.mensagem}`}
+      accessibilityLabel={`${notificacao.lida ? "Notificação lida" : "Notificação nova"}: ${notificacao.titulo}. ${notificacao.mensagem}`}
       accessibilityRole="button"
       onPress={onPress}
       style={[estilos.cartao, !notificacao.lida ? estilos.cartaoNaoLido : null]}

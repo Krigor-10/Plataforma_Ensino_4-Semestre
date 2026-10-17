@@ -1,18 +1,20 @@
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
+import { useEffect } from "react";
 import { View } from "react-native";
 import HeaderGlobal from "./HeaderGlobal.jsx";
 import ScreenIndicator from "./ScreenIndicator.jsx";
+import { cores } from "../lib/theme.js";
 import { ROUTES } from "../lib/routes.js";
 
 const TELAS_INFO = {
-  [ROUTES.INICIO]: { icone: "home", titulo: "Inicio" },
-  [ROUTES.CONTEUDOS]: { icone: "book", titulo: "Conteudos" },
-  [ROUTES.AVALIACOES]: { icone: "clipboard", titulo: "Avaliacoes" },
+  [ROUTES.INICIO]: { icone: "home", titulo: "Início" },
+  [ROUTES.CONTEUDOS]: { icone: "book", titulo: "Conteúdos" },
+  [ROUTES.AVALIACOES]: { icone: "clipboard", titulo: "Avaliações" },
   [ROUTES.PROGRESSO]: { icone: "bar-chart", titulo: "Progresso" },
-  [ROUTES.MATRICULAS]: { icone: "school", titulo: "Matriculas" },
+  [ROUTES.MATRICULAS]: { icone: "school", titulo: "Matrículas" },
   [ROUTES.CERTIFICADOS]: { icone: "ribbon", titulo: "Certificados" },
   [ROUTES.PERFIL]: { icone: "person", titulo: "Meu perfil" },
-  [ROUTES.NOTIFICACOES]: { icone: "notifications", titulo: "Notificacoes" },
+  [ROUTES.NOTIFICACOES]: { icone: "notifications", titulo: "Notificações" },
   [ROUTES.BUSCA]: { icone: "search", titulo: "Buscar" }
 };
 
@@ -22,14 +24,22 @@ const TELAS_INFO = {
    aba focada dentro dele; nas demais rotas (Perfil/Notificacoes/Certificados/
    Busca) route.name ja e o suficiente. onAbrirMenu vem de AlunoWorkspace.jsx
    (o menu lateral fica fora da arvore do Navigator, precisa do estado la). */
-export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrirMenu, route, usuario }) {
+export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrirMenu, onRotaAtivaMudou, route, usuario }) {
   const nomeAtivo = route.name === ROUTES.ALUNO_TABS
     ? getFocusedRouteNameFromRoute(route) ?? ROUTES.INICIO
     : route.name;
   const info = TELAS_INFO[nomeAtivo];
 
+  // Reporta a rota realmente focada pro AlunoWorkspace.jsx repassar ao
+  // MenuLateral.jsx (fora da arvore do Navigator, sem acesso direto a esse
+  // calculo) — mesmo nome que ja usamos aqui pra montar o ScreenIndicator,
+  // sem duplicar a logica de foco em outro lugar.
+  useEffect(() => {
+    onRotaAtivaMudou?.(nomeAtivo);
+  }, [nomeAtivo, onRotaAtivaMudou]);
+
   return (
-    <View>
+    <View style={{ backgroundColor: cores.fundo }}>
       <HeaderGlobal
         notificacoesVersao={notificacoesVersao}
         onAbrirBusca={() => navigation.navigate(ROUTES.BUSCA)}

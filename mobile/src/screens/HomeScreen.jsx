@@ -24,7 +24,7 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
 
       {progressosPorCurso.length === 0 ? (
         <Text style={styles.vazio}>
-          Voce ainda nao esta matriculado em nenhum curso. Va em Matriculas para explorar o catalogo.
+          Você ainda não está matriculado em nenhum curso. Vá em Matrículas para explorar o catálogo.
         </Text>
       ) : (
         <ScrollView contentContainerStyle={styles.listaConteudo} style={styles.lista}>
@@ -36,7 +36,7 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
 
             return (
               <TouchableOpacity
-                accessibilityLabel={`Ver conteudos de ${tituloCurso}, ${formatPercent(percentual)} concluido`}
+                accessibilityLabel={`Ver conteúdos de ${tituloCurso}, ${formatPercent(percentual)} concluído`}
                 accessibilityRole="button"
                 disabled={!onAbrirAba}
                 key={progresso.id}
@@ -50,7 +50,7 @@ export default function HomeScreen({ onAbrirAba, snapshot }) {
                     <View style={[styles.barraPreenchida, { width: `${percentual}%` }]} />
                   </View>
                   <Text style={styles.cartaoMeta}>
-                    {formatPercent(percentual)} concluido - {progresso.modulosConcluidos}/{progresso.totalModulos} modulo(s)
+                    {formatPercent(percentual)} concluído - {progresso.modulosConcluidos}/{progresso.totalModulos} módulo(s)
                   </Text>
                 </View>
                 <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />

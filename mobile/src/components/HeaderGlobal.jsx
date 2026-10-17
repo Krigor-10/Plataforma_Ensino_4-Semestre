@@ -53,7 +53,7 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
         <TouchableOpacity accessibilityHint="Abre a busca de cursos, conteudos e avaliacoes" accessibilityLabel="Buscar" onPress={onAbrirBusca} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name="search-outline" size={22} />
         </TouchableOpacity>
-        <TouchableOpacity accessibilityHint="Abre a lista de notificacoes" accessibilityLabel="Notificacoes" onPress={onAbrirNotificacoes} style={estilos.botao}>
+        <TouchableOpacity accessibilityHint="Abre a lista de notificações" accessibilityLabel="Notificações" onPress={onAbrirNotificacoes} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name={notificacoesNaoLidas > 0 ? "notifications" : "notifications-outline"} size={22} />
           {notificacoesNaoLidas > 0 ? (
             <View style={estilos.badge}>

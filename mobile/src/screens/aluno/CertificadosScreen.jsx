@@ -78,7 +78,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
         onSessionExpired?.();
         return;
       }
-      setErroEmissao(err.message || "Nao foi possivel emitir o certificado agora.");
+      setErroEmissao(err.message || "Não foi possível emitir o certificado agora.");
     } finally {
       setEmitindo(false);
     }
@@ -106,7 +106,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   if (certificados.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Assim que uma matricula for aprovada e o curso concluido, o certificado aparece aqui.</Text>
+        <Text style={estilos.vazio}>Assim que uma matrícula for aprovada e o curso concluído, o certificado aparece aqui.</Text>
       </View>
     );
   }
@@ -130,14 +130,25 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
       <ScrollView contentContainerStyle={estilos.corpo}>
         {certificados.map((certificado) => (
           <View key={certificado.matriculaId} style={estilos.cartao}>
-            <Text style={estilos.cartaoTitulo}>{certificado.cursoTitulo}</Text>
-            {certificado.turmaNome ? <Text style={estilos.cartaoMeta}>{certificado.turmaNome}</Text> : null}
+            <View style={estilos.cartaoTopo}>
+              <View style={estilos.cartaoIcone}>
+                <Ionicons
+                  color={certificado.desbloqueado ? cores.destaque : cores.bloqueado}
+                  name="ribbon-outline"
+                  size={20}
+                />
+              </View>
+              <View style={estilos.cartaoTextos}>
+                <Text style={estilos.cartaoTitulo}>{certificado.cursoTitulo}</Text>
+                {certificado.turmaNome ? <Text style={estilos.cartaoMeta}>{certificado.turmaNome}</Text> : null}
 
-            {certificado.desbloqueado ? (
-              <Text style={estilos.notaTexto}>Nota {formatGrade(certificado.nota)} / 10</Text>
-            ) : (
-              <Text style={estilos.percentualTexto}>{Math.round(certificado.percentual)}% concluido</Text>
-            )}
+                {certificado.desbloqueado ? (
+                  <Text style={estilos.notaTexto}>Nota {formatGrade(certificado.nota)} / 10</Text>
+                ) : (
+                  <Text style={estilos.percentualTexto}>{Math.round(certificado.percentual)}% concluído</Text>
+                )}
+              </View>
+            </View>
 
             <View style={estilos.cartaoAcoes}>
               <TouchableOpacity
@@ -186,18 +197,18 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
               <Toast mensagem={erroEmissao} onFechar={() => setErroEmissao("")} tipo="erro" />
             ) : certificadoEmitido ? (
               <View style={estilos.certificado}>
-                <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSAO</Text>
+                <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSÃO</Text>
                 <Text style={estilos.certificadoIntro}>Outorgado a</Text>
                 <Text style={estilos.certificadoNome}>{certificadoEmitido.alunoNome}</Text>
                 <Text style={estilos.certificadoTexto}>
-                  Por ter concluido com aproveitamento o curso de{" "}
+                  Por ter concluído com aproveitamento o curso de{" "}
                   <Text style={estilos.certificadoDestaque}>{certificadoEmitido.cursoTitulo}</Text>
                   {certificadoEmitido.turmaNome ? ` na turma ${certificadoEmitido.turmaNome}` : ""}, com nota final{" "}
                   {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
                 </Text>
                 <Text style={estilos.certificadoData}>{formatDate(certificadoEmitido.emitidoEm)}</Text>
                 <Text style={estilos.certificadoEscola}>Oferecido pela escola: CodeRyse Academy</Text>
-                <Text style={estilos.certificadoVerificacao}>Codigo de verificacao: {certificadoEmitido.codigoVerificacao}</Text>
+                <Text style={estilos.certificadoVerificacao}>Código de verificação: {certificadoEmitido.codigoVerificacao}</Text>
               </View>
             ) : null}
           </ScrollView>
@@ -222,6 +233,16 @@ const estilos = StyleSheet.create({
   resumoRotulo: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.xs, gap: espacamentos.md },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, padding: espacamentos.lg },
+  cartaoTopo: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.sm },
+  cartaoIcone: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: cores.fundoCartaoAtivo,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  cartaoTextos: { flex: 1 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15 },
   cartaoMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
   notaTexto: { color: cores.sucesso, fontWeight: "700", marginTop: 8 },

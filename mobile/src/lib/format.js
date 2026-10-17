@@ -16,8 +16,13 @@ export function formatPercent(value) {
   return `${Math.round(Number(value) || 0)}%`;
 }
 
+// Mesmo padrao do Web (frontend/src/lib/format.js): virgula decimal pt-BR e
+// "-" em vez de "0,0" quando o valor e ausente/zero, pra nao sugerir uma nota
+// que nunca foi lancada. Usada pra nota final/media — valores onde zero quase
+// sempre significa "ainda sem nota", nao "o aluno tirou zero".
 export function formatGrade(value) {
-  return Number(value ?? 0).toFixed(1);
+  const numero = Number(value || 0);
+  return numero > 0 ? numero.toFixed(1).replace(".", ",") : "-";
 }
 
 export function formatMoney(value) {
@@ -27,8 +32,16 @@ export function formatMoney(value) {
   }).format(Number(value || 0));
 }
 
+// Mesma formatacao de formatGrade, mas sem o fallback "-": usada pra notas
+// onde zero e um resultado real e ja confirmado (nota obtida numa tentativa
+// ja enviada, nota maxima de uma questao), nao um valor ainda nao lancado.
 export function formatScore(value) {
-  return Number(value ?? 0).toFixed(1);
+  return Number(value || 0).toFixed(1).replace(".", ",");
+}
+
+export function formatQuestoes(total) {
+  const quantidade = Number(total) || 0;
+  return `${quantidade} questão${quantidade === 1 ? "" : "ões"}`;
 }
 
 export function formatarTempoRestante(segundosRestantes) {
@@ -43,23 +56,23 @@ export function normalizeStatus(status) {
 }
 
 export function normalizeContentType(type) {
-  const labels = { 1: "Texto", 2: "PDF", 3: "Video", 4: "Link", 5: "Imagem" };
+  const labels = { 1: "Texto", 2: "PDF", 3: "Vídeo", 4: "Link", 5: "Imagem" };
   return typeof type === "number" ? labels[type] || "Desconhecido" : type || "Desconhecido";
 }
 
 export function normalizeProgressStatus(status) {
-  const labels = { 1: "Nao iniciado", 2: "Em andamento", 3: "Concluido" };
-  return typeof status === "number" ? labels[status] || "Desconhecido" : status || "Nao iniciado";
+  const labels = { 1: "Não iniciado", 2: "Em andamento", 3: "Concluído" };
+  return typeof status === "number" ? labels[status] || "Desconhecido" : status || "Não iniciado";
 }
 
 export function normalizeEvaluationType(type) {
-  const labels = { 1: "Quiz", 2: "Prova", 3: "Exercicio" };
-  return typeof type === "number" ? labels[type] || "Avaliacao" : type || "Avaliacao";
+  const labels = { 1: "Quiz", 2: "Prova", 3: "Exercício" };
+  return typeof type === "number" ? labels[type] || "Avaliação" : type || "Avaliação";
 }
 
 export function normalizeQuestionType(type) {
-  const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa", 4: "Afirmativas combinadas" };
-  return typeof type === "number" ? labels[type] || "Questao" : type || "Questao";
+  const labels = { 1: "Múltipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa", 4: "Afirmativas combinadas" };
+  return typeof type === "number" ? labels[type] || "Questão" : type || "Questão";
 }
 
 export function onlyDigits(value) {

@@ -8,19 +8,32 @@ import { ROUTES } from "../lib/routes.js";
 
 const LARGURA_MENU = Math.min(320, Dimensions.get("window").width * 0.8);
 
-const ITENS = [
-  { chave: ROUTES.CERTIFICADOS, dica: "Abre a tela de certificados", icone: "ribbon-outline", rotulo: "Certificados" },
-  { chave: ROUTES.PERFIL, dica: "Abre a tela de perfil", icone: "person-outline", rotulo: "Meu perfil" }
+const GRUPOS = [
+  {
+    titulo: "Navegação",
+    itens: [
+      { chave: ROUTES.MATRICULAS, dica: "Abre a tela de matriculas", icone: "school-outline", rotulo: "Matrículas" },
+      { chave: ROUTES.CERTIFICADOS, dica: "Abre a tela de certificados", icone: "ribbon-outline", rotulo: "Certificados" }
+    ]
+  },
+  {
+    titulo: "Conta",
+    itens: [
+      { chave: ROUTES.PERFIL, dica: "Abre a tela de perfil", icone: "person-outline", rotulo: "Meu perfil" }
+    ]
+  }
 ];
 
-/* Menu lateral (drawer) do Aluno — consolida os destinos secundarios que
-   saem da Bottom Nav (Certificados) + atalho de Perfil + Sair, sem duplicar
-   o que ja fica na barra inferior (Inicio/Conteudos/Avaliacoes/Progresso/
-   Matriculas continuam la, nao aparecem aqui). Usa o <Modal> nativo do RN
-   (mesmo padrao ja usado em QuizModal/PerfilScreen/ConteudosScreen) pra
-   ganhar o onRequestClose do botao fisico de voltar do Android de graca;
-   o slide lateral e so um Animated.View por cima, nao e o Modal que anima. */
-export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSair, usuario }) {
+/* Menu lateral (drawer) do Aluno — agrupa Navegacao (Matriculas, que tambem
+   continua como aba na Bottom Nav; e Certificados, que so existe aqui) e
+   Conta (Meu perfil + Sair). Usa o <Modal> nativo do RN (mesmo padrao ja
+   usado em QuizModal/PerfilScreen/ConteudosScreen) pra ganhar o
+   onRequestClose do botao fisico de voltar do Android de graca; o slide
+   lateral e so um Animated.View por cima, nao e o Modal que anima. O
+   painel precisa vir ANTES do overlay `fundo` no JSX: `raiz` e um flex row,
+   entao a 1a posicao fica encostada a esquerda (onde o painel deve nascer
+   quando aberto) e a 2a preenche o resto (onde o overlay cobre o conteudo). */
+export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSair, rotaAtiva, usuario }) {
   const insets = useSafeAreaInsets();
   // eslint-disable-next-line react-hooks/refs -- padrao idiomatico useRef(valorInicial).current pra extrair um Animated.Value estavel (mesma instancia em todo render); nao ha mutacao aqui, so leitura do valor ja criado.
   const deslocamento = useRef(new Animated.Value(-LARGURA_MENU)).current;
@@ -49,13 +62,6 @@ export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSa
   return (
     <Modal animationType="none" onRequestClose={onFechar} transparent visible={aberto}>
       <View style={estilos.raiz}>
-        <TouchableOpacity
-          accessibilityHint="Fecha o menu lateral"
-          accessibilityLabel="Fechar menu"
-          activeOpacity={1}
-          onPress={onFechar}
-          style={estilos.fundo}
-        />
         <Animated.View
           style={[
             estilos.painel,
@@ -85,23 +91,32 @@ export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSa
           </View>
 
           <ScrollView contentContainerStyle={estilos.lista}>
-            {ITENS.map((item) => (
-              <TouchableOpacity
-                accessibilityHint={item.dica}
-                accessibilityLabel={item.rotulo}
-                accessibilityRole="button"
-                key={item.chave}
-                onPress={() => onNavegar(item.chave)}
-                style={estilos.item}
-              >
-                <Ionicons color={cores.textoSuave} name={item.icone} size={20} />
-                <Text style={estilos.itemTexto}>{item.rotulo}</Text>
-              </TouchableOpacity>
+            {GRUPOS.map((grupo) => (
+              <View key={grupo.titulo} style={estilos.grupo}>
+                <Text style={estilos.grupoTitulo}>{grupo.titulo}</Text>
+                {grupo.itens.map((item) => {
+                  const ativo = item.chave === rotaAtiva;
+                  return (
+                    <TouchableOpacity
+                      accessibilityHint={item.dica}
+                      accessibilityLabel={item.rotulo}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: ativo }}
+                      key={item.chave}
+                      onPress={() => onNavegar(item.chave)}
+                      style={[estilos.item, ativo ? estilos.itemAtivo : null]}
+                    >
+                      <Ionicons color={ativo ? cores.destaque : cores.textoSuave} name={item.icone} size={20} />
+                      <Text style={[estilos.itemTexto, ativo ? estilos.itemTextoAtivo : null]}>{item.rotulo}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             ))}
           </ScrollView>
 
           <TouchableOpacity
-            accessibilityHint="Abre a confirmacao pra sair da conta"
+            accessibilityHint="Abre a confirmação pra sair da conta"
             accessibilityLabel="Sair da conta"
             accessibilityRole="button"
             onPress={onSolicitarSair}
@@ -111,6 +126,13 @@ export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSa
             <Text style={estilos.itemSairTexto}>Sair</Text>
           </TouchableOpacity>
         </Animated.View>
+        <TouchableOpacity
+          accessibilityHint="Fecha o menu lateral"
+          accessibilityLabel="Fechar menu"
+          activeOpacity={1}
+          onPress={onFechar}
+          style={estilos.fundo}
+        />
       </View>
     </Modal>
   );
@@ -137,7 +159,17 @@ const estilos = StyleSheet.create({
   avatarTexto: { color: cores.texto, fontSize: 20, fontWeight: "800" },
   nome: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, maxWidth: "100%" },
   papel: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
-  lista: { gap: 4, paddingVertical: espacamentos.sm },
+  lista: { gap: espacamentos.sm, paddingVertical: espacamentos.sm },
+  grupo: { gap: 4 },
+  grupoTitulo: {
+    color: cores.textoSuave,
+    fontSize: tipografia.legenda,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    paddingHorizontal: espacamentos.sm,
+    marginBottom: 2
+  },
   item: {
     flexDirection: "row",
     alignItems: "center",
@@ -146,7 +178,9 @@ const estilos = StyleSheet.create({
     paddingHorizontal: espacamentos.sm,
     borderRadius: raios.md
   },
+  itemAtivo: { backgroundColor: cores.fundoCartaoAtivo },
   itemTexto: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
+  itemTextoAtivo: { color: cores.destaque, fontWeight: "700" },
   itemSair: {
     flexDirection: "row",
     alignItems: "center",
