@@ -256,9 +256,9 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <Text style={estilos.secaoTitulo}>Antes de começar</Text>
               <View style={estilos.resumo}>
                 <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
-                <ResumoItem icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+                <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
                 {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-                  <ResumoItem icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
+                  <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
                 ) : null}
                 <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
               </View>
@@ -306,7 +306,13 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
 
               {questaoAtual.contexto ? (
-                <TouchableOpacity onPress={() => setApoioAberto((atual) => !atual)} style={estilos.apoioToggle}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: apoioAberto }}
+                  onPress={() => setApoioAberto((atual) => !atual)}
+                  style={estilos.apoioToggle}
+                >
+                  <Ionicons color={cores.destaque} name={apoioAberto ? "chevron-up" : "chevron-down"} size={16} />
                   <Text style={estilos.apoioToggleTexto}>{apoioAberto ? "Ocultar contexto de apoio" : "Ver contexto de apoio"}</Text>
                 </TouchableOpacity>
               ) : null}
@@ -350,13 +356,10 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                       onPress={() => selecionarAlternativa(questaoAtual.id, alternativa.id)}
                       style={[estilos.alternativa, selecionada ? estilos.alternativaSelecionada : null]}
                     >
-                      <Text style={estilos.alternativaLetra}>{alternativa.letra}</Text>
+                      <View style={[estilos.alternativaLetraCirculo, selecionada ? estilos.alternativaLetraCirculoSelecionada : null]}>
+                        <Text style={[estilos.alternativaLetra, selecionada ? estilos.alternativaLetraSelecionada : null]}>{alternativa.letra}</Text>
+                      </View>
                       <Text style={[estilos.alternativaTexto, selecionada ? estilos.alternativaTextoSelecionado : null]}>{alternativa.texto}</Text>
-                      {selecionada ? (
-                        <Ionicons color={cores.sucesso} name="checkmark-circle" size={20} />
-                      ) : (
-                        <View style={estilos.alternativaCheckEspaco} />
-                      )}
                     </TouchableOpacity>
                   );
                   })}
@@ -365,7 +368,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
               <View style={estilos.acoesLinha}>
                 {indiceAtual > 0 ? (
-                  <Botao disabled={enviando} onPress={() => setIndiceAtual((atual) => atual - 1)} variante="fantasma">
+                  <Botao disabled={enviando} icone="chevron-back" onPress={() => setIndiceAtual((atual) => atual - 1)} variante="fantasma">
                     Voltar
                   </Botao>
                 ) : <View />}
@@ -404,7 +407,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                 <View
                   style={[
                     estilos.resultadoBarraPreenchida,
-                    { width: `${Math.max(0, Math.min(porcentagem, 100))}%`, backgroundColor: corrigida ? cores.sucesso : cores.aviso }
+                    { width: `${Math.max(0, Math.min(porcentagem, 100))}%` }
                   ]}
                 />
               </View>
@@ -412,7 +415,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <View style={estilos.resultadoDivisor} />
 
               <View style={estilos.resumo}>
-                <ResumoItem icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
+                <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
                 <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${tentativaNumeroAtual} de ${tentativasPermitidas}`} />
               </View>
 
@@ -433,11 +436,15 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   );
 }
 
-function ResumoItem({ icone, rotulo, valor }) {
+// `cor` e opcional — rotulo neutro (Questoes, Tentativas) mantem o cinza
+// padrao; chamadores passam uma cor semantica (tempo=informativo,
+// nota=destaque) so quando o dado realmente carrega esse significado, pra
+// nao colorir tudo indiscriminadamente.
+function ResumoItem({ cor = cores.textoSuave, icone, rotulo, valor }) {
   return (
     <View style={estilos.resumoItem}>
       <View style={estilos.resumoRotuloLinha}>
-        {icone ? <Ionicons color={cores.textoSuave} name={icone} size={18} /> : null}
+        {icone ? <Ionicons color={cor} name={icone} size={18} /> : null}
         <Text style={estilos.resumoRotulo}>{rotulo}</Text>
       </View>
       <Text style={estilos.resumoValor}>{valor}</Text>
@@ -478,7 +485,7 @@ const estilos = StyleSheet.create({
   pillAtiva: { borderColor: cores.destaque },
   pillRespondida: { backgroundColor: cores.destaque },
   pillTexto: { color: cores.texto, fontWeight: "600", fontSize: tipografia.rotulo },
-  apoioToggle: { marginBottom: 8 },
+  apoioToggle: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, marginBottom: 4 },
   apoioToggleTexto: { color: cores.destaque, fontWeight: "600" },
   apoioTexto: { color: cores.textoSuave, marginBottom: 16, lineHeight: 20 },
   enunciadoTipo: { color: cores.informativo, fontSize: tipografia.rotulo, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
@@ -490,10 +497,21 @@ const estilos = StyleSheet.create({
   afirmativaTexto: { color: cores.textoSuave, lineHeight: 20 },
   alternativa: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, padding: 14, marginBottom: 10 },
   alternativaSelecionada: { borderColor: cores.destaque, borderWidth: 2, backgroundColor: cores.fundoCartaoAtivo },
-  alternativaLetra: { color: cores.textoRotulo, fontWeight: "800", width: 20 },
+  alternativaLetraCirculo: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: cores.bordaCartao,
+    backgroundColor: cores.fundo,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  alternativaLetraCirculoSelecionada: { backgroundColor: cores.destaque, borderColor: cores.destaque },
+  alternativaLetra: { color: cores.textoRotulo, fontWeight: "800", fontSize: tipografia.rotulo },
+  alternativaLetraSelecionada: { color: cores.texto },
   alternativaTexto: { color: cores.texto, flex: 1 },
   alternativaTextoSelecionado: { fontWeight: "700" },
-  alternativaCheckEspaco: { width: 20 },
   acoesLinha: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12, gap: 12 },
   resultado: { paddingTop: espacamentos.sm },
   resultadoIconeContorno: {
@@ -511,7 +529,10 @@ const estilos = StyleSheet.create({
   resultadoDescricao: { color: cores.textoSuave, textAlign: "center", marginBottom: espacamentos.xl, lineHeight: 20 },
   resultadoPorcentagem: { color: cores.destaque, fontSize: tipografia.numeroGrande, fontWeight: "800", marginBottom: espacamentos.md, textAlign: "center" },
   resultadoBarraFundo: { height: 8, borderRadius: 4, backgroundColor: cores.bordaCartao, overflow: "hidden", marginBottom: espacamentos.xl },
-  resultadoBarraPreenchida: { height: 8, borderRadius: 4 },
+  // Cor fixa (destaque), nao condicionada a corrigida/nota — a barra
+  // representa a pontuacao obtida, nao um veredito de aprovado/reprovado
+  // (nao ha nota minima de aprovacao em lugar nenhum do sistema).
+  resultadoBarraPreenchida: { height: 8, borderRadius: 4, backgroundColor: cores.destaque },
   resultadoDivisor: { height: 1, backgroundColor: cores.bordaCartao, marginBottom: espacamentos.xl },
   resultadoBotaoRefazer: { marginBottom: espacamentos.md }
 });

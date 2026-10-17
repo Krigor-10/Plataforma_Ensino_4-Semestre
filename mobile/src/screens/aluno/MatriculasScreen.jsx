@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Botao from "../../components/Botao.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
@@ -32,6 +33,7 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
   const [mensagem, setMensagem] = useState(null);
   const [cancelamentoPendente, setCancelamentoPendente] = useState(null);
   const [canceladasAbertas, setCanceladasAbertas] = useState(false);
+  const [detalheSelecionado, setDetalheSelecionado] = useState(null);
 
   const turmasPorCursoId = useMemo(() => {
     const mapa = new Map();
@@ -222,17 +224,18 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
             {cursosAtivos.map((curso) => {
               const matricula = matriculaPorCursoId.get(curso.id);
               const pagamento = pagamentoPorMatriculaId.get(matricula.id);
+              const progresso = progressoCursoPorMatricula.get(matricula.id);
               return (
                 <ItemCursoMatriculado
                   curso={curso}
                   key={curso.id}
                   matricula={matricula}
-                  navigation={navigation}
+                  onAbrirDetalhes={() => setDetalheSelecionado({ curso, matricula, pagamento, progresso })}
                   onCancelar={() => setCancelamentoPendente({ matricula, tituloCurso: curso.titulo })}
                   onConfirmarPagamento={() => confirmarPagamento(matricula)}
                   pagamento={pagamento}
                   processando={processando === matricula.id}
-                  progresso={progressoCursoPorMatricula.get(matricula.id)}
+                  progresso={progresso}
                 />
               );
             })}
@@ -257,6 +260,7 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
                           curso={curso}
                           key={curso.id}
                           matricula={matricula}
+                          onAbrirDetalhes={() => setDetalheSelecionado({ curso, matricula, pagamento: null, progresso: null })}
                           onReabrir={() => reabrir(matricula)}
                           processando={processando === matricula.id}
                         />
@@ -302,6 +306,27 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
           </View>
         </View>
       </Modal>
+
+      <ModalDetalhesMatricula
+        detalhe={detalheSelecionado}
+        navigation={navigation}
+        onCancelar={() => {
+          if (detalheSelecionado) {
+            const { curso, matricula } = detalheSelecionado;
+            setDetalheSelecionado(null);
+            setCancelamentoPendente({ matricula, tituloCurso: curso.titulo });
+          }
+        }}
+        onConfirmarPagamento={() => detalheSelecionado && confirmarPagamento(detalheSelecionado.matricula)}
+        onFechar={() => setDetalheSelecionado(null)}
+        onReabrir={() => {
+          if (detalheSelecionado) {
+            reabrir(detalheSelecionado.matricula);
+            setDetalheSelecionado(null);
+          }
+        }}
+        processando={processando === detalheSelecionado?.matricula?.id}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -309,15 +334,19 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
 // Card enxuto: sem descricao (ja fica no Catalogo) e sem "Solicitada em" pra
 // matricula aprovada (a data de pedido nao e informacao relevante ali). O
 // selo de status so aparece pra estados excepcionais — "estar em Meus
-// cursos com progresso" ja comunica "Aprovada" sem precisar de selo.
-// Aprovada com navigation disponivel vira tocavel (abre Conteudos do curso,
-// mesmo destino que BuscaScreen.jsx ja usa) — as demais ficam informativas.
-function ItemCursoMatriculado({ curso, matricula, navigation, onCancelar, onConfirmarPagamento, onReabrir, pagamento, processando, progresso }) {
+// cursos com progresso" ja comunica "Aprovada" sem precisar de selo. O card
+// inteiro abre o modal de detalhes (onAbrirDetalhes) — nao navega mais
+// direto pra Conteudos, ver ModalDetalhesMatricula mais abaixo.
+function ItemCursoMatriculado({ curso, matricula, onAbrirDetalhes, onCancelar, onConfirmarPagamento, onReabrir, pagamento, processando, progresso }) {
   const status = normalizeStatus(matricula.status);
   const aprovada = status === "Aprovada";
   const excepcional = status === "Cancelada" || status === "Rejeitada";
   const temPagamentoPendente = aprovada && pagamento?.status === PAGAMENTO_PENDENTE;
-  const percentual = progresso ? Math.max(0, Math.min(Number(progresso.percentualConclusao) || 0, 100)) : null;
+  // Aprovada sem registro de progresso = aluno ainda nao concluiu nada (o
+  // registro so e criado na 1a acao do aluno, GET nunca fabrica um —
+  // confirmado em ProgressoAlunoService.ObterSnapshotAsync) — 0% real, nao
+  // "dado ausente". Pendente/Cancelada/Rejeitada nunca mostram a barra.
+  const percentual = aprovada ? Math.max(0, Math.min(Number(progresso?.percentualConclusao) || 0, 100)) : null;
   const temNota = Number(matricula.notaFinal) > 0;
 
   const conteudo = (
@@ -332,7 +361,7 @@ function ItemCursoMatriculado({ curso, matricula, navigation, onCancelar, onConf
         ) : null}
       </View>
 
-      {aprovada && percentual !== null ? (
+      {aprovada ? (
         <>
           <View style={estilos.barraFundoFina}>
             <View style={[estilos.barraPreenchidaFina, { width: `${percentual}%` }]} />
@@ -371,26 +400,17 @@ function ItemCursoMatriculado({ curso, matricula, navigation, onCancelar, onConf
     </>
   );
 
-  if (aprovada && navigation) {
-    return (
-      <TouchableOpacity
-        accessibilityLabel={`Ver conteúdos de ${curso.titulo}`}
-        accessibilityRole="button"
-        onPress={() => navigation.navigate(ROUTES.CONTEUDOS, { cursoId: curso.id })}
-        style={estilos.cartaoLinha}
-      >
-        <CapaCurso curso={curso} size={56} />
-        <View style={estilos.cartao}>{conteudo}</View>
-        <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} style={estilos.cartaoChevron} />
-      </TouchableOpacity>
-    );
-  }
-
   return (
-    <View style={[estilos.cartaoLinha, excepcional ? estilos.cartaoLinhaExcepcional : null]}>
+    <TouchableOpacity
+      accessibilityLabel={`Ver detalhes da matrícula em ${curso.titulo}`}
+      accessibilityRole="button"
+      onPress={onAbrirDetalhes}
+      style={[estilos.cartaoLinha, excepcional ? estilos.cartaoLinhaExcepcional : null]}
+    >
       <CapaCurso curso={curso} size={56} />
       <View style={estilos.cartao}>{conteudo}</View>
-    </View>
+      <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} style={estilos.cartaoChevron} />
+    </TouchableOpacity>
   );
 }
 
@@ -422,6 +442,111 @@ function ItemCursoCatalogo({ curso, onSolicitar, processando, temTurma }) {
         ) : null}
       </View>
     </View>
+  );
+}
+
+// Modal de detalhes — abre ao tocar num card de "Meus cursos" em vez de
+// navegar direto pra Conteudos (o aluno so vai pra Conteudos de proposito,
+// pelo botao "Acessar conteudos" abaixo, so quando Aprovada). pageSheet e o
+// mesmo padrao ja usado em QuizModal/CertificadosScreen (ocupa quase a tela
+// toda, ganha onRequestClose do botao fisico de voltar do Android de graca).
+function ModalDetalhesMatricula({ detalhe, navigation, onCancelar, onConfirmarPagamento, onFechar, onReabrir, processando }) {
+  const insets = useSafeAreaInsets();
+
+  if (!detalhe) {
+    return null;
+  }
+
+  const { curso, matricula, pagamento, progresso } = detalhe;
+  const status = normalizeStatus(matricula.status);
+  const aprovada = status === "Aprovada";
+  const temPagamentoPendente = aprovada && pagamento?.status === PAGAMENTO_PENDENTE;
+  const percentual = aprovada ? Math.max(0, Math.min(Number(progresso?.percentualConclusao) || 0, 100)) : null;
+  const temNota = Number(matricula.notaFinal) > 0;
+  const temModulos = aprovada && Number(progresso?.totalModulos) > 0;
+
+  return (
+    <Modal animationType="slide" onRequestClose={onFechar} presentationStyle="pageSheet" visible={Boolean(detalhe)}>
+      <View style={estilos.detalheContainer}>
+        <View style={[estilos.detalheCabecalho, { paddingTop: insets.top + 16 }]}>
+          <CapaCurso curso={curso} size={48} />
+          <Text numberOfLines={2} style={estilos.detalheTitulo}>{curso.titulo}</Text>
+          <TouchableOpacity
+            accessibilityLabel="Fechar detalhes da matrícula"
+            accessibilityRole="button"
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            onPress={onFechar}
+            style={estilos.detalheBotaoFechar}
+          >
+            <Ionicons color={cores.erro} name="close" size={22} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={estilos.detalheCorpo}>
+          <Text style={estilos.detalheSecaoTitulo}>Situação da matrícula</Text>
+          <View style={estilos.detalheStatusLinha}>
+            <Ionicons color={corDoStatusMatricula(status)} name={iconeDoStatusMatricula(status)} size={16} />
+            <Text style={[estilos.detalheStatusTexto, { color: corDoStatusMatricula(status) }]}>{status}</Text>
+          </View>
+          <Text style={estilos.detalheMeta}>Solicitada em {formatDate(matricula.dataSolicitacao)}</Text>
+          {temNota ? <Text style={estilos.detalheMeta}>Nota final {formatGrade(matricula.notaFinal)}</Text> : null}
+
+          {aprovada ? (
+            <View style={estilos.detalheProgressoBloco}>
+              <View style={estilos.barraFundoFina}>
+                <View style={[estilos.barraPreenchidaFina, { width: `${percentual}%` }]} />
+              </View>
+              <Text style={estilos.detalheMeta}>
+                {percentual >= 100 ? "Concluído" : percentual <= 0 ? "Não iniciado" : `${Math.round(percentual)}% concluído`}
+                {temModulos ? ` · ${progresso.modulosConcluidos || 0}/${progresso.totalModulos} módulo(s)` : ""}
+              </Text>
+            </View>
+          ) : null}
+
+          {temPagamentoPendente ? (
+            <View style={estilos.pagamentoLinha}>
+              <Text style={estilos.pagamentoPendente}>Pendente (simulado): {formatMoney(pagamento.valor)}</Text>
+              <Botao carregando={processando} onPress={onConfirmarPagamento} style={estilos.botaoPagamento} variante="sucesso">
+                Confirmar
+              </Botao>
+            </View>
+          ) : null}
+
+          {curso.descricao ? (
+            <>
+              <Text style={estilos.detalheSecaoTitulo}>Sobre o curso</Text>
+              <Text style={estilos.detalheDescricao}>{curso.descricao}</Text>
+            </>
+          ) : null}
+
+          {status === "Pendente" ? (
+            <Botao carregando={processando} onPress={onCancelar} style={estilos.botaoAcaoCartao} variante="perigo">
+              Cancelar solicitação
+            </Botao>
+          ) : null}
+          {status === "Rejeitada" ? (
+            <Botao carregando={processando} onPress={onReabrir} style={estilos.botaoAcaoCartao} variante="primario">
+              Reabrir solicitação
+            </Botao>
+          ) : null}
+        </ScrollView>
+
+        {aprovada ? (
+          <View style={estilos.detalheAcoes}>
+            <Botao
+              icone="book-outline"
+              onPress={() => {
+                onFechar();
+                navigation.navigate(ROUTES.CONTEUDOS, { cursoId: curso.id });
+              }}
+              variante="primario"
+            >
+              Acessar conteúdos
+            </Botao>
+          </View>
+        ) : null}
+      </View>
+    </Modal>
   );
 }
 
@@ -473,5 +598,33 @@ const estilos = StyleSheet.create({
   confirmacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700" },
   confirmacaoTexto: { color: cores.textoSuave, fontSize: 14, lineHeight: 20 },
   confirmacaoAcoes: { flexDirection: "row", gap: espacamentos.sm, marginTop: espacamentos.sm },
-  botaoDialogo: { flex: 1 }
+  botaoDialogo: { flex: 1 },
+  detalheContainer: { flex: 1, backgroundColor: cores.fundo },
+  detalheCabecalho: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: espacamentos.md,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: cores.bordaCartao
+  },
+  detalheTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1 },
+  detalheBotaoFechar: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  detalheCorpo: { padding: espacamentos.xl, paddingBottom: 40, gap: 4 },
+  detalheSecaoTitulo: {
+    color: cores.textoSuave,
+    fontSize: tipografia.legenda,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: espacamentos.lg,
+    marginBottom: espacamentos.xs
+  },
+  detalheStatusLinha: { flexDirection: "row", alignItems: "center", gap: 6 },
+  detalheStatusTexto: { fontWeight: "700", fontSize: tipografia.corpo },
+  detalheMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
+  detalheProgressoBloco: { marginTop: espacamentos.sm },
+  detalheDescricao: { color: cores.textoRotulo, fontSize: tipografia.corpo, lineHeight: 20 },
+  detalheAcoes: { padding: espacamentos.xl, paddingTop: espacamentos.sm, borderTopWidth: 1, borderTopColor: cores.bordaCartao }
 });
