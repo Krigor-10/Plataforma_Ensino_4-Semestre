@@ -7,6 +7,7 @@ import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
 import CursosScreen from "./CursosScreen.jsx";
+import CertificadosScreen from "./CertificadosScreen.jsx";
 import { ROUTES } from "../../lib/routes.js";
 import { cores } from "../../lib/theme.js";
 
@@ -26,8 +27,15 @@ function CustomTabBar({ state, navigation }) {
   return (
     <View style={[estilos.tabBar, { paddingBottom: insets.bottom || 10 }]}>
       {state.routes.map((route, index) => {
-        const ativa = state.index === index;
         const config = ABAS_POR_CHAVE[route.name];
+        // Rotas nested no Tab.Navigator que nao sao abas visiveis (ex.:
+        // Certificados, que mora aqui so pra manter a CustomTabBar visivel —
+        // ver AlunoWorkspace.jsx) nao tem entrada em ABAS/ABAS_POR_CHAVE de
+        // proposito, entao nao viram um 6o icone quebrado aqui.
+        if (!config) {
+          return null;
+        }
+        const ativa = state.index === index;
         return (
           <TouchableOpacity
             accessibilityLabel={config.rotulo}
@@ -98,6 +106,16 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
             usuario={usuario}
           />
         )}
+      </Tab.Screen>
+      {/* Nested aqui (nao como AlunoStack.Screen irmao do Tab.Navigator em
+          AlunoWorkspace.jsx) de proposito: navegar pra uma Screen de fora do
+          Tab.Navigator troca a arvore inteira, derrubando a CustomTabBar
+          junto. Vivendo dentro do Tab.Navigator, a barra permanece visivel
+          (so nao aparece como icone, ver CustomTabBar acima). Acessivel via
+          sidebar (MenuLateral.jsx) e pelo botao "Ver certificado" em
+          CursosScreen.jsx, nenhum dos dois muda. */}
+      <Tab.Screen name={ROUTES.CERTIFICADOS}>
+        {() => <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />}
       </Tab.Screen>
     </Tab.Navigator>
   );
