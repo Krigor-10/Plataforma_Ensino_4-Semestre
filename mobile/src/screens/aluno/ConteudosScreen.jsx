@@ -322,7 +322,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   const corpoQuiz = (
     <>
       <View style={estilos.linhaIcone}>
-        <Ionicons color={cores.textoSuave} name="play-outline" size={18} />
+        <Ionicons color={cores.sucesso} name="play-outline" size={18} />
       </View>
       <View style={estilos.linhaTextos}>
         <Text numberOfLines={2} style={estilos.linhaTitulo}>{quiz.titulo}</Text>
