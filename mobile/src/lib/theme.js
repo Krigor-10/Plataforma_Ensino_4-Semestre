@@ -56,8 +56,18 @@ export const tipografia = {
   numeroGrande: 40
 };
 
+// Escala de tamanho de icone (Ionicons) - substitui os numeros soltos
+// (13/14/16/18/20/22/24) que cada tela escolhia por conta propria.
+export const tamanhosIcone = {
+  sm: 14,
+  md: 18,
+  lg: 20,
+  xl: 24
+};
+
 // Elevacao - preset unico de sombra pra cartoes/modais que precisam se
-// destacar do fundo preto da tela; ainda nao aplicado em nenhum lugar.
+// destacar do fundo preto da tela; usado em MatriculasScreen, MenuLateral
+// e ModalConfirmarSaida.
 export const sombra = {
   cartao: {
     shadowColor: "#000",

@@ -1,17 +1,17 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import BannerGradiente from "../../components/BannerGradiente.jsx";
-import CapaCurso from "../../components/CapaCurso.jsx";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
-import { formatPercent, formatQuestoes, normalizeContentType } from "../../lib/format.js";
+import { formatQuestoes, normalizeContentType } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
+import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 // Monta uma lista plana de linhas (conteudo + quiz vinculado + quiz solto do
 // modulo) na ordem de exibicao, pra renderizar o modulo como uma lista unica
@@ -40,8 +40,7 @@ const ICONE_TIPO_CONTEUDO = {
 };
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
-  const [cursoAtivoId, setCursoAtivoId] = useState(null);
-  const [seletorCursoAberto, setSeletorCursoAberto] = useState(false);
+  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
@@ -56,7 +55,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   useEffect(() => {
     if (route.params?.cursoId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- consome um param de navegacao vindo de fora (BuscaScreen.jsx) uma unica vez; nao e estado derivavel de props/state local, so existe no objeto route.
-      setCursoAtivoId(route.params.cursoId);
+      setCursoSelecionadoId(route.params.cursoId);
       navigation.setParams({ cursoId: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer reagir quando um novo cursoId chega via navegacao, nao a cada render.
@@ -75,7 +74,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     [snapshot]
   );
 
-  const cursoAtivo = grupos.find((curso) => curso.id === cursoAtivoId) || grupos[0] || null;
+  const cursoAtivo = grupos.find((curso) => curso.id === cursoSelecionadoId) || null;
 
   function alternarModulo(moduloId) {
     setModulosAbertos((atual) => {
@@ -123,25 +122,45 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     );
   }
 
+  if (!cursoAtivo) {
+    return (
+      <View style={estilos.container}>
+        <SeletorCurso
+          accessibilityLabelPrefix="Ver conteúdos de"
+          itens={grupos.map((curso) => ({ curso, id: curso.id }))}
+          onSelecionar={setCursoSelecionadoId}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={estilos.container}>
-      <BannerGradiente
-        accessibilityLabel={`Curso em estudo: ${cursoAtivo.titulo}. Toque para trocar de curso`}
-        icone="school-outline"
-        onPress={() => setSeletorCursoAberto(true)}
+      <TouchableOpacity
+        accessibilityLabel="Voltar para a seleção de cursos"
+        onPress={() => setCursoSelecionadoId(null)}
+        style={estilos.voltar}
       >
-        <Text style={estilos.seletorRotulo}>Curso em estudo</Text>
-        <View style={estilos.seletorLinha}>
-          <Text numberOfLines={2} style={estilos.seletorCursoTexto}>{cursoAtivo.titulo}</Text>
-          <Ionicons color={cores.texto} name="chevron-down" size={18} />
+        <Ionicons color={cores.destaque} name="chevron-back" size={18} />
+        <Text style={estilos.voltarTexto}>Voltar</Text>
+      </TouchableOpacity>
+
+      <View style={estilos.cabecalhoCurso}>
+        <View style={estilos.cabecalhoCursoTextos}>
+          <Text numberOfLines={2} style={estilos.tituloCursoAtivo}>{cursoAtivo.titulo}</Text>
+          <Text style={estilos.subtituloCurso}>{cursoAtivo.modulos.length} módulo(s)</Text>
         </View>
-      </BannerGradiente>
+        <ProgressoCircular percentual={cursoAtivo.progresso} size={48} />
+      </View>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
-        <Text style={estilos.progressoCurso}>{formatPercent(cursoAtivo.progresso)} de progresso - {cursoAtivo.modulos.length} módulo(s)</Text>
-
         {cursoAtivo.proximoConteudo ? (
-          <TouchableOpacity onPress={() => alternarModulo(cursoAtivo.proximoConteudo.moduloId)} style={estilos.continuar}>
+          <TouchableOpacity
+            accessibilityLabel={`Continue de onde parou: ${cursoAtivo.proximoConteudo.titulo}`}
+            accessibilityRole="button"
+            onPress={() => alternarModulo(cursoAtivo.proximoConteudo.moduloId)}
+            style={estilos.continuar}
+          >
             <View style={estilos.continuarIcone}>
               <Ionicons color={cores.destaque} name="play-circle-outline" size={20} />
             </View>
@@ -164,6 +183,9 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
           return (
             <View key={modulo.id} style={estilos.modulo}>
               <TouchableOpacity
+                accessibilityLabel={modulo.titulo}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: modulo.bloqueado, expanded: aberto }}
                 disabled={modulo.bloqueado}
                 onPress={() => alternarModulo(modulo.id)}
                 style={estilos.moduloCabecalho}
@@ -180,17 +202,13 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                   {modulo.bloqueado ? (
                     <Text style={estilos.moduloContagem}>Conclua o módulo anterior para desbloquear</Text>
                   ) : totalConteudos > 0 ? (
-                    <>
-                      <View style={estilos.barraFundoFina}>
-                        <View style={[estilos.barraPreenchidaFina, { width: `${percentualModulo}%` }]} />
-                      </View>
-                      <Text
-                        accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
-                        style={estilos.moduloContagem}
-                      >
-                        {modulo.concluidos} de {totalConteudos} concluídos{moduloConcluido ? " · Concluído" : ""}
-                      </Text>
-                    </>
+                    <View
+                      accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
+                      accessible
+                      style={estilos.barraFundoFina}
+                    >
+                      <View style={[estilos.barraPreenchidaFina, { width: `${percentualModulo}%` }]} />
+                    </View>
                   ) : null}
                 </View>
                 <Ionicons
@@ -229,43 +247,6 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         onSessionExpired={onSessionExpired}
         visivel={Boolean(quizSelecionado)}
       />
-
-      <Modal animationType="fade" onRequestClose={() => setSeletorCursoAberto(false)} transparent visible={seletorCursoAberto}>
-        <TouchableOpacity
-          accessibilityLabel="Fechar selecao de curso"
-          activeOpacity={1}
-          onPress={() => setSeletorCursoAberto(false)}
-          style={estilos.seletorFundo}
-        >
-          <TouchableOpacity activeOpacity={1} style={estilos.seletorPainel}>
-            <Text style={estilos.seletorPainelTitulo}>Selecionar curso</Text>
-            <ScrollView contentContainerStyle={estilos.seletorLista}>
-              {grupos.map((curso) => {
-                const ativo = curso.id === cursoAtivo.id;
-                return (
-                  <TouchableOpacity
-                    accessibilityLabel={curso.titulo}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: ativo }}
-                    key={curso.id}
-                    onPress={() => {
-                      setCursoAtivoId(curso.id);
-                      setSeletorCursoAberto(false);
-                    }}
-                    style={[estilos.seletorItem, ativo ? estilos.seletorItemAtivo : null]}
-                  >
-                    <CapaCurso curso={curso} size={40} />
-                    <Text numberOfLines={2} style={[estilos.seletorItemTexto, ativo ? estilos.seletorItemTextoAtivo : null]}>
-                      {curso.titulo}
-                    </Text>
-                    {ativo ? <Ionicons color={cores.destaque} name="checkmark" size={18} /> : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -341,14 +322,14 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   const corpoQuiz = (
     <>
       <View style={estilos.linhaIcone}>
-        <Ionicons color={cores.textoSuave} name="help-circle-outline" size={18} />
+        <Ionicons color={cores.textoSuave} name="play-outline" size={18} />
       </View>
       <View style={estilos.linhaTextos}>
         <Text numberOfLines={2} style={estilos.linhaTitulo}>{quiz.titulo}</Text>
         <Text style={estilos.linhaMeta}>Quiz · {formatQuestoes(quiz.totalQuestoes)} · sem nota</Text>
       </View>
       {disponibilidade.podeRealizar ? (
-        <Ionicons color={cores.destaque} name="play-circle" size={24} />
+        <Ionicons color={cores.sucesso} name="play-circle" size={24} />
       ) : concluidoQuiz ? (
         <View accessibilityLabel="Concluído" accessible>
           <Ionicons color={cores.textoSuave} name="checkmark-circle" size={22} />
@@ -377,36 +358,29 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  seletorRotulo: { color: cores.textoRotulo, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
-  seletorLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: espacamentos.sm, marginTop: 4 },
-  seletorCursoTexto: { color: cores.texto, fontSize: 18, fontWeight: "700", flex: 1 },
-  seletorFundo: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)", paddingHorizontal: espacamentos.xl, paddingTop: 100 },
-  seletorPainel: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, maxHeight: "70%", overflow: "hidden" },
-  seletorPainelTitulo: {
-    color: cores.textoSuave,
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    padding: espacamentos.lg,
-    paddingBottom: espacamentos.sm
-  },
-  seletorLista: { paddingHorizontal: espacamentos.sm, paddingBottom: espacamentos.sm },
-  seletorItem: {
+  voltar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: espacamentos.sm,
-    paddingHorizontal: espacamentos.md,
-    paddingVertical: espacamentos.md,
-    borderRadius: raios.md,
-    minHeight: 44
+    gap: 2,
+    minHeight: 44,
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.lg,
+    marginLeft: -6
   },
-  seletorItemAtivo: { backgroundColor: cores.fundoCartaoAtivo },
-  seletorItemTexto: { color: cores.textoSuave, fontSize: 15, fontWeight: "600", flex: 1 },
-  seletorItemTextoAtivo: { color: cores.texto },
+  voltarTexto: { color: cores.destaque, fontWeight: "600" },
+  cabecalhoCurso: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: espacamentos.md,
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.sm,
+    paddingBottom: espacamentos.lg
+  },
+  cabecalhoCursoTextos: { flex: 1, minWidth: 160 },
+  tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
+  subtituloCurso: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
   corpo: { padding: espacamentos.xl, paddingTop: 0, paddingBottom: 40 },
-  progressoCurso: { color: cores.textoSuave, marginBottom: 16 },
   continuar: {
     flexDirection: "row",
     alignItems: "center",
@@ -427,7 +401,7 @@ const estilos = StyleSheet.create({
     justifyContent: "center"
   },
   continuarTextos: { flex: 1 },
-  continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: 12, marginBottom: 4 },
+  continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo, marginBottom: 4 },
   continuarTitulo: { color: cores.texto, fontWeight: "600" },
   modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
   moduloCabecalho: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, padding: 14 },
@@ -439,7 +413,7 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
-  moduloTitulo: { color: cores.texto, fontWeight: "700" },
+  moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   moduloContagem: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
   barraFundoFina: { height: 4, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.sm },
   barraPreenchidaFina: { height: 4, borderRadius: raios.sm, backgroundColor: cores.destaque },
@@ -465,6 +439,6 @@ const estilos = StyleSheet.create({
   linhaTitulo: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
   linhaMeta: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
   linhaCheckbox: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", marginRight: -11 },
-  vazioModulo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md },
+  vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
 });

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { cores, espacamentos, raios } from "../lib/theme.js";
+import { StyleSheet, Text, View } from "react-native";
+import Botao from "../components/Botao.jsx";
+import { cores, espacamentos } from "../lib/theme.js";
 
 /* Rede de seguranca pra sessoes de Professor/Coordenador/Admin ja persistidas
    no aparelho antes desta tela existir (o app mobile so implementa o fluxo
@@ -16,9 +17,9 @@ export default function AcessoNaoSuportadoScreen({ onLogout, usuario }) {
         Ola, {usuario?.nome || "usuario"}. Sua conta e do tipo {usuario?.tipoUsuario || "outro perfil"}, e por enquanto
         o app mobile so oferece a experiencia do Aluno. Acesse pelo navegador (site) pra usar sua conta.
       </Text>
-      <TouchableOpacity onPress={onLogout} style={estilos.botao}>
-        <Text style={estilos.botaoTexto}>Sair</Text>
-      </TouchableOpacity>
+      <Botao onPress={onLogout} style={estilos.botao} variante="perigo">
+        Sair
+      </Botao>
     </View>
   );
 }
@@ -34,15 +35,5 @@ const estilos = StyleSheet.create({
   },
   titulo: { color: cores.texto, fontSize: 18, fontWeight: "700", textAlign: "center" },
   texto: { color: cores.textoSuave, fontSize: 14, textAlign: "center", lineHeight: 20 },
-  botao: {
-    marginTop: espacamentos.md,
-    borderWidth: 1,
-    borderColor: cores.erro,
-    borderRadius: raios.md,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    minHeight: 44,
-    justifyContent: "center"
-  },
-  botaoTexto: { color: cores.erro, fontWeight: "700" }
+  botao: { marginTop: espacamentos.md, paddingHorizontal: 28 }
 });

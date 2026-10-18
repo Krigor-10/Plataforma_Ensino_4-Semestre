@@ -43,6 +43,7 @@ export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrir
       <HeaderGlobal
         notificacoesVersao={notificacoesVersao}
         onAbrirBusca={() => navigation.navigate(ROUTES.BUSCA)}
+        onAbrirInicio={() => navigation.navigate(ROUTES.ALUNO_TABS, { screen: ROUTES.INICIO })}
         onAbrirMenu={onAbrirMenu}
         onAbrirNotificacoes={() => navigation.navigate(ROUTES.NOTIFICACOES)}
         onAbrirPerfil={() => navigation.navigate(ROUTES.PERFIL)}

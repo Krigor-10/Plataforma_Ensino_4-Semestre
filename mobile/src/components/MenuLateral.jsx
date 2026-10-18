@@ -10,16 +10,16 @@ const LARGURA_MENU = Math.min(320, Dimensions.get("window").width * 0.8);
 
 const GRUPOS = [
   {
+    titulo: "Conta",
+    itens: [
+      { chave: ROUTES.PERFIL, dica: "Abre a tela de perfil", icone: "person-outline", rotulo: "Meu perfil" }
+    ]
+  },
+  {
     titulo: "Navegação",
     itens: [
       { chave: ROUTES.MATRICULAS, dica: "Abre a tela de matriculas", icone: "school-outline", rotulo: "Matrículas" },
       { chave: ROUTES.CERTIFICADOS, dica: "Abre a tela de certificados", icone: "ribbon-outline", rotulo: "Certificados" }
-    ]
-  },
-  {
-    titulo: "Conta",
-    itens: [
-      { chave: ROUTES.PERFIL, dica: "Abre a tela de perfil", icone: "person-outline", rotulo: "Meu perfil" }
     ]
   }
 ];

@@ -290,6 +290,10 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <View style={estilos.pillsLinha}>
                 {questoes.map((questao, indice) => (
                   <TouchableOpacity
+                    accessibilityLabel={`Questão ${indice + 1}${indice === indiceAtual ? ", atual" : ""}${questaoRespondida(questao) ? ", respondida" : ", não respondida"}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: indice === indiceAtual }}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                     key={questao.id}
                     onPress={() => setIndiceAtual(indice)}
                     style={[

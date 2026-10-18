@@ -228,7 +228,9 @@ const styles = StyleSheet.create({
   },
   linkEsqueciSenha: {
     marginTop: 16,
-    alignItems: "center"
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44
   },
   linkEsqueciSenhaTexto: {
     color: cores.textoSuave,

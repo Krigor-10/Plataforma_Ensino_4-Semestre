@@ -11,13 +11,6 @@ import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 const TIPO_QUIZ = 1;
 
-// Icone de categoria por tipo de avaliacao — mesmo "help-circle-outline" que
-// ConteudosScreen.jsx ja usa pra quiz, pra nao inventar um segundo simbolo
-// pro mesmo conceito. Provas/trabalhos (qualquer tipo != quiz) usam o icone
-// de prancheta, igual ao que BuscaScreen.jsx ja usa pra categoria "Avaliações".
-const ICONE_CATEGORIA_AVALIACAO = { [TIPO_QUIZ]: "help-circle-outline" };
-const ICONE_CATEGORIA_PADRAO = "clipboard-outline";
-
 // obterDisponibilidadeAvaliacao() ja calcula tone+label pros estados
 // Agendada/Encerrada/Sem questoes, mas o card so usava isso no
 // accessibilityLabel — ninguem enxergava o estado, so quem usa leitor de
@@ -75,10 +68,15 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     [cursoPorId, snapshot.progressos.cursos]
   );
 
+  // So avaliacoes formais (Prova/Exercicio) aparecem aqui — quiz (tipoAvaliacao
+  // === TIPO_QUIZ) e conteudo de modulo, mora exclusivamente em Conteudos
+  // (ver agruparConteudosPorCurso em lib/conteudos.js, que ja faz o filtro
+  // inverso pra aquela tela). Mesmo campo tipoAvaliacao, mesmo snapshot — so
+  // o criterio de inclusao difere entre as duas telas, sem chamada nova.
   const avaliacoesDoCurso = useMemo(
     () =>
       (snapshot.avaliacoes || [])
-        .filter((avaliacao) => avaliacao.cursoId === cursoSelecionadoId)
+        .filter((avaliacao) => avaliacao.cursoId === cursoSelecionadoId && Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ)
         .sort((a, b) => (a.titulo || "").localeCompare(b.titulo || "")),
     [snapshot.avaliacoes, cursoSelecionadoId]
   );
@@ -185,8 +183,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
               : null;
             const contexto = avaliacao.moduloTitulo;
             const temTentativa = Number(avaliacao.tentativasRealizadas || 0) > 0;
-            const mostrarNota = temTentativa && Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ && avaliacao.ultimaNota != null;
-            const iconeCategoria = ICONE_CATEGORIA_AVALIACAO[Number(avaliacao.tipoAvaliacao)] || ICONE_CATEGORIA_PADRAO;
+            const mostrarNota = temTentativa && avaliacao.ultimaNota != null;
             const mostrarStatusPendente = !disponibilidade.podeRealizar && !concluida && !emAndamento;
             const statusVisual = TONE_VISUAL[disponibilidade.tone] || TONE_VISUAL.aviso;
 
@@ -201,12 +198,21 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
               >
                 <View style={estilos.cartaoTopo}>
                   <View style={estilos.cartaoIcone}>
-                    <Ionicons color={cores.destaque} name={iconeCategoria} size={20} />
+                    <Ionicons color={cores.destaque} name="clipboard-outline" size={20} />
                   </View>
 
                   <View style={estilos.cartaoTextos}>
-                    <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
-                    <Text style={estilos.cartaoContexto}>{contexto}</Text>
+                    <View style={estilos.cartaoTituloLinha}>
+                      <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
+                      {mostrarNota ? (
+                        <View style={estilos.badgeNota}>
+                          <Text style={estilos.badgeNotaTexto}>
+                            {formatScore(avaliacao.ultimaNota)}/{formatScore(avaliacao.notaMaxima)}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {contexto ? <Text style={estilos.cartaoContexto}>{contexto}</Text> : null}
                     {emAndamento ? (
                       <Text
                         style={[
@@ -229,7 +235,6 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                     ) : null}
                     {temTentativa ? (
                       <Text style={estilos.cartaoMeta}>
-                        {mostrarNota ? `Nota ${formatScore(avaliacao.ultimaNota)} / ${formatScore(avaliacao.notaMaxima)} · ` : ""}
                         Tentativas {avaliacao.tentativasRealizadas} de {avaliacao.tentativasPermitidas || 1}
                       </Text>
                     ) : null}
@@ -302,7 +307,10 @@ const estilos = StyleSheet.create({
     justifyContent: "center"
   },
   cartaoTextos: { flex: 1 },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
+  cartaoTituloLinha: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: espacamentos.xs },
+  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, flexShrink: 1 },
+  badgeNota: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: 999, paddingHorizontal: espacamentos.sm, paddingVertical: 2 },
+  badgeNotaTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.legenda },
   cartaoContexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
   cartaoMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "600" },
   cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "700" },

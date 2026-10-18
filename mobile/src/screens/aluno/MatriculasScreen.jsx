@@ -188,10 +188,20 @@ export default function MatriculasScreen({ navigation, onRecarregar, onSessionEx
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.container}>
       <View style={estilos.abas}>
-        <TouchableOpacity onPress={() => setAba("meus-cursos")} style={[estilos.aba, aba === "meus-cursos" ? estilos.abaAtiva : null]}>
+        <TouchableOpacity
+          accessibilityRole="tab"
+          accessibilityState={{ selected: aba === "meus-cursos" }}
+          onPress={() => setAba("meus-cursos")}
+          style={[estilos.aba, aba === "meus-cursos" ? estilos.abaAtiva : null]}
+        >
           <Text style={[estilos.abaTexto, aba === "meus-cursos" ? estilos.abaTextoAtivo : null]}>Meus cursos</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setAba("catalogo")} style={[estilos.aba, aba === "catalogo" ? estilos.abaAtiva : null]}>
+        <TouchableOpacity
+          accessibilityRole="tab"
+          accessibilityState={{ selected: aba === "catalogo" }}
+          onPress={() => setAba("catalogo")}
+          style={[estilos.aba, aba === "catalogo" ? estilos.abaAtiva : null]}
+        >
           <Text style={[estilos.abaTexto, aba === "catalogo" ? estilos.abaTextoAtivo : null]}>Catálogo</Text>
         </TouchableOpacity>
       </View>

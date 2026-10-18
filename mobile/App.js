@@ -10,6 +10,7 @@ import { apiRequest } from "./src/lib/api.js";
 import { clearSession, persistSession, readSession } from "./src/lib/session.js";
 import { ROUTES } from "./src/lib/routes.js";
 import { envolverComSentry, inicializarSentry } from "./src/lib/sentry.js";
+import { cores } from "./src/lib/theme.js";
 
 const RootStack = createNativeStackNavigator();
 
@@ -53,8 +54,8 @@ function App() {
 
   if (!pronto) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#191221" }}>
-        <ActivityIndicator color="#7b2ff7" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: cores.fundo }}>
+        <ActivityIndicator color={cores.destaque} />
       </View>
     );
   }

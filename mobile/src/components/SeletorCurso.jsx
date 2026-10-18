@@ -45,5 +45,5 @@ const estilos = StyleSheet.create({
     borderLeftColor: cores.destaque,
     padding: 14
   },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15, flex: 1 }
+  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, flex: 1 }
 });

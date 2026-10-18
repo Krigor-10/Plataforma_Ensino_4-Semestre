@@ -75,7 +75,9 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tab.Screen name={ROUTES.INICIO}>
-        {({ navigation }) => <HomeScreen onAbrirAba={(aba) => navigation.navigate(aba)} snapshot={snapshot} />}
+        {({ navigation }) => (
+          <HomeScreen onAbrirAba={(aba, params) => navigation.navigate(aba, params)} snapshot={snapshot} usuario={usuario} />
+        )}
       </Tab.Screen>
       <Tab.Screen name={ROUTES.CONTEUDOS}>
         {() => <ConteudosScreen onRecarregar={onRecarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} token={token} />}

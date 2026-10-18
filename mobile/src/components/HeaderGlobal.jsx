@@ -16,7 +16,7 @@ import { cores, espacamentos } from "../lib/theme.js";
    de proposito — e uma acao destrutiva, fica no menu lateral/Perfil pra nao
    virar tap acidental ao lado de Notificacoes. Hamburguer (abre o menu lateral,
    ver MenuLateral.jsx) e busca (ver BuscaScreen.jsx) sao os dois botoes novos. */
-export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrirMenu, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
+export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrirInicio, onAbrirMenu, onAbrirNotificacoes, onAbrirPerfil, usuario }) {
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -44,10 +44,17 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
         <TouchableOpacity accessibilityHint="Abre o menu lateral" accessibilityLabel="Menu" onPress={onAbrirMenu} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name="menu" size={24} />
         </TouchableOpacity>
-        <View style={estilos.marca}>
+        <TouchableOpacity
+          accessibilityHint="Volta para a tela de início"
+          accessibilityLabel="CodeRyse, ir para o início"
+          accessibilityRole="button"
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 8 }}
+          onPress={onAbrirInicio}
+          style={estilos.marca}
+        >
           <Text style={estilos.marcaCode}>Code</Text>
           <Text style={estilos.marcaRyse}>Ryse</Text>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={estilos.acoes}>
         <TouchableOpacity accessibilityHint="Abre a busca de cursos, conteudos e avaliacoes" accessibilityLabel="Buscar" onPress={onAbrirBusca} style={estilos.botao}>
