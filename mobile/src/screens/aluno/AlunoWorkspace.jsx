@@ -6,6 +6,7 @@ import MenuLateral from "../../components/MenuLateral.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import AlunoTabsNavigator from "./AlunoTabsNavigator.jsx";
 import BuscaScreen from "./BuscaScreen.jsx";
+import CatalogoScreen from "./CatalogoScreen.jsx";
 import CertificadosScreen from "./CertificadosScreen.jsx";
 import PerfilScreen from "./PerfilScreen.jsx";
 import NotificacoesScreen from "./NotificacoesScreen.jsx";
@@ -67,10 +68,11 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
 
   function navegarDoMenu(rota) {
     setMenuAberto(false);
-    // Matriculas e uma aba dentro do AlunoTabsNavigator (nested), nao uma
-    // Screen direta do AlunoStack como Certificados/Perfil/Notificacoes —
-    // precisa do shorthand {screen} pra navegacao descer um nivel.
-    if (rota === ROUTES.MATRICULAS) {
+    // Cursos e uma aba dentro do AlunoTabsNavigator (nested), nao uma
+    // Screen direta do AlunoStack como Catalogo/Certificados/Perfil/
+    // Notificacoes — precisa do shorthand {screen} pra navegacao descer um
+    // nivel.
+    if (rota === ROUTES.CURSOS) {
       navigationRef.current?.navigate(ROUTES.ALUNO_TABS, { screen: rota });
       return;
     }
@@ -134,6 +136,11 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
               onSessionExpired={onSessionExpired}
               onVoltar={() => navigation.goBack()}
             />
+          )}
+        </AlunoStack.Screen>
+        <AlunoStack.Screen name={ROUTES.CATALOGO}>
+          {() => (
+            <CatalogoScreen onRecarregar={recarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} usuario={usuario} />
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.CERTIFICADOS}>

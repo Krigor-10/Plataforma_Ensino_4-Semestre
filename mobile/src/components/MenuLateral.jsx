@@ -18,7 +18,8 @@ const GRUPOS = [
   {
     titulo: "Navegação",
     itens: [
-      { chave: ROUTES.MATRICULAS, dica: "Abre a tela de matriculas", icone: "school-outline", rotulo: "Matrículas" },
+      { chave: ROUTES.CURSOS, dica: "Abre a tela de cursos adquiridos", icone: "school-outline", rotulo: "Cursos" },
+      { chave: ROUTES.CATALOGO, dica: "Abre o catalogo de cursos disponiveis", icone: "storefront-outline", rotulo: "Catálogo" },
       { chave: ROUTES.CERTIFICADOS, dica: "Abre a tela de certificados", icone: "ribbon-outline", rotulo: "Certificados" }
     ]
   }

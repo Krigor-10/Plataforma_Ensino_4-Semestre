@@ -6,7 +6,7 @@ import HomeScreen from "../HomeScreen.jsx";
 import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
-import MatriculasScreen from "./MatriculasScreen.jsx";
+import CursosScreen from "./CursosScreen.jsx";
 import { ROUTES } from "../../lib/routes.js";
 import { cores } from "../../lib/theme.js";
 
@@ -17,7 +17,7 @@ const ABAS = [
   { chave: ROUTES.CONTEUDOS, icone: "book-outline", iconeAtivo: "book", rotulo: "Conteúdos" },
   { chave: ROUTES.AVALIACOES, icone: "clipboard-outline", iconeAtivo: "clipboard", rotulo: "Avaliações" },
   { chave: ROUTES.PROGRESSO, icone: "bar-chart-outline", iconeAtivo: "bar-chart", rotulo: "Progresso" },
-  { chave: ROUTES.MATRICULAS, icone: "school-outline", iconeAtivo: "school", rotulo: "Matrículas" }
+  { chave: ROUTES.CURSOS, icone: "school-outline", iconeAtivo: "school", rotulo: "Cursos" }
 ];
 const ABAS_POR_CHAVE = Object.fromEntries(ABAS.map((aba) => [aba.chave, aba]));
 
@@ -88,9 +88,9 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
       <Tab.Screen name={ROUTES.PROGRESSO}>
         {() => <ProgressoScreen snapshot={snapshot} />}
       </Tab.Screen>
-      <Tab.Screen name={ROUTES.MATRICULAS}>
+      <Tab.Screen name={ROUTES.CURSOS}>
         {({ navigation }) => (
-          <MatriculasScreen
+          <CursosScreen
             navigation={navigation}
             onRecarregar={onRecarregar}
             onSessionExpired={onSessionExpired}
