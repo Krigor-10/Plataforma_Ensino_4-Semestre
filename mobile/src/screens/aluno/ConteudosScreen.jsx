@@ -1,7 +1,7 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, BackHandler, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
@@ -60,6 +60,25 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer reagir quando um novo cursoId chega via navegacao, nao a cada render.
   }, [route.params?.cursoId]);
+
+  // Selecao de curso e estado local (nao e uma rota do Navigator), entao o
+  // botao fisico/gesto de voltar do Android nao sabe por padrao que devia
+  // interceptar aqui — sem isso, voltar com um curso aberto pulava direto
+  // pra fora da aba (pra Inicio) em vez de voltar pra selecao de curso,
+  // diferente do botao "Voltar" da propria tela. Mesmo padrao ja usado em
+  // MenuLateral.jsx. So registra o listener enquanto ha curso selecionado.
+  useEffect(() => {
+    if (!cursoSelecionadoId) {
+      return undefined;
+    }
+
+    const assinatura = BackHandler.addEventListener("hardwareBackPress", () => {
+      setCursoSelecionadoId(null);
+      return true;
+    });
+
+    return () => assinatura.remove();
+  }, [cursoSelecionadoId]);
 
   const grupos = useMemo(
     () =>
@@ -166,7 +185,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
             </View>
             <View style={estilos.continuarTextos}>
               <Text style={estilos.continuarRotulo}>Continue de onde parou</Text>
-              <Text style={estilos.continuarTitulo}>{cursoAtivo.proximoConteudo.titulo}</Text>
+              <Text numberOfLines={1} style={estilos.continuarTitulo}>{cursoAtivo.proximoConteudo.titulo}</Text>
             </View>
           </TouchableOpacity>
         ) : null}

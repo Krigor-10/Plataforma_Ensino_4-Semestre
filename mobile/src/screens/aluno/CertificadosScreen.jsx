@@ -139,7 +139,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                 />
               </View>
               <View style={estilos.cartaoTextos}>
-                <Text style={estilos.cartaoTitulo}>{certificado.cursoTitulo}</Text>
+                <Text numberOfLines={2} style={estilos.cartaoTitulo}>{certificado.cursoTitulo}</Text>
                 {certificado.turmaNome ? <Text style={estilos.cartaoMeta}>{certificado.turmaNome}</Text> : null}
 
                 {certificado.desbloqueado ? (

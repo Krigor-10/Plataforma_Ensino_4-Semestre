@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
-import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 /* Progresso do Aluno segue o mesmo contexto Curso->conteudo ja usado em
@@ -20,6 +20,23 @@ import SeletorCurso from "../../components/SeletorCurso.jsx";
    aqui — esse detalhamento continua exclusivo da aba Conteudos. */
 export default function ProgressoScreen({ snapshot }) {
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+
+  // Mesmo ajuste de ConteudosScreen.jsx/AvaliacoesScreen.jsx: curso
+  // selecionado e estado local, nao rota — sem isso o voltar fisico do
+  // Android pulava direto pra fora da aba em vez de voltar pra selecao
+  // de curso.
+  useEffect(() => {
+    if (!cursoSelecionadoId) {
+      return undefined;
+    }
+
+    const assinatura = BackHandler.addEventListener("hardwareBackPress", () => {
+      setCursoSelecionadoId(null);
+      return true;
+    });
+
+    return () => assinatura.remove();
+  }, [cursoSelecionadoId]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
@@ -86,7 +103,7 @@ export default function ProgressoScreen({ snapshot }) {
           <View style={estilos.cabecalhoLinha}>
             <CapaCurso curso={curso} size={48} />
             <View style={estilos.cabecalhoConteudo}>
-              <Text numberOfLines={1} style={estilos.titulo}>{tituloCursoAtivo}</Text>
+              <Text numberOfLines={2} style={estilos.titulo}>{tituloCursoAtivo}</Text>
               <View style={estilos.barraFundo}>
                 <View
                   style={[
@@ -110,8 +127,10 @@ export default function ProgressoScreen({ snapshot }) {
               ProgressoAlunoService.RecalcularProgressoCursoAsync no backend) —
               provas/exercicios NAO entram aqui, so entram na Media. Por isso
               100% de progresso pode coexistir com uma avaliacao (prova) ainda
-              pendente, de proposito: sao dois indicadores diferentes. */}
-          <Text style={estilos.legendaMetricas}>Progresso considera conteúdos e quizzes. Provas e exercícios contam na média, não no percentual.</Text>
+              pendente, de proposito: sao dois indicadores diferentes. Texto
+              explicando isso na tela foi removido (cabecalho mais compacto,
+              pedido explicito do usuario) — a regra em si continua valendo,
+              so nao aparece mais escrita aqui. */}
         </View>
 
         <View style={estilos.modulosLista}>
@@ -129,7 +148,10 @@ export default function ProgressoScreen({ snapshot }) {
                   key={modulo.id}
                   style={estilos.modulo}
                 >
-                  <Text numberOfLines={1} style={estilos.moduloTitulo}>{modulo.titulo}</Text>
+                  <View style={estilos.moduloTituloLinha}>
+                    <Ionicons accessibilityElementsHidden color={cores.destaque} importantForAccessibility="no" name="grid-outline" size={15} />
+                    <Text numberOfLines={1} style={estilos.moduloTitulo}>{modulo.titulo}</Text>
+                  </View>
                   <View style={estilos.moduloIndicadores}>
                     <Text style={estilos.moduloProgresso}>{modulo.concluidos}/{totalConteudos}</Text>
                     {moduloConcluido ? <Ionicons color={cores.sucesso} name="checkmark-circle" size={18} /> : null}
@@ -176,7 +198,6 @@ const estilos = StyleSheet.create({
   metrica: { alignItems: "center", flex: 1 },
   metricaValor: { color: cores.texto, fontWeight: "700", fontSize: 15 },
   metricaRotulo: { color: cores.textoSuave, fontSize: 11, marginTop: 2 },
-  legendaMetricas: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md, lineHeight: 16 },
   modulosLista: { gap: 8 },
   modulo: {
     flexDirection: "row",
@@ -188,6 +209,13 @@ const estilos = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12
   },
+  // Icone igual ao TbLayoutGrid da Web (SecoesAluno.jsx) — reforca a
+  // hierarquia curso->modulo tambem no mobile. So identificacao visual, sem
+  // acao propria nem hitSlop: todo o resto da linha ja nao e clicavel aqui
+  // (Progresso nao navega pelos modulos, so mostra evolucao). gap em sm (nao
+  // xs) pra bater com o mesmo respiro icone->titulo ja usado em
+  // ConteudosScreen.jsx (moduloCabecalho) — xs ficava visualmente colado.
+  moduloTituloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, flex: 1 },
   moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: 13, flex: 1 },
   moduloIndicadores: { flexDirection: "row", alignItems: "center", gap: 6 },
   moduloProgresso: { color: cores.textoSuave, fontSize: 12, fontWeight: "600" },

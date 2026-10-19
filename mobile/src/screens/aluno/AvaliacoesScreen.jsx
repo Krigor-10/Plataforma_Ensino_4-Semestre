@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatarTempoRestante, formatScore } from "../../lib/format.js";
 import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
@@ -56,6 +56,22 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer reagir quando um novo cursoId chega via navegacao, nao a cada render.
   }, [route.params?.cursoId]);
+
+  // Mesmo ajuste de ConteudosScreen.jsx: curso selecionado e estado local,
+  // nao rota — sem isso o voltar fisico do Android pulava direto pra fora
+  // da aba em vez de voltar pra selecao de curso.
+  useEffect(() => {
+    if (!cursoSelecionadoId) {
+      return undefined;
+    }
+
+    const assinatura = BackHandler.addEventListener("hardwareBackPress", () => {
+      setCursoSelecionadoId(null);
+      return true;
+    });
+
+    return () => assinatura.remove();
+  }, [cursoSelecionadoId]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
@@ -168,7 +184,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
         <Text style={estilos.voltarTexto}>Trocar de curso</Text>
       </TouchableOpacity>
 
-      <Text numberOfLines={1} style={estilos.tituloCursoAtivo}>{tituloCursoAtivo}</Text>
+      <Text numberOfLines={2} style={estilos.tituloCursoAtivo}>{tituloCursoAtivo}</Text>
 
       {mensagemFeedback ? (
         <View style={estilos.mensagemContainer}>
@@ -235,7 +251,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
                   <View style={estilos.cartaoTextos}>
                     <View style={estilos.cartaoTituloLinha}>
-                      <Text style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
+                      <Text numberOfLines={2} style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
                       {mostrarNota ? (
                         <View style={estilos.badgeNota}>
                           <Text style={estilos.badgeNotaTexto}>
@@ -244,7 +260,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                         </View>
                       ) : null}
                     </View>
-                    {contexto ? <Text style={estilos.cartaoContexto}>{contexto}</Text> : null}
+                    {contexto ? <Text numberOfLines={1} style={estilos.cartaoContexto}>{contexto}</Text> : null}
                     {emAndamento ? (
                       <Text
                         style={[
