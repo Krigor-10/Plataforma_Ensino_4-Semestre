@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -34,6 +35,10 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  // Seção 3 (Segurança da conta): os 3 campos de senha ficam escondidos por
+  // padrão atrás deste toggle — só aparecem quando o usuário efetivamente
+  // entra no fluxo de troca, em vez de ocupar espaço permanentemente na tela.
+  const [alterandoSenha, setAlterandoSenha] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -144,13 +149,16 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     }
   }
 
+  function cancelarAlteracaoSenha() {
+    setSenha(SENHA_INICIAL);
+    setMensagemSenha(null);
+    setAlterandoSenha(false);
+  }
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.container}>
     <ScrollView contentContainerStyle={estilos.corpo}>
-      <TouchableOpacity onPress={onVoltar} style={estilos.voltar}>
-        <Ionicons color={cores.destaque} name="chevron-back" size={18} />
-        <Text style={estilos.voltarTexto}>Voltar</Text>
-      </TouchableOpacity>
+      <BotaoVoltar onPress={onVoltar} style={estilos.voltar} />
 
       <View style={estilos.identidadeCartao}>
         <View style={estilos.avatar}>
@@ -158,6 +166,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         </View>
         <Text numberOfLines={1} style={estilos.identidadeNome}>{usuario?.nome}</Text>
         <Text style={estilos.identidadePapel}>{usuario?.tipoUsuario}</Text>
+        <Text numberOfLines={1} style={estilos.identidadeEmail}>{usuario?.email}</Text>
       </View>
 
       <Text style={estilos.tituloSecao}>Editar dados</Text>
@@ -179,17 +188,40 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         </Botao>
       </View>
 
-      <Text style={estilos.tituloSecao}>Trocar senha</Text>
+      <Text style={estilos.tituloSecao}>Segurança da conta</Text>
       <View style={estilos.cartao}>
-        <Campo label="Senha atual" onChangeText={(v) => setSenha((atual) => ({ ...atual, senhaAtual: v }))} secureTextEntry value={senha.senhaAtual} />
-        <Campo label="Nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, novaSenha: v }))} secureTextEntry value={senha.novaSenha} />
-        <Campo label="Confirmar nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, confirmarNovaSenha: v }))} secureTextEntry value={senha.confirmarNovaSenha} />
+        {!alterandoSenha ? (
+          <TouchableOpacity
+            accessibilityHint="Mostra os campos para trocar sua senha"
+            accessibilityLabel="Alterar senha"
+            accessibilityRole="button"
+            onPress={() => setAlterandoSenha(true)}
+            style={estilos.linhaAlterarSenha}
+          >
+            <View style={estilos.linhaAlterarSenhaIcone}>
+              <Ionicons color={cores.destaque} name="lock-closed-outline" size={18} />
+            </View>
+            <Text style={estilos.linhaAlterarSenhaTexto}>Alterar senha</Text>
+            <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
+          </TouchableOpacity>
+        ) : (
+          <>
+            <Campo label="Senha atual" onChangeText={(v) => setSenha((atual) => ({ ...atual, senhaAtual: v }))} secureTextEntry value={senha.senhaAtual} />
+            <Campo label="Nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, novaSenha: v }))} secureTextEntry value={senha.novaSenha} />
+            <Campo label="Confirmar nova senha" onChangeText={(v) => setSenha((atual) => ({ ...atual, confirmarNovaSenha: v }))} secureTextEntry value={senha.confirmarNovaSenha} />
 
-        <Toast mensagem={mensagemSenha?.texto} onFechar={() => setMensagemSenha(null)} tipo={mensagemSenha?.tipo} />
+            <Toast mensagem={mensagemSenha?.texto} onFechar={() => setMensagemSenha(null)} tipo={mensagemSenha?.tipo} />
 
-        <Botao carregando={salvandoSenha} onPress={salvarSenha} style={estilos.botaoFormulario} variante="primario">
-          Trocar senha
-        </Botao>
+            <View style={estilos.acoesSenha}>
+              <Botao disabled={salvandoSenha} onPress={cancelarAlteracaoSenha} style={estilos.acoesSenhaBotao} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao carregando={salvandoSenha} onPress={salvarSenha} style={estilos.acoesSenhaBotao} variante="primario">
+                Trocar senha
+              </Botao>
+            </View>
+          </>
+        )}
       </View>
 
       <Botao accessibilityLabel="Sair da conta" icone="log-out-outline" onPress={() => setConfirmandoSaida(true)} style={estilos.botaoSair} variante="perigo">
@@ -214,13 +246,13 @@ function Campo({ label, ...props }) {
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: espacamentos.xl, paddingBottom: 40, gap: espacamentos.sm },
-  voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, alignSelf: "flex-start", marginBottom: 8, marginLeft: -6 },
-  voltarTexto: { color: cores.destaque, fontWeight: "600" },
+  voltar: { alignSelf: "flex-start", marginBottom: 8 },
   identidadeCartao: { alignItems: "center", backgroundColor: cores.fundoCartao, borderRadius: raios.lg, paddingVertical: espacamentos.xl, marginBottom: espacamentos.sm },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: cores.destaque, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
   avatarTexto: { color: cores.texto, fontSize: 22, fontWeight: "800" },
   identidadeNome: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", maxWidth: "85%", textAlign: "center" },
   identidadePapel: { color: cores.textoSuave, fontSize: tipografia.corpo, marginTop: 2 },
+  identidadeEmail: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4, maxWidth: "85%" },
   tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 12, marginBottom: 8 },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16, gap: 12 },
   campo: { gap: 6 },
@@ -235,5 +267,17 @@ const estilos = StyleSheet.create({
     borderColor: cores.bordaCartao
   },
   botaoFormulario: { marginTop: 4 },
+  linhaAlterarSenha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, minHeight: 44 },
+  linhaAlterarSenhaIcone: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: cores.fundoCartaoAtivo,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  linhaAlterarSenhaTexto: { flex: 1, color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
+  acoesSenha: { flexDirection: "row", gap: espacamentos.sm, marginTop: 4 },
+  acoesSenhaBotao: { flex: 1 },
   botaoSair: { marginTop: 28 }
 });

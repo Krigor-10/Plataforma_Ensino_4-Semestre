@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
@@ -80,10 +81,7 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
   return (
     <View style={estilos.container}>
       <View style={estilos.cabecalho}>
-        <TouchableOpacity onPress={onVoltar} style={estilos.voltar}>
-          <Ionicons color={cores.destaque} name="chevron-back" size={18} />
-          <Text style={estilos.voltarTexto}>Voltar</Text>
-        </TouchableOpacity>
+        <BotaoVoltar onPress={onVoltar} />
         {naoLidas > 0 ? (
           <TouchableOpacity onPress={marcarTodasComoLidas} style={estilos.marcarTodas}>
             <Ionicons color={cores.textoSuave} name="checkmark-done-outline" size={14} />
@@ -142,8 +140,6 @@ function ItemNotificacao({ notificacao, onPress }) {
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo, padding: espacamentos.xl },
   cabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: espacamentos.sm },
-  voltar: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, marginLeft: -6 },
-  voltarTexto: { color: cores.destaque, fontWeight: "600" },
   marcarTodas: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
   marcarTodasTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontWeight: "600" },
   titulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.destaque, marginBottom: espacamentos.lg },

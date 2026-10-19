@@ -138,8 +138,14 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.CATALOGO}>
-          {() => (
-            <CatalogoScreen onRecarregar={recarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} usuario={usuario} />
+          {({ navigation }) => (
+            <CatalogoScreen
+              onRecarregar={recarregar}
+              onSessionExpired={onSessionExpired}
+              onVoltar={() => navigation.goBack()}
+              snapshot={snapshot}
+              usuario={usuario}
+            />
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.BUSCA}>

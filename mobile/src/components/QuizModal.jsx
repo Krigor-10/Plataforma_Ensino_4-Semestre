@@ -8,7 +8,7 @@ import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
 import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
-import { cores, espacamentos, tipografia } from "../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
@@ -232,8 +232,67 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const tentativaNumeroAtual = Math.min(tentativasRealizadas + 1 + tentativaOffset, tentativasPermitidas);
   const podeRefazer = Boolean(resultado) && tentativaNumeroAtual < tentativasPermitidas;
 
+  // Fase "confirmar" vive num Modal CENTRALIZADO separado (dialogo pequeno,
+  // mesmo conceito do Web: avaliacaoParaConfirmar vs avaliacaoEmExecucao sao
+  // dois modais distintos em SecoesAluno.jsx) — nao cabia no Modal fullscreen
+  // de execucao, que precisa ocupar a tela toda pro cronometro/navegacao
+  // entre questoes. iniciar() so troca `fase`, entao o dialogo centralizado
+  // some e o Modal fullscreen abaixo assume (fase "carregando"->"execucao")
+  // sem nenhuma mudanca na logica de carregamento/envio.
   return (
-    <Modal animationType="slide" onRequestClose={() => !enviando && onFechar()} presentationStyle="pageSheet" visible={visivel}>
+    <>
+      <Modal animationType="fade" onRequestClose={onFechar} transparent visible={visivel && fase === "confirmar"}>
+        <View style={[estilos.dialogoOverlay, { paddingTop: insets.top + espacamentos.xl, paddingBottom: insets.bottom + espacamentos.xl }]}>
+          <TouchableOpacity
+            accessibilityElementsHidden
+            accessibilityRole="none"
+            activeOpacity={1}
+            importantForAccessibility="no"
+            onPress={onFechar}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={estilos.dialogo}>
+            <View style={estilos.dialogoCabecalho}>
+              <Text style={estilos.dialogoTitulo}>Antes de começar</Text>
+              <TouchableOpacity
+                accessibilityHint="Fecha sem iniciar a avaliação"
+                accessibilityLabel="Fechar"
+                accessibilityRole="button"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={onFechar}
+                style={estilos.dialogoFechar}
+              >
+                <Ionicons color={cores.textoSuave} name="close" size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={estilos.dialogoCorpo} style={estilos.dialogoScroll}>
+              <Text numberOfLines={2} style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
+
+              <View style={estilos.resumo}>
+                <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
+                <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+                {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
+                  <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
+                ) : null}
+                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
+              </View>
+
+              <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
+            </ScrollView>
+
+            <View style={estilos.dialogoRodape}>
+              {tentativasEsgotadas ? (
+                <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
+              ) : (
+                <Botao icone="play" onPress={iniciar} variante="primario">Iniciar avaliação</Botao>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal animationType="slide" onRequestClose={() => !enviando && onFechar()} presentationStyle="pageSheet" visible={visivel && fase !== "confirmar"}>
       <View style={estilos.container}>
         <View style={[estilos.cabecalho, { paddingTop: insets.top + 16 }]}>
           <Text numberOfLines={1} style={estilos.titulo}>{avaliacao.titulo}</Text>
@@ -251,26 +310,6 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.corpoFlex}>
         <ScrollView contentContainerStyle={estilos.corpo}>
-          {fase === "confirmar" ? (
-            <View>
-              <Text style={estilos.secaoTitulo}>Antes de começar</Text>
-              <View style={estilos.resumo}>
-                <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
-                <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
-                {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-                  <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
-                ) : null}
-                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
-              </View>
-              <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
-              {tentativasEsgotadas ? (
-                <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
-              ) : (
-                <Botao onPress={iniciar} variante="primario">Iniciar</Botao>
-              )}
-            </View>
-          ) : null}
-
           {fase === "carregando" ? <ActivityIndicator color={cores.destaque} style={{ marginTop: 32 }} /> : null}
 
           {fase === "execucao" && questaoAtual ? (
@@ -436,7 +475,8 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         </ScrollView>
         </KeyboardAvoidingView>
       </View>
-    </Modal>
+      </Modal>
+    </>
   );
 }
 
@@ -472,7 +512,51 @@ const estilos = StyleSheet.create({
   iconeFechar: { opacity: 0.75 },
   corpoFlex: { flex: 1 },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  secaoTitulo: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", marginBottom: 16 },
+  // Modal de pre-avaliacao (fase "confirmar") — dialogo centralizado,
+  // separado do Modal fullscreen de execucao. Largura responsiva (nunca
+  // mais que 420 nem mais que a tela menos as margens), altura limitada a
+  // 85% da tela com scroll interno no corpo e o botao "Iniciar avaliacao"
+  // fixo no rodape (fora do ScrollView), pra ficar sempre acessivel mesmo
+  // com conteudo longo.
+  dialogoOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: espacamentos.xl
+  },
+  dialogo: {
+    width: "100%",
+    maxWidth: 420,
+    maxHeight: "85%",
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    overflow: "hidden"
+  },
+  dialogoCabecalho: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: espacamentos.sm,
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.lg,
+    paddingBottom: espacamentos.md,
+    borderBottomWidth: 1,
+    borderBottomColor: cores.bordaCartao
+  },
+  dialogoTitulo: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", flex: 1 },
+  dialogoFechar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
+  dialogoScroll: { flexShrink: 1 },
+  dialogoCorpo: { padding: espacamentos.xl },
+  dialogoAvaliacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", marginBottom: espacamentos.lg },
+  dialogoRodape: {
+    padding: espacamentos.xl,
+    paddingTop: espacamentos.md,
+    borderTopWidth: 1,
+    borderTopColor: cores.bordaCartao
+  },
   resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
   resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },

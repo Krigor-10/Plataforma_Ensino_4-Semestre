@@ -41,7 +41,7 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
   return (
     <View style={[estilos.container, { paddingTop: insets.top + 12 }]}>
       <View style={estilos.esquerda}>
-        <TouchableOpacity accessibilityHint="Abre o menu lateral" accessibilityLabel="Menu" onPress={onAbrirMenu} style={estilos.botao}>
+        <TouchableOpacity accessibilityHint="Abre o menu lateral" accessibilityLabel="Menu" accessibilityRole="button" onPress={onAbrirMenu} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name="menu" size={24} />
         </TouchableOpacity>
         <TouchableOpacity
@@ -57,10 +57,10 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
         </TouchableOpacity>
       </View>
       <View style={estilos.acoes}>
-        <TouchableOpacity accessibilityHint="Abre a busca de cursos, conteudos e avaliacoes" accessibilityLabel="Buscar" onPress={onAbrirBusca} style={estilos.botao}>
+        <TouchableOpacity accessibilityHint="Abre a busca de cursos, conteudos e avaliacoes" accessibilityLabel="Buscar" accessibilityRole="button" onPress={onAbrirBusca} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name="search-outline" size={22} />
         </TouchableOpacity>
-        <TouchableOpacity accessibilityHint="Abre a lista de notificações" accessibilityLabel="Notificações" onPress={onAbrirNotificacoes} style={estilos.botao}>
+        <TouchableOpacity accessibilityHint="Abre a lista de notificações" accessibilityLabel="Notificações" accessibilityRole="button" onPress={onAbrirNotificacoes} style={estilos.botao}>
           <Ionicons color={cores.textoSuave} name={notificacoesNaoLidas > 0 ? "notifications" : "notifications-outline"} size={22} />
           {notificacoesNaoLidas > 0 ? (
             <View style={estilos.badge}>
@@ -71,6 +71,7 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
         <TouchableOpacity
           accessibilityHint="Abre a tela de perfil"
           accessibilityLabel="Perfil"
+          accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           onPress={onAbrirPerfil}
           style={estilos.avatar}
@@ -105,8 +106,7 @@ const estilos = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: cores.destaque,
     alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 4
+    justifyContent: "center"
   },
   avatarTexto: { color: cores.texto, fontSize: 13, fontWeight: "800" },
   badge: {

@@ -8,6 +8,7 @@ import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import QuizModal from "../../components/QuizModal.jsx";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
+import Toast from "../../components/Toast.jsx";
 
 const TIPO_QUIZ = 1;
 
@@ -40,6 +41,7 @@ const TONE_VISUAL = {
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+  const [mensagemFeedback, setMensagemFeedback] = useState("");
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -169,6 +171,12 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
       <Text numberOfLines={1} style={estilos.tituloCursoAtivo}>{tituloCursoAtivo}</Text>
 
+      {mensagemFeedback ? (
+        <View style={estilos.mensagemContainer}>
+          <Toast mensagem={mensagemFeedback} onFechar={() => setMensagemFeedback("")} tipo="informativo" />
+        </View>
+      ) : null}
+
       {avaliacoesDoCurso.length === 0 ? (
         <Text style={estilos.vazio}>Este curso ainda não possui avaliações disponíveis.</Text>
       ) : (
@@ -186,14 +194,39 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
             const mostrarNota = temTentativa && avaliacao.ultimaNota != null;
             const mostrarStatusPendente = !disponibilidade.podeRealizar && !concluida && !emAndamento;
             const statusVisual = TONE_VISUAL[disponibilidade.tone] || TONE_VISUAL.aviso;
+            // Card inteiro e clicavel pros dois estados com acao real: abre o
+            // quiz se disponivel, ou avisa que ja foi concluida (sem reabrir
+            // o fluxo nem criar tentativa nova). Estados Agendada/Encerrada/
+            // Sem questoes continuam so informativos (ja mostram o motivo via
+            // cartaoStatusLinha abaixo) — nao viram botao pra nao sugerir uma
+            // acao que nao existe.
+            const interativo = disponibilidade.podeRealizar || concluida;
+            const rotuloAcessibilidade = disponibilidade.podeRealizar
+              ? `Iniciar avaliação ${avaliacao.titulo}`
+              : concluida
+                ? `${avaliacao.titulo}. Avaliação concluída.`
+                : `${avaliacao.titulo}. ${contexto}. ${disponibilidade.mensagem}`;
+            const dicaAcessibilidade = disponibilidade.podeRealizar
+              ? "Abre a avaliação para responder"
+              : concluida
+                ? "Mostra que esta avaliação já foi concluída"
+                : undefined;
 
             return (
-              <View
-                accessibilityLabel={
-                  disponibilidade.podeRealizar || concluida ? undefined : `${avaliacao.titulo}. ${contexto}. ${disponibilidade.mensagem}`
-                }
-                accessible={!disponibilidade.podeRealizar && !concluida}
+              <TouchableOpacity
+                accessibilityHint={dicaAcessibilidade}
+                accessibilityLabel={rotuloAcessibilidade}
+                accessibilityRole={interativo ? "button" : undefined}
+                activeOpacity={interativo ? 0.75 : 1}
+                disabled={!interativo}
                 key={avaliacao.id}
+                onPress={() => {
+                  if (disponibilidade.podeRealizar) {
+                    setAvaliacaoSelecionada(avaliacao);
+                  } else if (concluida) {
+                    setMensagemFeedback("Esta avaliação já foi concluída.");
+                  }
+                }}
                 style={estilos.cartao}
               >
                 <View style={estilos.cartaoTopo}>
@@ -241,21 +274,16 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                   </View>
 
                   {disponibilidade.podeRealizar ? (
-                    <TouchableOpacity
-                      accessibilityLabel={`Iniciar avaliação ${avaliacao.titulo}`}
-                      accessibilityRole="button"
-                      onPress={() => setAvaliacaoSelecionada(avaliacao)}
-                      style={estilos.botaoPlay}
-                    >
+                    <View accessibilityElementsHidden importantForAccessibility="no" style={estilos.botaoPlay}>
                       <Ionicons color={cores.destaque} name="play-circle" size={30} />
-                    </TouchableOpacity>
+                    </View>
                   ) : concluida ? (
-                    <View accessibilityLabel="Concluída" accessible style={estilos.iconeEstado}>
-                      <Ionicons color={cores.textoSuave} name="checkmark-circle" size={22} />
+                    <View accessibilityElementsHidden importantForAccessibility="no" style={estilos.iconeEstado}>
+                      <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
                     </View>
                   ) : null}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -287,6 +315,7 @@ const estilos = StyleSheet.create({
     marginLeft: -6
   },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
+  mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
   tituloCursoAtivo: {
     color: cores.texto,
     fontWeight: "700",
