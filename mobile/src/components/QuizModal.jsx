@@ -3,12 +3,14 @@ import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, Scr
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Botao from "./Botao.jsx";
+import ModalCentralizado from "./ModalCentralizado.jsx";
+import ModalConfirmarSaida from "./ModalConfirmarSaida.jsx";
 import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
 import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
-import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
+import { cores, espacamentos, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
@@ -29,6 +31,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const [resultado, setResultado] = useState(null);
   const [tempoRestante, setTempoRestante] = useState(null);
   const [tentativaOffset, setTentativaOffset] = useState(0);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   const prazoFinalRef = useRef(null);
   const insets = useSafeAreaInsets();
 
@@ -44,6 +47,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       setResultado(null);
       setTempoRestante(null);
       setTentativaOffset(0);
+      setConfirmandoSaida(false);
       prazoFinalRef.current = null;
     }
   }, [visivel, avaliacao?.id]);
@@ -218,6 +222,22 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
     iniciar();
   }
 
+  // Tocar no X (ou o botao fisico de voltar do Android) enquanto a tentativa
+  // esta em andamento nao pode sair silenciosamente — pede confirmacao,
+  // com a mensagem variando conforme o aluno ja respondeu alguma coisa ou
+  // nao. Fora da fase "execucao" (confirmar/carregando/resultado) fecha
+  // direto: antes de iniciar nao ha nada a perder, e depois do resultado a
+  // tentativa ja foi enviada de verdade, nao ha "saida" a confirmar.
+  function tentarFecharExecucao() {
+    if (fase !== "execucao") {
+      onFechar();
+      return;
+    }
+    setConfirmandoSaida(true);
+  }
+
+  const totalRespondidas = questoes.filter(questaoRespondida).length;
+
   if (!avaliacao) {
     return null;
   }
@@ -232,7 +252,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const tentativaNumeroAtual = Math.min(tentativasRealizadas + 1 + tentativaOffset, tentativasPermitidas);
   const podeRefazer = Boolean(resultado) && tentativaNumeroAtual < tentativasPermitidas;
 
-  // Fase "confirmar" vive num Modal CENTRALIZADO separado (dialogo pequeno,
+  // Fase "confirmar" vive num dialogo CENTRALIZADO separado (ModalCentralizado,
   // mesmo conceito do Web: avaliacaoParaConfirmar vs avaliacaoEmExecucao sao
   // dois modais distintos em SecoesAluno.jsx) — nao cabia no Modal fullscreen
   // de execucao, que precisa ocupar a tela toda pro cronometro/navegacao
@@ -241,72 +261,76 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   // sem nenhuma mudanca na logica de carregamento/envio.
   return (
     <>
-      <Modal animationType="fade" onRequestClose={onFechar} transparent visible={visivel && fase === "confirmar"}>
-        <View style={[estilos.dialogoOverlay, { paddingTop: insets.top + espacamentos.xl, paddingBottom: insets.bottom + espacamentos.xl }]}>
-          <TouchableOpacity
-            accessibilityElementsHidden
-            accessibilityRole="none"
-            activeOpacity={1}
-            importantForAccessibility="no"
-            onPress={onFechar}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={estilos.dialogo}>
-            <View style={estilos.dialogoCabecalho}>
-              <Text style={estilos.dialogoTitulo}>Antes de começar</Text>
-              <TouchableOpacity
-                accessibilityHint="Fecha sem iniciar a avaliação"
-                accessibilityLabel="Fechar"
-                accessibilityRole="button"
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={onFechar}
-                style={estilos.dialogoFechar}
-              >
-                <Ionicons color={cores.textoSuave} name="close" size={22} />
-              </TouchableOpacity>
-            </View>
+      <ModalCentralizado
+        onFechar={onFechar}
+        titulo="Antes de começar"
+        visivel={visivel && fase === "confirmar"}
+        rodape={
+          tentativasEsgotadas ? (
+            <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
+          ) : (
+            <Botao icone="play" onPress={iniciar} variante="primario">Iniciar avaliação</Botao>
+          )
+        }
+      >
+        <Text numberOfLines={2} style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
 
-            <ScrollView contentContainerStyle={estilos.dialogoCorpo} style={estilos.dialogoScroll}>
-              <Text numberOfLines={2} style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
-
-              <View style={estilos.resumo}>
-                <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
-                <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
-                {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-                  <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
-                ) : null}
-                <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
-              </View>
-
-              <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
-            </ScrollView>
-
-            <View style={estilos.dialogoRodape}>
-              {tentativasEsgotadas ? (
-                <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
-              ) : (
-                <Botao icone="play" onPress={iniciar} variante="primario">Iniciar avaliação</Botao>
-              )}
-            </View>
-          </View>
+        <View style={estilos.resumo}>
+          <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
+          <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+          {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
+            <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
+          ) : null}
+          <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
         </View>
-      </Modal>
 
-      <Modal animationType="slide" onRequestClose={() => !enviando && onFechar()} presentationStyle="pageSheet" visible={visivel && fase !== "confirmar"}>
+        <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
+      </ModalCentralizado>
+
+      <Modal animationType="slide" onRequestClose={() => !enviando && tentarFecharExecucao()} presentationStyle="pageSheet" visible={visivel && fase !== "confirmar"}>
       <View style={estilos.container}>
         <View style={[estilos.cabecalho, { paddingTop: insets.top + 16 }]}>
           <Text numberOfLines={1} style={estilos.titulo}>{avaliacao.titulo}</Text>
-          <TouchableOpacity
-            accessibilityLabel="Fechar avaliação"
-            accessibilityRole="button"
-            disabled={enviando}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            onPress={onFechar}
-            style={estilos.botaoFechar}
-          >
-            <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
-          </TouchableOpacity>
+          <View style={estilos.cabecalhoDireita}>
+            {fase === "execucao" && tempoRestante !== null ? (
+              <View style={estilos.cronometroLinha}>
+                <Ionicons color={tempoRestante <= 60 ? cores.erro : cores.texto} name="time-outline" size={16} />
+                <Text style={[estilos.cronometro, tempoRestante <= 60 ? estilos.cronometroUrgente : null]}>
+                  {formatarTempoRestante(tempoRestante)}
+                </Text>
+              </View>
+            ) : null}
+            <TouchableOpacity
+              accessibilityLabel="Fechar avaliação"
+              accessibilityRole="button"
+              disabled={enviando}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              onPress={tentarFecharExecucao}
+              style={estilos.botaoFechar}
+            >
+              <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <ModalConfirmarSaida
+          acaoCancelar="Continuar avaliação"
+          acaoConfirmar="Sair da avaliação"
+          iconeCancelar="arrow-back"
+          iconeConfirmar="exit-outline"
+          onCancelar={() => setConfirmandoSaida(false)}
+          onConfirmar={() => {
+            setConfirmandoSaida(false);
+            onFechar();
+          }}
+          texto={
+            totalRespondidas === 0
+              ? "Você ainda não respondeu nenhuma questão. Deseja realmente sair da avaliação?"
+              : `Você já respondeu ${totalRespondidas} de ${questoes.length} questões. Suas respostas ficam salvas e você pode continuar depois, mas a avaliação só é enviada quando você tocar em "Enviar avaliação". Deseja realmente sair agora?`
+          }
+          titulo="Sair da avaliação"
+          visivel={confirmandoSaida}
+        />
 
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.corpoFlex}>
         <ScrollView contentContainerStyle={estilos.corpo}>
@@ -316,14 +340,6 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
             <View>
               <View style={estilos.passos}>
                 <Text style={estilos.contador}>Questão {indiceAtual + 1} de {questoes.length}</Text>
-                {tempoRestante !== null ? (
-                  <View style={estilos.cronometroLinha}>
-                    <Ionicons color={tempoRestante <= 60 ? cores.erro : cores.texto} name="time-outline" size={16} />
-                    <Text style={[estilos.cronometro, tempoRestante <= 60 ? estilos.cronometroUrgente : null]}>
-                      {formatarTempoRestante(tempoRestante)}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
 
               <View style={estilos.pillsLinha}>
@@ -508,55 +524,16 @@ const estilos = StyleSheet.create({
     borderBottomColor: cores.bordaCartao
   },
   titulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1, marginRight: 12 },
+  // Agrupa cronometro (quando a avaliacao esta em execucao) + botao de
+  // fechar do lado direito do cabecalho fixo, pra "justify-content: space-
+  // between" do cabecalho distribuir so 2 blocos (titulo vs. este grupo),
+  // nao 3 soltos.
+  cabecalhoDireita: { flexDirection: "row", alignItems: "center", gap: espacamentos.md },
   botaoFechar: { padding: 4 },
   iconeFechar: { opacity: 0.75 },
   corpoFlex: { flex: 1 },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  // Modal de pre-avaliacao (fase "confirmar") — dialogo centralizado,
-  // separado do Modal fullscreen de execucao. Largura responsiva (nunca
-  // mais que 420 nem mais que a tela menos as margens), altura limitada a
-  // 85% da tela com scroll interno no corpo e o botao "Iniciar avaliacao"
-  // fixo no rodape (fora do ScrollView), pra ficar sempre acessivel mesmo
-  // com conteudo longo.
-  dialogoOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: espacamentos.xl
-  },
-  dialogo: {
-    width: "100%",
-    maxWidth: 420,
-    maxHeight: "85%",
-    backgroundColor: cores.fundoCartao,
-    borderRadius: raios.lg,
-    borderWidth: 1,
-    borderColor: cores.bordaCartao,
-    overflow: "hidden"
-  },
-  dialogoCabecalho: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: espacamentos.sm,
-    paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.lg,
-    paddingBottom: espacamentos.md,
-    borderBottomWidth: 1,
-    borderBottomColor: cores.bordaCartao
-  },
-  dialogoTitulo: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", flex: 1 },
-  dialogoFechar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
-  dialogoScroll: { flexShrink: 1 },
-  dialogoCorpo: { padding: espacamentos.xl },
   dialogoAvaliacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", marginBottom: espacamentos.lg },
-  dialogoRodape: {
-    padding: espacamentos.xl,
-    paddingTop: espacamentos.md,
-    borderTopWidth: 1,
-    borderTopColor: cores.bordaCartao
-  },
   resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
   resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },

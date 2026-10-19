@@ -32,11 +32,10 @@ const TONE_VISUAL = {
    segunda implementacao desnecessaria pro mesmo padrao.
 
    Cards de avaliacao continuam compactos: so identificam a avaliacao
-   (titulo + modulo) e o estado (Play se disponivel, check neutro — nao
-   verde de sucesso — se concluida, ja que o sistema nao tem nota minima de
-   aprovacao em lugar nenhum pra julgar se o resultado foi satisfatorio).
-   Detalhes (tempo, questoes, nota, tentativas) ficam pro Modal de
-   confirmacao, o QuizModal.jsx ja existente (fase "confirmar"), reaproveitado
+   (titulo + modulo) e o estado (Play se disponivel, check verde — cores.sucesso
+   — se concluida; card inteiro e clicavel, nao so o icone). Detalhes (tempo,
+   questoes, nota, tentativas) ficam pro Modal de confirmacao, o QuizModal.jsx
+   ja existente (fase "confirmar"), reaproveitado
    sem alteracao. */
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
@@ -266,11 +265,6 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
                         <Text style={[estilos.cartaoStatusTexto, { color: statusVisual.cor }]}>{disponibilidade.label}</Text>
                       </View>
                     ) : null}
-                    {temTentativa ? (
-                      <Text style={estilos.cartaoMeta}>
-                        Tentativas {avaliacao.tentativasRealizadas} de {avaliacao.tentativasPermitidas || 1}
-                      </Text>
-                    ) : null}
                   </View>
 
                   {disponibilidade.podeRealizar ? (
@@ -316,16 +310,33 @@ const estilos = StyleSheet.create({
   },
   voltarTexto: { color: cores.destaque, fontWeight: "600" },
   mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
+  // paddingBottom aqui (nao mais paddingTop dividido no `corpo` abaixo) e o
+  // UNICO dono do espaco entre o titulo e o primeiro card — mesmo padrao
+  // estrutural do cabecalhoCurso de ConteudosScreen.jsx (paddingBottom: lg +
+  // corpo com paddingTop: 0), reaproveitado aqui por pedido explicito pra
+  // nao deixar duas origens de espacamento (titulo + ScrollView) cada uma
+  // contribuindo uma fatia do mesmo respiro visual.
   tituloCursoAtivo: {
     color: cores.texto,
     fontWeight: "700",
     fontSize: tipografia.titulo,
     paddingHorizontal: espacamentos.xl,
     paddingTop: espacamentos.sm,
-    paddingBottom: espacamentos.sm
+    paddingBottom: espacamentos.lg
   },
-  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.sm, gap: espacamentos.md },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, padding: espacamentos.lg },
+  corpo: { padding: espacamentos.xl, paddingTop: 0, gap: espacamentos.md },
+  // borderLeftWidth/borderLeftColor seguem o mesmo padrao do card "Continue
+  // de onde parou" em ConteudosScreen.jsx (.continuar) — faixa roxa de
+  // identidade visual, mesma cor/espessura, sem afetar o raio dos cantos
+  // (RN aplica borderRadius por cima do borderLeftWidth automaticamente)
+  // nem a area de toque (TouchableOpacity continua cobrindo o card inteiro).
+  cartao: {
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    padding: espacamentos.lg,
+    borderLeftWidth: 3,
+    borderLeftColor: cores.destaque
+  },
   cartaoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: espacamentos.sm },
   cartaoIcone: {
     width: 32,
@@ -341,7 +352,6 @@ const estilos = StyleSheet.create({
   badgeNota: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: 999, paddingHorizontal: espacamentos.sm, paddingVertical: 2 },
   badgeNotaTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.legenda },
   cartaoContexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
-  cartaoMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "600" },
   cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, marginTop: 4, fontWeight: "700" },
   cartaoEmAndamentoUrgente: { color: cores.erro },
   cartaoStatusLinha: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },

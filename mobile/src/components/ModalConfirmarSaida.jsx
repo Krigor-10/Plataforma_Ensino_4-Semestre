@@ -2,22 +2,38 @@ import { Modal, StyleSheet, Text, View } from "react-native";
 import Botao from "./Botao.jsx";
 import { cores, espacamentos, raios, sombra, tipografia } from "../lib/theme.js";
 
-/* Dialogo de confirmacao de logout — extraido de PerfilScreen.jsx (unico
-   lugar que tinha "Sair" antes do menu lateral) pra ser reaproveitado tambem
-   por MenuLateral.jsx, sem duplicar o mesmo Modal/estilos nos dois lugares. */
-export default function ModalConfirmarSaida({ onCancelar, onConfirmar, visivel }) {
+/* Dialogo de confirmacao generico (nao so de logout) — nasceu extraido de
+   PerfilScreen.jsx (unico lugar que tinha "Sair" antes do menu lateral) e
+   hoje tambem e usado pelo AlunoWorkspace.jsx (acionado via MenuLateral.jsx).
+   Textos/icones/variantes tem default identico ao uso original de logout
+   (zero mudanca de comportamento pros chamadores existentes), mas ficam
+   sobrescritiveis — reaproveitado pelo QuizModal.jsx pra confirmar saida de
+   uma avaliacao em andamento, so trocando titulo/texto/rotulos dos botoes. */
+export default function ModalConfirmarSaida({
+  acaoCancelar = "Cancelar",
+  acaoConfirmar = "Sair",
+  iconeCancelar = "close",
+  iconeConfirmar = "log-out-outline",
+  onCancelar,
+  onConfirmar,
+  texto = "Deseja realmente sair da sua conta?",
+  titulo = "Sair da conta",
+  varianteCancelar = "perigo",
+  varianteConfirmar = "sucesso",
+  visivel
+}) {
   return (
     <Modal animationType="fade" onRequestClose={onCancelar} transparent visible={visivel}>
       <View style={estilos.fundo}>
         <View style={estilos.painel}>
-          <Text style={estilos.titulo}>Sair da conta</Text>
-          <Text style={estilos.texto}>Deseja realmente sair da sua conta?</Text>
+          <Text style={estilos.titulo}>{titulo}</Text>
+          <Text style={estilos.texto}>{texto}</Text>
           <View style={estilos.acoes}>
-            <Botao icone="close" onPress={onCancelar} style={estilos.botao} variante="perigo">
-              Cancelar
+            <Botao icone={iconeCancelar} onPress={onCancelar} style={estilos.botao} variante={varianteCancelar}>
+              {acaoCancelar}
             </Botao>
-            <Botao icone="log-out-outline" onPress={onConfirmar} style={estilos.botao} variante="sucesso">
-              Sair
+            <Botao icone={iconeConfirmar} onPress={onConfirmar} style={estilos.botao} variante={varianteConfirmar}>
+              {acaoConfirmar}
             </Botao>
           </View>
         </View>

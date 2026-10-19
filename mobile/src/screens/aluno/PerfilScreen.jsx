@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
+import ModalCentralizado from "../../components/ModalCentralizado.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -29,6 +30,11 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
   const [dados, setDados] = useState(() => estadoFormularioInicial(usuario));
   const [mensagemPerfil, setMensagemPerfil] = useState(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  // `rascunhoPerfil` null = tela em modo leitura (padrao); objeto = modal de
+  // edicao aberto, editando uma COPIA de `dados` (nao os dados persistidos
+  // direto) — assim "Cancelar"/fechar o modal so descarta o rascunho, sem
+  // nenhuma chance de deixar a tela de leitura com valor editado e nao salvo.
+  const [rascunhoPerfil, setRascunhoPerfil] = useState(null);
 
   const [senha, setSenha] = useState(SENHA_INICIAL);
   const [mensagemSenha, setMensagemSenha] = useState(null);
@@ -61,25 +67,38 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function atualizarCampo(campo, valor) {
-    setDados((atual) => ({ ...atual, [campo]: valor }));
+  function atualizarCampoRascunho(campo, valor) {
+    setRascunhoPerfil((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  function abrirEdicaoPerfil() {
+    setMensagemPerfil(null);
+    setRascunhoPerfil(dados);
+  }
+
+  function fecharEdicaoPerfil() {
+    if (salvandoPerfil) {
+      return;
+    }
+    setMensagemPerfil(null);
+    setRascunhoPerfil(null);
   }
 
   async function salvarPerfil() {
     const obrigatorios = ["nome", "email", "telefone", "cep", "rua", "numero", "bairro", "cidade", "estado"];
-    const campoVazio = obrigatorios.find((campo) => !String(dados[campo] || "").trim());
+    const campoVazio = obrigatorios.find((campo) => !String(rascunhoPerfil[campo] || "").trim());
 
     if (campoVazio) {
       setMensagemPerfil({ tipo: "erro", texto: "Preencha todos os campos para salvar seu perfil." });
       return;
     }
 
-    if (onlyDigits(dados.cep).length !== 8) {
+    if (onlyDigits(rascunhoPerfil.cep).length !== 8) {
       setMensagemPerfil({ tipo: "erro", texto: "Informe um CEP com 8 dígitos." });
       return;
     }
 
-    if (dados.estado.trim().length !== 2) {
+    if (rascunhoPerfil.estado.trim().length !== 2) {
       setMensagemPerfil({ tipo: "erro", texto: "Informe a UF com 2 letras." });
       return;
     }
@@ -91,19 +110,21 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
       const usuarioAtualizado = await apiRequest("/Usuarios/me", {
         method: "PUT",
         body: JSON.stringify({
-          nome: dados.nome.trim(),
-          email: dados.email.trim(),
-          telefone: dados.telefone.trim(),
-          cep: formatCep(onlyDigits(dados.cep)),
-          rua: dados.rua.trim(),
-          numero: dados.numero.trim(),
-          bairro: dados.bairro.trim(),
-          cidade: dados.cidade.trim(),
-          estado: dados.estado.trim().toUpperCase()
+          nome: rascunhoPerfil.nome.trim(),
+          email: rascunhoPerfil.email.trim(),
+          telefone: rascunhoPerfil.telefone.trim(),
+          cep: formatCep(onlyDigits(rascunhoPerfil.cep)),
+          rua: rascunhoPerfil.rua.trim(),
+          numero: rascunhoPerfil.numero.trim(),
+          bairro: rascunhoPerfil.bairro.trim(),
+          cidade: rascunhoPerfil.cidade.trim(),
+          estado: rascunhoPerfil.estado.trim().toUpperCase()
         })
       });
 
       onUsuarioAtualizado?.(usuarioAtualizado);
+      setDados(estadoFormularioInicial(usuarioAtualizado));
+      setRascunhoPerfil(null);
       setMensagemPerfil({ tipo: "sucesso", texto: "Perfil atualizado com sucesso." });
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -169,24 +190,60 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         <Text numberOfLines={1} style={estilos.identidadeEmail}>{usuario?.email}</Text>
       </View>
 
-      <Text style={estilos.tituloSecao}>Editar dados</Text>
+      <View style={estilos.tituloSecaoLinha}>
+        <Text style={estilos.tituloSecao}>Dados pessoais</Text>
+        <TouchableOpacity
+          accessibilityHint="Abre o modal de edição dos seus dados pessoais"
+          accessibilityLabel="Editar dados pessoais"
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          onPress={abrirEdicaoPerfil}
+          style={estilos.botaoEditar}
+        >
+          <Ionicons color={cores.destaque} name="pencil" size={18} />
+        </TouchableOpacity>
+      </View>
       <View style={estilos.cartao}>
-        <Campo label="Nome completo" onChangeText={(v) => atualizarCampo("nome", v)} value={dados.nome} />
-        <Campo autoCapitalize="none" keyboardType="email-address" label="E-mail" onChangeText={(v) => atualizarCampo("email", v)} value={dados.email} />
-        <Campo keyboardType="phone-pad" label="Telefone" onChangeText={(v) => atualizarCampo("telefone", v)} placeholder="(11) 99999-9999" value={dados.telefone} />
-        <Campo keyboardType="numeric" label="CEP" onChangeText={(v) => atualizarCampo("cep", v)} placeholder="00000-000" value={dados.cep} />
-        <Campo label="Rua" onChangeText={(v) => atualizarCampo("rua", v)} value={dados.rua} />
-        <Campo label="Numero" onChangeText={(v) => atualizarCampo("numero", v)} value={dados.numero} />
-        <Campo label="Bairro" onChangeText={(v) => atualizarCampo("bairro", v)} value={dados.bairro} />
-        <Campo label="Cidade" onChangeText={(v) => atualizarCampo("cidade", v)} value={dados.cidade} />
-        <Campo autoCapitalize="characters" label="UF" maxLength={2} onChangeText={(v) => atualizarCampo("estado", v)} placeholder="SP" value={dados.estado} />
+        <CampoLeitura label="Nome completo" valor={dados.nome} />
+        <CampoLeitura label="E-mail" valor={dados.email} />
+        <CampoLeitura label="Telefone" valor={dados.telefone} />
+        <CampoLeitura label="CEP" valor={dados.cep} />
+        <CampoLeitura label="Rua" valor={dados.rua} />
+        <CampoLeitura label="Numero" valor={dados.numero} />
+        <CampoLeitura label="Bairro" valor={dados.bairro} />
+        <CampoLeitura label="Cidade" valor={dados.cidade} />
+        <CampoLeitura label="UF" valor={dados.estado} />
 
         <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
-
-        <Botao carregando={salvandoPerfil} onPress={salvarPerfil} style={estilos.botaoFormulario} variante="primario">
-          Salvar alteracoes
-        </Botao>
       </View>
+
+      <ModalCentralizado
+        onFechar={fecharEdicaoPerfil}
+        titulo="Editar dados pessoais"
+        visivel={Boolean(rascunhoPerfil)}
+        rodape={
+          <View style={estilos.acoesEdicaoPerfil}>
+            <Botao disabled={salvandoPerfil} onPress={fecharEdicaoPerfil} style={estilos.acoesEdicaoPerfilBotao} variante="fantasma">
+              Cancelar
+            </Botao>
+            <Botao carregando={salvandoPerfil} onPress={salvarPerfil} style={estilos.acoesEdicaoPerfilBotao} variante="primario">
+              Salvar alterações
+            </Botao>
+          </View>
+        }
+      >
+        <Campo label="Nome completo" onChangeText={(v) => atualizarCampoRascunho("nome", v)} value={rascunhoPerfil?.nome || ""} />
+        <Campo autoCapitalize="none" keyboardType="email-address" label="E-mail" onChangeText={(v) => atualizarCampoRascunho("email", v)} value={rascunhoPerfil?.email || ""} />
+        <Campo keyboardType="phone-pad" label="Telefone" onChangeText={(v) => atualizarCampoRascunho("telefone", v)} placeholder="(11) 99999-9999" value={rascunhoPerfil?.telefone || ""} />
+        <Campo keyboardType="numeric" label="CEP" onChangeText={(v) => atualizarCampoRascunho("cep", v)} placeholder="00000-000" value={rascunhoPerfil?.cep || ""} />
+        <Campo label="Rua" onChangeText={(v) => atualizarCampoRascunho("rua", v)} value={rascunhoPerfil?.rua || ""} />
+        <Campo label="Numero" onChangeText={(v) => atualizarCampoRascunho("numero", v)} value={rascunhoPerfil?.numero || ""} />
+        <Campo label="Bairro" onChangeText={(v) => atualizarCampoRascunho("bairro", v)} value={rascunhoPerfil?.bairro || ""} />
+        <Campo label="Cidade" onChangeText={(v) => atualizarCampoRascunho("cidade", v)} value={rascunhoPerfil?.cidade || ""} />
+        <Campo autoCapitalize="characters" label="UF" maxLength={2} onChangeText={(v) => atualizarCampoRascunho("estado", v)} placeholder="SP" value={rascunhoPerfil?.estado || ""} />
+
+        <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
+      </ModalCentralizado>
 
       <Text style={estilos.tituloSecao}>Segurança da conta</Text>
       <View style={estilos.cartao}>
@@ -243,6 +300,18 @@ function Campo({ label, ...props }) {
   );
 }
 
+// Mesma estrutura rotulo+valor do Campo (TextInput), so que so leitura — a
+// tela de Perfil abre sempre nesse modo, pra nao editar nada por acidente;
+// o modal de edicao (ModalCentralizado) e que usa o Campo editavel de verdade.
+function CampoLeitura({ label, valor }) {
+  return (
+    <View style={estilos.campo}>
+      <Text style={estilos.rotulo}>{label}</Text>
+      <Text numberOfLines={1} style={estilos.valorLeitura}>{valor || "—"}</Text>
+    </View>
+  );
+}
+
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: espacamentos.xl, paddingBottom: 40, gap: espacamentos.sm },
@@ -254,6 +323,12 @@ const estilos = StyleSheet.create({
   identidadePapel: { color: cores.textoSuave, fontSize: tipografia.corpo, marginTop: 2 },
   identidadeEmail: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4, maxWidth: "85%" },
   tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 12, marginBottom: 8 },
+  // Linha com o titulo da secao + icone de lapis alinhado a direita — mesmo
+  // `tituloSecao` de base, so vira uma row quando precisa do botao de editar
+  // (Dados pessoais); Segurança da conta nao tem acao no titulo, continua
+  // usando `tituloSecao` sozinho.
+  tituloSecaoLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12, marginBottom: 8 },
+  botaoEditar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16, gap: 12 },
   campo: { gap: 6 },
   rotulo: { color: cores.textoRotulo, fontSize: tipografia.corpo },
@@ -266,7 +341,12 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderColor: cores.bordaCartao
   },
-  botaoFormulario: { marginTop: 4 },
+  // Mesmo "slot" visual do `entrada` (TextInput), sem a borda/fundo de campo
+  // ativo — reforca que a tela de Perfil, no modo leitura, nao e um
+  // formulario editavel.
+  valorLeitura: { color: cores.texto, fontSize: tipografia.corpo, paddingVertical: 10 },
+  acoesEdicaoPerfil: { flexDirection: "row", gap: espacamentos.sm },
+  acoesEdicaoPerfilBotao: { flex: 1 },
   linhaAlterarSenha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, minHeight: 44 },
   linhaAlterarSenhaIcone: {
     width: 32,
