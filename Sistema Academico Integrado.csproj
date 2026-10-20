@@ -40,6 +40,12 @@
 		</PackageReference>
 		<PackageReference Include="Scalar.AspNetCore" Version="2.4.1" />
 		<PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+
+		<!-- Pins diretos: MailKit/Microsoft.Data.SqlClient/DataProtection puxam
+		     versoes transitivas vulneraveis a DoS (CVE-2026-84008/70162/96958/
+		     96959/96960, GHSA-846f-f764-76mx e correlatas). 10.0.13 e a
+		     primeira versao corrigida na linha do .NET 10. -->
+		<PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
 	</ItemGroup>
 
 </Project>

@@ -12,6 +12,13 @@ public abstract class ArmazenamentoArquivoServiceBase : IArmazenamentoArquivoSer
 {
     private static readonly FileExtensionContentTypeProvider ContentTypeProvider = new();
 
+    /* subpasta e nomeArquivo chegam direto da rota publica "/uploads/{subpasta}/{nomeArquivo}"
+       (Program.cs) - sao controlados pelo cliente. Sem esta validacao, "subpasta" com
+       "..\.." (ou nomeArquivo com separador embutido) permitiria ler qualquer arquivo
+       fora de Storage/Uploads no backend local, ou qualquer blob fora da "pasta" logica
+       pretendida no backend Azure. Centralizado aqui pra valer pros dois backends. */
+    private static readonly string[] SubpastasPermitidas = { "conteudos", "cursos", "questoes" };
+
     /* Assinatura binaria (magic bytes) por extensao — evita que um arquivo
        renomeado (ex.: um .html/.exe salvo como .jpg) passe so por ter a
        extensao certa no nome. .mp4/.mov compartilham o formato de container
@@ -92,7 +99,20 @@ public abstract class ArmazenamentoArquivoServiceBase : IArmazenamentoArquivoSer
         return $"/uploads/{subpasta}/{nomeArquivo}";
     }
 
-    public abstract Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo);
+    public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
+    {
+        if (!SubpastasPermitidas.Contains(subpasta) ||
+            string.IsNullOrWhiteSpace(nomeArquivo) ||
+            nomeArquivo is "." or ".." ||
+            Path.GetFileName(nomeArquivo) != nomeArquivo)
+        {
+            return Task.FromResult<ArquivoArmazenado?>(null);
+        }
+
+        return AbrirArquivoValidadoAsync(subpasta, nomeArquivo);
+    }
+
+    protected abstract Task<ArquivoArmazenado?> AbrirArquivoValidadoAsync(string subpasta, string nomeArquivo);
 
     protected abstract Task PersistirAsync(IFormFile arquivo, string subpasta, string nomeArquivo);
 

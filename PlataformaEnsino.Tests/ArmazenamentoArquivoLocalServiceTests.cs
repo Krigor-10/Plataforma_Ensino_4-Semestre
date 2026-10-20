@@ -143,6 +143,40 @@ public class ArmazenamentoArquivoLocalServiceTests : IDisposable
             () => _service.SalvarArquivoAsync(arquivoVazio, "conteudos", new[] { ".pdf" }, 1_000_000));
     }
 
+    [Fact]
+    public async Task AbrirArquivoAsync_ArquivoValido_RetornaConteudo()
+    {
+        var arquivo = CriarArquivoFake("prova.pdf");
+        var url = await _service.SalvarArquivoAsync(arquivo, "conteudos", new[] { ".pdf" }, 1_000_000);
+        var nomeArquivo = Path.GetFileName(url);
+
+        var resultado = await _service.AbrirArquivoAsync("conteudos", nomeArquivo);
+
+        Assert.NotNull(resultado);
+        resultado!.Conteudo.Dispose();
+    }
+
+    [Fact]
+    public async Task AbrirArquivoAsync_SubpastaForaDoAllowlist_RetornaNulo()
+    {
+        // Simula tentativa de path traversal via segmento de rota: "/uploads/../appsettings.json/x".
+        var resultado = await _service.AbrirArquivoAsync("../../..", "appsettings.json");
+
+        Assert.Null(resultado);
+    }
+
+    [Theory]
+    [InlineData("..")]
+    [InlineData("../segredo.txt")]
+    [InlineData("..\\segredo.txt")]
+    [InlineData("sub/segredo.txt")]
+    public async Task AbrirArquivoAsync_NomeArquivoComTravessiaDeDiretorio_RetornaNulo(string nomeArquivoMalicioso)
+    {
+        var resultado = await _service.AbrirArquivoAsync("conteudos", nomeArquivoMalicioso);
+
+        Assert.Null(resultado);
+    }
+
     private class AmbienteFake : IWebHostEnvironment
     {
         public AmbienteFake(string contentRootPath)

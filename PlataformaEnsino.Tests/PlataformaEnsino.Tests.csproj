@@ -14,6 +14,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+
+    <!-- Pin: Microsoft.AspNetCore.Mvc.Testing traz System.Security.Cryptography.Xml
+         10.0.10 (vulneravel a DoS, GHSA-r955-8q5j-3h83/-7hqp-7c5m-4vq6/-c399-9853-6jmj).
+         10.0.13 e a primeira versao corrigida. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
   </ItemGroup>
 
   <ItemGroup>

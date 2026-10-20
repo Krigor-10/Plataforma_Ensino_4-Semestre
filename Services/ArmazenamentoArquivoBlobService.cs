@@ -39,7 +39,7 @@ public class ArmazenamentoArquivoBlobService : ArmazenamentoArquivoServiceBase
         });
     }
 
-    public override async Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
+    protected override async Task<ArquivoArmazenado?> AbrirArquivoValidadoAsync(string subpasta, string nomeArquivo)
     {
         var blobCliente = _containerCliente.GetBlobClient(CaminhoBlob(subpasta, nomeArquivo));
 

@@ -26,11 +26,16 @@ public class ArmazenamentoArquivoLocalService : ArmazenamentoArquivoServiceBase
         await arquivo.CopyToAsync(stream);
     }
 
-    public override Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
+    protected override Task<ArquivoArmazenado?> AbrirArquivoValidadoAsync(string subpasta, string nomeArquivo)
     {
-        var caminhoCompleto = Path.Combine(CaminhoPasta(subpasta), nomeArquivo);
+        var pastaBase = Path.GetFullPath(CaminhoPasta(subpasta));
+        var caminhoCompleto = Path.GetFullPath(Path.Combine(pastaBase, nomeArquivo));
 
-        if (!File.Exists(caminhoCompleto))
+        /* Segunda camada de defesa alem do allowlist/GetFileName da classe base:
+           garante que o caminho resolvido continua dentro da pasta esperada mesmo
+           que algum backend futuro pare de usar a validacao da classe base. */
+        if (!caminhoCompleto.StartsWith(pastaBase + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            !File.Exists(caminhoCompleto))
         {
             return Task.FromResult<ArquivoArmazenado?>(null);
         }
