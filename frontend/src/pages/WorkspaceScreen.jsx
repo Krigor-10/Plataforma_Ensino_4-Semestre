@@ -626,6 +626,7 @@ export default function WorkspaceScreen({
                   coordenadores={snapshot.coordenadores}
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
+                  onSessionExpired={onSessionExpired}
                   pendencias={pendingRows}
                   professores={snapshot.professores}
                   usuario={usuario}
@@ -635,6 +636,7 @@ export default function WorkspaceScreen({
                   cursos={coordenadorCursos}
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
+                  onSessionExpired={onSessionExpired}
                   professores={snapshot.professores}
                   turmas={coordenadorTurmas}
                   usuario={usuario}

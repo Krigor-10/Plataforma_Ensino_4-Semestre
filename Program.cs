@@ -74,6 +74,7 @@ builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
+builder.Services.AddScoped<ITaxaAdesaoService, TaxaAdesaoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IExtratorTextoMaterialService, ExtratorTextoMaterialService>();
 builder.Services.AddScoped<IValidadorQuestaoIaService, ValidadorQuestaoIaService>();

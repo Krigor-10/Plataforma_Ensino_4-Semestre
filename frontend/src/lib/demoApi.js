@@ -42,6 +42,8 @@ export async function demoRequest(endpoint, options = {}) {
       return listCourses();
     case path === "/Cursos/desempenho" && method === "GET":
       return listCoordinatorCourseDesempenho();
+    case /^\/Cursos\/taxa-adesao(\?.*)?$/.test(path) && method === "GET":
+      return getTaxaAdesaoDemo(path);
     case path === "/Cursos/meus" && method === "GET":
       return listTeacherCourses();
     case /^\/Cursos\/\d+\/coordenador$/.test(path) && method === "PUT":
@@ -1248,6 +1250,132 @@ function montarTurmaDesempenhoDemo(db, turma, cursoById, alunoById, progressoCur
       : 0,
     alunos: alunosDto,
     avaliacoes: avaliacoesDto
+  };
+}
+
+const MESES_PT_BR_TAXA_ADESAO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/* Espelha TaxaAdesaoService.cs (backend) em JS puro pro modo demo: ranking
+   por volume de matriculas aprovadas no periodo, sem percentual de vagas
+   (o sistema nunca checa capacidade de turma em lugar nenhum do fluxo real). */
+function buildTaxaAdesaoBuckets(dataInicio, dataFim, agrupamento) {
+  const buckets = [];
+
+  if (agrupamento === "trimestral") {
+    let cursor = new Date(dataInicio.getFullYear(), Math.floor(dataInicio.getMonth() / 3) * 3, 1);
+    while (cursor <= dataFim) {
+      const fimExclusivo = new Date(cursor.getFullYear(), cursor.getMonth() + 3, 1);
+      const trimestre = Math.floor(cursor.getMonth() / 3) + 1;
+      buckets.push({ inicio: cursor, fimExclusivo, label: `T${trimestre}/${cursor.getFullYear()}` });
+      cursor = fimExclusivo;
+    }
+  } else if (agrupamento === "semestral") {
+    let cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth() < 6 ? 0 : 6, 1);
+    while (cursor <= dataFim) {
+      const fimExclusivo = new Date(cursor.getFullYear(), cursor.getMonth() + 6, 1);
+      const semestre = cursor.getMonth() < 6 ? 1 : 2;
+      buckets.push({ inicio: cursor, fimExclusivo, label: `S${semestre}/${cursor.getFullYear()}` });
+      cursor = fimExclusivo;
+    }
+  } else {
+    let cursor = new Date(dataInicio.getFullYear(), dataInicio.getMonth(), 1);
+    while (cursor <= dataFim) {
+      const fimExclusivo = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+      buckets.push({ inicio: cursor, fimExclusivo, label: `${MESES_PT_BR_TAXA_ADESAO[cursor.getMonth()]}/${cursor.getFullYear()}` });
+      cursor = fimExclusivo;
+    }
+  }
+
+  return buckets;
+}
+
+function getTaxaAdesaoDemo(path) {
+  const user = requireAuthenticatedUser();
+  if (!MANAGER_ROLES.has(user.tipoUsuario)) {
+    throw new DemoApiError("Este recurso demo exige perfil de administracao ou coordenacao.", 403);
+  }
+
+  const queryString = path.includes("?") ? path.slice(path.indexOf("?") + 1) : "";
+  const params = new URLSearchParams(queryString);
+  const dataInicio = new Date(params.get("dataInicio"));
+  const dataFim = new Date(params.get("dataFim"));
+  const agrupamento = (params.get("agrupamento") || "mensal").toLowerCase();
+
+  if (!["mensal", "trimestral", "semestral"].includes(agrupamento)) {
+    throw new DemoApiError("Agrupamento invalido. Use mensal, trimestral ou semestral.", 400);
+  }
+
+  if (Number.isNaN(dataInicio.getTime()) || Number.isNaN(dataFim.getTime())) {
+    throw new DemoApiError("Informe um periodo valido.", 400);
+  }
+
+  if (dataFim < dataInicio) {
+    throw new DemoApiError("A data final nao pode ser anterior a data inicial.", 400);
+  }
+
+  const db = readDemoDb();
+  const cursos = user.tipoUsuario === "Admin"
+    ? db.cursos
+    : db.cursos.filter((curso) => curso.coordenadorId === user.id);
+
+  if (cursos.length === 0) {
+    return { dataInicio: dataInicio.toISOString(), dataFim: dataFim.toISOString(), agrupamento, ranking: [], evolucao: [], destaque: null };
+  }
+
+  const cursoIds = new Set(cursos.map((curso) => curso.id));
+  const dataFimExclusiva = new Date(dataFim.getFullYear(), dataFim.getMonth(), dataFim.getDate() + 1);
+
+  const datasPorCursoId = new Map();
+  db.matriculas.forEach((matricula) => {
+    if (!cursoIds.has(matricula.cursoId) || matricula.status !== 1) {
+      return;
+    }
+
+    const data = new Date(matricula.dataSolicitacao);
+    if (data < dataInicio || data >= dataFimExclusiva) {
+      return;
+    }
+
+    if (!datasPorCursoId.has(matricula.cursoId)) {
+      datasPorCursoId.set(matricula.cursoId, []);
+    }
+
+    datasPorCursoId.get(matricula.cursoId).push(data);
+  });
+
+  const comparadorPtBr = (a, b) => a.localeCompare(b, "pt-BR");
+  const ranking = cursos
+    .map((curso) => ({
+      cursoId: curso.id,
+      cursoTitulo: curso.titulo,
+      matriculasConfirmadas: (datasPorCursoId.get(curso.id) || []).length
+    }))
+    .sort((a, b) => b.matriculasConfirmadas - a.matriculasConfirmadas || comparadorPtBr(a.cursoTitulo, b.cursoTitulo));
+
+  const buckets = buildTaxaAdesaoBuckets(dataInicio, dataFim, agrupamento);
+  const evolucao = ranking
+    .filter((curso) => curso.matriculasConfirmadas > 0)
+    .slice(0, 5)
+    .map((cursoRanking) => {
+      const datas = datasPorCursoId.get(cursoRanking.cursoId) || [];
+      return {
+        cursoId: cursoRanking.cursoId,
+        cursoTitulo: cursoRanking.cursoTitulo,
+        pontos: buckets.map((bucket) => ({
+          periodoInicio: bucket.inicio.toISOString(),
+          periodoLabel: bucket.label,
+          matriculasConfirmadas: datas.filter((data) => data >= bucket.inicio && data < bucket.fimExclusivo).length
+        }))
+      };
+    });
+
+  return {
+    dataInicio: dataInicio.toISOString(),
+    dataFim: dataFim.toISOString(),
+    agrupamento,
+    ranking,
+    evolucao,
+    destaque: ranking.find((curso) => curso.matriculasConfirmadas > 0) || null
   };
 }
 

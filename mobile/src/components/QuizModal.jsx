@@ -273,7 +273,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
           )
         }
       >
-        <Text numberOfLines={2} style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
+        <Text style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
 
         <View style={estilos.resumo}>
           <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />

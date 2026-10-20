@@ -400,7 +400,7 @@ function ModalDetalhesCurso({ detalhe, navigation, onCancelar, onConfirmarPagame
       <View style={estilos.detalheContainer}>
         <View style={[estilos.detalheCabecalho, { paddingTop: insets.top + 16 }]}>
           <CapaCurso curso={curso} size={48} />
-          <Text numberOfLines={2} style={estilos.detalheTitulo}>{curso.titulo}</Text>
+          <Text style={estilos.detalheTitulo}>{curso.titulo}</Text>
           <TouchableOpacity
             accessibilityLabel="Fechar detalhes do curso"
             accessibilityRole="button"

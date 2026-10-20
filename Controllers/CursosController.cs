@@ -16,17 +16,20 @@ public class CursosController : ControllerBase
     private readonly IArmazenamentoArquivoService _armazenamentoService;
     private readonly ICursoDesempenhoService _cursoDesempenhoService;
     private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
+    private readonly ITaxaAdesaoService _taxaAdesaoService;
 
     public CursosController(
         ICursoService cursoService,
         IArmazenamentoArquivoService armazenamentoService,
         ICursoDesempenhoService cursoDesempenhoService,
-        ICursoAutorizacaoService cursoAutorizacaoService)
+        ICursoAutorizacaoService cursoAutorizacaoService,
+        ITaxaAdesaoService taxaAdesaoService)
     {
         _cursoService = cursoService;
         _cursoDesempenhoService = cursoDesempenhoService;
         _armazenamentoService = armazenamentoService;
         _cursoAutorizacaoService = cursoAutorizacaoService;
+        _taxaAdesaoService = taxaAdesaoService;
     }
 
     [HttpPost]
@@ -128,6 +131,26 @@ public class CursosController : ControllerBase
 
         var cursoAtualizado = await _cursoService.DefinirImagemAsync(id, imagemUrl);
         return Ok(cursoAtualizado);
+    }
+
+    [HttpGet("taxa-adesao")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> ObterTaxaAdesao([FromQuery] DateTime dataInicio, [FromQuery] DateTime dataFim, [FromQuery] string agrupamento = "mensal")
+    {
+        if (User.IsInRole("Admin"))
+        {
+            var taxaAdesaoAdmin = await _taxaAdesaoService.ObterParaAdminAsync(dataInicio, dataFim, agrupamento);
+            return Ok(taxaAdesaoAdmin);
+        }
+
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        var taxaAdesaoCoordenador = await _taxaAdesaoService.ObterParaCoordenadorAsync(coordenadorId.Value, dataInicio, dataFim, agrupamento);
+        return Ok(taxaAdesaoCoordenador);
     }
 
     [HttpGet("desempenho")]

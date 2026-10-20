@@ -22,6 +22,7 @@ import {
 } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { parseApiDate } from "../../lib/format.js";
 
@@ -61,7 +62,7 @@ const ACESSO_RAPIDO = [
   { icone: <MdDescription size={20} />, rotulo: "Professores", secao: "professores" }
 ];
 
-export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, pendencias = [], professores = [], usuario }) {
+export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, onSessionExpired, pendencias = [], professores = [], usuario }) {
   const alunosAtivos = alunos.filter((aluno) => aluno.ativo).length;
   const totalUsuarios = alunos.length + professores.length + coordenadores.length;
   const aprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada").length;
@@ -183,6 +184,8 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
           </ResponsiveContainer>
         </div>
       </section>
+
+      <GraficoTaxaAdesao onSessionExpired={onSessionExpired} papel="Admin" />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 
 import { MdChevronRight, MdGroups, MdMenuBook, MdSchool } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
 
 function ChartTooltipStyle() {
@@ -23,7 +24,7 @@ function ChartTooltipStyle() {
   };
 }
 
-export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSecao, professores = [], turmas = [], usuario }) {
+export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSecao, onSessionExpired, professores = [], turmas = [], usuario }) {
   const professorPorId = new Map(professores.map((professor) => [Number(professor.id), professor]));
   const meusCursos = cursos.filter((curso) => Number(curso.coordenadorId) === Number(usuario.id));
   const idsMeusCursos = new Set(meusCursos.map((curso) => Number(curso.id)));
@@ -140,6 +141,8 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
           )}
         </div>
       </section>
+
+      <GraficoTaxaAdesao onSessionExpired={onSessionExpired} papel="Coordenador" />
     </main>
   );
 }
