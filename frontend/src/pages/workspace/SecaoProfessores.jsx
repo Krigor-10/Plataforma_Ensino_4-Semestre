@@ -9,6 +9,7 @@ import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
+import { useConsultaCep } from "../../hooks/useConsultaCep.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { formatCep, formatDate, iniciaisNome, maskCpf, onlyDigits } from "../../lib/format.js";
@@ -55,6 +56,17 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [professorEmEdicaoId, setProfessorEmEdicaoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
+  const { status: statusCep, mensagem: mensagemCep, consultarCep } = useConsultaCep({
+    onEncontrado: (endereco) => {
+      setDadosFormulario((atual) => ({
+        ...atual,
+        rua: endereco.rua,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        estado: endereco.estado
+      }));
+    }
+  });
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [professorParaExcluir, setProfessorParaExcluir] = useState(null);
   const [mensagemExclusao, setMensagemExclusao] = useState("");
@@ -620,7 +632,26 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               <div className="formulario-perfil__grade">
                 <div className="campo">
                   <label className="campo__rotulo" htmlFor="professor-cep">CEP *</label>
-                  <input autoComplete="postal-code" className="campo__entrada" disabled={salvando} id="professor-cep" inputMode="numeric" maxLength={9} name="cep" onChange={atualizarCampo} placeholder="00000-000" value={dadosFormulario.cep} />
+                  <input
+                    autoComplete="postal-code"
+                    className="campo__entrada"
+                    disabled={salvando}
+                    id="professor-cep"
+                    inputMode="numeric"
+                    maxLength={9}
+                    name="cep"
+                    onChange={(event) => {
+                      atualizarCampo(event);
+                      consultarCep(event.target.value);
+                    }}
+                    placeholder="00000-000"
+                    value={dadosFormulario.cep}
+                  />
+                  {statusCep === "buscando" || mensagemCep ? (
+                    <span className="campo__dica" role="status">
+                      {mensagemCep || "Buscando endereco..."}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="campo formulario-perfil__campo--largo">
                   <label className="campo__rotulo" htmlFor="professor-rua">Rua *</label>

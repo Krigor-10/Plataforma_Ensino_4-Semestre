@@ -12,6 +12,7 @@ import { mapById } from "../../lib/dashboard.js";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
 import { getCourseCover } from "../../data/courseCovers.js";
+import { resolverImagemCurso } from "../../lib/courseImage.js";
 
 function normalizarBusca(valor) {
   return String(valor ?? "")
@@ -779,7 +780,16 @@ export function SecaoCursos({
                       />
                     </span>
                   ) : null}
-                  <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
+                  <img
+                    alt=""
+                    className="catalogo-card__imagem"
+                    loading="lazy"
+                    src={resolverImagemCurso(curso)}
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = getCourseCover(curso);
+                    }}
+                  />
                   <div className="catalogo-card__corpo">
                     <div className="meus-cursos__titulo-linha">
                       <strong className="catalogo-card__titulo">{curso.titulo}</strong>

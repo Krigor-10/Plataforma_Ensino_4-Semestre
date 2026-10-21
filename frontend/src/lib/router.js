@@ -13,7 +13,7 @@ export function readRoute(pathname = window.location.pathname) {
   }
 
   if (segments[0] === "cadastro") {
-    return { kind: "cadastro" };
+    return { kind: "cadastro", cursoId: segments[1] || null };
   }
 
   if (segments[0] === "esqueci-senha") {

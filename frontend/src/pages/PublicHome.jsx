@@ -7,6 +7,7 @@ import Modal from "../components/Modal.jsx";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { CURATED_COURSES, PUBLIC_PILLARS, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
 import { getCourseCover } from "../data/courseCovers.js";
+import { resolverImagemCurso } from "../lib/courseImage.js";
 import { formatMoney } from "../lib/format.js";
 import homeBannerImage from "../assets/home-publica-banner.jpg";
 import { apiRequest } from "../lib/api.js";
@@ -147,7 +148,11 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                           aria-hidden="true"
                           className="cartao-curso__imagem"
                           loading="lazy"
-                          src={getCourseCover(curso)}
+                          src={resolverImagemCurso(curso)}
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = getCourseCover(curso);
+                          }}
                         />
                       </div>
 
@@ -164,7 +169,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                       <Botao
                         variante="primario"
                         tamanho="pequeno"
-                        onClick={() => onNavigate("/cadastro")}
+                        onClick={() => onNavigate(`/cadastro/${curso.id}`)}
                         aria-label={`Cadastrar-se em ${curso.titulo}`}
                         className="linha-icone-texto"
                       >
@@ -188,7 +193,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               <Botao variante="perigo" onClick={() => setCursoModal(null)} className="linha-icone-texto" style={{ marginRight: "auto" }}>
                 <TbX size={15} aria-hidden="true" /> Fechar
               </Botao>
-              <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate("/cadastro"); }} className="linha-icone-texto">
+              <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate(`/cadastro/${cursoModal.id}`); }} className="linha-icone-texto">
                 <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
               </Botao>
             </footer>

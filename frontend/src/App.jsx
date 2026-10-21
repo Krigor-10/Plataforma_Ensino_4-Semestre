@@ -130,7 +130,7 @@ export default function App() {
       />
     );
   } else if (route.kind === "cadastro") {
-    content = <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} />;
+    content = <CadastroScreen isDemoMode={isDemoMode} onNavigate={handleNavigate} cursoId={route.cursoId} />;
   } else if (route.kind === "esqueci-senha") {
     content = <EsqueciSenhaScreen onNavigate={handleNavigate} />;
   } else if (route.kind === "redefinir-senha") {

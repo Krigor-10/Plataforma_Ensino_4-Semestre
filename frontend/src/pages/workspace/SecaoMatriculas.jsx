@@ -10,6 +10,7 @@ import { ApiError, apiRequest } from "../../lib/api.js";
 import { clampPercent, formatDate, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
+import { resolverImagemCurso } from "../../lib/courseImage.js";
 
 const PAGAMENTO_PENDENTE = 1;
 
@@ -45,10 +46,11 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
 }
 
 /* Card de curso reaproveitado pelo catalogo (Matriculas) e por Meus Cursos.
-   Imagem vem da mesma fonte usada na Home Publica (getCourseCover, em
-   data/courseCovers.js) - mapeamento por titulo do curso pra um asset
-   estatico, com fallback generico, garantindo que as tres telas mostrem
-   sempre a mesma imagem por curso. */
+   Imagem resolvida com a mesma logica usada na Home Publica
+   (resolverImagemCurso, em lib/courseImage.js): prioriza curso.imagemUrl
+   (upload real do Admin), com fallback pro dicionario estatico por titulo
+   (getCourseCover), garantindo que as tres telas mostrem sempre a mesma
+   imagem por curso. */
 export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando, temTurmaDisponivel = false }) {
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
   const progresso = clampPercent(matricula?.progresso);
@@ -56,7 +58,16 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
 
   return (
     <li className="catalogo-card">
-      <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
+      <img
+        alt=""
+        className="catalogo-card__imagem"
+        loading="lazy"
+        src={resolverImagemCurso(curso)}
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = getCourseCover(curso);
+        }}
+      />
       <div className="catalogo-card__corpo">
         <div className="meus-cursos__titulo-linha">
           <h3 className="catalogo-card__titulo">{curso.titulo}</h3>

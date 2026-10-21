@@ -2,6 +2,7 @@ import BarraProgresso from "./BarraProgresso.jsx";
 import Insignia from "./Insignia.jsx";
 import { EmptyState } from "./Primitives.jsx";
 import { getCourseCover } from "../data/courseCovers.js";
+import { resolverImagemCurso } from "../lib/courseImage.js";
 
 /* Grade de cards de curso do professor, ponto de entrada compartilhado por
    Conteudos, Avaliacoes e Progresso (cada uma monta seu proprio resumo por
@@ -20,7 +21,16 @@ export default function GradeCursosProfessor({ cursos, mensagemVazia, onSelecion
       {cursos.map(({ badge, curso, percentual, resumo, rodapeEsquerda }) => (
         <li key={curso.id}>
           <button className="catalogo-card catalogo-card--acionavel" onClick={() => onSelecionar(curso.id)} type="button">
-            <img alt="" className="catalogo-card__imagem" loading="lazy" src={getCourseCover(curso)} />
+            <img
+              alt=""
+              className="catalogo-card__imagem"
+              loading="lazy"
+              src={resolverImagemCurso(curso)}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = getCourseCover(curso);
+              }}
+            />
             <div className="catalogo-card__corpo">
               <strong className="catalogo-card__titulo">{curso.titulo}</strong>
               <p className="catalogo-card__data">{resumo}</p>

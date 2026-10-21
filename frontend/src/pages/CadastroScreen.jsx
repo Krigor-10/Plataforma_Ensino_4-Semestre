@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { TbX } from "react-icons/tb";
 import Botao from "../components/Botao.jsx";
-import { SIGNUP_INITIAL_STATE } from "../data/appConfig.js";
+import { SIGNUP_INITIAL_STATE, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
 import { formatCep, onlyDigits } from "../lib/format.js";
 import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
+import { useConsultaCep } from "../hooks/useConsultaCep.js";
 
 const ABAS = ["Dados Pessoais e Senha", "Endereco"];
 const CAMPOS_ABA_0 = ["nome", "email", "cpf", "telefone", "cursoId", "senha", "confirmarSenha"];
@@ -26,17 +27,31 @@ const ID_DO_CAMPO = {
   estado: "cad-estado"
 };
 
-export default function CadastroScreen({ isDemoMode, onNavigate }) {
+export default function CadastroScreen({ isDemoMode, onNavigate, cursoId }) {
   useDocumentTitle("Cadastro de matricula | CodeRyse Academy");
 
   const [form, setForm] = useState(SIGNUP_INITIAL_STATE);
   const [cursos, setCursos] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [catalogMessage, setCatalogMessage] = useState("");
+  const [catalogTone, setCatalogTone] = useState("info");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [tone, setTone] = useState("info");
   const [abaAtual, setAbaAtual] = useState(0);
   const [campoComErro, setCampoComErro] = useState("");
+
+  const { status: statusCep, mensagem: mensagemCep, consultarCep } = useConsultaCep({
+    onEncontrado: (endereco) => {
+      setForm((atual) => ({
+        ...atual,
+        rua: endereco.rua,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        estado: endereco.estado
+      }));
+    }
+  });
 
   useEffect(() => {
     let ignore = false;
@@ -48,16 +63,17 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
           return;
         }
 
-        setCursos(response);
-        setCatalogStatus("ready");
+        const cursosVisiveis = response.filter(isCursoVisivelNoCatalogoPublico);
+        setCursos(cursosVisiveis);
+        setCatalogStatus(cursosVisiveis.length > 0 ? "ready" : "vazio");
       } catch (err) {
         if (ignore) {
           return;
         }
 
         setCatalogStatus("error");
-        setTone("error");
-        setMessage(err.message || "Nao foi possivel carregar os cursos agora.");
+        setCatalogTone("error");
+        setCatalogMessage(err.message || "Nao foi possivel carregar os cursos agora.");
       }
     }
 
@@ -67,6 +83,22 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
       ignore = true;
     };
   }, []);
+
+  // Pre-seleciona o curso vindo da Home (/cadastro/:cursoId) so depois que o
+  // catalogo ja carregou e so se o aluno ainda nao tiver escolhido nada -
+  // evita condicao de corrida e nunca sobrescreve uma escolha manual.
+  useEffect(() => {
+    if (catalogStatus !== "ready" || !cursoId) {
+      return;
+    }
+
+    const existeNoCatalogo = cursos.some((curso) => String(curso.id) === String(cursoId));
+    if (!existeNoCatalogo) {
+      return;
+    }
+
+    setForm((atual) => (atual.cursoId ? atual : { ...atual, cursoId: String(cursoId) }));
+  }, [catalogStatus, cursoId, cursos]);
 
   function updateField(name, value) {
     if (campoComErro === name) {
@@ -315,10 +347,15 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     value={form.cursoId}
                     onChange={(event) => updateField("cursoId", event.target.value)}
                     required
+                    disabled={catalogStatus === "vazio"}
                     {...propsInvalido("cursoId")}
                   >
                     <option value="">
-                      {catalogStatus === "loading" ? "Carregando cursos..." : "Selecione um curso"}
+                      {catalogStatus === "loading"
+                        ? "Carregando cursos..."
+                        : catalogStatus === "vazio"
+                          ? "Nenhum curso disponivel no momento"
+                          : "Selecione um curso"}
                     </option>
                     {cursos.map((curso) => (
                       <option key={curso.id} value={curso.id}>
@@ -327,6 +364,12 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     ))}
                   </select>
                   <ErroCampo nomeCampo="cursoId" />
+                  {catalogMessage ? <InlineMessage tone={catalogTone}>{catalogMessage}</InlineMessage> : null}
+                  {catalogStatus === "vazio" ? (
+                    <InlineMessage tone="warning">
+                      Nao ha cursos disponiveis para matricula no momento. Tente novamente mais tarde.
+                    </InlineMessage>
+                  ) : null}
                 </div>
 
                 <div className={classeCampo("senha")}>
@@ -376,11 +419,19 @@ export default function CadastroScreen({ isDemoMode, onNavigate }) {
                     name="cep"
                     type="text"
                     value={form.cep}
-                    onChange={(event) => updateField("cep", event.target.value)}
+                    onChange={(event) => {
+                      updateField("cep", event.target.value);
+                      consultarCep(event.target.value);
+                    }}
                     required
                     {...propsInvalido("cep")}
                   />
                   <ErroCampo nomeCampo="cep" />
+                  {statusCep === "buscando" || mensagemCep ? (
+                    <span className="campo__dica" role="status">
+                      {mensagemCep || "Buscando endereco..."}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="grade-endereco">
