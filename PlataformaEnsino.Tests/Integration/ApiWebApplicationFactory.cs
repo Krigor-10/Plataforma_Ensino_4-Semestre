@@ -84,6 +84,37 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
             await context.SaveChangesAsync();
         }
 
+        return await ObterTokenAsync(email);
+    }
+
+    /// <summary>Cria um Professor direto no banco de teste e loga via /api/v1/auth/login, devolvendo o JWT.</summary>
+    public async Task<string> CriarProfessorEObterTokenAsync(string email)
+    {
+        using (var scope = Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            await context.Database.EnsureCreatedAsync();
+
+            var professor = new Professor
+            {
+                Nome = "Professor de Teste",
+                Email = email,
+                Cpf = "98765432100",
+                Especialidade = "Testes",
+                CodigoRegistro = $"PROF-{Guid.NewGuid():N}"[..10]
+            };
+            professor.ConfigurarAcesso("Professor", BCrypt.Net.BCrypt.HashPassword(SenhaPadrao));
+
+            context.Professores.Add(professor);
+            await context.SaveChangesAsync();
+        }
+
+        return await ObterTokenAsync(email);
+    }
+
+    /// <summary>Loga via /api/v1/auth/login um usuario ja existente no banco de teste (criado fora desta factory) e devolve o JWT.</summary>
+    public async Task<string> ObterTokenAsync(string email)
+    {
         using var client = CreateClient();
         var resposta = await client.PostAsJsonAsync("/api/v1/auth/login", new { email, senha = SenhaPadrao });
         resposta.EnsureSuccessStatusCode();

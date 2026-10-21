@@ -70,6 +70,7 @@ builder.Services.AddScoped<ICursoAutorizacaoService, CursoAutorizacaoService>();
 builder.Services.AddScoped<IMatriculaService, MatriculaService>();
 builder.Services.AddScoped<IPagamentoService, PagamentoService>();
 builder.Services.AddScoped<IAcessoAcademicoService, AcessoAcademicoService>();
+builder.Services.AddScoped<IUploadAutorizacaoService, UploadAutorizacaoService>();
 builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
@@ -318,7 +319,15 @@ app.UseRateLimiter();
 
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/uploads") && context.User.Identity?.IsAuthenticated != true)
+    // "/uploads/cursos" sao fotos de capa de curso - material de marketing
+    // publico (precisa aparecer na Home sem sessao), nao material pago.
+    // "/uploads/conteudos" e "/uploads/questoes" continuam exigindo login -
+    // e, pra esses dois, o endpoint abaixo ainda checa se o aluno de fato
+    // pagou por aquele curso especifico (ver IUploadAutorizacaoService).
+    var ehSubpastaPublica = context.Request.Path.StartsWithSegments("/uploads/cursos");
+
+    if (!ehSubpastaPublica && context.Request.Path.StartsWithSegments("/uploads") &&
+        context.User.Identity?.IsAuthenticated != true)
     {
         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return;
@@ -330,8 +339,25 @@ app.Use(async (context, next) =>
 // Le do backend configurado (disco local ou Azure Blob Storage) em vez de
 // StaticFileOptions contra um caminho fisico fixo - o gate de autenticacao
 // pro path "/uploads" continua sendo o middleware acima, inalterado.
-app.MapGet("/uploads/{subpasta}/{nomeArquivo}", async (string subpasta, string nomeArquivo, IArmazenamentoArquivoService armazenamento) =>
+app.MapGet("/uploads/{subpasta}/{nomeArquivo}", async (
+    string subpasta,
+    string nomeArquivo,
+    HttpContext http,
+    IArmazenamentoArquivoService armazenamento,
+    IUploadAutorizacaoService uploadAutorizacao) =>
 {
+    // So checa posse de pagamento pra Aluno baixando material pago -
+    // staff (Admin/Coordenador/Professor) so precisa estar autenticado,
+    // igual ao comportamento anterior, pra nao travar edicao/preview.
+    if ((subpasta == "conteudos" || subpasta == "questoes") && http.User.IsInRole("Aluno"))
+    {
+        var alunoId = http.User.ObterUsuarioId();
+        if (alunoId is null || !await uploadAutorizacao.AlunoPodeAcessarArquivoAsync(subpasta, nomeArquivo, alunoId.Value))
+        {
+            return Results.Forbid();
+        }
+    }
+
     var arquivo = await armazenamento.AbrirArquivoAsync(subpasta, nomeArquivo);
     return arquivo is null
         ? Results.NotFound()
