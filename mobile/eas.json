@@ -17,13 +17,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.0.2:4000"
+        "EXPO_PUBLIC_API_URL": "http://192.168.0.2:4000",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://app-coderyse-academy.azurewebsites.net"
+        "EXPO_PUBLIC_API_URL": "https://app-coderyse-academy.azurewebsites.net",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
