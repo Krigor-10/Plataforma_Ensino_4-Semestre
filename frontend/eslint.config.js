@@ -32,5 +32,14 @@ export default [
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }]
     }
+  },
+  {
+    // Scripts de build (ex.: otimizar-imagens-legado.mjs) rodam em Node, nao
+    // no browser - sem isso "console"/"URL"/etc acusam no-undef por nao
+    // estarem no escopo de globals.browser do bloco acima.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2021 }
+    }
   }
 ];
