@@ -66,6 +66,28 @@ public sealed class ModuloConfiguration : IEntityTypeConfiguration<Modulo>
     }
 }
 
+public sealed class ProfessorCursoConfiguration : IEntityTypeConfiguration<ProfessorCurso>
+{
+    public void Configure(EntityTypeBuilder<ProfessorCurso> builder)
+    {
+        builder
+            .HasOne(pc => pc.Professor)
+            .WithMany()
+            .HasForeignKey(pc => pc.ProfessorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasOne(pc => pc.Curso)
+            .WithMany()
+            .HasForeignKey(pc => pc.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasIndex(pc => new { pc.ProfessorId, pc.CursoId })
+            .IsUnique();
+    }
+}
+
 public sealed class TurmaConfiguration : IEntityTypeConfiguration<Turma>
 {
     public void Configure(EntityTypeBuilder<Turma> builder)
@@ -148,6 +170,18 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .IsUnique()
             .HasFilter("[Status] = 1")
             .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada");
+
+        // Substitui o indice acima como a protecao real de "aluno nao pode ter
+        // duas matriculas Aprovada no mesmo curso": o fluxo atual nao depende
+        // mais de turma, entao TurmaId fica sempre nulo pra matriculas novas e
+        // o indice por TurmaId perde efeito (SQL Server permite varios NULL
+        // num indice unico). Mantido junto do antigo (nao removido) ate a
+        // migracao final de remocao de Turma.
+        builder
+            .HasIndex(m => new { m.AlunoId, m.CursoId })
+            .IsUnique()
+            .HasFilter("[Status] = 1")
+            .HasDatabaseName("IX_Matriculas_AlunoId_CursoId_Aprovada");
     }
 }
 

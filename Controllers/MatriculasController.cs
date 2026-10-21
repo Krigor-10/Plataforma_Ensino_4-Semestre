@@ -85,14 +85,14 @@ public class MatriculasController : ControllerBase
 
     [HttpPut("{id:int}/aprovar")]
     [Authorize(Roles = "Admin,Coordenador")]
-    public async Task<IActionResult> Aprovar(int id, [FromBody] int turmaId)
+    public async Task<IActionResult> Aprovar(int id)
     {
         if (!await UsuarioPodeGerenciarMatriculaAsync(id))
         {
             return MensagemAcessoNegado();
         }
 
-        await _matriculaService.AprovarMatriculaAsync(id, turmaId);
+        await _matriculaService.AprovarMatriculaAsync(id);
         return Ok(new { mensagem = "Matrícula aprovada com sucesso." });
     }
 

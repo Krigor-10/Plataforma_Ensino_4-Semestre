@@ -73,11 +73,43 @@ public class CursoService : ICursoService
     public async Task<IEnumerable<Curso>> ListarCursosPorProfessorAsync(int professorId)
     {
         return await _context.Cursos
-            .Where(curso => _context.Turmas.Any(turma =>
-                turma.ProfessorId == professorId &&
-                turma.CursoId == curso.Id))
+            .Where(curso => _context.ProfessoresCursos.Any(vinculo =>
+                vinculo.ProfessorId == professorId &&
+                vinculo.CursoId == curso.Id))
             .OrderBy(curso => curso.Titulo)
             .ToListAsync();
+    }
+
+    public async Task VincularProfessorAsync(int cursoId, int professorId)
+    {
+        _ = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        var professorExiste = await _context.Professores.AnyAsync(professor => professor.Id == professorId);
+        if (!professorExiste)
+        {
+            throw new KeyNotFoundException("Professor não encontrado.");
+        }
+
+        var jaVinculado = await _context.ProfessoresCursos
+            .AnyAsync(vinculo => vinculo.CursoId == cursoId && vinculo.ProfessorId == professorId);
+        if (jaVinculado)
+        {
+            return;
+        }
+
+        _context.ProfessoresCursos.Add(new ProfessorCurso { CursoId = cursoId, ProfessorId = professorId });
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DesvincularProfessorAsync(int cursoId, int professorId)
+    {
+        var vinculo = await _context.ProfessoresCursos
+            .FirstOrDefaultAsync(item => item.CursoId == cursoId && item.ProfessorId == professorId)
+            ?? throw new KeyNotFoundException("Vinculo entre professor e curso nao encontrado.");
+
+        _context.ProfessoresCursos.Remove(vinculo);
+        await _context.SaveChangesAsync();
     }
 
     public async Task AdicionarModuloAsync(int cursoId, Modulo novoModulo)

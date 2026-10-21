@@ -563,6 +563,11 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("TurmaId");
 
+                    b.HasIndex("AlunoId", "CursoId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Matriculas_AlunoId_CursoId_Aprovada")
+                        .HasFilter("[Status] = 1");
+
                     b.HasIndex("AlunoId", "TurmaId")
                         .IsUnique()
                         .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada")
@@ -680,6 +685,33 @@ namespace Sistema_Academico_Integrado.Migrations
                         .IsUnique();
 
                     b.ToTable("Pagamentos");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ProfessorCurso", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CursoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProfessorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("VinculadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CursoId");
+
+                    b.HasIndex("ProfessorId", "CursoId")
+                        .IsUnique();
+
+                    b.ToTable("ProfessoresCursos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoConteudoAluno", b =>
@@ -1509,6 +1541,25 @@ namespace Sistema_Academico_Integrado.Migrations
                         .IsRequired();
 
                     b.Navigation("Matricula");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ProfessorCurso", b =>
+                {
+                    b.HasOne("PlataformaEnsino.API.Models.Curso", "Curso")
+                        .WithMany()
+                        .HasForeignKey("CursoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PlataformaEnsino.API.Models.Professor", "Professor")
+                        .WithMany()
+                        .HasForeignKey("ProfessorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Curso");
+
+                    b.Navigation("Professor");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoConteudoAluno", b =>

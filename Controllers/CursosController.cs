@@ -113,6 +113,32 @@ public class CursosController : ControllerBase
     }
 
     // Foto de capa e responsabilidade exclusiva do Admin (mesma regra do valor).
+    [HttpPost("{id:int}/professores/{professorId:int}")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> VincularProfessor(int id, int professorId)
+    {
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
+        await _cursoService.VincularProfessorAsync(id, professorId);
+        return Ok(new { mensagem = "Professor vinculado ao curso com sucesso." });
+    }
+
+    [HttpDelete("{id:int}/professores/{professorId:int}")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> DesvincularProfessor(int id, int professorId)
+    {
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
+        await _cursoService.DesvincularProfessorAsync(id, professorId);
+        return Ok(new { mensagem = "Professor desvinculado do curso com sucesso." });
+    }
+
     [HttpPost("{id:int}/imagem")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(6_000_000)]

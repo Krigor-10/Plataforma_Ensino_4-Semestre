@@ -17,6 +17,7 @@ public class PlataformaContext : DbContext
     public DbSet<Curso> Cursos { get; set; }
     public DbSet<Modulo> Modulos { get; set; }
     public DbSet<Turma> Turmas { get; set; }
+    public DbSet<ProfessorCurso> ProfessoresCursos { get; set; }
     public DbSet<Matricula> Matriculas { get; set; }
     public DbSet<Pagamento> Pagamentos { get; set; }
     public DbSet<ConteudoDidatico> ConteudosDidaticos { get; set; }

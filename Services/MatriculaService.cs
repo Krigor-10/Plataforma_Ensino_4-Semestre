@@ -13,20 +13,17 @@ public class MatriculaService : IMatriculaService
     private readonly PlataformaContext _context;
     private readonly IMatriculaRepository _matriculaRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
-    private readonly IGenericRepository<Turma> _turmaRepository;
     private readonly INotificacaoService _notificacaoService;
 
     public MatriculaService(
         IMatriculaRepository matriculaRepository,
         IGenericRepository<Aluno> alunoRepository,
-        IGenericRepository<Turma> turmaRepository,
         PlataformaContext context,
         INotificacaoService notificacaoService)
     {
         _context = context;
         _matriculaRepository = matriculaRepository;
         _alunoRepository = alunoRepository;
-        _turmaRepository = turmaRepository;
         _notificacaoService = notificacaoService;
     }
 
@@ -35,17 +32,16 @@ public class MatriculaService : IMatriculaService
     /// sem intervencao de coordenador" — usado tanto no cadastro
     /// (<see cref="Services.AlunoService.CadastrarAlunoCompletoAsync"/>)
     /// quanto na solicitacao pelo Catalogo de Cursos (aluno ja logado
-    /// pedindo matricula num curso adicional). Resolve a turma mais antiga
-    /// do curso, aprova na hora, e cria o Pagamento pendente se o curso for
-    /// pago (via CriarPagamentoPendenteSeNecessarioAsync) — o acesso ao
-    /// conteudo continua bloqueado ate a confirmacao do pagamento
-    /// (ver AcessoAcademicoService). Se nao houver turma cadastrada para o
-    /// curso, lanca InvalidOperationException (-> 422). Sempre transacional:
-    /// se a aprovacao falhar (ex.: sem turma), a matricula Pendente
-    /// intermediaria criada por CriarMatriculaPendenteAsync tambem e
-    /// desfeita, evitando um registro orfao no banco. Quando chamado de
-    /// dentro de uma transacao ja aberta pelo chamador (cadastro), reaproveita
-    /// essa transacao em vez de abrir uma segunda.
+    /// pedindo matricula num curso adicional). Aprova direto no curso (sem
+    /// turma) e cria o Pagamento pendente se o curso for pago (via
+    /// CriarPagamentoPendenteSeNecessarioAsync) — o acesso ao conteudo
+    /// continua bloqueado ate a confirmacao do pagamento (ver
+    /// AcessoAcademicoService). Sempre transacional: se a aprovacao falhar
+    /// (ex.: aluno ja matriculado), a matricula Pendente intermediaria criada
+    /// por CriarMatriculaPendenteAsync tambem e desfeita, evitando um
+    /// registro orfao no banco. Quando chamado de dentro de uma transacao ja
+    /// aberta pelo chamador (cadastro), reaproveita essa transacao em vez de
+    /// abrir uma segunda.
     /// </summary>
     public async Task<Matricula> MatricularComAprovacaoAutomaticaAsync(int alunoId, int cursoId)
     {
@@ -127,7 +123,7 @@ public class MatriculaService : IMatriculaService
     public Task<int?> ObterCursoIdDaMatriculaAsync(int matriculaId) =>
         _matriculaRepository.ObterCursoIdAsync(matriculaId);
 
-    public async Task AprovarMatriculaAsync(int matriculaId, int turmaId)
+    public async Task AprovarMatriculaAsync(int matriculaId)
     {
         var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
             ?? throw new KeyNotFoundException("Matrícula não encontrada.");
@@ -137,26 +133,28 @@ public class MatriculaService : IMatriculaService
             throw new InvalidOperationException("Apenas matriculas pendentes podem ser aprovadas.");
         }
 
-        var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
-            ?? throw new KeyNotFoundException("Turma não encontrada.");
-
-        if (matricula.CursoId != turma.CursoId)
-        {
-            throw new InvalidOperationException("A turma selecionada nao pertence ao curso solicitado pelo aluno.");
-        }
-
         var aluno = await _alunoRepository.ObterPorIdAsync(matricula.AlunoId)
             ?? throw new KeyNotFoundException("Aluno não encontrado.");
 
-        await AprovarNaTurmaResolvidaAsync(matricula, turma, aluno);
+        await AprovarNoCursoAsync(matricula, aluno);
         await SalvarComProtecaoDeConcorrenciaAsync();
+
+        var tituloCurso = await ObterTituloCursoAsync(matricula.CursoId);
 
         await _notificacaoService.NotificarAsync(
             aluno.Id,
             "Matricula aprovada",
-            $"Sua matricula na turma \"{turma.NomeTurma}\" foi aprovada.",
+            $"Sua matricula no curso \"{tituloCurso}\" foi aprovada.",
             TipoNotificacao.MatriculaAprovada,
             "/app/cursos-matriculados");
+    }
+
+    private async Task<string> ObterTituloCursoAsync(int cursoId)
+    {
+        return await _context.Cursos
+            .Where(curso => curso.Id == cursoId)
+            .Select(curso => curso.Titulo)
+            .FirstOrDefaultAsync() ?? string.Empty;
     }
 
     /// <summary>
@@ -206,7 +204,7 @@ public class MatriculaService : IMatriculaService
                 await _notificacaoService.NotificarAsync(
                     aprovada.AlunoId,
                     "Matricula aprovada",
-                    $"Sua matricula na turma \"{aprovada.NomeTurma}\" foi aprovada.",
+                    $"Sua matricula no curso \"{aprovada.CursoTitulo}\" foi aprovada.",
                     TipoNotificacao.MatriculaAprovada,
                     "/app/cursos-matriculados");
             }
@@ -322,8 +320,8 @@ public class MatriculaService : IMatriculaService
             ?? await _alunoRepository.ObterPorIdAsync(matricula.AlunoId)
             ?? throw new KeyNotFoundException("Aluno nao encontrado.");
 
-        var turma = await ResolverTurmaAutomaticaAsync(matricula);
-        var matriculaResultante = await AprovarNaTurmaResolvidaAsync(matricula, turma, aluno);
+        var matriculaResultante = await AprovarNoCursoAsync(matricula, aluno);
+        var tituloCurso = await ObterTituloCursoAsync(matriculaResultante.CursoId);
 
         return new AprovacaoMatriculaItemDto
         {
@@ -331,37 +329,36 @@ public class MatriculaService : IMatriculaService
             CodigoRegistro = matriculaResultante.CodigoRegistro,
             AlunoId = aluno.Id,
             CursoId = matriculaResultante.CursoId,
-            TurmaId = turma.Id,
-            NomeTurma = turma.NomeTurma
+            CursoTitulo = tituloCurso
         };
     }
 
     /// <summary>
-    /// Aprova uma matricula pendente numa turma ja resolvida — usado tanto pela
-    /// aprovacao manual com turma explicita (<see cref="AprovarMatriculaAsync"/>)
-    /// quanto pela aprovacao automatica em lote
-    /// (<see cref="AprovarMatriculaAutomaticamenteCoreAsync"/>), que só diferem em
-    /// como a turma é obtida. Retorna a matricula que ficou como a aprovada na
-    /// turma: a própria <paramref name="matricula"/>, ou a matricula já aprovada
-    /// anteriormente caso a pendência seja consolidada nela.
+    /// Aprova uma matricula pendente diretamente no curso (sem turma) — usado
+    /// tanto pela aprovacao manual (<see cref="AprovarMatriculaAsync"/>) quanto
+    /// pela aprovacao automatica em lote
+    /// (<see cref="AprovarMatriculaAutomaticamenteCoreAsync"/>). Retorna a
+    /// matricula que ficou como a aprovada no curso: a própria
+    /// <paramref name="matricula"/>, ou a matricula já aprovada anteriormente
+    /// caso a pendência seja consolidada nela.
     /// </summary>
-    private async Task<Matricula> AprovarNaTurmaResolvidaAsync(Matricula matricula, Turma turma, Aluno aluno)
+    private async Task<Matricula> AprovarNoCursoAsync(Matricula matricula, Aluno aluno)
     {
-        var matriculaAtiva = await ObterMatriculaAprovadaNaTurmaAsync(matricula, turma);
+        var matriculaAtiva = await ObterMatriculaAprovadaNoCursoAsync(matricula);
         if (matriculaAtiva is not null)
         {
-            await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, turma, aluno);
+            await ConsolidarMatriculaDuplicadaAsync(matricula, matriculaAtiva, aluno);
             return matriculaAtiva;
         }
 
-        await GarantirAlunoSemOutraMatriculaPendenteNaTurmaAsync(matricula, turma);
+        await GarantirAlunoSemOutraMatriculaPendenteNoCursoAsync(matricula);
 
         if (string.IsNullOrWhiteSpace(matricula.CodigoRegistro))
         {
             matricula.CodigoRegistro = await GerarCodigoMatriculaAsync();
         }
 
-        matricula.AprovarComTurma(turma.Id, turma.CursoId);
+        matricula.Aprovar();
         await GarantirCodigoAlunoAsync(aluno);
         await CriarPagamentoPendenteSeNecessarioAsync(matricula);
 
@@ -396,64 +393,32 @@ public class MatriculaService : IMatriculaService
         await _context.Pagamentos.AddAsync(Pagamento.CriarPendente(matricula.Id, precoCurso));
     }
 
-    private async Task<Turma> ResolverTurmaAutomaticaAsync(Matricula matricula)
-    {
-        Turma? turma;
-
-        if (matricula.TurmaId.HasValue)
-        {
-            turma = await _turmaRepository.ObterPorIdAsync(matricula.TurmaId.Value)
-                ?? throw new KeyNotFoundException("Turma nao encontrada.");
-        }
-        else
-        {
-            turma = await _context.Turmas
-                .Where(item => item.CursoId == matricula.CursoId)
-                .OrderBy(item => item.DataCriacao)
-                .ThenBy(item => item.Id)
-                .FirstOrDefaultAsync();
-        }
-
-        if (turma is null)
-        {
-            throw new InvalidOperationException("Nao ha turma padrao cadastrada para o curso solicitado.");
-        }
-
-        if (matricula.CursoId != turma.CursoId)
-        {
-            throw new InvalidOperationException("A turma selecionada nao pertence ao curso solicitado pelo aluno.");
-        }
-
-        return turma;
-    }
-
-    private async Task<Matricula?> ObterMatriculaAprovadaNaTurmaAsync(Matricula matricula, Turma turma)
+    private async Task<Matricula?> ObterMatriculaAprovadaNoCursoAsync(Matricula matricula)
     {
         return await _context.Matriculas.FirstOrDefaultAsync(item =>
             item.Id != matricula.Id &&
             item.AlunoId == matricula.AlunoId &&
-            item.TurmaId == turma.Id &&
+            item.CursoId == matricula.CursoId &&
             item.Status == StatusMatricula.Aprovada);
     }
 
-    private async Task GarantirAlunoSemOutraMatriculaPendenteNaTurmaAsync(Matricula matricula, Turma turma)
+    private async Task GarantirAlunoSemOutraMatriculaPendenteNoCursoAsync(Matricula matricula)
     {
         var jaPossuiMatriculaPendente = await _context.Matriculas.AnyAsync(item =>
             item.Id != matricula.Id &&
             item.AlunoId == matricula.AlunoId &&
-            item.TurmaId == turma.Id &&
+            item.CursoId == matricula.CursoId &&
             item.Status == StatusMatricula.Pendente);
 
         if (jaPossuiMatriculaPendente)
         {
-            throw new InvalidOperationException("O aluno ja possui outra matricula pendente nesta turma.");
+            throw new InvalidOperationException("O aluno ja possui outra matricula pendente neste curso.");
         }
     }
 
     private async Task<AprovacaoMatriculaItemDto> ConsolidarMatriculaDuplicadaAsync(
         Matricula matriculaDuplicada,
         Matricula matriculaAtiva,
-        Turma turma,
         Aluno aluno)
     {
         if (string.IsNullOrWhiteSpace(matriculaAtiva.CodigoRegistro))
@@ -464,13 +429,14 @@ public class MatriculaService : IMatriculaService
         matriculaDuplicada.Cancelar();
         await GarantirCodigoAlunoAsync(aluno);
 
+        var tituloCurso = await ObterTituloCursoAsync(matriculaAtiva.CursoId);
+
         return new AprovacaoMatriculaItemDto
         {
             MatriculaId = matriculaAtiva.Id,
             CodigoRegistro = matriculaAtiva.CodigoRegistro,
             CursoId = matriculaAtiva.CursoId,
-            TurmaId = turma.Id,
-            NomeTurma = turma.NomeTurma
+            CursoTitulo = tituloCurso
         };
     }
 

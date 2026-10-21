@@ -15,7 +15,6 @@ public class MatriculaServiceTests
         var service = new MatriculaService(
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
-            new GenericRepository<Turma>(context),
             context,
             new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
 
@@ -24,18 +23,10 @@ public class MatriculaServiceTests
 
     private static Curso CriarCurso(PlataformaContext context, decimal preco = 0)
     {
-        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = "CUR-0001", Preco = preco };
+        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..10], Preco = preco };
         context.Cursos.Add(curso);
         context.SaveChanges();
         return curso;
-    }
-
-    private static Turma CriarTurma(PlataformaContext context, int cursoId)
-    {
-        var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = "TUR-0001", CursoId = cursoId };
-        context.Turmas.Add(turma);
-        context.SaveChanges();
-        return turma;
     }
 
     private static Aluno CriarAluno(PlataformaContext context, string matricula = "Pendente")
@@ -61,7 +52,7 @@ public class MatriculaServiceTests
         return aluno;
     }
 
-    private static Matricula CriarMatriculaPendente(PlataformaContext context, int alunoId, int cursoId, int turmaId)
+    private static Matricula CriarMatriculaPendente(PlataformaContext context, int alunoId, int cursoId)
     {
         var matricula = new Matricula
         {
@@ -69,7 +60,6 @@ public class MatriculaServiceTests
             CursoId = cursoId,
             CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..10]
         };
-        matricula.VincularTurma(turmaId);
 
         context.Matriculas.Add(matricula);
         context.SaveChanges();
@@ -77,40 +67,21 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task AprovarMatriculaAsync_AprovaEAtualizaTurmaDoAluno()
+    public async Task AprovarMatriculaAsync_AprovaSemDependerDeTurmaEAtualizaCodigoDoAluno()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
 
-        await service.AprovarMatriculaAsync(matricula.Id, turma.Id);
+        await service.AprovarMatriculaAsync(matricula.Id);
 
         var matriculaAtualizada = await service.ObterMatriculaPorIdAsync(matricula.Id);
         Assert.Equal(StatusMatricula.Aprovada, matriculaAtualizada.Status);
-        Assert.Equal(turma.Id, matriculaAtualizada.TurmaId);
+        Assert.Null(matriculaAtualizada.TurmaId);
 
         var alunoAtualizado = context.Alunos.Single(a => a.Id == aluno.Id);
         Assert.NotEqual("Pendente", alunoAtualizado.Matricula);
-    }
-
-    [Fact]
-    public async Task AprovarMatriculaAsync_TurmaDeOutroCurso_LancaInvalidOperation()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var outroCurso = new Curso { Titulo = "Outro Curso", CodigoRegistro = "CUR-0002" };
-        context.Cursos.Add(outroCurso);
-        context.SaveChanges();
-
-        var turmaDoCurso = CriarTurma(context, curso.Id);
-        var turmaDeOutroCurso = CriarTurma(context, outroCurso.Id);
-        var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turmaDoCurso.Id);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.AprovarMatriculaAsync(matricula.Id, turmaDeOutroCurso.Id));
     }
 
     [Fact]
@@ -118,9 +89,8 @@ public class MatriculaServiceTests
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
 
         await service.RejeitarMatriculaAsync(matricula.Id);
 
@@ -133,9 +103,8 @@ public class MatriculaServiceTests
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id, turma.Id);
+        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
 
         var resultado = await service.AprovarMatriculasAutomaticamenteAsync(new[] { matricula.Id, 999 });
 
@@ -143,21 +112,23 @@ public class MatriculaServiceTests
         Assert.Single(resultado.Aprovadas);
         Assert.Single(resultado.Erros);
         Assert.Equal(matricula.Id, resultado.Aprovadas[0].MatriculaId);
+        Assert.Equal(curso.Titulo, resultado.Aprovadas[0].CursoTitulo);
         Assert.Equal(999, resultado.Erros[0].MatriculaId);
     }
 
     [Fact]
-    public async Task MatricularComAprovacaoAutomaticaAsync_CriaMatriculaJaAprovadaComTurma()
+    public async Task MatricularComAprovacaoAutomaticaAsync_SemNenhumaTurmaCadastrada_AprovaComSucesso()
     {
+        // Prova a correcao do bug original: matricula automatica nao pode mais
+        // depender de uma turma existir pra aprovar o aluno no curso.
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        var turma = CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
         var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
 
         Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
-        Assert.Equal(turma.Id, matricula.TurmaId);
+        Assert.Null(matricula.TurmaId);
         Assert.Equal(curso.Id, matricula.CursoId);
         Assert.NotEmpty(matricula.CodigoRegistro);
 
@@ -166,22 +137,10 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task MatricularComAprovacaoAutomaticaAsync_CursoSemTurma_LancaInvalidOperation()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context); // sem CriarTurma
-        var aluno = CriarAluno(context);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id));
-    }
-
-    [Fact]
     public async Task MatricularComAprovacaoAutomaticaAsync_CursoPago_CriaPagamentoPendente()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context, preco: 199.90m);
-        CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
         var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
@@ -196,11 +155,25 @@ public class MatriculaServiceTests
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        CriarTurma(context, curso.Id);
         var aluno = CriarAluno(context);
 
         var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
 
         Assert.False(context.Pagamentos.Any(p => p.MatriculaId == matricula.Id));
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_AlunoJaAprovadoNoCurso_ConsolidaSemDuplicar()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+
+        await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+        await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+
+        var aprovadas = context.Matriculas.Count(m =>
+            m.AlunoId == aluno.Id && m.CursoId == curso.Id && m.Status == StatusMatricula.Aprovada);
+        Assert.Equal(1, aprovadas);
     }
 }
