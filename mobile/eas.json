@@ -23,6 +23,10 @@
     },
     "production": {
       "autoIncrement": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://app-coderyse-academy.azurewebsites.net",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
