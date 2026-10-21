@@ -23,7 +23,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://SUBSTITUIR-PELA-URL-DO-AZURE"
+        "EXPO_PUBLIC_API_URL": "https://app-coderyse-academy.azurewebsites.net"
       }
     }
   },
