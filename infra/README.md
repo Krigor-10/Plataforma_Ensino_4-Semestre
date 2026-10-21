@@ -37,25 +37,50 @@ JWT usadas aqui (não ficam em lugar nenhum além do que você guardar).
 Anote os outputs do comando (`webAppName`, `webAppDefaultHostName`,
 `sqlServerFqdn`, `storageAccountName`) — são usados nos próximos passos.
 
-## 2. Criar a identidade de deploy do GitHub Actions (uma vez)
+## 2. Autenticação do GitHub Actions: publish profile
 
-O workflow usa login OIDC (sem secret de senha de longa duração). Crie um
-app registration e vincule a uma federated credential do seu repositório:
+O desenho original usava login OIDC (Service Principal + federated
+credential, sem secret de senha de longa duração). **Isso exige permissão
+para criar App Registrations no tenant do Azure AD** — em tenants
+institucionais (ex.: UNIP, usado neste projeto) contas de estudante
+normalmente não têm essa permissão (`az ad app create` falha com
+"Insufficient privileges to complete the operation"), e não há como um
+usuário comum contornar isso sem o TI do tenant liberar.
+
+Alternativa usada aqui, que não precisa de nenhuma permissão de Azure AD —
+só do seu próprio acesso (Contributor) ao recurso: **publish profile**, a
+credencial própria do App Service (usuário/senha do Kudu/SCM):
 
 ```bash
-az ad app create --display-name "github-deploy-plataforma-ensino"
-# anote o appId retornado -> é o AZURE_CLIENT_ID
-
-az ad sp create-for-rbac --id <appId-do-passo-anterior> --role Contributor \
-  --scopes /subscriptions/<subscription-id>/resourceGroups/<seu-resource-group>
-
-az ad app federated-credential create --id <appId> --parameters '{
-  "name": "github-main-branch",
-  "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:<seu-usuario-ou-org>/<seu-repo>:ref:refs/heads/main",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
+az webapp deployment list-publishing-profiles \
+  --name <webAppName-do-passo-1> \
+  --resource-group <seu-resource-group> \
+  --xml
 ```
+
+Guarde a saída XML inteira — é o valor do secret `AZURE_WEBAPP_PUBLISH_PROFILE`
+no passo 3.
+
+**Trade-off aceito**: sem login no `az` CLI dentro do runner, o workflow não
+abre/fecha mais o firewall do Azure SQL nem aplica migrations sozinho. Depois
+de qualquer alteração de schema (nova migration), rode manualmente contra o
+banco de produção:
+
+```bash
+az sql server firewall-rule create \
+  --resource-group <seu-resource-group> --server <sqlServerName> \
+  --name temp-meu-ip --start-ip-address <seu-ip-publico> --end-ip-address <seu-ip-publico>
+
+dotnet ef database update --project "Sistema Academico Integrado.csproj" \
+  --connection "Server=tcp:<sqlServerFqdn>,1433;Database=PlataformaEnsinoDB;User ID=<sqlAdminLogin>;Password=<sqlAdminPassword>;Encrypt=True;TrustServerCertificate=False;"
+
+az sql server firewall-rule delete \
+  --resource-group <seu-resource-group> --server <sqlServerName> --name temp-meu-ip
+```
+
+Se o tenant permitir App Registrations no seu caso, o fluxo OIDC original
+(Service Principal + federated credential + `azure/login` no workflow) é a
+opção mais robusta — preferível caso disponível.
 
 ## 3. Configurar o GitHub (uma vez)
 
@@ -63,18 +88,13 @@ az ad app federated-credential create --id <appId> --parameters '{
 
 | Nome | Valor |
 |---|---|
-| `AZURE_CLIENT_ID` | `appId` do passo 2 |
-| `AZURE_TENANT_ID` | `az account show --query tenantId -o tsv` |
-| `AZURE_SUBSCRIPTION_ID` | `az account show --query id -o tsv` |
-| `AZURE_SQL_CONNECTION_STRING` | `Server=tcp:<sqlServerFqdn>,1433;Database=PlataformaEnsinoDB;User ID=<sqlAdminLogin>;Password=<sqlAdminPassword>;Encrypt=True;TrustServerCertificate=False;` |
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | saída XML do comando do passo 2 |
 
 **Variables** (mesma tela, aba "Variables"):
 
 | Nome | Valor |
 |---|---|
-| `AZURE_RESOURCE_GROUP` | o resource group usado no passo 1 |
-| `AZURE_SQL_SERVER_NAME` | `sql-plataforma-ensino` (sem o `.database.windows.net`) |
-| `AZURE_WEBAPP_NAME` | `webAppName` do passo 1 (`app-plataforma-ensino`) |
+| `AZURE_WEBAPP_NAME` | `webAppName` do passo 1 |
 
 Opcional, mas recomendado: crie um Environment chamado `production`
 (Settings → Environments) com uma regra de aprovação manual — o workflow já
