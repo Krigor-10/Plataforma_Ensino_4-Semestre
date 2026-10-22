@@ -139,6 +139,54 @@ public class CursosController : ControllerBase
         return Ok(new { mensagem = "Professor desvinculado do curso com sucesso." });
     }
 
+    // Curso Acompanhado: professor marca sua parte como concluida, o que
+    // notifica o coordenador responsavel pra revisar e encerrar.
+    [HttpPost("{id:int}/concluir")]
+    [Authorize(Roles = "Professor")]
+    public async Task<IActionResult> ConcluirCurso(int id)
+    {
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        await _cursoService.ConcluirCursoComoProfessorAsync(id, professorId.Value);
+        return Ok(new { mensagem = "Curso marcado como concluido. O coordenador foi notificado." });
+    }
+
+    // So o coordenador responsavel pelo curso pode encerrar — nao o Admin
+    // (decisao explicita do negocio). Encerrar bloqueia conteudo/avaliacao/
+    // matricula novos e libera a elegibilidade de certificado pra quem ja
+    // cumpriu os requisitos.
+    [HttpPost("{id:int}/encerrar")]
+    [Authorize(Roles = "Coordenador")]
+    public async Task<IActionResult> EncerrarCurso(int id)
+    {
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        await _cursoService.EncerrarCursoAsync(id, coordenadorId.Value);
+        return Ok(new { mensagem = "Curso encerrado com sucesso." });
+    }
+
+    [HttpPost("{id:int}/reabrir")]
+    [Authorize(Roles = "Coordenador")]
+    public async Task<IActionResult> ReabrirCurso(int id)
+    {
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        await _cursoService.ReabrirCursoAsync(id, coordenadorId.Value);
+        return Ok(new { mensagem = "Curso reaberto com sucesso." });
+    }
+
     [HttpPost("{id:int}/imagem")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(6_000_000)]

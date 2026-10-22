@@ -4,6 +4,7 @@ import { MdDelete, MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { parseApiDate } from "../../lib/format.js";
 
@@ -37,6 +38,8 @@ const OPCOES_TIPO_QUESTAO = [
 const ALTERNATIVAS_MULTIPLA_ESCOLHA = ["A", "B", "C", "D", "E"];
 const ALTERNATIVAS_AFIRMATIVAS_COMBINADAS = ["A", "B", "C", "D", "E"];
 const NUMERACAO_AFIRMATIVAS_PADRAO = ["I", "II", "III", "IV", "V", "VI"];
+const MINIMO_ALTERNATIVAS = 4;
+const MAXIMO_ALTERNATIVAS = 5;
 
 function normalizeQuestionType(type) {
   const labels = { 1: "Multipla escolha", 2: "Verdadeiro/Falso", 3: "Dissertativa", 4: "Afirmativas combinadas" };
@@ -121,7 +124,15 @@ function criarAlternativasPorTipo(tipoQuestao, alternativasAtuais = []) {
     ];
   }
 
-  const letras = tipo === 4 ? ALTERNATIVAS_AFIRMATIVAS_COMBINADAS : ALTERNATIVAS_MULTIPLA_ESCOLHA;
+  const letrasBase = tipo === 4 ? ALTERNATIVAS_AFIRMATIVAS_COMBINADAS : ALTERNATIVAS_MULTIPLA_ESCOLHA;
+  // Novas questoes nascem com o minimo (4 alternativas, A-D); se ja havia uma
+  // quantidade valida (ao trocar o tipo da questao, ou editar uma existente
+  // com 5), preserva — nunca forca de volta pro maximo.
+  const quantidade =
+    alternativasAtuais.length >= MINIMO_ALTERNATIVAS && alternativasAtuais.length <= MAXIMO_ALTERNATIVAS
+      ? alternativasAtuais.length
+      : MINIMO_ALTERNATIVAS;
+  const letras = letrasBase.slice(0, quantidade);
 
   return letras.map((letra, index) => ({
     letra,
@@ -222,6 +233,7 @@ export function AssistenteQuizAvaliacao({
   onRefresh,
   onSessionExpired
 }) {
+  const { mostrarToast } = useToast();
   const [avaliacaoAssistenteId, setAvaliacaoAssistenteId] = useState(() => avaliacaoParaEditar?.id ?? null);
   const [dadosFormulario, setDadosFormulario] = useState(() =>
     estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz)
@@ -431,14 +443,11 @@ export function AssistenteQuizAvaliacao({
     try {
       if (avaliacaoAssistenteId) {
         await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}`, { method: "PUT", body: JSON.stringify(dadosEnvio) });
-        setMensagemFormulario({ tone: "success", message: "Dados gerais atualizados." });
+        mostrarToast("Dados gerais atualizados.", "sucesso");
       } else {
         const criada = await apiRequest("/Avaliacoes", { method: "POST", body: JSON.stringify(dadosEnvio) });
         setAvaliacaoAssistenteId(criada.id);
-        setMensagemFormulario({
-          tone: "success",
-          message: modoExclusivoQuiz ? "Quiz criado. Agora adicione as questoes." : "Avaliacao criada. Agora adicione as questoes."
-        });
+        mostrarToast(modoExclusivoQuiz ? "Quiz criado. Agora adicione as questoes." : "Avaliacao criada. Agora adicione as questoes.", "sucesso");
       }
 
       onRefresh?.();
@@ -534,6 +543,39 @@ export function AssistenteQuizAvaliacao({
         alternativeIndex === index ? { ...alternativa, justificativa: value } : alternativa
       )
     }));
+  }
+
+  function adicionarAlternativa() {
+    setDadosFormularioQuestao((current) => {
+      if (current.alternativas.length >= MAXIMO_ALTERNATIVAS) {
+        return current;
+      }
+
+      const proximaLetra = ALTERNATIVAS_MULTIPLA_ESCOLHA[current.alternativas.length];
+      return {
+        ...current,
+        alternativas: [...current.alternativas, { letra: proximaLetra, texto: "", ehCorreta: false, justificativa: "" }]
+      };
+    });
+  }
+
+  function removerAlternativa(index) {
+    setDadosFormularioQuestao((current) => {
+      if (current.alternativas.length <= MINIMO_ALTERNATIVAS) {
+        return current;
+      }
+
+      const removiaACorreta = current.alternativas[index]?.ehCorreta;
+      const restantes = current.alternativas
+        .filter((_, alternativeIndex) => alternativeIndex !== index)
+        .map((alternativa, novoIndice) => ({ ...alternativa, letra: ALTERNATIVAS_MULTIPLA_ESCOLHA[novoIndice] }));
+
+      if (removiaACorreta && restantes.length > 0 && !restantes.some((alternativa) => alternativa.ehCorreta)) {
+        restantes[0] = { ...restantes[0], ehCorreta: true };
+      }
+
+      return { ...current, alternativas: restantes };
+    });
   }
 
   function selecionarAlternativaCorreta(index) {
@@ -654,13 +696,13 @@ export function AssistenteQuizAvaliacao({
       if (questaoEmEdicaoId) {
         await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes/${questaoEmEdicaoId}`, { method: "PUT", body: JSON.stringify(payload) });
         setQuestaoEmEdicaoId(null);
-        setMensagemQuestoes({ tone: "success", message: "Questao atualizada." });
+        mostrarToast("Questao atualizada.", "sucesso");
         await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
         setEtapaAtiva("resumo");
       } else {
         await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes`, { method: "POST", body: JSON.stringify(payload) });
         setDadosFormularioQuestao(criarEstadoInicialFormularioQuestao());
-        setMensagemQuestoes({ tone: "success", message: "Questao adicionada. Pode cadastrar a proxima." });
+        mostrarToast("Questao adicionada. Pode cadastrar a proxima.", "sucesso");
         await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
       }
       onRefresh?.();
@@ -687,7 +729,7 @@ export function AssistenteQuizAvaliacao({
 
     try {
       await apiRequest(`/Avaliacoes/${avaliacaoAssistenteId}/questoes/${questao.id}`, { method: "DELETE" });
-      setMensagemQuestoes({ tone: "success", message: "Questao removida da avaliacao." });
+      mostrarToast("Questao removida da avaliacao.", "sucesso");
       if (questaoEmEdicaoId === questao.id) {
         setQuestaoEmEdicaoId(null);
         setEtapaAtiva("resumo");
@@ -1069,10 +1111,12 @@ export function AssistenteQuizAvaliacao({
                       />
                     </div>
 
-                    <div className="campo">
-                      <label className="campo__rotulo" htmlFor="questao-contexto">Contexto</label>
-                      <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-contexto" name="contexto" onChange={atualizarCampoFormularioQuestao} placeholder="Texto de apoio opcional." value={dadosFormularioQuestao.contexto} />
-                    </div>
+                    {!ehQuiz ? (
+                      <div className="campo">
+                        <label className="campo__rotulo" htmlFor="questao-contexto">Contexto</label>
+                        <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-contexto" name="contexto" onChange={atualizarCampoFormularioQuestao} placeholder="Texto de apoio opcional." value={dadosFormularioQuestao.contexto} />
+                      </div>
+                    ) : null}
 
                     <div className="campo">
                       <label className="campo__rotulo" htmlFor="questao-enunciado">Enunciado *</label>
@@ -1133,14 +1177,16 @@ export function AssistenteQuizAvaliacao({
                                   <MdDelete aria-hidden="true" size={15} />
                                 </Botao>
                               </div>
-                              <textarea
-                                aria-label={`Justificativa da afirmativa ${index + 1}`}
-                                className="campo__entrada"
-                                disabled={salvandoQuestao}
-                                onChange={(event) => atualizarAfirmativa(index, "justificativa", event.target.value)}
-                                placeholder="Justificativa (por que a afirmativa esta certa ou errada)"
-                                value={afirmativa.justificativa}
-                              />
+                              {!ehQuiz ? (
+                                <textarea
+                                  aria-label={`Justificativa da afirmativa ${index + 1}`}
+                                  className="campo__entrada"
+                                  disabled={salvandoQuestao}
+                                  onChange={(event) => atualizarAfirmativa(index, "justificativa", event.target.value)}
+                                  placeholder="Justificativa (por que a afirmativa esta certa ou errada)"
+                                  value={afirmativa.justificativa}
+                                />
+                              ) : null}
                             </li>
                           ))}
                         </ul>
@@ -1179,30 +1225,55 @@ export function AssistenteQuizAvaliacao({
                                   onChange={() => selecionarAlternativaCorreta(index)}
                                   type="radio"
                                 />
+                                {Number(dadosFormularioQuestao.tipoQuestao) !== 2 &&
+                                dadosFormularioQuestao.alternativas.length > MINIMO_ALTERNATIVAS ? (
+                                  <Botao
+                                    aria-label={`Remover alternativa ${alternativa.letra}`}
+                                    disabled={salvandoQuestao}
+                                    onClick={() => removerAlternativa(index)}
+                                    tamanho="pequeno"
+                                    type="button"
+                                    variante="perigo"
+                                  >
+                                    <MdDelete aria-hidden="true" size={15} />
+                                  </Botao>
+                                ) : null}
                               </div>
-                              <textarea
-                                aria-label={`Justificativa da alternativa ${alternativa.letra}`}
-                                className="campo__entrada"
-                                disabled={salvandoQuestao}
-                                onChange={(event) => atualizarJustificativaAlternativa(index, event.target.value)}
-                                placeholder="Justificativa (opcional)"
-                                value={alternativa.justificativa}
-                              />
+                              {!ehQuiz ? (
+                                <textarea
+                                  aria-label={`Justificativa da alternativa ${alternativa.letra}`}
+                                  className="campo__entrada"
+                                  disabled={salvandoQuestao}
+                                  onChange={(event) => atualizarJustificativaAlternativa(index, event.target.value)}
+                                  placeholder="Justificativa (opcional)"
+                                  value={alternativa.justificativa}
+                                />
+                              ) : null}
                             </li>
                           ))}
                         </ul>
+                        {Number(dadosFormularioQuestao.tipoQuestao) !== 2 &&
+                        dadosFormularioQuestao.alternativas.length < MAXIMO_ALTERNATIVAS ? (
+                          <Botao disabled={salvandoQuestao} onClick={adicionarAlternativa} type="button" variante="secundario">
+                            + Adicionar alternativa
+                          </Botao>
+                        ) : null}
                       </div>
                     ) : null}
 
-                    <div className="campo">
-                      <label className="campo__rotulo" htmlFor="questao-explicacao">Explicacao pos-resposta</label>
-                      <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-explicacao" name="explicacaoPosResposta" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: comentario para correcao." value={dadosFormularioQuestao.explicacaoPosResposta} />
-                    </div>
+                    {!ehQuiz ? (
+                      <div className="campo">
+                        <label className="campo__rotulo" htmlFor="questao-explicacao">Explicacao pos-resposta</label>
+                        <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-explicacao" name="explicacaoPosResposta" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: comentario para correcao." value={dadosFormularioQuestao.explicacaoPosResposta} />
+                      </div>
+                    ) : null}
 
-                    <div className="campo">
-                      <label className="campo__rotulo" htmlFor="questao-bibliografia">Referencias bibliograficas</label>
-                      <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-bibliografia" name="referenciasBibliograficas" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: uma referencia por linha." value={dadosFormularioQuestao.referenciasBibliograficas} />
-                    </div>
+                    {!ehQuiz ? (
+                      <div className="campo">
+                        <label className="campo__rotulo" htmlFor="questao-bibliografia">Referencias bibliograficas</label>
+                        <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-bibliografia" name="referenciasBibliograficas" onChange={atualizarCampoFormularioQuestao} placeholder="Opcional: uma referencia por linha." value={dadosFormularioQuestao.referenciasBibliograficas} />
+                      </div>
+                    ) : null}
 
                     {mensagemQuestoes.message ? <InlineMessage tone={mensagemQuestoes.tone}>{mensagemQuestoes.message}</InlineMessage> : null}
                   </form>

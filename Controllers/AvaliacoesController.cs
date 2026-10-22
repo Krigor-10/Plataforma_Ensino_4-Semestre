@@ -334,6 +334,63 @@ public class AvaliacoesController : ControllerBase
         });
     }
 
+    // Mesma geracao por IA de "{id}/ia/gerar-questoes", mas lendo de um
+    // ConteudoDidatico ja cadastrado no curso em vez de exigir novo upload —
+    // usado pelo fluxo "gerar quiz com IA a partir do material" em Conteudos.
+    // NADA aqui e persistido; o professor revisa e confirma via POST {id}/questoes/lote.
+    [HttpPost("{id:int}/ia/gerar-questoes-de-conteudo")]
+    [Authorize(Roles = "Professor")]
+    [EnableRateLimiting("ia-geracao")]
+    public async Task<IActionResult> GerarQuestoesComIaDeConteudo(int id, [FromBody] GerarQuestoesDeConteudoRequestDto dto, CancellationToken cancellationToken)
+    {
+        var professorId = ObterProfessorId();
+        if (!professorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
+        }
+
+        List<TipoQuestao> tipos;
+        try
+        {
+            tipos = (dto.TiposPermitidos ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(valor => Enum.Parse<TipoQuestao>(valor, ignoreCase: true))
+                .Distinct()
+                .ToList();
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(new { mensagem = "tiposPermitidos contem um tipo de questao invalido." });
+        }
+
+        if (tipos.Count == 0)
+        {
+            return BadRequest(new { mensagem = "Informe ao menos um tipo de questao permitido." });
+        }
+
+        var configuracao = new GerarQuestoesIaRequestDto
+        {
+            QuantidadeQuestoes = dto.QuantidadeQuestoes,
+            Dificuldade = dto.Dificuldade,
+            TiposPermitidos = tipos,
+            Assunto = dto.Assunto
+        };
+
+        if (!TryValidateModel(configuracao))
+        {
+            return BadRequest(ModelState);
+        }
+
+        var resultado = await _avaliacaoService.GerarQuestoesComIaDeConteudoAsync(id, professorId.Value, dto.ConteudoDidaticoId, configuracao, cancellationToken);
+
+        return Ok(new
+        {
+            questoes = resultado.Questoes,
+            avisos = resultado.Avisos,
+            limitacaoDetectada = resultado.LimitacaoDetectada
+        });
+    }
+
     [HttpPost("questoes-banco/{questaoBancoId:int}/anexos")]
     [Authorize(Roles = "Professor")]
     [RequestSizeLimit(105_000_000)]

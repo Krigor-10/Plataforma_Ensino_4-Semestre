@@ -38,6 +38,14 @@ public class Curso
     public int? CoordenadorId { get; set; }
     public int CriadoPor { get; set; }
 
+    public ModeloCurso ModeloCurso { get; set; } = ModeloCurso.PagoPacote;
+
+    public int? ConcluidoPeloProfessorId { get; private set; }
+    public DateTime? ConcluidoPeloProfessorEm { get; private set; }
+
+    public int? EncerradoPorId { get; private set; }
+    public DateTime? EncerradoEm { get; private set; }
+
     [JsonIgnore]
     [ValidateNever]
     public Coordenador? Coordenador { get; set; }
@@ -45,6 +53,14 @@ public class Curso
     [JsonIgnore]
     [ValidateNever]
     public Admin? Criador { get; set; }
+
+    [JsonIgnore]
+    [ValidateNever]
+    public Professor? ProfessorConclusao { get; set; }
+
+    [JsonIgnore]
+    [ValidateNever]
+    public Coordenador? EncerradoPor { get; set; }
 
     [JsonIgnore]
     [ValidateNever]
@@ -75,5 +91,33 @@ public class Curso
     {
         ArgumentNullException.ThrowIfNull(modulo);
         Modulos.Add(modulo);
+    }
+
+    public void ConcluirPeloProfessor(int professorId, DateTime? momento = null)
+    {
+        if (professorId <= 0)
+        {
+            throw new ArgumentException("O professor informado e invalido.");
+        }
+
+        ConcluidoPeloProfessorId = professorId;
+        ConcluidoPeloProfessorEm = momento ?? DateTime.UtcNow;
+    }
+
+    public void Encerrar(int coordenadorId, DateTime? momento = null)
+    {
+        if (coordenadorId <= 0)
+        {
+            throw new ArgumentException("O coordenador informado e invalido.");
+        }
+
+        EncerradoPorId = coordenadorId;
+        EncerradoEm = momento ?? DateTime.UtcNow;
+    }
+
+    public void Reabrir()
+    {
+        EncerradoPorId = null;
+        EncerradoEm = null;
     }
 }

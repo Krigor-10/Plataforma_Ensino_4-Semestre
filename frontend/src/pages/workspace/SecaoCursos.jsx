@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbEdit, TbLayoutGrid, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbEdit, TbFlagCheck, TbLayoutGrid, TbLock, TbLockOpen, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -53,10 +53,10 @@ export function SecaoCursos({
   const [enviandoImagem, setEnviandoImagem] = useState(false);
   const [mensagemImagem, setMensagemImagem] = useState({ tone: "", message: "" });
   const [cursoParaEditar, setCursoParaEditar] = useState(null);
-  const [dadosEdicaoCurso, setDadosEdicaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
+  const [dadosEdicaoCurso, setDadosEdicaoCurso] = useState({ titulo: "", descricao: "", preco: "", modeloCurso: 2 });
   const [mensagemEdicao, setMensagemEdicao] = useState({ tone: "", message: "" });
   const [formularioCriacaoAberto, setFormularioCriacaoAberto] = useState(false);
-  const [dadosCriacaoCurso, setDadosCriacaoCurso] = useState({ titulo: "", descricao: "", preco: "" });
+  const [dadosCriacaoCurso, setDadosCriacaoCurso] = useState({ titulo: "", descricao: "", preco: "", modeloCurso: 2 });
   const [mensagemCriacao, setMensagemCriacao] = useState({ tone: "", message: "" });
   const [salvandoCriacao, setSalvandoCriacao] = useState(false);
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
@@ -277,12 +277,40 @@ export function SecaoCursos({
     onAbrirSecaoCurso?.(section, curso);
   }
 
+  async function executarAcaoCurso(curso, acao, mensagemSucesso, mensagemErroPadrao) {
+    setSalvando(true);
+    try {
+      await apiRequest(`/Cursos/${curso.id}/${acao}`, { method: "POST" });
+      mostrarToast(mensagemSucesso, "sucesso");
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      mostrarToast(err.message || mensagemErroPadrao, "erro");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const concluirCurso = (curso) =>
+    executarAcaoCurso(curso, "concluir", "Curso marcado como concluido. O coordenador foi notificado.", "Nao foi possivel concluir o curso agora.");
+
+  const encerrarCurso = (curso) =>
+    executarAcaoCurso(curso, "encerrar", "Curso encerrado com sucesso.", "Nao foi possivel encerrar o curso agora.");
+
+  const reabrirCurso = (curso) =>
+    executarAcaoCurso(curso, "reabrir", "Curso reaberto com sucesso.", "Nao foi possivel reabrir o curso agora.");
+
   function abrirModalEdicao(curso) {
     setCursoParaEditar(curso);
     setDadosEdicaoCurso({
       titulo: curso.titulo || "",
       descricao: curso.descricao || "",
-      preco: String(curso.preco ?? "")
+      preco: String(curso.preco ?? ""),
+      modeloCurso: Number(curso.modeloCurso) || 2
     });
     setMensagemEdicao({ tone: "", message: "" });
   }
@@ -324,7 +352,8 @@ export function SecaoCursos({
         body: JSON.stringify({
           titulo: dadosEdicaoCurso.titulo.trim(),
           descricao: dadosEdicaoCurso.descricao.trim(),
-          preco
+          preco,
+          modeloCurso: Number(dadosEdicaoCurso.modeloCurso)
         })
       });
 
@@ -344,7 +373,7 @@ export function SecaoCursos({
   }
 
   function abrirFormularioCriacaoCurso() {
-    setDadosCriacaoCurso({ titulo: "", descricao: "", preco: "" });
+    setDadosCriacaoCurso({ titulo: "", descricao: "", preco: "", modeloCurso: 2 });
     setMensagemCriacao({ tone: "", message: "" });
     setFormularioCriacaoAberto(true);
   }
@@ -386,7 +415,8 @@ export function SecaoCursos({
         body: JSON.stringify({
           titulo: dadosCriacaoCurso.titulo.trim(),
           descricao: dadosCriacaoCurso.descricao.trim(),
-          preco
+          preco,
+          modeloCurso: Number(dadosCriacaoCurso.modeloCurso)
         })
       });
 
@@ -499,6 +529,15 @@ export function SecaoCursos({
               <label className="campo__rotulo" htmlFor="novo-curso-preco">Preco (R$) *</label>
               <input className="campo__entrada" disabled={salvandoCriacao} id="novo-curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoCriacaoCurso} step="0.01" type="number" value={dadosCriacaoCurso.preco} />
             </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="novo-curso-modelo">Modelo de curso *</label>
+              <select className="campo__entrada" disabled={salvandoCriacao} id="novo-curso-modelo" name="modeloCurso" onChange={atualizarCampoCriacaoCurso} value={dadosCriacaoCurso.modeloCurso}>
+                <option value={1}>Gratuito (conteudo pronto)</option>
+                <option value={2}>Pago (pacote pronto)</option>
+                <option value={3}>Acompanhado (professor libera aos poucos)</option>
+              </select>
+              <p className="campo__ajuda">Acompanhado precisa ser concluido pelo professor e encerrado pelo coordenador antes de liberar certificados.</p>
+            </div>
 
             {mensagemCriacao.message ? <InlineMessage tone={mensagemCriacao.tone}>{mensagemCriacao.message}</InlineMessage> : null}
           </form>
@@ -533,6 +572,14 @@ export function SecaoCursos({
               <label className="campo__rotulo" htmlFor="curso-preco">Preco (R$) *</label>
               <input className="campo__entrada" disabled={salvandoEdicao || !ehAdmin} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
               {!ehAdmin ? <p className="campo__ajuda">Apenas administradores podem alterar o valor do curso.</p> : null}
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-modelo">Modelo de curso *</label>
+              <select className="campo__entrada" disabled={salvandoEdicao} id="curso-modelo" name="modeloCurso" onChange={atualizarCampoEdicao} value={dadosEdicaoCurso.modeloCurso}>
+                <option value={1}>Gratuito (conteudo pronto)</option>
+                <option value={2}>Pago (pacote pronto)</option>
+                <option value={3}>Acompanhado (professor libera aos poucos)</option>
+              </select>
             </div>
 
             {mensagemEdicao.message ? <InlineMessage tone={mensagemEdicao.tone}>{mensagemEdicao.message}</InlineMessage> : null}
@@ -602,6 +649,17 @@ export function SecaoCursos({
                 {coordenador ? ` · Coordenacao: ${coordenador.nome}` : cursoSelecionado.coordenadorId ? "" : " · Aguardando coordenador"}
               </p>
             </div>
+            {Number(cursoSelecionado.modeloCurso) === 3 ? (
+              <Insignia
+                texto={
+                  cursoSelecionado.encerradoEm
+                    ? "Encerrado"
+                    : cursoSelecionado.concluidoPeloProfessorEm
+                    ? "Aguardando encerramento"
+                    : "Em andamento"
+                }
+              />
+            ) : null}
           </header>
 
           {cursoSelecionado.descricao ? <p className="texto-vazio">{cursoSelecionado.descricao}</p> : null}
@@ -632,6 +690,21 @@ export function SecaoCursos({
               {ehAdmin ? (
                 <Botao onClick={() => abrirModalImagem(cursoSelecionado)} tamanho="pequeno" variante="secundario">
                   <TbCamera aria-hidden="true" size={16} /> Alterar foto de capa
+                </Botao>
+              ) : null}
+              {ehProfessor && Number(cursoSelecionado.modeloCurso) === 3 && !cursoSelecionado.concluidoPeloProfessorEm ? (
+                <Botao disabled={salvando} onClick={() => concluirCurso(cursoSelecionado)} tamanho="pequeno" variante="primario">
+                  <TbFlagCheck aria-hidden="true" size={16} /> Concluir curso
+                </Botao>
+              ) : null}
+              {ehCoordenador && Number(cursoSelecionado.modeloCurso) === 3 && cursoSelecionado.concluidoPeloProfessorEm && !cursoSelecionado.encerradoEm ? (
+                <Botao disabled={salvando} onClick={() => encerrarCurso(cursoSelecionado)} tamanho="pequeno" variante="primario">
+                  <TbLock aria-hidden="true" size={16} /> Encerrar curso
+                </Botao>
+              ) : null}
+              {ehCoordenador && Number(cursoSelecionado.modeloCurso) === 3 && cursoSelecionado.encerradoEm ? (
+                <Botao disabled={salvando} onClick={() => reabrirCurso(cursoSelecionado)} tamanho="pequeno" variante="secundario">
+                  <TbLockOpen aria-hidden="true" size={16} /> Reabrir curso
                 </Botao>
               ) : null}
             </div>

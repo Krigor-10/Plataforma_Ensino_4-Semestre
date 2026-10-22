@@ -389,6 +389,12 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<DateTime?>("ConcluidoPeloProfessorEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ConcluidoPeloProfessorId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("CoordenadorId")
                         .HasColumnType("int");
 
@@ -400,9 +406,18 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<DateTime?>("EncerradoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("EncerradoPorId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ImagemUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("ModeloCurso")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("Preco")
                         .HasPrecision(10, 2)
@@ -418,9 +433,13 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("CodigoRegistro")
                         .IsUnique();
 
+                    b.HasIndex("ConcluidoPeloProfessorId");
+
                     b.HasIndex("CoordenadorId");
 
                     b.HasIndex("CriadoPor");
+
+                    b.HasIndex("EncerradoPorId");
 
                     b.ToTable("Cursos");
                 });
@@ -1432,6 +1451,11 @@ namespace Sistema_Academico_Integrado.Migrations
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
                 {
+                    b.HasOne("PlataformaEnsino.API.Models.Professor", "ProfessorConclusao")
+                        .WithMany()
+                        .HasForeignKey("ConcluidoPeloProfessorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("PlataformaEnsino.API.Models.Coordenador", "Coordenador")
                         .WithMany()
                         .HasForeignKey("CoordenadorId")
@@ -1443,9 +1467,18 @@ namespace Sistema_Academico_Integrado.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("PlataformaEnsino.API.Models.Coordenador", "EncerradoPor")
+                        .WithMany()
+                        .HasForeignKey("EncerradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Coordenador");
 
                     b.Navigation("Criador");
+
+                    b.Navigation("EncerradoPor");
+
+                    b.Navigation("ProfessorConclusao");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.FeedbackAcademico", b =>

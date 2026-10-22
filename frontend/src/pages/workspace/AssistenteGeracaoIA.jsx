@@ -54,9 +54,18 @@ function montarMensagemErro(err, mensagemPadrao) {
    so vira uma avaliacao "normal" (editavel pelo assistente manual) depois
    que esse POST acontece. Ver proposta_criacao_manual_e_ia_avaliacoes na
    memoria do projeto pro desenho completo decidido com o usuario. */
-export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSessionExpired }) {
+export function AssistenteGeracaoIA({
+  conteudosDisponiveis = [],
+  cursoAtivo,
+  modoExclusivoQuiz = false,
+  moduloContexto = null,
+  onFechar,
+  onRefresh,
+  onSessionExpired
+}) {
   const [etapa, setEtapa] = useState("selecao");
   const [arquivo, setArquivo] = useState(null);
+  const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState("");
   const [titulo, setTitulo] = useState("");
   const [quantidadeQuestoes, setQuantidadeQuestoes] = useState("5");
   const [dificuldade, setDificuldade] = useState("3");
@@ -104,8 +113,32 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
     setArquivo(null);
   }
 
+  const materiaisValidosParaIA = useMemo(
+    () => conteudosDisponiveis.filter((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))),
+    [conteudosDisponiveis]
+  );
+  const conteudoSelecionado = useMemo(
+    () => materiaisValidosParaIA.find((conteudo) => String(conteudo.id) === String(conteudoSelecionadoId)) || null,
+    [materiaisValidosParaIA, conteudoSelecionadoId]
+  );
+
+  function selecionarConteudoExistente(event) {
+    const id = event.target.value;
+    setConteudoSelecionadoId(id);
+    const conteudo = materiaisValidosParaIA.find((item) => String(item.id) === String(id));
+    if (conteudo) {
+      setTitulo((atual) => atual || `Quiz - ${conteudo.titulo}`);
+    }
+    setMensagem({ tone: "", message: "" });
+  }
+
   function avancarParaConfiguracao() {
-    if (!arquivo) {
+    if (modoExclusivoQuiz) {
+      if (!conteudoSelecionadoId) {
+        setMensagem({ tone: "error", message: "Selecione um material de texto ou PDF antes de continuar." });
+        return;
+      }
+    } else if (!arquivo) {
       setMensagem({ tone: "error", message: "Selecione um arquivo PDF ou DOCX antes de continuar." });
       return;
     }
@@ -143,9 +176,9 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
             titulo: tituloTratado,
             descricao: "",
             turmaId: Number(cursoAtivo.turma.id),
-            moduloId: null,
-            conteudoDidaticoId: null,
-            tipoAvaliacao: 2,
+            moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
+            conteudoDidaticoId: modoExclusivoQuiz ? Number(conteudoSelecionadoId) : null,
+            tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,
             statusPublicacao: 1,
             dataAbertura: null,
             dataFechamento: null,
@@ -161,14 +194,28 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
         setAvaliacaoGeradaId(idAvaliacao);
       }
 
-      const formData = new FormData();
-      formData.append("arquivo", arquivo);
-      formData.append("quantidadeQuestoes", quantidadeQuestoes);
-      formData.append("dificuldade", dificuldade);
-      formData.append("tiposPermitidos", tiposSelecionados.join(","));
-      formData.append("assunto", assunto.trim());
+      let resultado;
+      if (modoExclusivoQuiz) {
+        resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes-de-conteudo`, {
+          method: "POST",
+          body: JSON.stringify({
+            conteudoDidaticoId: Number(conteudoSelecionadoId),
+            quantidadeQuestoes: Number(quantidadeQuestoes),
+            dificuldade: Number(dificuldade),
+            tiposPermitidos: tiposSelecionados.join(","),
+            assunto: assunto.trim()
+          })
+        });
+      } else {
+        const formData = new FormData();
+        formData.append("arquivo", arquivo);
+        formData.append("quantidadeQuestoes", quantidadeQuestoes);
+        formData.append("dificuldade", dificuldade);
+        formData.append("tiposPermitidos", tiposSelecionados.join(","));
+        formData.append("assunto", assunto.trim());
 
-      const resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes`, { method: "POST", body: formData });
+        resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes`, { method: "POST", body: formData });
+      }
 
       setQuestoesGeradas((resultado.questoes || []).map(mapearQuestaoGerada));
       setAvisosGeracao(resultado.avisos || []);
@@ -189,7 +236,8 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
 
   async function regenerarQuestao(indice) {
     const questaoAtual = questoesGeradas[indice];
-    if (!questaoAtual || !avaliacaoGeradaId || !arquivo || indiceRegenerando !== null) {
+    const temFonte = modoExclusivoQuiz ? Boolean(conteudoSelecionadoId) : Boolean(arquivo);
+    if (!questaoAtual || !avaliacaoGeradaId || !temFonte || indiceRegenerando !== null) {
       return;
     }
 
@@ -197,14 +245,28 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
     setMensagem({ tone: "", message: "" });
 
     try {
-      const formData = new FormData();
-      formData.append("arquivo", arquivo);
-      formData.append("quantidadeQuestoes", "1");
-      formData.append("dificuldade", String(questaoAtual.dificuldade || dificuldade));
-      formData.append("tiposPermitidos", String(questaoAtual.tipoQuestao));
-      formData.append("assunto", assunto.trim());
+      let resultado;
+      if (modoExclusivoQuiz) {
+        resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes-de-conteudo`, {
+          method: "POST",
+          body: JSON.stringify({
+            conteudoDidaticoId: Number(conteudoSelecionadoId),
+            quantidadeQuestoes: 1,
+            dificuldade: Number(questaoAtual.dificuldade || dificuldade),
+            tiposPermitidos: String(questaoAtual.tipoQuestao),
+            assunto: assunto.trim()
+          })
+        });
+      } else {
+        const formData = new FormData();
+        formData.append("arquivo", arquivo);
+        formData.append("quantidadeQuestoes", "1");
+        formData.append("dificuldade", String(questaoAtual.dificuldade || dificuldade));
+        formData.append("tiposPermitidos", String(questaoAtual.tipoQuestao));
+        formData.append("assunto", assunto.trim());
 
-      const resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes`, { method: "POST", body: formData });
+        resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes`, { method: "POST", body: formData });
+      }
       const [questaoNova] = (resultado.questoes || []).map(mapearQuestaoGerada);
 
       if (!questaoNova) {
@@ -411,9 +473,9 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
           titulo: titulo.trim(),
           descricao: "",
           turmaId: Number(cursoAtivo.turma.id),
-          moduloId: null,
-          conteudoDidaticoId: null,
-          tipoAvaliacao: 2,
+          moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
+          conteudoDidaticoId: modoExclusivoQuiz ? Number(conteudoSelecionadoId) : null,
+          tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,
           statusPublicacao: 1,
           dataAbertura: null,
           dataFechamento: null,
@@ -443,7 +505,7 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
     <Modal
       className="modal-caixa--avaliacao"
       onFechar={fecharAssistente}
-      titulo="Gerar avaliacao com IA"
+      titulo={modoExclusivoQuiz ? "Gerar quiz com IA" : "Gerar avaliacao com IA"}
       rodape={
         etapa === "selecao" ? (
           <footer className="criar-avaliacao__rodape">
@@ -479,12 +541,12 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
         <aside className="criar-avaliacao__steps">
           <button className={`criar-avaliacao__step${etapa === "selecao" ? " criar-avaliacao__step--ativo" : ""}`} onClick={() => setEtapa("selecao")} type="button">
             <span aria-hidden="true" className="criar-avaliacao__step-icone">{etapa === "selecao" ? "●" : "○"}</span>
-            Enviar material
+            {modoExclusivoQuiz ? "Selecionar material" : "Enviar material"}
           </button>
           <button
             className={`criar-avaliacao__step${etapa === "configuracao" ? " criar-avaliacao__step--ativo" : ""}`}
-            disabled={!arquivo}
-            onClick={() => arquivo && setEtapa("configuracao")}
+            disabled={modoExclusivoQuiz ? !conteudoSelecionadoId : !arquivo}
+            onClick={() => (modoExclusivoQuiz ? conteudoSelecionadoId : arquivo) && setEtapa("configuracao")}
             type="button"
           >
             <span aria-hidden="true" className="criar-avaliacao__step-icone">{etapa === "configuracao" ? "●" : "○"}</span>
@@ -506,22 +568,56 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
             <section className="criar-avaliacao__secao">
               <h3 className="criar-avaliacao__secao-titulo">Material de origem</h3>
               <div className="criar-avaliacao__secao-corpo">
-                <p className="campo__ajuda" style={{ marginTop: 0 }}>
-                  Envie um PDF ou DOCX com o conteudo que a IA vai usar como base para gerar as questoes. O arquivo fica
-                  so nesta sessao - nada e salvo antes da revisao final.
-                </p>
-                <div className="campo">
-                  <label className="campo__rotulo" htmlFor="gerar-ia-arquivo">Arquivo (PDF ou DOCX) *</label>
-                  <input accept=".pdf,.docx" className="campo__entrada" id="gerar-ia-arquivo" onChange={selecionarArquivo} type="file" />
-                  {arquivo ? (
-                    <p className="campo__ajuda">
-                      Selecionado: <strong>{arquivo.name}</strong>{" "}
-                      <button className="link-botao" onClick={removerArquivoSelecionado} type="button">
-                        Remover
-                      </button>
+                {modoExclusivoQuiz ? (
+                  <>
+                    <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                      Escolha um material de texto ou PDF ja cadastrado neste modulo. A IA vai usar o conteudo dele
+                      como base para gerar as perguntas do quiz.
                     </p>
-                  ) : null}
-                </div>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="gerar-ia-conteudo">Material *</label>
+                      {materiaisValidosParaIA.length ? (
+                        <select
+                          className="campo__entrada"
+                          id="gerar-ia-conteudo"
+                          onChange={selecionarConteudoExistente}
+                          value={conteudoSelecionadoId}
+                        >
+                          <option value="">Selecione um material</option>
+                          {materiaisValidosParaIA.map((conteudo) => (
+                            <option key={conteudo.id} value={conteudo.id}>
+                              {conteudo.titulo}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <InlineMessage tone="info">
+                          Nenhum material de texto ou PDF cadastrado neste modulo ainda. Cadastre um conteudo desse
+                          tipo antes de gerar o quiz por IA.
+                        </InlineMessage>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                      Envie um PDF ou DOCX com o conteudo que a IA vai usar como base para gerar as questoes. O arquivo fica
+                      so nesta sessao - nada e salvo antes da revisao final.
+                    </p>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="gerar-ia-arquivo">Arquivo (PDF ou DOCX) *</label>
+                      <input accept=".pdf,.docx" className="campo__entrada" id="gerar-ia-arquivo" onChange={selecionarArquivo} type="file" />
+                      {arquivo ? (
+                        <p className="campo__ajuda">
+                          Selecionado: <strong>{arquivo.name}</strong>{" "}
+                          <button className="link-botao" onClick={removerArquivoSelecionado} type="button">
+                            Remover
+                          </button>
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                )}
                 {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
               </div>
             </section>
@@ -550,11 +646,15 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
                 }}
               >
                 <p className="campo__ajuda" style={{ marginTop: 0 }}>
-                  Material enviado: <strong>{arquivo?.name}</strong>
+                  {modoExclusivoQuiz ? (
+                    <>Material selecionado: <strong>{conteudoSelecionado?.titulo}</strong></>
+                  ) : (
+                    <>Material enviado: <strong>{arquivo?.name}</strong></>
+                  )}
                 </p>
 
                 <div className="campo">
-                  <label className="campo__rotulo" htmlFor="gerar-ia-titulo">Titulo da avaliacao *</label>
+                  <label className="campo__rotulo" htmlFor="gerar-ia-titulo">{modoExclusivoQuiz ? "Titulo do quiz *" : "Titulo da avaliacao *"}</label>
                   <input
                     className="campo__entrada"
                     disabled={gerando}
@@ -641,7 +741,9 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
               <div className="criar-avaliacao__secao-corpo">
                 <p className="campo__ajuda" style={{ marginTop: 0 }}>
                   {questoesGeradas.length} questao(oes) geradas a partir de{" "}
-                  {urlArquivoEnviado ? (
+                  {modoExclusivoQuiz ? (
+                    <strong>{conteudoSelecionado?.titulo}</strong>
+                  ) : urlArquivoEnviado ? (
                     <a href={urlArquivoEnviado} rel="noreferrer" target="_blank">
                       {arquivo?.name}
                     </a>
@@ -747,15 +849,17 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
                           />
                         </div>
 
-                        <div className="campo">
-                          <label className="campo__rotulo" htmlFor={`gerar-ia-contexto-${indice}`}>Contexto</label>
-                          <textarea
-                            className="campo__entrada"
-                            id={`gerar-ia-contexto-${indice}`}
-                            onChange={(event) => atualizarCampoQuestaoGerada(indice, "contexto", event.target.value)}
-                            value={questao.contexto || ""}
-                          />
-                        </div>
+                        {!modoExclusivoQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor={`gerar-ia-contexto-${indice}`}>Contexto</label>
+                            <textarea
+                              className="campo__entrada"
+                              id={`gerar-ia-contexto-${indice}`}
+                              onChange={(event) => atualizarCampoQuestaoGerada(indice, "contexto", event.target.value)}
+                              value={questao.contexto || ""}
+                            />
+                          </div>
+                        ) : null}
 
                         <div className="campo">
                           <label className="campo__rotulo" htmlFor={`gerar-ia-enunciado-${indice}`}>Enunciado *</label>
@@ -843,12 +947,14 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
                                       Correta
                                     </label>
                                   </div>
-                                  <textarea
-                                    aria-label={`Justificativa da afirmativa ${indiceAfirmativa + 1}`}
-                                    className="campo__entrada"
-                                    onChange={(event) => atualizarAfirmativaGerada(indice, indiceAfirmativa, "justificativa", event.target.value)}
-                                    value={afirmativa.justificativa || ""}
-                                  />
+                                  {!modoExclusivoQuiz ? (
+                                    <textarea
+                                      aria-label={`Justificativa da afirmativa ${indiceAfirmativa + 1}`}
+                                      className="campo__entrada"
+                                      onChange={(event) => atualizarAfirmativaGerada(indice, indiceAfirmativa, "justificativa", event.target.value)}
+                                      value={afirmativa.justificativa || ""}
+                                    />
+                                  ) : null}
                                 </li>
                               ))}
                             </ul>
@@ -883,28 +989,32 @@ export function AssistenteGeracaoIA({ cursoAtivo, onFechar, onRefresh, onSession
                                       type="radio"
                                     />
                                   </div>
-                                  <textarea
-                                    aria-label={`Justificativa da alternativa ${alternativa.letra} da questao ${indice + 1}`}
-                                    className="campo__entrada"
-                                    onChange={(event) => atualizarAlternativaGerada(indice, indiceAlternativa, "justificativa", event.target.value)}
-                                    placeholder="Justificativa (opcional)"
-                                    value={alternativa.justificativa || ""}
-                                  />
+                                  {!modoExclusivoQuiz ? (
+                                    <textarea
+                                      aria-label={`Justificativa da alternativa ${alternativa.letra} da questao ${indice + 1}`}
+                                      className="campo__entrada"
+                                      onChange={(event) => atualizarAlternativaGerada(indice, indiceAlternativa, "justificativa", event.target.value)}
+                                      placeholder="Justificativa (opcional)"
+                                      value={alternativa.justificativa || ""}
+                                    />
+                                  ) : null}
                                 </li>
                               ))}
                             </ul>
                           </div>
                         ) : null}
 
-                        <div className="campo">
-                          <label className="campo__rotulo" htmlFor={`gerar-ia-explicacao-${indice}`}>Explicacao pos-resposta</label>
-                          <textarea
-                            className="campo__entrada"
-                            id={`gerar-ia-explicacao-${indice}`}
-                            onChange={(event) => atualizarCampoQuestaoGerada(indice, "explicacaoPosResposta", event.target.value)}
-                            value={questao.explicacaoPosResposta || ""}
-                          />
-                        </div>
+                        {!modoExclusivoQuiz ? (
+                          <div className="campo">
+                            <label className="campo__rotulo" htmlFor={`gerar-ia-explicacao-${indice}`}>Explicacao pos-resposta</label>
+                            <textarea
+                              className="campo__entrada"
+                              id={`gerar-ia-explicacao-${indice}`}
+                              onChange={(event) => atualizarCampoQuestaoGerada(indice, "explicacaoPosResposta", event.target.value)}
+                              value={questao.explicacaoPosResposta || ""}
+                            />
+                          </div>
+                        ) : null}
                       </article>
                     );
                   })}

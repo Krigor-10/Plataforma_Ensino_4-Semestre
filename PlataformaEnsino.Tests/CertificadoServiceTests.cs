@@ -242,6 +242,43 @@ public class CertificadoServiceTests
     }
 
     [Fact]
+    public async Task EmitirCertificadoAsync_CursoAcompanhadoNaoEncerrado_LancaArgumentException()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
+    }
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_CursoAcompanhadoEncerrado_EmiteCertificado()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        contextoDeArranjo.SaveChanges();
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
+
+        Assert.NotNull(resultado.CertificadoEmitidoEm);
+    }
+
+    [Fact]
     public async Task ListarCertificadosDoAlunoAsync_RetornaSoOsCertificadosEmitidos()
     {
         var nomeBanco = Guid.NewGuid().ToString();

@@ -16,7 +16,12 @@ public class MatriculaServiceTests
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
             context,
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new CursoService(
+                context,
+                new GenericRepository<Curso>(context),
+                new GenericRepository<Coordenador>(context),
+                new NotificacaoService(context, NullLogger<NotificacaoService>.Instance)));
 
         return (service, context);
     }
@@ -175,5 +180,19 @@ public class MatriculaServiceTests
         var aprovadas = context.Matriculas.Count(m =>
             m.AlunoId == aluno.Id && m.CursoId == curso.Id && m.Status == StatusMatricula.Aprovada);
         Assert.Equal(1, aprovadas);
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoAcompanhadoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id));
     }
 }

@@ -12,15 +12,18 @@ public class CursoService : ICursoService
     private readonly PlataformaContext _context;
     private readonly IGenericRepository<Curso> _cursoRepository;
     private readonly IGenericRepository<Coordenador> _coordenadorRepository;
+    private readonly INotificacaoService _notificacaoService;
 
     public CursoService(
         PlataformaContext context,
         IGenericRepository<Curso> cursoRepository,
-        IGenericRepository<Coordenador> coordenadorRepository)
+        IGenericRepository<Coordenador> coordenadorRepository,
+        INotificacaoService notificacaoService)
     {
         _context = context;
         _cursoRepository = cursoRepository;
         _coordenadorRepository = coordenadorRepository;
+        _notificacaoService = notificacaoService;
     }
 
     public async Task<Curso> CriarCursoAsync(CriarCursoDto dto, int criadoPorId)
@@ -32,6 +35,7 @@ public class CursoService : ICursoService
             Titulo = dto.Titulo.Trim(),
             Descricao = dto.Descricao?.Trim() ?? string.Empty,
             Preco = dto.Preco,
+            ModeloCurso = dto.ModeloCurso ?? InferirModeloPorPreco(dto.Preco),
             CriadoPor = criadoPorId,
             CodigoRegistro = await GerarCodigoCursoAsync()
         };
@@ -53,11 +57,19 @@ public class CursoService : ICursoService
         curso.Descricao = dto.Descricao?.Trim() ?? string.Empty;
         curso.Preco = dto.Preco;
 
+        if (dto.ModeloCurso.HasValue)
+        {
+            curso.ModeloCurso = dto.ModeloCurso.Value;
+        }
+
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
 
         return curso;
     }
+
+    private static ModeloCurso InferirModeloPorPreco(decimal preco) =>
+        preco <= 0 ? ModeloCurso.Gratuito : ModeloCurso.PagoPacote;
 
     public async Task<Curso> ObterCursoPorIdAsync(int id)
     {
@@ -148,6 +160,103 @@ public class CursoService : ICursoService
             ?? throw new KeyNotFoundException("Coordenador não encontrado.");
 
         curso.AtribuirCoordenador(coordenador);
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+    }
+
+    public async Task GarantirCursoAbertoAsync(int cursoId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.ModeloCurso == ModeloCurso.Acompanhado && curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Este curso foi encerrado e nao aceita mais conteudo, avaliacoes ou matriculas novas.");
+        }
+    }
+
+    public async Task ConcluirCursoComoProfessorAsync(int cursoId, int professorId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.ModeloCurso != ModeloCurso.Acompanhado)
+        {
+            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado podem ser concluidos pelo professor.");
+        }
+
+        if (!await ProfessorPertenceAoCursoAsync(professorId, cursoId))
+        {
+            throw new InvalidOperationException("O professor informado nao esta vinculado a este curso.");
+        }
+
+        if (curso.ConcluidoPeloProfessorEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso ja foi marcado como concluido pelo professor.");
+        }
+
+        curso.ConcluirPeloProfessor(professorId);
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+
+        if (curso.CoordenadorId.HasValue)
+        {
+            await _notificacaoService.NotificarAsync(
+                curso.CoordenadorId.Value,
+                "Curso pronto para encerramento",
+                $"O professor concluiu o curso \"{curso.Titulo}\". Revise e encerre quando estiver pronto pra liberar os certificados.",
+                TipoNotificacao.CursoConcluidoPeloProfessor,
+                "/app/cursos");
+        }
+    }
+
+    public async Task EncerrarCursoAsync(int cursoId, int coordenadorId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.ModeloCurso != ModeloCurso.Acompanhado)
+        {
+            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado podem ser encerrados.");
+        }
+
+        if (curso.CoordenadorId != coordenadorId)
+        {
+            throw new InvalidOperationException("Apenas o coordenador responsavel por este curso pode encerra-lo.");
+        }
+
+        if (!curso.ConcluidoPeloProfessorEm.HasValue)
+        {
+            throw new InvalidOperationException("O professor ainda nao concluiu este curso.");
+        }
+
+        if (curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso ja esta encerrado.");
+        }
+
+        curso.Encerrar(coordenadorId);
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+    }
+
+    public async Task ReabrirCursoAsync(int cursoId, int coordenadorId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.CoordenadorId != coordenadorId)
+        {
+            throw new InvalidOperationException("Apenas o coordenador responsavel por este curso pode reabri-lo.");
+        }
+
+        if (!curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso nao esta encerrado.");
+        }
+
+        curso.Reabrir();
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
     }

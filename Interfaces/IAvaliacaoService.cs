@@ -22,6 +22,7 @@ public interface IAvaliacaoService
     Task<TentativaAvaliacaoAlunoResponseDto> EnviarRespostasAlunoAsync(int avaliacaoId, int alunoId, EnviarAvaliacaoAlunoDto dto);
     Task<RevisaoTentativaResponseDto> ObterRevisaoTentativaAsync(int tentativaId, int alunoId);
     Task<ResultadoGeracaoIA> GerarQuestoesComIaAsync(int avaliacaoId, int professorId, IFormFile arquivo, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken);
+    Task<ResultadoGeracaoIA> GerarQuestoesComIaDeConteudoAsync(int avaliacaoId, int professorId, int conteudoDidaticoId, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken);
     Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo);
     Task RemoverAnexoQuestaoAsync(int questaoBancoId, int anexoId, int professorId);
 }

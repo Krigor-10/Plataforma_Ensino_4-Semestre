@@ -47,7 +47,12 @@ public class MatriculaConcorrenciaTests : IAsyncLifetime
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
             context,
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new CursoService(
+                context,
+                new GenericRepository<Curso>(context),
+                new GenericRepository<Coordenador>(context),
+                new NotificacaoService(context, NullLogger<NotificacaoService>.Instance)));
 
     [Fact]
     public async Task MatricularComAprovacaoAutomaticaAsync_DuasChamadasSimultaneas_NuncaDuplicaMatriculaAprovada()

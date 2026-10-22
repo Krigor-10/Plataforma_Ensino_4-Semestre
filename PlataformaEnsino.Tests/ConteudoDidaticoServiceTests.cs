@@ -17,7 +17,11 @@ public class ConteudoDidaticoServiceTests
         new GenericRepository<Turma>(context),
         new GenericRepository<Modulo>(context),
         new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
-        new CursoService(context, new GenericRepository<Curso>(context), new GenericRepository<Coordenador>(context)),
+        new CursoService(
+            context,
+            new GenericRepository<Curso>(context),
+            new GenericRepository<Coordenador>(context),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance)),
         context);
 
     private static Professor CriarProfessor(PlataformaContext context)
@@ -148,6 +152,24 @@ public class ConteudoDidaticoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id)));
+    }
+
+    [Fact]
+    public async Task CriarConteudoAsync_CursoAcompanhadoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id)));

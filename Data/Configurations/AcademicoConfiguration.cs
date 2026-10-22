@@ -27,6 +27,18 @@ public sealed class CursoConfiguration : IEntityTypeConfiguration<Curso>
             .HasIndex(c => c.CriadoPor);
 
         builder
+            .HasOne(c => c.ProfessorConclusao)
+            .WithMany()
+            .HasForeignKey(c => c.ConcluidoPeloProfessorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasOne(c => c.EncerradoPor)
+            .WithMany()
+            .HasForeignKey(c => c.EncerradoPorId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
             .Property(c => c.Preco)
             .HasPrecision(10, 2);
 

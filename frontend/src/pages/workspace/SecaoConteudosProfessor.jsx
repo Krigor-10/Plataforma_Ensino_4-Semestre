@@ -14,6 +14,7 @@ import {
   TbPhoto,
   TbPlayerPlay,
   TbPlus,
+  TbSparkles,
   TbTrophy,
   TbX
 } from "react-icons/tb";
@@ -27,6 +28,7 @@ import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
+import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 
 const OPCOES_TIPO_CONTEUDO = [
@@ -107,6 +109,7 @@ export function SecaoConteudosProfessor({
   const [assistenteQuizAberto, setAssistenteQuizAberto] = useState(false);
   const [avaliacaoQuizParaEditar, setAvaliacaoQuizParaEditar] = useState(null);
   const [contextoNovoQuiz, setContextoNovoQuiz] = useState(null);
+  const [moduloParaQuizComIa, setModuloParaQuizComIa] = useState(null);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
 
@@ -489,6 +492,23 @@ export function SecaoConteudosProfessor({
     setContextoNovoQuiz(null);
   }
 
+  function abrirGeracaoQuizComIa(modulo) {
+    if (!cursoAtivo) {
+      return;
+    }
+
+    setModuloParaQuizComIa(modulo);
+  }
+
+  function fecharGeracaoQuizComIa() {
+    setModuloParaQuizComIa(null);
+  }
+
+  const conteudosDoModuloParaIa = useMemo(
+    () => (moduloParaQuizComIa ? conteudos.filter((conteudo) => conteudo.moduloId === moduloParaQuizComIa.id) : []),
+    [conteudos, moduloParaQuizComIa]
+  );
+
   return (
     <div className="tela-conteudos">
       {!cursoAtivo ? (
@@ -518,6 +538,7 @@ export function SecaoConteudosProfessor({
           onAbrirEdicao={abrirEdicaoConteudo}
           onAlternarPublicacao={alternarPublicacao}
           onExcluir={abrirExclusaoConteudo}
+          onGerarQuizComIaModulo={abrirGeracaoQuizComIa}
           onGerenciarQuizModulo={gerenciarQuizModulo}
           onNovoConteudo={abrirFormularioNovoConteudo}
           onReordenar={reordenarConteudo}
@@ -534,6 +555,18 @@ export function SecaoConteudosProfessor({
           modoExclusivoQuiz
           modulosDisponiveis={modulosDisponiveis}
           onFechar={fecharAssistenteQuiz}
+          onRefresh={onRefresh}
+          onSessionExpired={onSessionExpired}
+        />
+      ) : null}
+
+      {moduloParaQuizComIa && cursoAtivo ? (
+        <AssistenteGeracaoIA
+          conteudosDisponiveis={conteudosDoModuloParaIa}
+          cursoAtivo={cursoAtivo}
+          modoExclusivoQuiz
+          moduloContexto={moduloParaQuizComIa}
+          onFechar={fecharGeracaoQuizComIa}
           onRefresh={onRefresh}
           onSessionExpired={onSessionExpired}
         />
@@ -787,6 +820,7 @@ function TrilhaConteudosProfessor({
   onAbrirEdicao,
   onAlternarPublicacao,
   onExcluir,
+  onGerarQuizComIaModulo,
   onGerenciarQuizModulo,
   onNovoConteudo,
   onReordenar,
@@ -1123,6 +1157,11 @@ function TrilhaConteudosProfessor({
                         <Botao className="atividades-curso__adicionar" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno" variante="fantasma">
                           <TbTrophy aria-hidden="true" size={13} /> Adicionar Quiz
                         </Botao>
+                        {itensDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
+                          <Botao className="atividades-curso__adicionar" onClick={() => onGerarQuizComIaModulo(modulo)} tamanho="pequeno" variante="fantasma">
+                            <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
+                          </Botao>
+                        ) : null}
                       </div>
                     </motion.div>
                   ) : null}

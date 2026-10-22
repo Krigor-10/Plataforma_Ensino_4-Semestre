@@ -9,7 +9,8 @@ public enum TipoNotificacao
     MatriculaRejeitada,
     AvaliacaoCorrigida,
     ConteudoPublicado,
-    PagamentoConfirmado
+    PagamentoConfirmado,
+    CursoConcluidoPeloProfessor
 }
 
 public class Notificacao

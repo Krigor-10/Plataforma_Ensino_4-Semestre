@@ -154,6 +154,8 @@ public class AvaliacaoService : IAvaliacaoService
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
+        var cursoId = modulo?.CursoId ?? turma.CursoId;
+        await _cursoService.GarantirCursoAbertoAsync(cursoId);
 
         var avaliacao = new Avaliacao
         {
@@ -162,7 +164,7 @@ public class AvaliacaoService : IAvaliacaoService
             ConteudoDidaticoId = material?.Id
         };
         avaliacao.DefinirAutor(professorId);
-        avaliacao.DefinirCurso(modulo?.CursoId ?? turma.CursoId);
+        avaliacao.DefinirCurso(cursoId);
 
         AplicarDados(avaliacao, dto);
 
@@ -182,11 +184,13 @@ public class AvaliacaoService : IAvaliacaoService
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
+        var cursoId = modulo?.CursoId ?? turma.CursoId;
+        await _cursoService.GarantirCursoAbertoAsync(cursoId);
 
         avaliacao.TurmaId = turma.Id;
         avaliacao.ModuloId = modulo?.Id;
         avaliacao.ConteudoDidaticoId = material?.Id;
-        avaliacao.DefinirCurso(modulo?.CursoId ?? turma.CursoId);
+        avaliacao.DefinirCurso(cursoId);
         AplicarDados(avaliacao, dto);
 
         _context.Avaliacoes.Update(avaliacao);
@@ -917,6 +921,109 @@ public class AvaliacaoService : IAvaliacaoService
         }
 
         return resultado;
+    }
+
+    public async Task<ResultadoGeracaoIA> GerarQuestoesComIaDeConteudoAsync(
+        int avaliacaoId, int professorId, int conteudoDidaticoId, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(configuracao);
+
+        var avaliacao = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+
+        var conteudo = await _context.ConteudosDidaticos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == conteudoDidaticoId, cancellationToken)
+            ?? throw new KeyNotFoundException("Conteudo nao encontrado.");
+
+        if (conteudo.CursoId != avaliacao.CursoId)
+        {
+            throw new InvalidOperationException("O conteudo informado nao pertence ao mesmo curso da avaliacao.");
+        }
+
+        MaterialParaIaDto material;
+        var avisosExtras = new List<string>();
+
+        if (conteudo.TipoConteudo == TipoConteudoDidatico.Texto)
+        {
+            if (string.IsNullOrWhiteSpace(conteudo.CorpoTexto))
+            {
+                throw new ArgumentException("Este conteudo nao tem texto suficiente para gerar questoes.");
+            }
+
+            material = MaterialParaIaDto.DeTexto(conteudo.CorpoTexto);
+        }
+        else if (conteudo.TipoConteudo == TipoConteudoDidatico.Pdf)
+        {
+            if (string.IsNullOrWhiteSpace(conteudo.ArquivoUrl))
+            {
+                throw new ArgumentException("Este conteudo nao tem arquivo associado.");
+            }
+
+            var (subpasta, nomeArquivo) = ExtrairSubpastaENomeArquivo(conteudo.ArquivoUrl);
+
+            var primeiraAbertura = await _armazenamentoService.AbrirArquivoAsync(subpasta, nomeArquivo)
+                ?? throw new KeyNotFoundException("Arquivo do conteudo nao encontrado no armazenamento.");
+
+            ResultadoExtracaoMaterial resultadoExtracao;
+            await using (primeiraAbertura.Conteudo)
+            {
+                resultadoExtracao = await _extratorTextoService.ExtrairTextoAsync(primeiraAbertura.Conteudo, ".pdf", cancellationToken);
+            }
+
+            var ehPdfEscaneado = resultadoExtracao.MotivoFalha == MotivoFalhaExtracao.PdfEscaneado;
+
+            if (!resultadoExtracao.TemTextoExtraivel && !ehPdfEscaneado)
+            {
+                var motivo = resultadoExtracao.Avisos.FirstOrDefault()
+                    ?? "O material nao tem texto suficiente para gerar questoes.";
+                throw new ArgumentException(motivo);
+            }
+
+            if (ehPdfEscaneado)
+            {
+                // PDF escaneado, sem texto extraivel por OCR local - mesmo fallback
+                // de visao nativa usado no fluxo de upload (GerarQuestoesComIaAsync).
+                // Precisa reabrir o arquivo: o stream da extracao ja foi consumido.
+                var segundaAbertura = await _armazenamentoService.AbrirArquivoAsync(subpasta, nomeArquivo)
+                    ?? throw new KeyNotFoundException("Arquivo do conteudo nao encontrado no armazenamento.");
+                using var buffer = new MemoryStream();
+                await using (segundaAbertura.Conteudo)
+                {
+                    await segundaAbertura.Conteudo.CopyToAsync(buffer, cancellationToken);
+                }
+                material = MaterialParaIaDto.DeDocumento(buffer.ToArray(), "application/pdf");
+                avisosExtras.Add(
+                    "Este PDF escaneado foi lido diretamente pela IA (sem OCR tradicional) - revise as questoes geradas com atencao, a leitura de texto em imagem pode conter erros.");
+            }
+            else
+            {
+                material = MaterialParaIaDto.DeTexto(string.Join("\n\n", resultadoExtracao.TextoPorPagina));
+            }
+        }
+        else
+        {
+            throw new ArgumentException("Este tipo de conteudo nao pode ser usado como fonte para geracao de questoes por IA.");
+        }
+
+        var resultado = await _avaliacaoIAService.GerarQuestoesAsync(material, configuracao, cancellationToken);
+
+        if (avisosExtras.Count > 0)
+        {
+            resultado = resultado with { Avisos = resultado.Avisos.Concat(avisosExtras).ToList() };
+        }
+
+        return resultado;
+    }
+
+    private static (string Subpasta, string NomeArquivo) ExtrairSubpastaENomeArquivo(string arquivoUrl)
+    {
+        var partes = arquivoUrl.TrimStart('/').Split('/', 3);
+        if (partes.Length < 3 || partes[0] != "uploads")
+        {
+            throw new ArgumentException("URL de arquivo invalida.");
+        }
+
+        return (partes[1], partes[2]);
     }
 
     public async Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo)

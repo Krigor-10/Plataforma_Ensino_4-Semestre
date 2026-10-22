@@ -1169,7 +1169,9 @@ export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cu
   const cursosComAvaliacao = useMemo(() => {
     const agrupados = new Map();
     avaliacoes.forEach((avaliacao) => {
-      if (!avaliacao.cursoId) {
+      // Quiz (tipoAvaliacao === 1) nao e avaliacao formal — fica exclusivo da
+      // trilha de Conteudos, nao entra aqui.
+      if (!avaliacao.cursoId || Number(avaliacao.tipoAvaliacao) === 1) {
         return;
       }
 
@@ -1200,7 +1202,9 @@ export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cu
     () =>
       cursoAtivo
         ? [...avaliacoes]
-            .filter((avaliacao) => avaliacao.cursoId === cursoAtivo.cursoId)
+            .filter(
+              (avaliacao) => avaliacao.cursoId === cursoAtivo.cursoId && Number(avaliacao.tipoAvaliacao) !== 1
+            )
             .sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
         : [],
     [avaliacoes, cursoAtivo]

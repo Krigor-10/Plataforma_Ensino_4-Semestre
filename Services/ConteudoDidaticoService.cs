@@ -74,6 +74,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         var modulo = await ValidarModuloAsync(dto.ModuloId);
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
 
         var conteudo = new ConteudoDidatico
         {
@@ -117,6 +118,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         var modulo = await ValidarModuloAsync(dto.ModuloId);
 
         ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
 
         conteudo.TurmaId = turma.Id;
         conteudo.ModuloId = modulo.Id;

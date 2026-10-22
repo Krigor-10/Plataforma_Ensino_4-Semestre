@@ -14,14 +14,17 @@ import { formatDate, normalizePublicationStatus } from "../../lib/format.js";
 export function DashboardProfessor({ avaliacoes = [], cursos = [], onMudarSecao, turmas = [], usuario }) {
   const cursoPorId = new Map(cursos.map((curso) => [Number(curso.id), curso]));
   const minhasTurmas = turmas.slice(0, 4);
-  const minhasAvaliacoes = [...avaliacoes]
+  // Quiz (tipoAvaliacao === 1) nao e avaliacao formal — fica exclusivo da
+  // trilha de Conteudos, nao entra nas estatisticas/lista de Avaliacoes.
+  const avaliacoesFormais = avaliacoes.filter((avaliacao) => Number(avaliacao.tipoAvaliacao) !== 1);
+  const minhasAvaliacoes = [...avaliacoesFormais]
     .sort((a, b) => new Date(b.criadoEm || 0).getTime() - new Date(a.criadoEm || 0).getTime())
     .slice(0, 4);
 
-  const avaliacoesPublicadas = avaliacoes.filter(
+  const avaliacoesPublicadas = avaliacoesFormais.filter(
     (avaliacao) => normalizePublicationStatus(avaliacao.statusPublicacao) === "Publicado"
   ).length;
-  const notasValidas = avaliacoes
+  const notasValidas = avaliacoesFormais
     .map((avaliacao) => Number(avaliacao.notaMaxima || 0))
     .filter((nota) => nota > 0);
   const mediaNotaMaxima = notasValidas.length

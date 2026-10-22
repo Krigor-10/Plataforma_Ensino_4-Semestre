@@ -15,7 +15,11 @@ public class AvaliacaoServiceTests
     private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
 
     private static CursoService CriarCursoService(PlataformaContext context) =>
-        new(context, new GenericRepository<Curso>(context), new GenericRepository<Coordenador>(context));
+        new(
+            context,
+            new GenericRepository<Curso>(context),
+            new GenericRepository<Coordenador>(context),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
@@ -174,6 +178,23 @@ public class AvaliacaoServiceTests
         Assert.Equal("Avaliacao Teste", avaliacao.Titulo);
         Assert.Equal(StatusPublicacao.Publicado, avaliacao.StatusPublicacao);
         Assert.NotNull(avaliacao.PublicadoEm);
+    }
+
+    [Fact]
+    public async Task CriarAvaliacaoAsync_CursoAcompanhadoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id)));
     }
 
     [Fact]
@@ -1117,13 +1138,160 @@ public class AvaliacaoServiceTests
         Assert.Contains(resultado.Avisos, aviso => aviso.Contains("lido diretamente pela IA", StringComparison.OrdinalIgnoreCase));
     }
 
+    // ---------- GerarQuestoesComIaDeConteudoAsync ----------
+
+    [Fact]
+    public async Task GerarQuestoesComIaDeConteudoAsync_ConteudoTexto_EnviaCorpoTextoParaIA()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var conteudo = new ConteudoDidatico { Titulo = "Aula 1", TurmaId = turma.Id, ModuloId = modulo.Id, CorpoTexto = "Conteudo de apoio pra gerar questoes." };
+        conteudo.DefinirProfessorAutor(professor.Id);
+        conteudo.DefinirCurso(curso.Id);
+        context.ConteudosDidaticos.Add(conteudo);
+        context.SaveChanges();
+
+        var iaFake = new AvaliacaoIAServiceFake(_ => new ResultadoGeracaoIA(Array.Empty<QuestaoGeradaIaDto>(), Array.Empty<string>(), false));
+        var service = new AvaliacaoService(
+            context,
+            new ProgressoAlunoService(context, new AcessoAcademicoService(context)),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            new ArmazenamentoArquivoServiceFake(),
+            new ExtratorTextoMaterialServiceFake(),
+            iaFake,
+            CriarCursoService(context));
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        await service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudo.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None);
+
+        Assert.False(iaFake.MaterialRecebido!.EhDocumento);
+        Assert.Equal("Conteudo de apoio pra gerar questoes.", iaFake.MaterialRecebido.TextoFonte);
+    }
+
+    [Fact]
+    public async Task GerarQuestoesComIaDeConteudoAsync_ConteudoDeOutroCurso_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var outroCurso = CriarCurso(context);
+        var outroModulo = CriarModulo(context, outroCurso.Id);
+        var conteudoDeOutroCurso = new ConteudoDidatico { Titulo = "Aula de outro curso", TurmaId = turma.Id, ModuloId = outroModulo.Id, CorpoTexto = "Texto." };
+        conteudoDeOutroCurso.DefinirProfessorAutor(professor.Id);
+        conteudoDeOutroCurso.DefinirCurso(outroCurso.Id);
+        context.ConteudosDidaticos.Add(conteudoDeOutroCurso);
+        context.SaveChanges();
+
+        var service = new AvaliacaoService(
+            context,
+            new ProgressoAlunoService(context, new AcessoAcademicoService(context)),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            new ArmazenamentoArquivoServiceFake(),
+            new ExtratorTextoMaterialServiceFake(),
+            new AvaliacaoIAServiceFake(),
+            CriarCursoService(context));
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoDeOutroCurso.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GerarQuestoesComIaDeConteudoAsync_TipoConteudoNaoSuportado_LancaArgumentException()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var conteudoVideo = new ConteudoDidatico { Titulo = "Aula em video", TurmaId = turma.Id, ModuloId = modulo.Id, TipoConteudo = TipoConteudoDidatico.Video, ArquivoUrl = "/uploads/conteudos/aula.mp4" };
+        conteudoVideo.DefinirProfessorAutor(professor.Id);
+        conteudoVideo.DefinirCurso(curso.Id);
+        context.ConteudosDidaticos.Add(conteudoVideo);
+        context.SaveChanges();
+
+        var service = new AvaliacaoService(
+            context,
+            new ProgressoAlunoService(context, new AcessoAcademicoService(context)),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            new ArmazenamentoArquivoServiceFake(),
+            new ExtratorTextoMaterialServiceFake(),
+            new AvaliacaoIAServiceFake(),
+            CriarCursoService(context));
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoVideo.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GerarQuestoesComIaDeConteudoAsync_PdfEscaneado_NaoBloqueiaEEnviaDocumentoParaIA()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var conteudoPdf = new ConteudoDidatico { Titulo = "Apostila", TurmaId = turma.Id, ModuloId = modulo.Id, TipoConteudo = TipoConteudoDidatico.Pdf, ArquivoUrl = "/uploads/conteudos/apostila.pdf" };
+        conteudoPdf.DefinirProfessorAutor(professor.Id);
+        conteudoPdf.DefinirCurso(curso.Id);
+        context.ConteudosDidaticos.Add(conteudoPdf);
+        context.SaveChanges();
+
+        var extrator = new ExtratorTextoMaterialServiceFake(() =>
+            new ResultadoExtracaoMaterial(
+                TextoPorPagina: Array.Empty<string>(),
+                QuantidadePaginas: 1,
+                TemTextoExtraivel: false,
+                Avisos: new[] { "Este PDF parece ser uma versao escaneada, sem texto selecionavel suficiente para gerar questoes." },
+                MotivoFalha: MotivoFalhaExtracao.PdfEscaneado));
+        var bytesFalsos = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nconteudo escaneado de teste");
+        var armazenamento = new ArmazenamentoArquivoServiceFake(conteudoParaAbrir: () => bytesFalsos);
+        var iaFake = new AvaliacaoIAServiceFake(_ => new ResultadoGeracaoIA(Array.Empty<QuestaoGeradaIaDto>(), Array.Empty<string>(), false));
+
+        var service = new AvaliacaoService(
+            context,
+            new ProgressoAlunoService(context, new AcessoAcademicoService(context)),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            armazenamento,
+            extrator,
+            iaFake,
+            CriarCursoService(context));
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        var resultado = await service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoPdf.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None);
+
+        Assert.True(iaFake.MaterialRecebido!.EhDocumento);
+        Assert.Equal("application/pdf", iaFake.MaterialRecebido.MediaType);
+        Assert.Contains(resultado.Avisos, aviso => aviso.Contains("lido diretamente pela IA", StringComparison.OrdinalIgnoreCase));
+    }
+
     private class ArmazenamentoArquivoServiceFake : IArmazenamentoArquivoService
     {
         private readonly Func<string>? _urlRetornada;
+        private readonly Func<byte[]>? _conteudoParaAbrir;
 
-        public ArmazenamentoArquivoServiceFake(Func<string>? urlRetornada = null)
+        public ArmazenamentoArquivoServiceFake(Func<string>? urlRetornada = null, Func<byte[]>? conteudoParaAbrir = null)
         {
             _urlRetornada = urlRetornada;
+            _conteudoParaAbrir = conteudoParaAbrir;
         }
 
         public Task<string> SalvarArquivoAsync(IFormFile arquivo, string subpasta, string[] extensoesPermitidas, long tamanhoMaximoBytes) =>
@@ -1131,8 +1299,10 @@ public class AvaliacaoServiceTests
                 ? Task.FromResult(_urlRetornada())
                 : throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita upload de anexo ate agora.");
 
-        public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo)
-            => throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita leitura de anexo ate agora.");
+        public Task<ArquivoArmazenado?> AbrirArquivoAsync(string subpasta, string nomeArquivo) =>
+            _conteudoParaAbrir is not null
+                ? Task.FromResult<ArquivoArmazenado?>(new ArquivoArmazenado(new MemoryStream(_conteudoParaAbrir()), "application/pdf"))
+                : throw new NotImplementedException("Nenhum teste de AvaliacaoService exercita leitura de anexo ate agora.");
     }
 
     private class ExtratorTextoMaterialServiceFake : IExtratorTextoMaterialService

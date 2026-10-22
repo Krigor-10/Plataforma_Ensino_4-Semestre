@@ -61,6 +61,15 @@ public class CertificadoService : ICertificadoService
             throw new ArgumentException("Ha avaliacoes (prova/exercicio) pendentes de correcao para concluir o curso.");
         }
 
+        // Curso Acompanhado tem conteudo liberado aos poucos pelo professor —
+        // "100% concluido" so e um criterio estavel depois que o coordenador
+        // encerra o curso (ver CursoService.EncerrarCursoAsync). Gratuito/
+        // PagoPacote ja nascem com todo o conteudo pronto, sem esse gate.
+        if (matricula.Curso!.ModeloCurso == ModeloCurso.Acompanhado && !matricula.Curso.EncerradoEm.HasValue)
+        {
+            throw new ArgumentException("Este curso ainda nao foi encerrado pelo coordenador.");
+        }
+
         if (matricula.CertificadoEmitidoEm is null)
         {
             matricula.EmitirCertificado();

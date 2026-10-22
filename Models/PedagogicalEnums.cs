@@ -59,3 +59,17 @@ public enum StatusPagamento
     Pago = 2,
     Cancelado = 3
 }
+
+/// <summary>
+/// Gratuito/PagoPacote: todo o conteudo ja esta pronto, certificado liberado
+/// automaticamente quando o aluno cumpre os requisitos. Acompanhado: professor
+/// publica conteudo aos poucos; precisa ser concluido pelo professor e
+/// encerrado pelo coordenador antes do certificado ficar disponivel (ver
+/// Curso.ConcluirPeloProfessor/Encerrar/Reabrir).
+/// </summary>
+public enum ModeloCurso
+{
+    Gratuito = 1,
+    PagoPacote = 2,
+    Acompanhado = 3
+}

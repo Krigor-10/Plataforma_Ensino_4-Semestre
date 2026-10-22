@@ -14,17 +14,20 @@ public class MatriculaService : IMatriculaService
     private readonly IMatriculaRepository _matriculaRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
     private readonly INotificacaoService _notificacaoService;
+    private readonly ICursoService _cursoService;
 
     public MatriculaService(
         IMatriculaRepository matriculaRepository,
         IGenericRepository<Aluno> alunoRepository,
         PlataformaContext context,
-        INotificacaoService notificacaoService)
+        INotificacaoService notificacaoService,
+        ICursoService cursoService)
     {
         _context = context;
         _matriculaRepository = matriculaRepository;
         _alunoRepository = alunoRepository;
         _notificacaoService = notificacaoService;
+        _cursoService = cursoService;
     }
 
     /// <summary>
@@ -70,6 +73,8 @@ public class MatriculaService : IMatriculaService
     /// </summary>
     private async Task<Matricula> CriarMatriculaPendenteAsync(int alunoId, int cursoId)
     {
+        await _cursoService.GarantirCursoAbertoAsync(cursoId);
+
         var novaMatricula = new Matricula
         {
             AlunoId = alunoId,

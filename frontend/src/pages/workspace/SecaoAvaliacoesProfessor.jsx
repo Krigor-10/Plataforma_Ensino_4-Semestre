@@ -141,7 +141,11 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         return;
       }
 
-      const avaliacoesDaTurma = avaliacoes.filter((avaliacao) => avaliacao.turmaId === turma.id);
+      // Quiz (tipoAvaliacao === 1) nao e avaliacao formal — fica exclusivo da
+      // trilha de Conteudos (ver SecaoConteudosProfessor.jsx), nao entra aqui.
+      const avaliacoesDaTurma = avaliacoes.filter(
+        (avaliacao) => avaliacao.turmaId === turma.id && Number(avaliacao.tipoAvaliacao) !== 1
+      );
 
       porCursoId.set(turma.cursoId, {
         curso,
@@ -163,7 +167,9 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     () =>
       cursoAtivo
         ? [...avaliacoes]
-            .filter((avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id)
+            .filter(
+              (avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id && Number(avaliacao.tipoAvaliacao) !== 1
+            )
             .sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
         : [],
     [avaliacoes, cursoAtivo]
@@ -349,7 +355,9 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
             resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
             rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
             badge:
-              totalPublicadas === 0
+              totalAvaliacoes === 0
+                ? "Sem avaliacoes"
+                : totalPublicadas === 0
                 ? "Rascunho"
                 : totalPublicadas === totalAvaliacoes
                 ? "Publicado"
