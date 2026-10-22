@@ -30,12 +30,12 @@ public class UploadAutorizacaoService : IUploadAutorizacaoService
 
     private async Task<bool> PodeAcessarConteudoAsync(string arquivoUrl, int alunoId)
     {
-        var turmaId = await _context.ConteudosDidaticos
+        var cursoId = await _context.ConteudosDidaticos
             .Where(conteudo => conteudo.ArquivoUrl == arquivoUrl)
-            .Select(conteudo => (int?)conteudo.TurmaId)
+            .Select(conteudo => (int?)conteudo.CursoId)
             .FirstOrDefaultAsync();
 
-        return turmaId.HasValue && await AlunoTemAcessoNaTurmaAsync(turmaId.Value, alunoId);
+        return cursoId.HasValue && await AlunoTemAcessoNoCursoAsync(cursoId.Value, alunoId);
     }
 
     private async Task<bool> PodeAcessarAnexoQuestaoAsync(string arquivoUrl, int alunoId)
@@ -51,17 +51,17 @@ public class UploadAutorizacaoService : IUploadAutorizacaoService
         }
 
         // Uma questao do banco pode estar publicada em mais de uma avaliacao
-        // (turmas diferentes) - basta o aluno ter acesso a uma delas, ja que
+        // (cursos diferentes) - basta o aluno ter acesso a uma delas, ja que
         // e o mesmo arquivo de anexo reaproveitado.
-        var turmaIds = await _context.QuestoesPublicadas
+        var cursoIds = await _context.QuestoesPublicadas
             .Where(questao => questao.QuestaoBancoId == questaoBancoId.Value)
-            .Join(_context.Avaliacoes, questao => questao.AvaliacaoId, avaliacao => avaliacao.Id, (questao, avaliacao) => avaliacao.TurmaId)
+            .Join(_context.Avaliacoes, questao => questao.AvaliacaoId, avaliacao => avaliacao.Id, (questao, avaliacao) => avaliacao.CursoId)
             .Distinct()
             .ToListAsync();
 
-        foreach (var turmaId in turmaIds)
+        foreach (var cursoId in cursoIds)
         {
-            if (await AlunoTemAcessoNaTurmaAsync(turmaId, alunoId))
+            if (await AlunoTemAcessoNoCursoAsync(cursoId, alunoId))
             {
                 return true;
             }
@@ -70,13 +70,13 @@ public class UploadAutorizacaoService : IUploadAutorizacaoService
         return false;
     }
 
-    private async Task<bool> AlunoTemAcessoNaTurmaAsync(int turmaId, int alunoId)
+    private async Task<bool> AlunoTemAcessoNoCursoAsync(int cursoId, int alunoId)
     {
         var matricula = await _context.Matriculas
             .Include(item => item.Curso)
             .FirstOrDefaultAsync(item =>
                 item.AlunoId == alunoId &&
-                item.TurmaId == turmaId &&
+                item.CursoId == cursoId &&
                 item.Status == StatusMatricula.Aprovada);
 
         return matricula is not null && await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula);

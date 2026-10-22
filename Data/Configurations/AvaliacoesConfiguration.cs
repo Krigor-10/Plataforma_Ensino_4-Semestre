@@ -120,6 +120,15 @@ public sealed class AvaliacaoConfiguration : IEntityTypeConfiguration<Avaliacao>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
+            .HasOne<Curso>()
+            .WithMany()
+            .HasForeignKey(a => a.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasIndex(a => a.CursoId);
+
+        builder
             .HasOne(a => a.ConteudoDidatico)
             .WithMany()
             .HasForeignKey(a => a.ConteudoDidaticoId)

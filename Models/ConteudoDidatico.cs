@@ -27,6 +27,7 @@ public class ConteudoDidatico
 
     public int ProfessorAutorId { get; private set; }
     public int TurmaId { get; set; }
+    public int CursoId { get; private set; }
     public int ModuloId { get; set; }
 
     public StatusPublicacao StatusPublicacao { get; private set; } = StatusPublicacao.Rascunho;
@@ -60,6 +61,16 @@ public class ConteudoDidatico
         }
 
         ProfessorAutorId = professorAutorId;
+    }
+
+    public void DefinirCurso(int cursoId)
+    {
+        if (cursoId <= 0)
+        {
+            throw new ArgumentException("O curso informado e invalido.");
+        }
+
+        CursoId = cursoId;
     }
 
     public void RegistrarCriacao(DateTime? criadoEm = null)

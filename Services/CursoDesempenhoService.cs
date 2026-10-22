@@ -54,10 +54,10 @@ public class CursoDesempenhoService : ICursoDesempenhoService
         }
         else
         {
-            var cursoIdsDoProfessor = await _context.Turmas
+            var cursoIdsDoProfessor = await _context.ProfessoresCursos
                 .AsNoTracking()
-                .Where(turma => turma.ProfessorId == professorId!.Value)
-                .Select(turma => turma.CursoId)
+                .Where(vinculo => vinculo.ProfessorId == professorId!.Value)
+                .Select(vinculo => vinculo.CursoId)
                 .Distinct()
                 .ToListAsync();
 
@@ -87,8 +87,6 @@ public class CursoDesempenhoService : ICursoDesempenhoService
         var turmaIdsPorCursoId = turmasDosCursos
             .GroupBy(turma => turma.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.Select(turma => turma.Id).ToHashSet());
-
-        var turmaIds = turmasDosCursos.Select(turma => turma.Id).ToList();
 
         var matriculas = await _context.Matriculas
             .AsNoTracking()
@@ -138,9 +136,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var avaliacoes = await _context.Avaliacoes
             .AsNoTracking()
-            .Where(avaliacao =>
-                (avaliacao.ModuloId.HasValue && moduloIds.Contains(avaliacao.ModuloId.Value)) ||
-                (!avaliacao.ModuloId.HasValue && turmaIds.Contains(avaliacao.TurmaId)))
+            .Where(avaliacao => cursoIds.Contains(avaliacao.CursoId))
             .ToListAsync();
         var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
         var avaliacoesPorModuloId = avaliacoes
@@ -149,9 +145,9 @@ public class CursoDesempenhoService : ICursoDesempenhoService
             .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
 
         // Prova/Exercicio podem ficar soltos direto no curso (sem modulo) — ver AvaliacaoService.ValidarModuloAsync.
-        var avaliacoesSemModuloPorTurmaId = avaliacoes
+        var avaliacoesSemModuloPorCursoId = avaliacoes
             .Where(avaliacao => !avaliacao.ModuloId.HasValue)
-            .GroupBy(avaliacao => avaliacao.TurmaId)
+            .GroupBy(avaliacao => avaliacao.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
 
         var tentativasCorrigidas = await _context.TentativasAvaliacao
@@ -201,10 +197,9 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 .OrderBy(modulo => modulo.Titulo, comparadorPtBr)
                 .ToList();
 
-            var avaliacoesSemModuloDoCurso = (turmaIdsPorCursoId.TryGetValue(curso.Id, out var turmaIdsDoCurso)
-                    ? turmaIdsDoCurso
-                    : new HashSet<int>())
-                .SelectMany(turmaId => avaliacoesSemModuloPorTurmaId.TryGetValue(turmaId, out var lista) ? lista : new List<Avaliacao>())
+            var avaliacoesSemModuloDoCurso = (avaliacoesSemModuloPorCursoId.TryGetValue(curso.Id, out var listaSemModulo)
+                    ? listaSemModulo
+                    : new List<Avaliacao>())
                 .Select(avaliacao => MontarAvaliacaoDto(avaliacao, totalAlunos, estatisticasPorAvaliacaoId))
                 .OrderBy(avaliacao => avaliacao.Titulo, comparadorPtBr)
                 .ToList();

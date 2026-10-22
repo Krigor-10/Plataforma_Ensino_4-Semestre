@@ -12,6 +12,7 @@ public interface ICursoService
     Task<IEnumerable<Curso>> ListarCursosPorProfessorAsync(int professorId);
     Task VincularProfessorAsync(int cursoId, int professorId);
     Task DesvincularProfessorAsync(int cursoId, int professorId);
+    Task<bool> ProfessorPertenceAoCursoAsync(int professorId, int cursoId);
     Task AdicionarModuloAsync(int cursoId, Modulo novoModulo);
     Task AtribuirCoordenadorAsync(int cursoId, int coordenadorId);
     Task<Curso> DefinirImagemAsync(int cursoId, string imagemUrl);

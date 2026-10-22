@@ -14,6 +14,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     private readonly IGenericRepository<Turma> _turmaRepository;
     private readonly IGenericRepository<Modulo> _moduloRepository;
     private readonly INotificacaoService _notificacaoService;
+    private readonly ICursoService _cursoService;
     private readonly PlataformaContext _context;
 
     public ConteudoDidaticoService(
@@ -23,6 +24,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         IGenericRepository<Turma> turmaRepository,
         IGenericRepository<Modulo> moduloRepository,
         INotificacaoService notificacaoService,
+        ICursoService cursoService,
         PlataformaContext context)
     {
         _conteudoRepository = conteudoRepository;
@@ -31,6 +33,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         _turmaRepository = turmaRepository;
         _moduloRepository = moduloRepository;
         _notificacaoService = notificacaoService;
+        _cursoService = cursoService;
         _context = context;
     }
 
@@ -78,6 +81,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
             ModuloId = modulo.Id
         };
         conteudo.DefinirProfessorAutor(professorId);
+        conteudo.DefinirCurso(modulo.CursoId);
         conteudo.RegistrarCriacao(DateTime.UtcNow);
 
         AplicarDados(
@@ -97,7 +101,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         if (conteudo.StatusPublicacao == StatusPublicacao.Publicado)
         {
-            await NotificarAlunosDaTurmaAsync(turma.Id, conteudo.Titulo);
+            await NotificarAlunosDoCursoAsync(conteudo.CursoId, conteudo.Titulo);
         }
 
         return await _conteudoRepository.ObterDetalhePorIdAsync(conteudo.Id) ?? conteudo;
@@ -116,6 +120,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         conteudo.TurmaId = turma.Id;
         conteudo.ModuloId = modulo.Id;
+        conteudo.DefinirCurso(modulo.CursoId);
         conteudo.MarcarAtualizacao(DateTime.UtcNow);
 
         AplicarDados(
@@ -135,23 +140,23 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         if (statusAnterior != StatusPublicacao.Publicado && conteudo.StatusPublicacao == StatusPublicacao.Publicado)
         {
-            await NotificarAlunosDaTurmaAsync(turma.Id, conteudo.Titulo);
+            await NotificarAlunosDoCursoAsync(conteudo.CursoId, conteudo.Titulo);
         }
 
         return await _conteudoRepository.ObterDetalhePorIdAsync(id) ?? conteudo;
     }
 
-    private async Task NotificarAlunosDaTurmaAsync(int turmaId, string tituloConteudo)
+    private async Task NotificarAlunosDoCursoAsync(int cursoId, string tituloConteudo)
     {
         var alunoIds = await _context.Matriculas
-            .Where(m => m.TurmaId == turmaId && m.Status == StatusMatricula.Aprovada)
+            .Where(m => m.CursoId == cursoId && m.Status == StatusMatricula.Aprovada)
             .Select(m => m.AlunoId)
             .ToListAsync();
 
         await _notificacaoService.NotificarVariosAsync(
             alunoIds,
             "Novo conteudo publicado",
-            $"O conteudo \"{tituloConteudo}\" foi publicado na sua turma.",
+            $"O conteudo \"{tituloConteudo}\" foi publicado no seu curso.",
             TipoNotificacao.ConteudoPublicado,
             "/app/conteudos");
     }
@@ -187,9 +192,9 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
             ?? throw new KeyNotFoundException("Turma nao encontrada.");
 
-        if (turma.ProfessorId != professorId)
+        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, turma.CursoId))
         {
-            throw new InvalidOperationException("A turma informada nao esta vinculada ao professor autenticado.");
+            throw new InvalidOperationException("O curso da turma informada nao esta vinculado ao professor autenticado.");
         }
 
         return turma;

@@ -17,6 +17,7 @@ public class Avaliacao
 
     public int ProfessorAutorId { get; private set; }
     public int TurmaId { get; set; }
+    public int CursoId { get; private set; }
     public int? ModuloId { get; set; }
     public int? ConteudoDidaticoId { get; set; }
 
@@ -69,6 +70,16 @@ public class Avaliacao
         }
 
         ProfessorAutorId = professorAutorId;
+    }
+
+    public void DefinirCurso(int cursoId)
+    {
+        if (cursoId <= 0)
+        {
+            throw new ArgumentException("O curso informado e invalido.");
+        }
+
+        CursoId = cursoId;
     }
 
     public void DefinirTentativasPermitidas(int tentativasPermitidas)

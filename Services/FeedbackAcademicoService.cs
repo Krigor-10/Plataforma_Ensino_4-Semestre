@@ -17,15 +17,15 @@ public class FeedbackAcademicoService : IFeedbackAcademicoService
 
     public async Task<FeedbackAcademicoResponseDto> CriarFeedbackAsync(int professorId, int alunoId, CriarFeedbackAcademicoDto dto)
     {
-        var alunoNaTurmaDoProfessor = await _context.Matriculas.AnyAsync(matricula =>
+        var alunoDoProfessor = await _context.Matriculas.AnyAsync(matricula =>
             matricula.AlunoId == alunoId &&
             matricula.Status == StatusMatricula.Aprovada &&
-            matricula.Turma != null &&
-            matricula.Turma.ProfessorId == professorId);
+            _context.ProfessoresCursos.Any(vinculo =>
+                vinculo.ProfessorId == professorId && vinculo.CursoId == matricula.CursoId));
 
-        if (!alunoNaTurmaDoProfessor)
+        if (!alunoDoProfessor)
         {
-            throw new InvalidOperationException("O aluno informado nao esta matriculado em nenhuma turma do professor autenticado.");
+            throw new InvalidOperationException("O aluno informado nao esta matriculado em nenhum curso do professor autenticado.");
         }
 
         var professorNome = await _context.Usuarios

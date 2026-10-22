@@ -60,7 +60,7 @@ public class ProgressoAlunoServiceTests
         return (curso, modulo, turma, matricula, aluno);
     }
 
-    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int turmaId, int moduloId, string titulo)
+    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int turmaId, int moduloId, int cursoId, string titulo)
     {
         var conteudo = new ConteudoDidatico
         {
@@ -70,6 +70,7 @@ public class ProgressoAlunoServiceTests
             PesoProgresso = 1
         };
         conteudo.DefinirProfessorAutor(1);
+        conteudo.DefinirCurso(cursoId);
         conteudo.DefinirStatusPublicacao(StatusPublicacao.Publicado);
 
         context.ConteudosDidaticos.Add(conteudo);
@@ -82,8 +83,8 @@ public class ProgressoAlunoServiceTests
     {
         var (service, context) = CriarService();
         var cenario = CriarCenarioAprovado(context);
-        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, "Aula 1");
-        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, "Aula 2");
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2");
 
         var snapshot = await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
 
@@ -103,8 +104,8 @@ public class ProgressoAlunoServiceTests
     {
         var (service, context) = CriarService();
         var cenario = CriarCenarioAprovado(context);
-        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, "Aula 1");
-        var conteudo2 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, "Aula 2");
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        var conteudo2 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2");
 
         await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
         var snapshot = await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo2.Id);
@@ -144,12 +145,48 @@ public class ProgressoAlunoServiceTests
     {
         var (service, context) = CriarService();
         var cenario = CriarCenarioAprovado(context);
-        var conteudo = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, "Aula 1");
+        var conteudo = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
 
         var outroAluno = CriarAluno(context);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.MarcarConteudoConcluidoAsync(outroAluno.Id, conteudo.Id));
+    }
+
+    [Fact]
+    public async Task MarcarConteudoConcluidoAsync_MatriculaSemTurma_ConcluiModuloECurso()
+    {
+        // Fix do bug critico: matricula aprovada pelo fluxo atual (sem Turma)
+        // precisa continuar permitindo marcar conteudo concluido e calcular progresso.
+        var (service, context) = CriarService();
+
+        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = "CUR-0002" };
+        context.Cursos.Add(curso);
+        context.SaveChanges();
+
+        var modulo = new Modulo { Titulo = "Modulo 1", CodigoRegistro = "MOD-0002", CursoId = curso.Id };
+        context.Modulos.Add(modulo);
+
+        var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = "TUR-0002", CursoId = curso.Id };
+        context.Turmas.Add(turma);
+        context.SaveChanges();
+
+        var aluno = CriarAluno(context);
+
+        var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, CodigoRegistro = "MAT-0002" };
+        matricula.Aprovar();
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, curso.Id, "Aula 1");
+
+        var snapshot = await service.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
+
+        var moduloProgresso = Assert.Single(snapshot.Modulos);
+        Assert.Equal(100m, moduloProgresso.PercentualConclusao);
+
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(100m, cursoProgresso.PercentualConclusao);
     }
 
     [Fact]

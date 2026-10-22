@@ -32,6 +32,15 @@ public sealed class ConteudoDidaticoConfiguration : IEntityTypeConfiguration<Con
             .OnDelete(DeleteBehavior.Restrict);
 
         builder
+            .HasOne<Curso>()
+            .WithMany()
+            .HasForeignKey(c => c.CursoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder
+            .HasIndex(c => c.CursoId);
+
+        builder
             .Property(c => c.CorpoTexto)
             .HasColumnType("nvarchar(max)");
 

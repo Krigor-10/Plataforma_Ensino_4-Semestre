@@ -4,6 +4,7 @@ using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
+using PlataformaEnsino.API.Repositories;
 using PlataformaEnsino.API.Services;
 using Xunit;
 
@@ -11,7 +12,10 @@ namespace PlataformaEnsino.Tests;
 
 public class AvaliacaoServiceTests
 {
-    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
+    private static AvaliacaoService CriarService(PlataformaContext context) => new(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+
+    private static CursoService CriarCursoService(PlataformaContext context) =>
+        new(context, new GenericRepository<Curso>(context), new GenericRepository<Coordenador>(context));
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
@@ -81,13 +85,37 @@ public class AvaliacaoServiceTests
         var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = $"TUR-{Guid.NewGuid():N}"[..9], CursoId = cursoId, ProfessorId = professorId };
         context.Turmas.Add(turma);
         context.SaveChanges();
+        VincularProfessorCurso(context, professorId, cursoId);
         return turma;
+    }
+
+    private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
+    {
+        var jaVinculado = context.ProfessoresCursos.Any(vinculo => vinculo.ProfessorId == professorId && vinculo.CursoId == cursoId);
+        if (jaVinculado)
+        {
+            return;
+        }
+
+        context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
+        context.SaveChanges();
     }
 
     private static Matricula CriarMatriculaAprovada(PlataformaContext context, int alunoId, int cursoId, int turmaId)
     {
         var matricula = new Matricula { AlunoId = alunoId, CursoId = cursoId, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
         matricula.VincularTurma(turmaId);
+        matricula.Aprovar();
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+        return matricula;
+    }
+
+    // Espelha o fluxo real de producao (MatriculaService.AprovarMatriculaAsync),
+    // que nunca vincula TurmaId — ver pendencia_fase_b_remocao_turma na memoria.
+    private static Matricula CriarMatriculaAprovadaSemTurma(PlataformaContext context, int alunoId, int cursoId)
+    {
+        var matricula = new Matricula { AlunoId = alunoId, CursoId = cursoId, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
         matricula.Aprovar();
         context.Matriculas.Add(matricula);
         context.SaveChanges();
@@ -542,7 +570,7 @@ public class AvaliacaoServiceTests
         int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
         var professor = CriarProfessor(context);
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
@@ -700,10 +728,41 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
+    public async Task EnviarRespostasAlunoAsync_MatriculaSemTurma_PermiteEnvio()
+    {
+        // Fix do bug critico: matricula aprovada pelo fluxo atual (sem Turma)
+        // precisa continuar liberando acesso a avaliacao publicada do curso.
+        var context = TestContextFactory.Criar();
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
+
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 10));
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id }
+            }
+        };
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Equal(10m, resultado.NotaBruta);
+    }
+
+    [Fact]
     public async Task EnviarRespostasAlunoAsync_AlunoSemMatriculaAprovadaNaTurma_LancaInvalidOperation()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
@@ -965,12 +1024,31 @@ public class AvaliacaoServiceTests
     public async Task ListarAvaliacoesPorAlunoAsync_SemMatriculaAprovada_RetornaVazio()
     {
         var context = TestContextFactory.Criar();
-        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake());
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
         var aluno = CriarAluno(context);
 
         var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
 
         Assert.Empty(resultado);
+    }
+
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_MatriculaSemTurma_RetornaAvaliacaoDoCurso()
+    {
+        var context = TestContextFactory.Criar();
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
+
+        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+
+        var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
+
+        Assert.Single(resultado);
     }
 
     [Fact]
@@ -1020,7 +1098,8 @@ public class AvaliacaoServiceTests
             new AcessoAcademicoService(context),
             armazenamento,
             extrator,
-            iaFake);
+            iaFake,
+            CriarCursoService(context));
 
         var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 

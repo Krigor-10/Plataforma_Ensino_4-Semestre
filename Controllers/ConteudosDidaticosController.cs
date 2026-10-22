@@ -150,7 +150,7 @@ public class ConteudosDidaticosController : ControllerBase
             ProfessorAutorId = conteudo.ProfessorAutorId,
             TurmaId = conteudo.TurmaId,
             TurmaNome = conteudo.Turma?.NomeTurma ?? string.Empty,
-            CursoId = conteudo.Modulo?.CursoId ?? conteudo.Turma?.CursoId ?? 0,
+            CursoId = conteudo.CursoId,
             CursoTitulo = conteudo.Modulo?.Curso?.Titulo ?? string.Empty,
             ModuloId = conteudo.ModuloId,
             ModuloTitulo = conteudo.Modulo?.Titulo ?? string.Empty,

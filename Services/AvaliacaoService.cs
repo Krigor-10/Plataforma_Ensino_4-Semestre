@@ -16,6 +16,7 @@ public class AvaliacaoService : IAvaliacaoService
     private readonly IArmazenamentoArquivoService _armazenamentoService;
     private readonly IExtratorTextoMaterialService _extratorTextoService;
     private readonly IAvaliacaoIAService _avaliacaoIAService;
+    private readonly ICursoService _cursoService;
 
     public AvaliacaoService(
         PlataformaContext context,
@@ -24,7 +25,8 @@ public class AvaliacaoService : IAvaliacaoService
         IAcessoAcademicoService acessoAcademicoService,
         IArmazenamentoArquivoService armazenamentoService,
         IExtratorTextoMaterialService extratorTextoService,
-        IAvaliacaoIAService avaliacaoIAService)
+        IAvaliacaoIAService avaliacaoIAService,
+        ICursoService cursoService)
     {
         _context = context;
         _progressoAlunoService = progressoAlunoService;
@@ -33,6 +35,7 @@ public class AvaliacaoService : IAvaliacaoService
         _armazenamentoService = armazenamentoService;
         _extratorTextoService = extratorTextoService;
         _avaliacaoIAService = avaliacaoIAService;
+        _cursoService = cursoService;
     }
 
     public async Task<IEnumerable<Avaliacao>> ListarAvaliacoesPorProfessorAsync(int professorId)
@@ -63,8 +66,7 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(matricula => matricula.Curso)
             .Where(matricula =>
                 matricula.AlunoId == alunoId &&
-                matricula.Status == StatusMatricula.Aprovada &&
-                matricula.TurmaId.HasValue)
+                matricula.Status == StatusMatricula.Aprovada)
             .ToListAsync();
 
         if (matriculas.Count == 0)
@@ -88,9 +90,9 @@ public class AvaliacaoService : IAvaliacaoService
             return Enumerable.Empty<AvaliacaoAlunoResponseDto>();
         }
 
-        var turmaIds = matriculas.Select(matricula => matricula.TurmaId!.Value).Distinct().ToList();
-        var matriculaPorTurmaId = matriculas
-            .GroupBy(matricula => matricula.TurmaId!.Value)
+        var cursoIds = matriculas.Select(matricula => matricula.CursoId).Distinct().ToList();
+        var matriculaPorCursoId = matriculas
+            .GroupBy(matricula => matricula.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.First().Id);
         var matriculaIds = matriculas.Select(matricula => matricula.Id).ToList();
 
@@ -106,7 +108,7 @@ public class AvaliacaoService : IAvaliacaoService
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
-                turmaIds.Contains(avaliacao.TurmaId))
+                cursoIds.Contains(avaliacao.CursoId))
             .Include(avaliacao => avaliacao.Turma)
             .Include(avaliacao => avaliacao.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
@@ -121,7 +123,7 @@ public class AvaliacaoService : IAvaliacaoService
         return avaliacoes.Select(avaliacao =>
             MapAvaliacaoAluno(
                 avaliacao,
-                matriculaPorTurmaId[avaliacao.TurmaId],
+                matriculaPorCursoId[avaliacao.CursoId],
                 tentativasPorAvaliacao.TryGetValue(avaliacao.Id, out var tentativasAvaliacao)
                     ? tentativasAvaliacao
                     : new List<TentativaAvaliacao>()));
@@ -160,6 +162,7 @@ public class AvaliacaoService : IAvaliacaoService
             ConteudoDidaticoId = material?.Id
         };
         avaliacao.DefinirAutor(professorId);
+        avaliacao.DefinirCurso(modulo?.CursoId ?? turma.CursoId);
 
         AplicarDados(avaliacao, dto);
 
@@ -183,6 +186,7 @@ public class AvaliacaoService : IAvaliacaoService
         avaliacao.TurmaId = turma.Id;
         avaliacao.ModuloId = modulo?.Id;
         avaliacao.ConteudoDidaticoId = material?.Id;
+        avaliacao.DefinirCurso(modulo?.CursoId ?? turma.CursoId);
         AplicarDados(avaliacao, dto);
 
         _context.Avaliacoes.Update(avaliacao);
@@ -806,8 +810,7 @@ public class AvaliacaoService : IAvaliacaoService
             .FirstOrDefaultAsync(item =>
                 item.AlunoId == alunoId &&
                 item.Status == StatusMatricula.Aprovada &&
-                item.TurmaId.HasValue &&
-                item.TurmaId == avaliacao.TurmaId)
+                item.CursoId == avaliacao.CursoId)
             ?? throw new InvalidOperationException("Esta avaliacao nao esta liberada para a matricula do aluno.");
 
         if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
@@ -843,9 +846,9 @@ public class AvaliacaoService : IAvaliacaoService
             .FirstOrDefaultAsync(item => item.Id == turmaId)
             ?? throw new KeyNotFoundException("Turma nao encontrada.");
 
-        if (turma.ProfessorId != professorId)
+        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, turma.CursoId))
         {
-            throw new InvalidOperationException("A turma informada nao esta vinculada ao professor autenticado.");
+            throw new InvalidOperationException("O curso da turma informada nao esta vinculado ao professor autenticado.");
         }
 
         return turma;
@@ -1305,7 +1308,7 @@ public class AvaliacaoService : IAvaliacaoService
             Descricao = avaliacao.Descricao,
             TurmaId = avaliacao.TurmaId,
             TurmaNome = avaliacao.Turma?.NomeTurma ?? string.Empty,
-            CursoId = avaliacao.Modulo?.CursoId ?? avaliacao.Turma?.CursoId ?? 0,
+            CursoId = avaliacao.CursoId,
             CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
             ModuloId = avaliacao.ModuloId,
             ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,

@@ -153,6 +153,40 @@ public class CertificadoServiceTests
         var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
 
         var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
+    }
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_MatriculaSemTurmaComAvaliacaoPendente_LancaArgumentException()
+    {
+        // Fix do bug critico: matricula aprovada pelo fluxo atual (sem Turma)
+        // precisa continuar bloqueando certificado quando ha avaliacao pendente.
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+
+        var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..16] };
+        matricula.Aprovar();
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+        context.ProgressosCursosAlunos.Add(new ProgressoCursoAluno
+        {
+            MatriculaId = matricula.Id,
+            CursoId = curso.Id,
+            PercentualConclusao = 100
+        });
+        context.SaveChanges();
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
@@ -174,6 +208,7 @@ public class CertificadoServiceTests
         var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
 
         var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         contextoDeArranjo.Avaliacoes.Add(avaliacao);
         contextoDeArranjo.SaveChanges();

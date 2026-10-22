@@ -76,7 +76,7 @@ public class UploadAutorizacaoServiceTests
         return matricula;
     }
 
-    private static ConteudoDidatico CriarConteudo(PlataformaContext context, int professorId, int turmaId, int moduloId, string arquivoUrl)
+    private static ConteudoDidatico CriarConteudo(PlataformaContext context, int professorId, int turmaId, int moduloId, int cursoId, string arquivoUrl)
     {
         var conteudo = new ConteudoDidatico
         {
@@ -87,6 +87,7 @@ public class UploadAutorizacaoServiceTests
             ModuloId = moduloId
         };
         conteudo.DefinirProfessorAutor(professorId);
+        conteudo.DefinirCurso(cursoId);
         context.ConteudosDidaticos.Add(conteudo);
         context.SaveChanges();
         return conteudo;
@@ -132,10 +133,11 @@ public class UploadAutorizacaoServiceTests
         return questao;
     }
 
-    private static Avaliacao CriarAvaliacao(PlataformaContext context, int professorId, int turmaId)
+    private static Avaliacao CriarAvaliacao(PlataformaContext context, int professorId, int turmaId, int cursoId)
     {
         var avaliacao = new Avaliacao { Titulo = "Avaliacao Teste", TurmaId = turmaId };
         avaliacao.DefinirAutor(professorId);
+        avaliacao.DefinirCurso(cursoId);
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
         return avaliacao;
@@ -158,10 +160,33 @@ public class UploadAutorizacaoServiceTests
         var modulo = CriarModulo(context, curso.Id);
         var aluno = CriarAluno(context);
         CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
-        var conteudo = CriarConteudo(context, professor.Id, turma.Id, modulo.Id, "/uploads/conteudos/arquivo-1.pdf");
+        var conteudo = CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-1.pdf");
 
         var service = CriarService(context);
         var resultado = await service.AlunoPodeAcessarArquivoAsync("conteudos", "arquivo-1.pdf", aluno.Id);
+
+        Assert.True(resultado);
+    }
+
+    [Fact]
+    public async Task AlunoPodeAcessarArquivoAsync_MatriculaSemTurma_RetornaTrue()
+    {
+        // Fix do bug critico: matricula aprovada pelo fluxo atual (sem Turma)
+        // precisa continuar liberando download do conteudo do curso.
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var modulo = CriarModulo(context, curso.Id);
+        var aluno = CriarAluno(context);
+        var matriculaSemTurma = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaSemTurma.Aprovar();
+        context.Matriculas.Add(matriculaSemTurma);
+        context.SaveChanges();
+        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-sem-turma.pdf");
+
+        var service = CriarService(context);
+        var resultado = await service.AlunoPodeAcessarArquivoAsync("conteudos", "arquivo-sem-turma.pdf", aluno.Id);
 
         Assert.True(resultado);
     }
@@ -175,7 +200,7 @@ public class UploadAutorizacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var modulo = CriarModulo(context, curso.Id);
         var aluno = CriarAluno(context);
-        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, "/uploads/conteudos/arquivo-2.pdf");
+        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-2.pdf");
 
         var service = CriarService(context);
         var resultado = await service.AlunoPodeAcessarArquivoAsync("conteudos", "arquivo-2.pdf", aluno.Id);
@@ -193,7 +218,7 @@ public class UploadAutorizacaoServiceTests
         var modulo = CriarModulo(context, curso.Id);
         var aluno = CriarAluno(context);
         CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
-        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, "/uploads/conteudos/arquivo-3.pdf");
+        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-3.pdf");
 
         var service = CriarService(context);
         var resultado = await service.AlunoPodeAcessarArquivoAsync("conteudos", "arquivo-3.pdf", aluno.Id);
@@ -210,7 +235,7 @@ public class UploadAutorizacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var aluno = CriarAluno(context);
         CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
-        var avaliacao = CriarAvaliacao(context, professor.Id, turma.Id);
+        var avaliacao = CriarAvaliacao(context, professor.Id, turma.Id, curso.Id);
         var (banco, _) = CriarQuestaoComAnexo(context, professor.Id, "/uploads/questoes/anexo-1.jpg");
         PublicarQuestao(context, banco.Id, avaliacao.Id);
 
@@ -229,7 +254,7 @@ public class UploadAutorizacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var aluno = CriarAluno(context);
         // Sem matricula nenhuma para o aluno.
-        var avaliacao = CriarAvaliacao(context, professor.Id, turma.Id);
+        var avaliacao = CriarAvaliacao(context, professor.Id, turma.Id, curso.Id);
         var (banco, _) = CriarQuestaoComAnexo(context, professor.Id, "/uploads/questoes/anexo-2.jpg");
         PublicarQuestao(context, banco.Id, avaliacao.Id);
 

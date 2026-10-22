@@ -46,8 +46,7 @@ public class ConteudoDidaticoRepository : GenericRepository<ConteudoDidatico>, I
                 Context.Matriculas.Any(matricula =>
                     matricula.AlunoId == alunoId &&
                     matricula.Status == StatusMatricula.Aprovada &&
-                    matricula.TurmaId.HasValue &&
-                    matricula.TurmaId == conteudo.TurmaId &&
+                    matricula.CursoId == conteudo.CursoId &&
                     (matricula.Curso!.Preco <= 0 ||
                      Context.Pagamentos.Any(pagamento => pagamento.MatriculaId == matricula.Id && pagamento.Status == StatusPagamento.Pago))))
             .Include(conteudo => conteudo.Turma)

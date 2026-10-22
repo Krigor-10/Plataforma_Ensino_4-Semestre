@@ -388,7 +388,7 @@ public class AvaliacoesController : ControllerBase
             ProfessorAutorId = avaliacao.ProfessorAutorId,
             TurmaId = avaliacao.TurmaId,
             TurmaNome = avaliacao.Turma?.NomeTurma ?? string.Empty,
-            CursoId = avaliacao.Modulo?.CursoId ?? avaliacao.Turma?.CursoId ?? 0,
+            CursoId = avaliacao.CursoId,
             CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
             ModuloId = avaliacao.ModuloId,
             ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,

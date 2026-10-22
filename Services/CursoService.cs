@@ -112,6 +112,12 @@ public class CursoService : ICursoService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<bool> ProfessorPertenceAoCursoAsync(int professorId, int cursoId)
+    {
+        return await _context.ProfessoresCursos
+            .AnyAsync(vinculo => vinculo.ProfessorId == professorId && vinculo.CursoId == cursoId);
+    }
+
     public async Task AdicionarModuloAsync(int cursoId, Modulo novoModulo)
     {
         ArgumentNullException.ThrowIfNull(novoModulo);

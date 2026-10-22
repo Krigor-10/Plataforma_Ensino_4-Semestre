@@ -13,15 +13,18 @@ public class TurmaService : ITurmaService
     private readonly PlataformaContext _context;
     private readonly ITurmaRepository _turmaRepository;
     private readonly IGenericRepository<Professor> _professorRepository;
+    private readonly ICursoService _cursoService;
 
     public TurmaService(
         PlataformaContext context,
         ITurmaRepository turmaRepository,
-        IGenericRepository<Professor> professorRepository)
+        IGenericRepository<Professor> professorRepository,
+        ICursoService cursoService)
     {
         _context = context;
         _turmaRepository = turmaRepository;
         _professorRepository = professorRepository;
+        _cursoService = cursoService;
     }
 
     public async Task<Turma> CriarTurmaAsync(Turma turma)
@@ -64,6 +67,7 @@ public class TurmaService : ITurmaService
 
         await _turmaRepository.AdicionarAsync(turma);
         await _turmaRepository.SalvarAlteracoesAsync();
+        await _cursoService.VincularProfessorAsync(turma.CursoId, turma.ProfessorId);
 
         return turma;
     }
@@ -100,6 +104,7 @@ public class TurmaService : ITurmaService
         turma.DefinirProfessor(professor);
         _turmaRepository.Atualizar(turma);
         await _turmaRepository.SalvarAlteracoesAsync();
+        await _cursoService.VincularProfessorAsync(turma.CursoId, professorId);
     }
 
     public async Task<Turma> AtualizarNomeTurmaAsync(int turmaId, string nomeTurma)

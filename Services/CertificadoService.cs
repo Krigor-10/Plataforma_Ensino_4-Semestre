@@ -50,7 +50,7 @@ public class CertificadoService : ICertificadoService
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
-                avaliacao.TurmaId == matricula.TurmaId)
+                avaliacao.CursoId == matricula.CursoId)
             .Select(avaliacao => avaliacao.Id)
             .Where(avaliacaoId => !_context.LancamentosNotasAlunos
                 .Any(lancamento => lancamento.MatriculaId == matricula.Id && lancamento.AvaliacaoId == avaliacaoId))

@@ -129,6 +129,7 @@ public class UploadsEndpointIntegrationTests : IClassFixture<ApiWebApplicationFa
             ModuloId = modulo.Id
         };
         conteudo.DefinirProfessorAutor(professor.Id);
+        conteudo.DefinirCurso(curso.Id);
         context.ConteudosDidaticos.Add(conteudo);
         await context.SaveChangesAsync();
 

@@ -227,6 +227,9 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("CursoId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("DataAbertura")
                         .HasColumnType("datetime2");
 
@@ -283,6 +286,8 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("ConteudoDidaticoId");
 
+                    b.HasIndex("CursoId");
+
                     b.HasIndex("ModuloId");
 
                     b.HasIndex("ProfessorAutorId");
@@ -314,6 +319,9 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.Property<DateTime>("CriadoEm")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("CursoId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Descricao")
                         .IsRequired()
@@ -356,6 +364,8 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CursoId");
 
                     b.HasIndex("ModuloId");
 
@@ -1355,6 +1365,12 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasForeignKey("ConteudoDidaticoId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("PlataformaEnsino.API.Models.Curso", null)
+                        .WithMany()
+                        .HasForeignKey("CursoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PlataformaEnsino.API.Models.Modulo", "Modulo")
                         .WithMany("Avaliacoes")
                         .HasForeignKey("ModuloId")
@@ -1383,6 +1399,12 @@ namespace Sistema_Academico_Integrado.Migrations
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
                 {
+                    b.HasOne("PlataformaEnsino.API.Models.Curso", null)
+                        .WithMany()
+                        .HasForeignKey("CursoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PlataformaEnsino.API.Models.Modulo", "Modulo")
                         .WithMany("ConteudosDidaticos")
                         .HasForeignKey("ModuloId")

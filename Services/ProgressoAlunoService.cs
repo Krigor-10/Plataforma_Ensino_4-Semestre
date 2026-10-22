@@ -80,8 +80,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .FirstOrDefaultAsync(item =>
                 item.AlunoId == alunoId &&
                 item.Status == StatusMatricula.Aprovada &&
-                item.TurmaId.HasValue &&
-                item.TurmaId == conteudo.TurmaId)
+                item.CursoId == conteudo.CursoId)
             ?? throw new InvalidOperationException("Este conteudo nao esta liberado para a matricula do aluno.");
 
         if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
@@ -225,7 +224,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
-                avaliacao.TurmaId == matricula.TurmaId &&
+                avaliacao.CursoId == matricula.CursoId &&
                 avaliacao.ModuloId == moduloId)
             .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
             .ToListAsync();
@@ -255,16 +254,15 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
     private async Task RecalcularMediaCursoAsync(Matricula matricula, DateTime now)
     {
-        // TurmaId ja garante o curso certo (uma turma pertence a um unico curso) —
-        // nao filtra mais por Modulo.CursoId porque avaliacoes tipo Prova/Exercicio
-        // podem ficar soltas direto no curso, sem modulo (ModuloId null). Quiz fica
-        // fora da media - e atividade formativa (RecalcularProgressoQuizAsync).
+        // Avaliacao.CursoId ja garante o curso certo mesmo pra Prova/Exercicio
+        // soltos direto no curso, sem modulo (ModuloId null). Quiz fica fora da
+        // media - e atividade formativa (RecalcularProgressoQuizAsync).
         var avaliacoesCurso = await _context.Avaliacoes
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
-                avaliacao.TurmaId == matricula.TurmaId)
+                avaliacao.CursoId == matricula.CursoId)
             .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
             .ToListAsync();
 
@@ -359,7 +357,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .AsNoTracking()
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
-                conteudo.TurmaId == matricula.TurmaId &&
+                conteudo.CursoId == matricula.CursoId &&
                 conteudo.ModuloId == moduloId)
             .Select(conteudo => new
             {
@@ -421,9 +419,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .AsNoTracking()
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
-                conteudo.TurmaId == matricula.TurmaId &&
-                conteudo.Modulo != null &&
-                conteudo.Modulo.CursoId == matricula.CursoId)
+                conteudo.CursoId == matricula.CursoId)
             .Select(conteudo => new
             {
                 conteudo.Id,
@@ -491,7 +487,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
-                avaliacao.TurmaId == matricula.TurmaId &&
+                avaliacao.CursoId == matricula.CursoId &&
                 avaliacao.ModuloId == moduloId)
             .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
             .ToListAsync();
@@ -507,7 +503,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
-                avaliacao.TurmaId == matricula.TurmaId)
+                avaliacao.CursoId == matricula.CursoId)
             .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
             .ToListAsync();
 

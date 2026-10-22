@@ -105,7 +105,20 @@ public class CursoDesempenhoServiceTests
         var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = $"TUR-{Guid.NewGuid():N}"[..9], CursoId = cursoId, ProfessorId = professorId };
         context.Turmas.Add(turma);
         context.SaveChanges();
+        VincularProfessorCurso(context, professorId, cursoId);
         return turma;
+    }
+
+    private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
+    {
+        var jaVinculado = context.ProfessoresCursos.Any(vinculo => vinculo.ProfessorId == professorId && vinculo.CursoId == cursoId);
+        if (jaVinculado)
+        {
+            return;
+        }
+
+        context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
+        context.SaveChanges();
     }
 
     private static Matricula CriarMatriculaAprovada(PlataformaContext context, int alunoId, int cursoId, int turmaId)
@@ -118,7 +131,7 @@ public class CursoDesempenhoServiceTests
         return matricula;
     }
 
-    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int turmaId, int moduloId, int professorId)
+    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int turmaId, int moduloId, int professorId, int cursoId)
     {
         var conteudo = new ConteudoDidatico
         {
@@ -128,11 +141,27 @@ public class CursoDesempenhoServiceTests
             PesoProgresso = 1
         };
         conteudo.DefinirProfessorAutor(professorId);
+        conteudo.DefinirCurso(cursoId);
         conteudo.DefinirStatusPublicacao(StatusPublicacao.Publicado);
 
         context.ConteudosDidaticos.Add(conteudo);
         context.SaveChanges();
         return conteudo;
+    }
+
+    private static Avaliacao CriarAvaliacaoSemModulo(PlataformaContext context, int turmaId, int cursoId, int professorId)
+    {
+        var avaliacao = new Avaliacao
+        {
+            Titulo = "Prova Teste",
+            TurmaId = turmaId
+        };
+        avaliacao.DefinirAutor(professorId);
+        avaliacao.DefinirCurso(cursoId);
+
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        return avaliacao;
     }
 
     // ---------- Isolamento por papel (limite de seguranca) ----------
@@ -203,7 +232,7 @@ public class CursoDesempenhoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id);
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id, curso.Id);
 
         var aluno = CriarAluno(context);
         var matricula = CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
@@ -256,7 +285,7 @@ public class CursoDesempenhoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id);
+        CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id, curso.Id);
 
         var aluno = CriarAluno(context);
         CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
@@ -271,5 +300,23 @@ public class CursoDesempenhoServiceTests
         var materialDto = Assert.Single(moduloDto.Materiais);
         Assert.Equal(0m, materialDto.PercentualConclusao);
         Assert.Equal(0, materialDto.AlunosConcluiram);
+    }
+
+    [Fact]
+    public async Task ObterDesempenhoPorProfessorAsync_AvaliacaoSemModulo_ApareceViaCursoId()
+    {
+        // Prova/Exercicio podem ficar soltos direto no curso (sem modulo) — a
+        // agregacao agora resolve isso via Avaliacao.CursoId, nao mais via Turma.
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = CriarAvaliacaoSemModulo(context, turma.Id, curso.Id, professor.Id);
+
+        var resultado = (await CriarService(context).ObterDesempenhoPorProfessorAsync(professor.Id)).ToList();
+
+        var cursoDto = Assert.Single(resultado);
+        var avaliacaoDto = Assert.Single(cursoDto.AvaliacoesSemModulo);
+        Assert.Equal(avaliacao.Id, avaliacaoDto.AvaliacaoId);
     }
 }
