@@ -9,11 +9,6 @@ function obterTituloCurso(cursoId, cursoPorId) {
   return curso?.titulo || `Curso #${cursoId}`;
 }
 
-function obterNomeTurma(turmaId, turmaPorId) {
-  const turma = turmaPorId.get(turmaId);
-  return turma?.nomeTurma || (turmaId ? `Turma #${turmaId}` : "Turma em definicao");
-}
-
 /**
  * Monta curso -> modulo -> conteudos/quizzes, com bloqueio sequencial de
  * modulo (modulo so libera quando o anterior esta 100% concluido) e de
@@ -23,7 +18,6 @@ function obterNomeTurma(turmaId, turmaPorId) {
  */
 export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos }) {
   const cursoPorId = new Map(cursos.map((curso) => [curso.id, curso]));
-  const turmaPorId = new Map();
 
   const matriculasAprovadas = matriculas.filter((matricula) => normalizeStatus(matricula.status) === "Aprovada");
   const progressoPorConteudoId = new Map((progressos.conteudos || []).map((progresso) => [progresso.conteudoDidaticoId, progresso]));
@@ -44,7 +38,6 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
       cursosMapeados.set(cursoId, {
         id: cursoId,
         titulo: obterTituloCurso(cursoId, cursoPorId),
-        turmas: new Set(),
         modulos: new Map(),
         totalConteudos: 0,
         concluidos: 0
@@ -70,7 +63,6 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
   matriculasAprovadas.forEach((matricula) => {
     const cursoId = Number(matricula.cursoId);
     const curso = garantirCurso(cursoId);
-    curso.turmas.add(obterNomeTurma(Number(matricula.turmaId), turmaPorId));
 
     (modulosPorCursoId.get(cursoId) || []).forEach((modulo) => {
       garantirModulo(curso, Number(modulo.id), modulo.titulo, modulo.dataCriacao);
@@ -149,7 +141,6 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
     return {
       id: curso.id,
       titulo: curso.titulo,
-      turmas: [...curso.turmas].filter(Boolean),
       progresso: curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0,
       modulos: modulosComBloqueio,
       proximoConteudo: conteudosDoCurso.find((conteudo) => !conteudo.concluido && !conteudo.bloqueado) || null

@@ -351,23 +351,20 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
         <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbAward size={22} />} rotulo="Nota final" valor={formatGrade(detalhe.notaFinal)} />
       </div>
 
-      {detalhe.modulos.length === 0 ? (
+      {modulosComConteudo.length === 0 ? (
         <EmptyState message="Este curso ainda nao possui modulos publicados para a sua turma." />
       ) : (
         <div className="atividades-curso__lista-modulos">
-          {detalhe.modulos.map((modulo, indice) => {
+          {modulosComConteudo.map((modulo, indice) => {
             const aberto = moduloAbertoId === modulo.id;
             const idDetalhe = `progresso-modulo-detalhe-${modulo.id}`;
-            const moduloSemConteudo = modulo.conteudos.length === 0;
-            const concluidoModulo = !moduloSemConteudo && modulo.progresso >= 100;
-            const emAndamentoModulo = !moduloSemConteudo && modulo.progresso > 0 && !concluidoModulo;
-            const statusModulo = moduloSemConteudo
-              ? "Aguardando conteudos"
-              : concluidoModulo
-                ? "Concluido"
-                : emAndamentoModulo
-                  ? "Em andamento"
-                  : "Nao iniciado";
+            const concluidoModulo = modulo.progresso >= 100;
+            const emAndamentoModulo = modulo.progresso > 0 && !concluidoModulo;
+            const statusModulo = concluidoModulo
+              ? "Concluido"
+              : emAndamentoModulo
+                ? "Em andamento"
+                : "Nao iniciado";
             const totalItensModulo = modulo.conteudos.length + modulo.avaliacoes.length;
             const concluidosModulo = modulo.conteudos.filter((conteudo) => conteudo.concluido).length;
 
@@ -426,7 +423,7 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
                           <dd>
                             <Insignia
                               texto={statusModulo}
-                              variante={moduloSemConteudo ? "neutro" : concluidoModulo ? "sucesso" : emAndamentoModulo ? "info" : "neutro"}
+                              variante={concluidoModulo ? "sucesso" : emAndamentoModulo ? "info" : "neutro"}
                             />
                           </dd>
                         </div>
@@ -881,6 +878,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
         <>
         <Modal
           className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : "modal-caixa--avaliacao modal-caixa--avaliacao-execucao"}
+          fecharComoVoltar={ehQuizExecucao && !resultadoTentativa}
           onFechar={fecharExecucaoAvaliacao}
           titulo={avaliacaoEmExecucao.titulo}
           rodape={
@@ -1486,6 +1484,7 @@ export function SecaoConteudosAluno({
         id: chaveCurso,
         acento: acentoCurso,
         titulo: tituloCurso || (cursoId ? `Curso #${cursoId}` : "Curso sem titulo"),
+        imagemUrl: cursoPorId.get(cursoId)?.imagemUrl || "",
         turmas: new Set(),
         modulos: new Map(),
         totalConteudos: 0,
@@ -1985,7 +1984,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                                 tamanho="pequeno"
                                                 variante={quizConcluido ? "fantasma" : "primario"}
                                               >
-                                                {quizConcluido ? "Ver quiz" : "Fazer quiz"}
+                                                {quizConcluido ? "Revisao detalhada" : "Fazer quiz"}
                                               </Botao>
                                             ) : null}
                                           </div>

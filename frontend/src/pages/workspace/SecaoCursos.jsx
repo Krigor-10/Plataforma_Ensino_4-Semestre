@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbEdit, TbFlagCheck, TbLayoutGrid, TbLock, TbLockOpen, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbFlagCheck, TbLayoutGrid, TbLock, TbLockOpen, TbPencil, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -34,8 +34,6 @@ export function SecaoCursos({
   ehProfessor,
   matriculas = [],
   modulos = [],
-  professores = [],
-  turmas = [],
   onAbrirSecaoCurso,
   onRefresh,
   onSessionExpired
@@ -66,23 +64,10 @@ export function SecaoCursos({
     [coordenadores]
   );
   const coordenadorPorId = useMemo(() => mapById(coordenadoresOrdenados), [coordenadoresOrdenados]);
-  const professorPorId = useMemo(() => mapById(professores), [professores]);
-  // Assume uma turma padrao por curso (regra aplicada na criacao de turmas).
-  const turmaPorCursoId = useMemo(() => {
-    const mapa = new Map();
-
-    turmas.forEach((turma) => {
-      if (!mapa.has(turma.cursoId)) {
-        mapa.set(turma.cursoId, turma);
-      }
-    });
-
-    return mapa;
-  }, [turmas]);
 
   const resumoPorCursoId = useMemo(() => {
     const resumoInicial = new Map(
-      cursos.map((curso) => [curso.id, { modulos: 0, turmas: 0, matriculas: 0, alunosMatriculados: 0, somaNotas: 0, notasContadas: 0 }])
+      cursos.map((curso) => [curso.id, { modulos: 0, matriculas: 0, alunosMatriculados: 0, somaNotas: 0, notasContadas: 0 }])
     );
 
     modulos.forEach((modulo) => {
@@ -90,14 +75,6 @@ export function SecaoCursos({
 
       if (resumo) {
         resumo.modulos += 1;
-      }
-    });
-
-    turmas.forEach((turma) => {
-      const resumo = resumoInicial.get(turma.cursoId);
-
-      if (resumo) {
-        resumo.turmas += 1;
       }
     });
 
@@ -121,7 +98,7 @@ export function SecaoCursos({
     });
 
     return resumoInicial;
-  }, [cursos, matriculas, modulos, turmas]);
+  }, [cursos, matriculas, modulos]);
 
   function mediaDoCurso(resumo) {
     return resumo.notasContadas > 0 ? resumo.somaNotas / resumo.notasContadas : 0;
@@ -179,6 +156,40 @@ export function SecaoCursos({
     () => cursos.find((curso) => curso.id === cursoSelecionadoId) || null,
     [cursoSelecionadoId, cursos]
   );
+
+  const [professoresDoCursoSelecionado, setProfessoresDoCursoSelecionado] = useState([]);
+
+  useEffect(() => {
+    if (!cursoSelecionadoId) {
+      setProfessoresDoCursoSelecionado([]);
+      return undefined;
+    }
+
+    let ativo = true;
+
+    apiRequest(`/Cursos/${cursoSelecionadoId}/professores`)
+      .then((professores) => {
+        if (ativo) {
+          setProfessoresDoCursoSelecionado(professores);
+        }
+      })
+      .catch((err) => {
+        if (!ativo) {
+          return;
+        }
+
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+
+        setProfessoresDoCursoSelecionado([]);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [cursoSelecionadoId, onSessionExpired]);
 
   function abrirDetalheCurso(curso) {
     setCursoSelecionadoId(curso.id);
@@ -628,8 +639,7 @@ export function SecaoCursos({
     const resumo = resumoPorCursoId.get(cursoSelecionado.id) || { modulos: 0, alunosMatriculados: 0, notasContadas: 0 };
     const media = mediaDoCurso(resumo);
     const coordenador = cursoSelecionado.coordenadorId ? coordenadorPorId.get(cursoSelecionado.coordenadorId) : null;
-    const turmaPadrao = turmaPorCursoId.get(cursoSelecionado.id) || null;
-    const professorNome = turmaPadrao?.professorId ? professorPorId.get(turmaPadrao.professorId)?.nome : null;
+    const nomesProfessores = professoresDoCursoSelecionado.map((professor) => professor.nome).join(", ");
 
     return (
       <div className="tela-cursos">
@@ -668,7 +678,7 @@ export function SecaoCursos({
             <CartaoEstatistica icone={<TbUsers size={22} />} rotulo="Alunos matriculados" valor={resumo.alunosMatriculados} />
             <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={22} />} rotulo="Media geral" valor={formatGrade(media)} />
             <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbLayoutGrid size={22} />} rotulo="Modulos" valor={resumo.modulos} />
-            <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbUserCheck size={22} />} rotulo="Turma / Professor" valor={professorNome || turmaPadrao?.nomeTurma || "Sem turma"} />
+            <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbUserCheck size={22} />} rotulo="Professores" valor={nomesProfessores || "Sem professor vinculado"} />
             <CartaoEstatistica corBorda="var(--cor-aviso)" icone={<TbCurrencyReal size={22} />} rotulo="Valor do curso" valor={formatMoney(cursoSelecionado.preco)} />
           </div>
 
@@ -680,11 +690,11 @@ export function SecaoCursos({
                 </Botao>
               ) : null}
               <Botao onClick={() => abrirSecaoRelacionada("turmas", cursoSelecionado)} tamanho="pequeno" variante="secundario">
-                <TbUsers aria-hidden="true" size={16} /> Ver turma padrao
+                <TbUsers aria-hidden="true" size={16} /> Ver professores
               </Botao>
               {ehAdmin || ehCoordenador ? (
                 <Botao onClick={() => abrirModalEdicao(cursoSelecionado)} tamanho="pequeno" variante="secundario">
-                  <TbEdit aria-hidden="true" size={16} /> Editar curso
+                  <TbPencil aria-hidden="true" size={16} /> Editar curso
                 </Botao>
               ) : null}
               {ehAdmin ? (

@@ -15,7 +15,7 @@ import { SecaoModulos } from "./workspace/SecaoModulos.jsx";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./workspace/SecoesAluno.jsx";
 import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./workspace/SecaoMatriculas.jsx";
 import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
-import { SecaoTurmas } from "./workspace/SecaoTurmas.jsx";
+import { SecaoProfessoresCurso } from "./workspace/SecaoProfessoresCurso.jsx";
 import { SecaoTurmasProfessor } from "./workspace/SecaoTurmasProfessor.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
 import { DashboardAdmin } from "./workspace/DashboardAdmin.jsx";
@@ -206,8 +206,6 @@ export default function WorkspaceScreen({
     const idsCursosCoordenador = new Set(coordenadorCursos.map((curso) => curso.id));
     return snapshot.turmas.filter((turma) => idsCursosCoordenador.has(turma.cursoId));
   }, [coordenadorCursos, role, snapshot.turmas]);
-
-  const visibleTurmas = isProfessor ? professorTurmas : role === "Coordenador" ? coordenadorTurmas : snapshot.turmas;
 
   const cursoByIdParaTurmas = useMemo(
     () => (role === "Coordenador" ? mapById(coordenadorCursos) : cursoById),
@@ -703,8 +701,6 @@ export default function WorkspaceScreen({
                 onAbrirSecaoCurso={abrirSecaoRelacionadaAoCurso}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
-                professores={snapshot.professores}
-                turmas={snapshot.turmas}
               />
             ) : null}
 
@@ -791,7 +787,6 @@ export default function WorkspaceScreen({
                 onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
-                turmas={snapshot.turmas}
                 usuario={usuario}
               />
             ) : null}
@@ -827,18 +822,13 @@ export default function WorkspaceScreen({
                   onSessionExpired={onSessionExpired}
                 />
               ) : (
-                <SecaoTurmas
-                  alunos={snapshot.alunos}
+                <SecaoProfessoresCurso
                   cursoPorId={cursoByIdParaTurmas}
                   cursoEmFoco={cursoEmFocoPorSecao.turmas}
-                  ehGestor={isManager}
-                  matriculas={snapshot.matriculas}
                   onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
                   onRefresh={() => setRefreshKey((current) => current + 1)}
                   onSessionExpired={onSessionExpired}
                   professores={snapshot.professores}
-                  professorPorId={professorById}
-                  turmas={visibleTurmas}
                 />
               )
             ) : null}

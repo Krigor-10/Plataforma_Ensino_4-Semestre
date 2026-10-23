@@ -139,6 +139,18 @@ public class CursosController : ControllerBase
         return Ok(new { mensagem = "Professor desvinculado do curso com sucesso." });
     }
 
+    [HttpGet("{id:int}/professores")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> ListarProfessoresVinculados(int id)
+    {
+        var professores = await _cursoService.ListarProfessoresVinculadosAsync(id);
+        return Ok(professores.Select(professor => new ProfessorResponseDto
+        {
+            CodigoRegistro = professor.CodigoRegistro,
+            Especialidade = professor.Especialidade
+        }.PreencherCamposBase(professor)));
+    }
+
     // Curso Acompanhado: professor marca sua parte como concluida, o que
     // notifica o coordenador responsavel pra revisar e encerrar.
     [HttpPost("{id:int}/concluir")]

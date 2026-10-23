@@ -247,4 +247,32 @@ public class CursoServiceTests
 
         await service.GarantirCursoAbertoAsync(curso.Id);
     }
+
+    [Fact]
+    public async Task ListarProfessoresVinculadosAsync_RetornaApenasProfessoresDoCurso()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var cursoAlvo = CriarCurso(context, ModeloCurso.PagoPacote);
+        var outroCurso = CriarCurso(context, ModeloCurso.PagoPacote);
+        var professorVinculado = CriarProfessor(context);
+        var professorDeOutroCurso = CriarProfessor(context);
+        VincularProfessorCurso(context, professorVinculado.Id, cursoAlvo.Id);
+        VincularProfessorCurso(context, professorDeOutroCurso.Id, outroCurso.Id);
+
+        var professores = await service.ListarProfessoresVinculadosAsync(cursoAlvo.Id);
+
+        var professor = Assert.Single(professores);
+        Assert.Equal(professorVinculado.Id, professor.Id);
+    }
+
+    [Fact]
+    public async Task ListarProfessoresVinculadosAsync_CursoInexistente_LancaKeyNotFound()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.ListarProfessoresVinculadosAsync(999));
+    }
 }

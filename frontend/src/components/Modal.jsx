@@ -4,10 +4,10 @@
    bloqueia interação com o fundo via aria-modal="true".
    ============================================================ */
 import { useEffect } from "react";
-import { TbX } from "react-icons/tb";
+import { TbArrowLeft, TbX } from "react-icons/tb";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
-export default function Modal({ titulo, onFechar, children, className, acoes, rodape }) {
+export default function Modal({ titulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false }) {
   const refModal = useFocusTrap();
 
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
       /* Nao fecha o modal (clicar fora nao tem esse comportamento aqui, so
          Escape/botao fecham) — isola qualquer clique dentro do modal (incluindo
          o fundo) de listeners de "clique fora" em document, como os menus de
-         contexto "..." de SecaoCursos/SecaoModulos/SecaoTurmas/SecaoAvaliacoesProfessor
+         contexto "..." de SecaoCursos/SecaoModulos/SecaoAvaliacoesProfessor
          e o TooltipGlobal, que senao fechariam/escondiam ao interagir com o modal. */
       onClick={(e) => e.stopPropagation()}
     >
@@ -46,10 +46,10 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
           <button
             className="modal-fechar"
             onClick={onFechar}
-            aria-label="Fechar modal"
+            aria-label={fecharComoVoltar ? "Voltar" : "Fechar modal"}
             type="button"
           >
-            <TbX aria-hidden="true" size={18} />
+            {fecharComoVoltar ? <TbArrowLeft aria-hidden="true" size={18} /> : <TbX aria-hidden="true" size={18} />}
           </button>
         </header>
         <div className="modal-conteudo">{children}</div>

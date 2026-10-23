@@ -16,8 +16,8 @@ import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
    (PainelModulosDesempenho). Diferenca de contexto por papel: sem "Professor
    responsavel" (e o proprio professor), com o botao "Exportar desempenho"
    (acao operacional que so faz sentido pra quem leciona a turma). Sem nenhuma
-   acao administrativa de turma — isso e exclusivo do Coordenador/Admin em
-   SecaoTurmas.jsx. */
+   acao de vinculo professor-curso — isso e exclusivo do Admin em
+   SecaoProfessoresCurso.jsx. */
 export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
   const { mostrarToast } = useToast();
   const [carregando, setCarregando] = useState(true);

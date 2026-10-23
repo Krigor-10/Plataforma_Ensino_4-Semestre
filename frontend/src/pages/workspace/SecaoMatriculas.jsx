@@ -14,7 +14,7 @@ import { resolverImagemCurso } from "../../lib/courseImage.js";
 
 const PAGAMENTO_PENDENTE = 1;
 
-export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
+export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate, onRefresh, onSessionExpired, usuario }) {
   if (ehAluno) {
     return (
       <VistaAlunoMatriculas
@@ -23,7 +23,6 @@ export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate,
         onNavigate={onNavigate}
         onRefresh={onRefresh}
         onSessionExpired={onSessionExpired}
-        turmas={turmas}
         usuario={usuario}
       />
     );
@@ -51,7 +50,7 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    (upload real do Admin), com fallback pro dicionario estatico por titulo
    (getCourseCover), garantindo que as tres telas mostrem sempre a mesma
    imagem por curso. */
-export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando, temTurmaDisponivel = false }) {
+export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando }) {
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
   const progresso = clampPercent(matricula?.progresso);
   const rotuloEntrada = progresso >= 100 ? "Revisar curso" : progresso > 0 ? "Continuar curso" : "Iniciar curso";
@@ -123,13 +122,9 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
             <span className="catalogo-card__codigo">
               {curso.ehGratuito ? <Insignia texto="Gratis" variante="sucesso" /> : formatMoney(curso.preco)}
             </span>
-            {temTurmaDisponivel ? (
-              <Botao disabled={solicitando} onClick={onSolicitar} tamanho="pequeno" variante="primario">
-                <TbSend aria-hidden="true" size={14} /> {solicitando ? "Enviando..." : "Solicitar matricula"}
-              </Botao>
-            ) : (
-              <span className="catalogo-card__codigo">Sem turma disponivel</span>
-            )}
+            <Botao disabled={solicitando} onClick={onSolicitar} tamanho="pequeno" variante="primario">
+              <TbSend aria-hidden="true" size={14} /> {solicitando ? "Enviando..." : "Solicitar matricula"}
+            </Botao>
           </footer>
         )}
       </div>
@@ -256,21 +251,11 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
   );
 }
 
-function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRefresh, onSessionExpired, turmas = [], usuario }) {
+function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRefresh, onSessionExpired, usuario }) {
   const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
   const [cursoSolicitando, setCursoSolicitando] = useState(null);
   const [popupMatricula, setPopupMatricula] = useState(null);
-
-  const turmasPorCursoId = useMemo(() => {
-    const grupos = new Map();
-    turmas.forEach((turma) => {
-      const lista = grupos.get(turma.cursoId) || [];
-      lista.push(turma);
-      grupos.set(turma.cursoId, lista);
-    });
-    return grupos;
-  }, [turmas]);
 
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
 
@@ -284,11 +269,6 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
   );
 
   async function solicitarMatricula(curso) {
-    const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
-    if (!temTurma) {
-      return;
-    }
-
     setCursoSolicitando(curso.id);
 
     try {
@@ -349,7 +329,6 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
               matricula={matriculaPorCursoId.get(curso.id)}
               onSolicitar={() => solicitarMatricula(curso)}
               solicitando={cursoSolicitando === curso.id}
-              temTurmaDisponivel={(turmasPorCursoId.get(curso.id) || []).length > 0}
             />
           ))}
         </ul>
@@ -477,7 +456,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
     if (erros.length > 0) {
       return {
         tone: "error",
-        message: `Nenhuma matricula foi aprovada. Verifique turma padrao cadastrada para: ${resumoErros}${complementoErros}.`
+        message: `Nenhuma matricula foi aprovada: ${resumoErros}${complementoErros}.`
       };
     }
 

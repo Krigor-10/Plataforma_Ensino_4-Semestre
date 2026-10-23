@@ -124,6 +124,19 @@ public class CursoService : ICursoService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<IEnumerable<Professor>> ListarProfessoresVinculadosAsync(int cursoId)
+    {
+        _ = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        return await _context.Professores
+            .Where(professor => _context.ProfessoresCursos.Any(vinculo =>
+                vinculo.ProfessorId == professor.Id &&
+                vinculo.CursoId == cursoId))
+            .OrderBy(professor => professor.Nome)
+            .ToListAsync();
+    }
+
     public async Task<bool> ProfessorPertenceAoCursoAsync(int professorId, int cursoId)
     {
         return await _context.ProfessoresCursos

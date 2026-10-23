@@ -50,6 +50,12 @@ export async function demoRequest(endpoint, options = {}) {
       return assignCourseCoordinator(getCourseCoordinatorActionId(path), payload);
     case /^\/Cursos\/\d+\/imagem$/.test(path) && method === "POST":
       return uploadCourseImage(getCourseImageActionId(path), payload);
+    case /^\/Cursos\/\d+\/professores$/.test(path) && method === "GET":
+      return listCourseProfessors(getCourseProfessoresListActionId(path));
+    case /^\/Cursos\/\d+\/professores\/\d+$/.test(path) && method === "POST":
+      return linkCourseProfessor(...getCourseProfessorActionIds(path));
+    case /^\/Cursos\/\d+\/professores\/\d+$/.test(path) && method === "DELETE":
+      return unlinkCourseProfessor(...getCourseProfessorActionIds(path));
     case path === "/Alunos/cadastro-completo" && method === "POST":
       return registerStudent(payload);
     case path === "/Alunos" && method === "GET":
@@ -666,6 +672,61 @@ function assignClassProfessor(classId, professorIdPayload) {
   turma.professorId = professor.id;
   saveDemoDb(db);
   return { mensagem: "Professor demo atribuido a turma com sucesso." };
+}
+
+function listCourseProfessors(cursoId) {
+  requireManager();
+  const db = readDemoDb();
+
+  if (!db.cursos.some((curso) => curso.id === cursoId)) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  const idsVinculados = new Set(
+    (db.professoresCursos || []).filter((vinculo) => vinculo.cursoId === cursoId).map((vinculo) => vinculo.professorId)
+  );
+
+  return clone(db.professores)
+    .filter((professor) => idsVinculados.has(professor.id))
+    .map((professor) => sanitizeDemoUser(professor))
+    .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"));
+}
+
+function linkCourseProfessor(cursoId, professorId) {
+  requireManager();
+  const db = readDemoDb();
+
+  if (!db.cursos.some((curso) => curso.id === cursoId)) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  if (!db.professores.some((professor) => professor.id === professorId)) {
+    throw new DemoApiError("Professor demo nao encontrado.", 404);
+  }
+
+  db.professoresCursos = db.professoresCursos || [];
+  const jaVinculado = db.professoresCursos.some(
+    (vinculo) => vinculo.cursoId === cursoId && vinculo.professorId === professorId
+  );
+
+  if (!jaVinculado) {
+    db.professoresCursos.push({ id: nextId(db.professoresCursos), cursoId, professorId });
+    saveDemoDb(db);
+  }
+
+  return { mensagem: "Professor vinculado ao curso com sucesso." };
+}
+
+function unlinkCourseProfessor(cursoId, professorId) {
+  requireManager();
+  const db = readDemoDb();
+
+  db.professoresCursos = (db.professoresCursos || []).filter(
+    (vinculo) => !(vinculo.cursoId === cursoId && vinculo.professorId === professorId)
+  );
+  saveDemoDb(db);
+
+  return { mensagem: "Professor desvinculado do curso com sucesso." };
 }
 
 function listModules() {
@@ -2541,6 +2602,10 @@ function ensureEvaluationCollections(db) {
   db.avaliacoes ||= [];
 }
 
+function ensureProfessoresCursosCollection(db) {
+  db.professoresCursos ||= [];
+}
+
 function ensurePagamentosCollection(db) {
   db.pagamentos ||= [];
 
@@ -2915,6 +2980,7 @@ function readDemoDb() {
         ensurePresentationEvaluation(parsed);
         ensureRegistrationCodes(parsed);
         ensurePagamentosCollection(parsed);
+        ensureProfessoresCursosCollection(parsed);
         saveDemoDb(parsed);
         return parsed;
       }
@@ -3154,6 +3220,11 @@ function createInitialDemoDb() {
         professorId: 301,
         dataCriacao: "2026-03-10T19:00:00.000Z"
       }
+    ],
+    professoresCursos: [
+      { id: 1, cursoId: 1, professorId: 301 },
+      { id: 2, cursoId: 2, professorId: 302 },
+      { id: 3, cursoId: 3, professorId: 301 }
     ],
     matriculas: [
       {
@@ -3487,6 +3558,29 @@ function getCourseCoordinatorActionId(path) {
   }
 
   return id;
+}
+
+function getCourseProfessoresListActionId(path) {
+  const match = String(path).match(/^\/Cursos\/(\d+)\/professores$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getCourseProfessorActionIds(path) {
+  const match = String(path).match(/^\/Cursos\/(\d+)\/professores\/(\d+)$/);
+  const cursoId = Number(match?.[1]);
+  const professorId = Number(match?.[2]);
+
+  if (!Number.isInteger(cursoId) || !Number.isInteger(professorId)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return [cursoId, professorId];
 }
 
 function getClassProfessorActionId(path) {

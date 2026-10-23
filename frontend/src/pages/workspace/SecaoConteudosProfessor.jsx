@@ -1155,7 +1155,7 @@ function TrilhaConteudosProfessor({
                           Novo conteudo
                         </Botao>
                         <Botao className="atividades-curso__adicionar" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno" variante="fantasma">
-                          <TbTrophy aria-hidden="true" size={13} /> Adicionar Quiz
+                          <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
                         </Botao>
                         {itensDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
                           <Botao className="atividades-curso__adicionar" onClick={() => onGerarQuizComIaModulo(modulo)} tamanho="pequeno" variante="fantasma">
