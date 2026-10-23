@@ -4,7 +4,11 @@ const path = require("path");
 // O app desktop nao tem interface propria: ele abre uma janela Electron
 // carregando a mesma SPA React ja servida pelo backend .NET em wwwroot,
 // junto com a API, no mesmo host/porta (sem CORS, sem duplicar o gateway).
-const APP_URL = process.env.DESKTOP_APP_URL || "http://localhost:5000";
+// O padrao aponta pra producao (Azure) porque e o que vai dentro do
+// instalador distribuido pra usuario final (nao te acesso a localhost
+// dele) — pra rodar em dev contra o backend local, defina DESKTOP_APP_URL
+// (ver desktop/README.md).
+const APP_URL = process.env.DESKTOP_APP_URL || "https://app-coderyse-academy.azurewebsites.net";
 
 function criarJanelaPrincipal() {
   const janela = new BrowserWindow({
