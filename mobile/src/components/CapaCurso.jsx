@@ -10,7 +10,7 @@ export default function CapaCurso({ curso, size = 56 }) {
   if (!capa) {
     return (
       <View style={[estilos.marcador, estiloTamanho]}>
-        <Ionicons color={cores.textoSuave} name="book-outline" size={size * 0.45} />
+        <Ionicons color={cores.destaque} name="book-outline" size={size * 0.45} />
       </View>
     );
   }
@@ -20,5 +20,11 @@ export default function CapaCurso({ curso, size = 56 }) {
 
 const estilos = StyleSheet.create({
   imagem: { backgroundColor: cores.fundoCartaoAtivo },
-  marcador: { backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" }
+  marcador: {
+    backgroundColor: cores.fundoCartaoAtivo,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    alignItems: "center",
+    justifyContent: "center"
+  }
 });

@@ -90,6 +90,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
         screenOptions={({ route, navigation }) => {
           navigationRef.current = navigation;
           return {
+            animation: "slide_from_right",
             header: () => (
               <AlunoHeaderBar
                 navigation={navigation}

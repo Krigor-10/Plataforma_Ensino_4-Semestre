@@ -1,11 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import CapaCurso from "../components/CapaCurso.jsx";
 import { obterDisponibilidadeAvaliacao } from "../lib/avaliacoes.js";
 import { formatPercent } from "../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 import { ROUTES } from "../lib/routes.js";
+import { DURACAO_TRANSICAO } from "../lib/transitions.js";
+
+const TouchableOpacityAnimado = Animated.createAnimatedComponent(TouchableOpacity);
 
 const ATALHOS = [
   { aba: ROUTES.CONTEUDOS, icone: "book-outline", rotulo: "Conteúdos" },
@@ -28,6 +32,9 @@ function obterSaudacao() {
    fictício. Saudacao e acoes de notificacoes/perfil/logout ficam no
    HeaderGlobal.jsx (persistente em todas as abas, nao so aqui). */
 export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
+  const reduzMovimentoContinuar = useReducedMotion();
+  const escalaContinuar = useSharedValue(1);
+  const estiloAnimadoContinuar = useAnimatedStyle(() => ({ transform: [{ scale: escalaContinuar.value }] }));
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
   const progressosPorCurso = useMemo(
@@ -73,18 +80,24 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
       ) : (
         <>
           <View style={styles.resumoLinha}>
-            <Resumo rotulo="Progresso geral" valor={formatPercent(progressoGeral)} />
-            <Resumo rotulo="Em andamento" valor={String(cursosEmAndamento.length)} />
-            <Resumo rotulo="Avaliações disponíveis" valor={String(avaliacoesDisponiveis)} />
+            <Resumo atraso={0} rotulo="Progresso geral" valor={formatPercent(progressoGeral)} />
+            <Resumo atraso={60} rotulo="Em andamento" valor={String(cursosEmAndamento.length)} />
+            <Resumo atraso={120} rotulo="Avaliações disponíveis" valor={String(avaliacoesDisponiveis)} />
           </View>
 
           {proximoCurso ? (
-            <TouchableOpacity
+            <TouchableOpacityAnimado
               accessibilityLabel={`Continuar estudando ${tituloCursoProximo}, ${formatPercent(proximoCurso.percentualConclusao)} concluído`}
               accessibilityRole="button"
               disabled={!onAbrirAba}
               onPress={() => onAbrirAba?.(ROUTES.CONTEUDOS, { cursoId: proximoCurso.cursoId })}
-              style={styles.cartaoContinuar}
+              onPressIn={() => {
+                if (!reduzMovimentoContinuar) escalaContinuar.value = withTiming(0.96, { duration: 100 });
+              }}
+              onPressOut={() => {
+                if (!reduzMovimentoContinuar) escalaContinuar.value = withTiming(1, { duration: 120 });
+              }}
+              style={[styles.cartaoContinuar, estiloAnimadoContinuar]}
             >
               <CapaCurso curso={cursoProximo} size={52} />
               <View style={styles.cartaoContinuarConteudo}>
@@ -95,7 +108,7 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
                 </View>
               </View>
               <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
-            </TouchableOpacity>
+            </TouchableOpacityAnimado>
           ) : null}
         </>
       )}
@@ -103,29 +116,70 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
       <Text style={styles.tituloAtalhos}>Acesso rápido</Text>
       <View style={styles.atalhosLinha}>
         {ATALHOS.map((atalho) => (
-          <TouchableOpacity
-            accessibilityLabel={atalho.rotulo}
-            accessibilityRole="button"
+          <AtalhoBotao
             disabled={!onAbrirAba}
+            icone={atalho.icone}
             key={atalho.aba}
             onPress={() => onAbrirAba?.(atalho.aba)}
-            style={styles.atalho}
-          >
-            <Ionicons color={cores.destaque} name={atalho.icone} size={22} />
-            <Text style={styles.atalhoTexto}>{atalho.rotulo}</Text>
-          </TouchableOpacity>
+            rotulo={atalho.rotulo}
+          />
         ))}
       </View>
     </ScrollView>
   );
 }
 
-function Resumo({ rotulo, valor }) {
+// Entrada escalonada dos 3 indicadores ao abrir a tela (atraso em ms por
+// indice) — so destaca a chegada deles, nenhum valor real e alterado.
+function Resumo({ atraso = 0, rotulo, valor }) {
+  const reduzMovimento = useReducedMotion();
+  const progresso = useSharedValue(reduzMovimento ? 1 : 0);
+
+  useEffect(() => {
+    if (reduzMovimento) {
+      progresso.value = 1;
+      return;
+    }
+    progresso.value = withDelay(atraso, withTiming(1, { duration: DURACAO_TRANSICAO }));
+  }, [atraso, progresso, reduzMovimento]);
+
+  const estiloAnimado = useAnimatedStyle(() => ({
+    opacity: progresso.value,
+    transform: [{ translateY: (1 - progresso.value) * 10 }]
+  }));
+
   return (
-    <View style={styles.resumoItem}>
+    <Animated.View style={[styles.resumoItem, estiloAnimado]}>
       <Text style={styles.resumoValor}>{valor}</Text>
       <Text style={styles.resumoRotulo}>{rotulo}</Text>
-    </View>
+    </Animated.View>
+  );
+}
+
+// Feedback de toque alem da opacidade padrao do TouchableOpacity: leve
+// "afundada" de escala enquanto pressionado, volta ao normal ao soltar.
+function AtalhoBotao({ disabled, icone, onPress, rotulo }) {
+  const reduzMovimento = useReducedMotion();
+  const escala = useSharedValue(1);
+  const estiloAnimado = useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
+
+  return (
+    <TouchableOpacityAnimado
+      accessibilityLabel={rotulo}
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      onPressIn={() => {
+        if (!reduzMovimento) escala.value = withTiming(0.96, { duration: 100 });
+      }}
+      onPressOut={() => {
+        if (!reduzMovimento) escala.value = withTiming(1, { duration: 120 });
+      }}
+      style={[styles.atalho, estiloAnimado]}
+    >
+      <Ionicons color={cores.destaque} name={icone} size={22} />
+      <Text style={styles.atalhoTexto}>{rotulo}</Text>
+    </TouchableOpacityAnimado>
   );
 }
 

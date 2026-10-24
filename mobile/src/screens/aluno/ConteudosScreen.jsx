@@ -1,7 +1,20 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, BackHandler, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  BackHandler,
+  LayoutAnimation,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View
+} from "react-native";
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
@@ -9,9 +22,9 @@ import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatQuestoes, normalizeContentType } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
-import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 // Monta uma lista plana de linhas (conteudo + quiz vinculado + quiz solto do
 // modulo) na ordem de exibicao, pra renderizar o modulo como uma lista unica
@@ -31,10 +44,17 @@ function montarLinhasModulo(modulo) {
   return linhas;
 }
 
+// Habilita LayoutAnimation no Android legado (arquitetura nova/Fabric ja
+// suporta sem essa flag, mas o guard e inofensivo caso o app rode sob a
+// arquitetura antiga em algum device).
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const ICONE_TIPO_CONTEUDO = {
   1: "document-text-outline",
   2: "document-attach-outline",
-  3: "videocam-outline",
+  3: "play-circle-outline",
   4: "link-outline",
   5: "image-outline"
 };
@@ -96,6 +116,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const cursoAtivo = grupos.find((curso) => curso.id === cursoSelecionadoId) || null;
 
   function alternarModulo(moduloId) {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setModulosAbertos((atual) => {
       const proximo = new Set(atual);
       if (proximo.has(moduloId)) {
@@ -144,7 +165,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   if (!cursoAtivo) {
     return (
       <View style={estilos.container}>
-        <SeletorCurso
+        <GradeCursosConteudos
           accessibilityLabelPrefix="Ver conteúdos de"
           itens={grupos.map((curso) => ({ curso, id: curso.id }))}
           onSelecionar={setCursoSelecionadoId}
@@ -270,6 +291,25 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   );
 }
 
+// Pulso curto de escala no icone de check, so na transicao real
+// false->true (nunca ao reabrir um modulo ja concluido antes) — usa um ref
+// pra lembrar o valor anterior, unica forma segura de detectar "acabou de
+// confirmar" dentro de um componente de lista remontado a cada render do pai.
+function useAnimacaoConclusao(concluido) {
+  const reduzMovimento = useReducedMotion();
+  const escala = useSharedValue(1);
+  const anterior = useRef(concluido);
+
+  useEffect(() => {
+    if (concluido && !anterior.current && !reduzMovimento) {
+      escala.value = withSequence(withTiming(1.3, { duration: 120 }), withTiming(1, { duration: 150 }));
+    }
+    anterior.current = concluido;
+  }, [concluido, escala, reduzMovimento]);
+
+  return useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
+}
+
 // Linha de lista (Material 3) pra um conteudo ou quiz dentro do modulo —
 // substitui os cards pretos dentro do card roxo do modulo por linhas
 // separadas por divisor fino, um unico elemento de status/acao a direita.
@@ -279,6 +319,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 // sem perder a capacidade de marcar concluido em conteudo sem arquivo).
 function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConcluido, mostrarDivisor, onAbrirQuiz }) {
   const estiloLinha = [estilos.linha, linha.recuado ? estilos.linhaRecuada : null, mostrarDivisor ? estilos.linhaDivisor : null];
+  const estiloCheck = useAnimacaoConclusao(linha.tipo === "conteudo" && linha.dado.concluido);
 
   if (linha.tipo === "conteudo") {
     const conteudo = linha.dado;
@@ -298,9 +339,9 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         {conteudo.bloqueado ? (
           <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
         ) : conteudo.concluido ? (
-          <View accessibilityLabel="Concluído" accessible>
+          <Animated.View accessibilityLabel="Concluído" accessible style={estiloCheck}>
             <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
-          </View>
+          </Animated.View>
         ) : processando ? (
           <ActivityIndicator color={cores.destaque} size="small" />
         ) : (
@@ -311,7 +352,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
             onPress={() => marcarConcluido(conteudo.id)}
             style={estilos.linhaCheckbox}
           >
-            <Ionicons color={cores.textoSuave} name="ellipse-outline" size={22} />
+            <Ionicons color={cores.textoRotulo} name="ellipse-outline" size={22} />
           </TouchableOpacity>
         )}
       </>
@@ -341,7 +382,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   const corpoQuiz = (
     <>
       <View style={estilos.linhaIcone}>
-        <Ionicons color={cores.sucesso} name="play-outline" size={18} />
+        <Ionicons color={cores.textoSuave} name="clipboard-outline" size={18} />
       </View>
       <View style={estilos.linhaTextos}>
         <Text numberOfLines={2} style={estilos.linhaTitulo}>{quiz.titulo}</Text>
@@ -351,7 +392,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         <Ionicons color={cores.sucesso} name="play-circle" size={24} />
       ) : concluidoQuiz ? (
         <View accessibilityLabel="Concluído" accessible>
-          <Ionicons color={cores.textoSuave} name="checkmark-circle" size={22} />
+          <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
         </View>
       ) : (
         <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
@@ -393,12 +434,12 @@ const estilos = StyleSheet.create({
     flexWrap: "wrap",
     gap: espacamentos.md,
     paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.sm,
-    paddingBottom: espacamentos.lg
+    paddingTop: espacamentos.md,
+    paddingBottom: espacamentos.xl
   },
   cabecalhoCursoTextos: { flex: 1, minWidth: 160 },
   tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
-  subtituloCurso: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
+  subtituloCurso: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4 },
   corpo: { padding: espacamentos.xl, paddingTop: 0, paddingBottom: 40 },
   continuar: {
     flexDirection: "row",
@@ -434,8 +475,8 @@ const estilos = StyleSheet.create({
   },
   moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   moduloContagem: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
-  barraFundoFina: { height: 4, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.sm },
-  barraPreenchidaFina: { height: 4, borderRadius: raios.sm, backgroundColor: cores.destaque },
+  barraFundoFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.sm },
+  barraPreenchidaFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
   itensLista: { paddingBottom: espacamentos.xs },
   // Linha de lista unica (Material 3): sem fundo/borda proprios, separadas
   // por divisor fino. Altura minima 56dp (1 linha) crescendo naturalmente
@@ -456,7 +497,7 @@ const estilos = StyleSheet.create({
   linhaIcone: { width: 36, height: 36, borderRadius: 18, backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
   linhaTextos: { flex: 1 },
   linhaTitulo: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
-  linhaMeta: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
+  linhaMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2 },
   linhaCheckbox: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", marginRight: -11 },
   vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
