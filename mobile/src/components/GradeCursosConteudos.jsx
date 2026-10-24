@@ -1,13 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { getCourseCover } from "../lib/courseCovers.js";
+import { resolverImagemCurso } from "../lib/courseCovers.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 /* Grade de 2 colunas pra selecao de curso na tela Conteudos, isolada de
    SeletorCurso.jsx (usado por Avaliacoes/Progresso) e CapaCurso.jsx (usado
    tambem por Cursos/Catalogo/Home) — nao reutiliza esses dois componentes
    visuais pra nao vazar a mudanca de layout pra essas outras telas, so a
-   funcao getCourseCover (resolucao de imagem por titulo) e compartilhada. */
+   funcao resolverImagemCurso (resolucao de imagem por imagemUrl/titulo) e
+   compartilhada. */
 export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onSelecionar, titulo = "Selecione um curso" }) {
   return (
     <>
@@ -28,7 +29,7 @@ export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, 
 
 function CardCurso({ accessibilityLabelPrefix, curso, id, onSelecionar }) {
   const tituloCurso = curso?.titulo || `Curso #${id}`;
-  const capa = getCourseCover(curso);
+  const capa = resolverImagemCurso(curso);
 
   return (
     <TouchableOpacity

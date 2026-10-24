@@ -1433,6 +1433,7 @@ public class AvaliacaoService : IAvaliacaoService
             TotalQuestoes = avaliacao.Questoes?.Count ?? 0,
             UltimaNota = ultimaTentativa?.NotaBruta,
             UltimoStatusTentativa = ultimaTentativa?.StatusTentativa,
+            UltimaTentativaId = ultimaTentativa?.Id,
             PublicadoEm = avaliacao.PublicadoEm
         };
     }

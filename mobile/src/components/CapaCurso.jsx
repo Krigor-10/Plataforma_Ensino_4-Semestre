@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image, StyleSheet, View } from "react-native";
-import { getCourseCover } from "../lib/courseCovers.js";
+import { resolverImagemCurso } from "../lib/courseCovers.js";
 import { cores, raios } from "../lib/theme.js";
 
 export default function CapaCurso({ curso, size = 56 }) {
-  const capa = getCourseCover(curso);
+  const capa = resolverImagemCurso(curso);
   const estiloTamanho = { width: size, height: size, borderRadius: raios.md };
 
   if (!capa) {

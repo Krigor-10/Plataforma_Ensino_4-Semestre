@@ -389,7 +389,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         <Text style={estilos.linhaMeta}>Quiz · {formatQuestoes(quiz.totalQuestoes)} · sem nota</Text>
       </View>
       {disponibilidade.podeRealizar ? (
-        <Ionicons color={cores.sucesso} name="play-circle" size={24} />
+        <Ionicons color={cores.destaque} name="play-circle" size={24} />
       ) : concluidoQuiz ? (
         <View accessibilityLabel="Concluído" accessible>
           <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />

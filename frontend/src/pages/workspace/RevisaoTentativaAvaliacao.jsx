@@ -10,7 +10,8 @@ function formatScore(value) {
 }
 
 /* Revisao pos-prova: so existe atras de uma acao explicita do aluno (botao
-   "Ver revisao detalhada" na tela de resultado de SecoesAluno.jsx) — nunca e
+   "Ver revisao detalhada" na tela de resultado, ou "Revisao detalhada" na
+   lista de quizzes de Conteudos, ambos em SecoesAluno.jsx) — nunca e
    mostrada automaticamente. So funciona para tentativas ja corrigidas (o
    backend recusa com 422 caso contrario). */
 export function RevisaoTentativaAvaliacao({ avaliacaoId, tentativaId, onFechar, onSessionExpired }) {

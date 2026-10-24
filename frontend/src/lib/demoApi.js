@@ -1696,7 +1696,8 @@ function listStudentEvaluations(studentId) {
       tentativasRealizadas: tentativas.length,
       tentativasRestantes: Math.max(Number(avaliacao.tentativasPermitidas || 1) - tentativas.length, 0),
       ultimaNota: ultimaTentativa?.notaBruta ?? null,
-      ultimoStatusTentativa: ultimaTentativa?.statusTentativa ?? null
+      ultimoStatusTentativa: ultimaTentativa?.statusTentativa ?? null,
+      ultimaTentativaId: ultimaTentativa?.id ?? null
     };
   });
 }

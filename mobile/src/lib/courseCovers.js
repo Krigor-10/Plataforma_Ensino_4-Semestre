@@ -1,3 +1,4 @@
+import { resolverUrlArquivo } from "./arquivos.js";
 import courseArchitectureCover from "../../assets/courses/course-arquitetura-soft.jpg";
 import courseAutomationTestingCover from "../../assets/courses/course-automacao-teste.jpg";
 import courseDataScienceCover from "../../assets/courses/course-ciencia-dados.jpg";
@@ -31,4 +32,19 @@ const COURSE_COVERS_BY_TITLE = {
 export function getCourseCover(curso) {
   const titulo = String(curso?.titulo || "").trim().toLowerCase();
   return COURSE_COVERS_BY_TITLE[titulo] || null;
+}
+
+/* Mesmo criterio do web (frontend/src/lib/courseImage.js): prioriza o
+   upload real do curso (curso.imagemUrl, servido publicamente em
+   /uploads/cursos/* - sem exigir token), cai no mapeamento estatico por
+   titulo acima, e por ultimo null (caller mostra icone generico). Sem essa
+   prioridade, qualquer curso criado em producao com capa real nunca
+   aparecia com imagem no mobile - so os cursos do seed fixo apareciam. */
+export function resolverImagemCurso(curso) {
+  const imagemUrl = String(curso?.imagemUrl || "").trim();
+  if (imagemUrl) {
+    return { uri: resolverUrlArquivo(imagemUrl) };
+  }
+
+  return getCourseCover(curso);
 }

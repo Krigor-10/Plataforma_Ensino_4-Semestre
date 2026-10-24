@@ -29,6 +29,7 @@ public class AvaliacaoAlunoResponseDto
     public int TotalQuestoes { get; set; }
     public decimal? UltimaNota { get; set; }
     public StatusTentativaAvaliacao? UltimoStatusTentativa { get; set; }
+    public int? UltimaTentativaId { get; set; }
     public DateTime? PublicadoEm { get; set; }
 }
 

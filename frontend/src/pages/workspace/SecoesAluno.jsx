@@ -531,6 +531,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   const [resultadoTentativa, setResultadoTentativa] = useState(null);
   const [tempoRestanteSegundos, setTempoRestanteSegundos] = useState(null);
   const [revisaoAberta, setRevisaoAberta] = useState(false);
+  const [revisaoDireta, setRevisaoDireta] = useState(null);
   const tempoRestanteRef = useRef(null);
   tempoRestanteRef.current = tempoRestanteSegundos;
 
@@ -601,6 +602,15 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     }
 
     setAvaliacaoParaConfirmar(avaliacao);
+  }
+
+  function abrirRevisaoTentativa(avaliacao) {
+    if (!avaliacao.ultimaTentativaId || Number(avaliacao.ultimoStatusTentativa) !== 3) {
+      setMensagem({ tone: "warning", message: "A revisao desta tentativa ainda nao esta disponivel." });
+      return;
+    }
+
+    setRevisaoDireta({ avaliacaoId: avaliacao.id, tentativaId: avaliacao.ultimaTentativaId });
   }
 
   async function abrirExecucaoAvaliacao(avaliacao) {
@@ -1144,10 +1154,27 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
         </>
         );
       })() : null}
+
+      {revisaoDireta ? (
+        <RevisaoTentativaAvaliacao
+          avaliacaoId={revisaoDireta.avaliacaoId}
+          onFechar={() => setRevisaoDireta(null)}
+          onSessionExpired={onSessionExpired}
+          tentativaId={revisaoDireta.tentativaId}
+        />
+      ) : null}
     </>
   );
 
-  return { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem, modaisExecucaoAvaliacao: modais, setMensagem };
+  return {
+    abrirConfirmacaoAvaliacao,
+    abrirRevisaoTentativa,
+    carregandoQuestoes,
+    enviandoRespostas,
+    mensagem,
+    modaisExecucaoAvaliacao: modais,
+    setMensagem
+  };
 }
 
 /* Mesmo fluxo/padrao visual da tela de Avaliacoes do professor (cursos em
@@ -1396,7 +1423,7 @@ export function SecaoConteudosAluno({
   turmas = []
 }) {
   const { mostrarToast } = useToast();
-  const { abrirConfirmacaoAvaliacao, carregandoQuestoes, enviandoRespostas, mensagem: mensagemQuiz, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
+  const { abrirConfirmacaoAvaliacao, abrirRevisaoTentativa, carregandoQuestoes, enviandoRespostas, mensagem: mensagemQuiz, modaisExecucaoAvaliacao } = useExecucaoAvaliacao({
     onRefresh,
     onSessionExpired
   });
@@ -1706,6 +1733,7 @@ export function SecaoConteudosAluno({
           conteudoSelecionadoId={conteudoSelecionadoId}
           curso={cursoAtivo}
           key={cursoAtivo.id}
+          onAbrirRevisao={abrirRevisaoTentativa}
           onConcluir={marcarConteudoConcluido}
           onIniciarQuiz={abrirConfirmacaoAvaliacao}
           onSelecionar={selecionarConteudoAluno}
@@ -1739,7 +1767,7 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   5: <TbPhoto aria-hidden="true" size="1.5rem" />
 };
 
-function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onConcluir, onIniciarQuiz, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
+function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
   const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
 
   const [modulosAbertos, setModulosAbertos] = useState(() => {
@@ -1980,7 +2008,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                             {disponibilidadeQuiz.podeRealizar || quizConcluido ? (
                                               <Botao
                                                 disabled={quizIndisponivel || (!disponibilidadeQuiz.podeRealizar && !quizConcluido)}
-                                                onClick={() => onIniciarQuiz(quiz)}
+                                                onClick={() => (quizConcluido ? onAbrirRevisao(quiz) : onIniciarQuiz(quiz))}
                                                 tamanho="pequeno"
                                                 variante={quizConcluido ? "fantasma" : "primario"}
                                               >

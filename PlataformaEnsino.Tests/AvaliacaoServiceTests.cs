@@ -1081,13 +1081,15 @@ public class AvaliacaoServiceTests
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
         };
-        await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+        var tentativa = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
 
         var resultado = (await service.ListarAvaliacoesPorAlunoAsync(aluno.Id)).ToList();
 
         var item = Assert.Single(resultado);
         Assert.Equal(1, item.TentativasRealizadas);
         Assert.Equal(2, item.TentativasRestantes);
+        Assert.Equal(tentativa.Id, item.UltimaTentativaId);
+        Assert.Equal(StatusTentativaAvaliacao.Corrigida, item.UltimoStatusTentativa);
     }
 
     // ---------- GerarQuestoesComIaAsync ----------

@@ -38,6 +38,7 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
       cursosMapeados.set(cursoId, {
         id: cursoId,
         titulo: obterTituloCurso(cursoId, cursoPorId),
+        imagemUrl: cursoPorId.get(cursoId)?.imagemUrl || null,
         modulos: new Map(),
         totalConteudos: 0,
         concluidos: 0
