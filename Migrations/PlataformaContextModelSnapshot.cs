@@ -57,7 +57,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoBancoId", "Numero")
                         .IsUnique();
 
-                    b.ToTable("AfirmativasQuestoesBanco");
+                    b.ToTable("AfirmativasQuestoesBanco", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AfirmativaQuestaoPublicada", b =>
@@ -95,7 +95,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoPublicadaId", "Numero")
                         .IsUnique();
 
-                    b.ToTable("AfirmativasQuestoesPublicadas");
+                    b.ToTable("AfirmativasQuestoesPublicadas", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AlternativaQuestaoBanco", b =>
@@ -133,7 +133,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoBancoId", "Letra")
                         .IsUnique();
 
-                    b.ToTable("AlternativasQuestoesBanco");
+                    b.ToTable("AlternativasQuestoesBanco", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AlternativaQuestaoPublicada", b =>
@@ -171,7 +171,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoPublicadaId", "Letra")
                         .IsUnique();
 
-                    b.ToTable("AlternativasQuestoesPublicadas");
+                    b.ToTable("AlternativasQuestoesPublicadas", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AnexoQuestaoBanco", b =>
@@ -207,7 +207,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("QuestaoBancoId");
 
-                    b.ToTable("AnexosQuestoesBanco");
+                    b.ToTable("AnexosQuestoesBanco", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Avaliacao", b =>
@@ -294,7 +294,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("TurmaId");
 
-                    b.ToTable("Avaliacoes");
+                    b.ToTable("Avaliacoes", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
@@ -373,7 +373,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("TurmaId");
 
-                    b.ToTable("ConteudosDidaticos");
+                    b.ToTable("ConteudosDidaticos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
@@ -441,46 +441,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("EncerradoPorId");
 
-                    b.ToTable("Cursos");
-                });
-
-            modelBuilder.Entity("PlataformaEnsino.API.Models.FeedbackAcademico", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AutorId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("DestinatarioId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("Lido")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Mensagem")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("Origem")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AutorId");
-
-                    b.HasIndex("DestinatarioId", "CriadoEm");
-
-                    b.ToTable("FeedbacksAcademicos");
+                    b.ToTable("Cursos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.LancamentoNotaAluno", b =>
@@ -543,7 +504,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "AvaliacaoId")
                         .IsUnique();
 
-                    b.ToTable("LancamentosNotasAlunos");
+                    b.ToTable("LancamentosNotasAlunos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Matricula", b =>
@@ -602,7 +563,7 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada")
                         .HasFilter("[Status] = 1");
 
-                    b.ToTable("Matriculas");
+                    b.ToTable("Matriculas", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Modulo", b =>
@@ -637,7 +598,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("CursoId", "Titulo")
                         .IsUnique();
 
-                    b.ToTable("Modulos");
+                    b.ToTable("Modulos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Notificacao", b =>
@@ -713,7 +674,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId")
                         .IsUnique();
 
-                    b.ToTable("Pagamentos");
+                    b.ToTable("Pagamentos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProfessorCurso", b =>
@@ -740,7 +701,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("ProfessorId", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("ProfessoresCursos");
+                    b.ToTable("ProfessoresCursos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoConteudoAluno", b =>
@@ -785,7 +746,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "ConteudoDidaticoId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosConteudosAlunos");
+                    b.ToTable("ProgressosConteudosAlunos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoCursoAluno", b =>
@@ -837,7 +798,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosCursosAlunos");
+                    b.ToTable("ProgressosCursosAlunos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoModuloAluno", b =>
@@ -895,7 +856,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "ModuloId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosModulosAlunos");
+                    b.ToTable("ProgressosModulosAlunos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.QuestaoBanco", b =>
@@ -959,7 +920,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("ProfessorAutorId");
 
-                    b.ToTable("QuestoesBanco");
+                    b.ToTable("QuestoesBanco", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.QuestaoPublicada", b =>
@@ -1009,7 +970,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("AvaliacaoId", "Ordem")
                         .IsUnique();
 
-                    b.ToTable("QuestoesPublicadas");
+                    b.ToTable("QuestoesPublicadas", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.RefreshToken", b =>
@@ -1087,7 +1048,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("TentativaAvaliacaoId", "QuestaoPublicadaId")
                         .IsUnique();
 
-                    b.ToTable("RespostasAlunos");
+                    b.ToTable("RespostasAlunos", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.TentativaAvaliacao", b =>
@@ -1130,7 +1091,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "AvaliacaoId", "NumeroTentativa")
                         .IsUnique();
 
-                    b.ToTable("TentativasAvaliacao");
+                    b.ToTable("TentativasAvaliacao", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Turma", b =>
@@ -1172,7 +1133,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("NomeTurma", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("Turmas");
+                    b.ToTable("Turmas", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Usuario", b =>
@@ -1479,24 +1440,6 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("EncerradoPor");
 
                     b.Navigation("ProfessorConclusao");
-                });
-
-            modelBuilder.Entity("PlataformaEnsino.API.Models.FeedbackAcademico", b =>
-                {
-                    b.HasOne("PlataformaEnsino.API.Models.Usuario", "Autor")
-                        .WithMany("FeedbacksEnviados")
-                        .HasForeignKey("AutorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("PlataformaEnsino.API.Models.Usuario", "Destinatario")
-                        .WithMany("FeedbacksRecebidos")
-                        .HasForeignKey("DestinatarioId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Autor");
-
-                    b.Navigation("Destinatario");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.LancamentoNotaAluno", b =>
@@ -1906,13 +1849,6 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("ConteudosDidaticos");
 
                     b.Navigation("Matriculas");
-                });
-
-            modelBuilder.Entity("PlataformaEnsino.API.Models.Usuario", b =>
-                {
-                    b.Navigation("FeedbacksEnviados");
-
-                    b.Navigation("FeedbacksRecebidos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Aluno", b =>

@@ -137,7 +137,6 @@ builder.Services.AddScoped<ICertificadoService, CertificadoService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
-builder.Services.AddScoped<IFeedbackAcademicoService, FeedbackAcademicoService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 builder.Services.AddHealthChecks()

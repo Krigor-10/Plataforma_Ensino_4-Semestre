@@ -80,34 +80,3 @@ public sealed class AdminConfiguration : IEntityTypeConfiguration<Admin>
         builder.ToTable("Admins");
     }
 }
-
-public sealed class FeedbackAcademicoConfiguration : IEntityTypeConfiguration<FeedbackAcademico>
-{
-    public void Configure(EntityTypeBuilder<FeedbackAcademico> builder)
-    {
-        builder
-            .Property(f => f.Origem)
-            .HasMaxLength(120)
-            .IsRequired();
-
-        builder
-            .Property(f => f.Mensagem)
-            .HasMaxLength(1000)
-            .IsRequired();
-
-        builder
-            .HasOne(f => f.Destinatario)
-            .WithMany(u => u.FeedbacksRecebidos)
-            .HasForeignKey(f => f.DestinatarioId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasOne(f => f.Autor)
-            .WithMany(u => u.FeedbacksEnviados)
-            .HasForeignKey(f => f.AutorId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder
-            .HasIndex(f => new { f.DestinatarioId, f.CriadoEm });
-    }
-}

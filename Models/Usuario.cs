@@ -62,14 +62,6 @@ public abstract class Usuario
     [JsonIgnore]
     public DateTime? TokenRecuperacaoSenhaExpiraEm { get; private set; }
 
-    [JsonIgnore]
-    [ValidateNever]
-    public List<FeedbackAcademico> FeedbacksRecebidos { get; set; } = new();
-
-    [JsonIgnore]
-    [ValidateNever]
-    public List<FeedbackAcademico> FeedbacksEnviados { get; set; } = new();
-
     public void AlterarDados(string nome, string email, string telefone, string cep, string rua, string numero, string bairro, string cidade, string estado)
     {
         if (string.IsNullOrWhiteSpace(nome))

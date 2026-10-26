@@ -131,8 +131,6 @@ Progress tracking uses: `ProgressoConteudoAluno`, `ProgressoModuloAluno`, `Progr
 
 Assessment system: `QuestaoBanco → QuestaoPublicada → Avaliacao → TentativaAvaliacao → RespostaAluno`. Bank questions can have file attachments (`AnexoQuestaoBanco` — image/PDF/video, reuses `IArmazenamentoArquivoService`, stored under `Storage/Uploads/questoes/`), managed via `POST/DELETE /api/v1/avaliacoes/questoes-banco/{questaoBancoId}/anexos` and surfaced in `QuestaoAvaliacaoResponseDto.Anexos` — only the owning Professor (`QuestaoBanco.ProfessorAutorId`) can manage them.
 
-`FeedbackAcademico` (a note/observation about a student) can be written by a Professor about a student enrolled in one of their own turmas (`POST /api/v1/usuarios/{alunoId}/feedbacks`), read by that student or by the Professor who wrote it (`GET .../feedbacks`), and marked read by the student (`PUT .../feedbacks/{id}/lido`). Backend only so far — no frontend screen yet.
-
 ### Authentication
 
 `POST /api/v1/auth/login` validates credentials and issues a JWT (HS256). The token contains claims for `usuarioId`, `ClaimTypes.Role` (TipoUsuario), and standard JWT fields. Token expiry defaults to 20 minutes (short-lived on purpose — a deactivated account or role change takes effect quickly; the refresh token, valid 30 days, silently renews it). Frontend stores token in `localStorage` and attaches it as `Authorization: Bearer <token>`.
