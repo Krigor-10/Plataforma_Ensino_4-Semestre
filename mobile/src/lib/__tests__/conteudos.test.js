@@ -1,7 +1,7 @@
 import { agruparConteudosPorCurso } from "../conteudos.js";
 
 function montarCenario() {
-  const cursos = [{ id: 1, titulo: "Curso Teste" }];
+  const cursos = [{ id: 1, titulo: "Curso Teste", imagemUrl: "/uploads/cursos/curso-1.jpg" }];
   const matriculas = [{ cursoId: 1, turmaId: 5, status: "Aprovada" }];
   const modulos = [
     { id: 100, cursoId: 1, titulo: "Modulo 1", dataCriacao: "2026-01-01" },
@@ -84,5 +84,12 @@ describe("agruparConteudosPorCurso", () => {
 
     expect(curso.modulos[1].quizzes).toHaveLength(1);
     expect(curso.modulos[1].quizzes[0].id).toBe(501);
+  });
+
+  it("repassa o imagemUrl do curso no objeto agrupado, pra CapaCurso/GradeCursosConteudos exibirem a capa", () => {
+    const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenario();
+    const [curso] = agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos });
+
+    expect(curso.imagemUrl).toBe("/uploads/cursos/curso-1.jpg");
   });
 });

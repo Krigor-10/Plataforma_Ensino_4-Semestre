@@ -142,6 +142,7 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
     return {
       id: curso.id,
       titulo: curso.titulo,
+      imagemUrl: curso.imagemUrl,
       progresso: curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0,
       modulos: modulosComBloqueio,
       proximoConteudo: conteudosDoCurso.find((conteudo) => !conteudo.concluido && !conteudo.bloqueado) || null
