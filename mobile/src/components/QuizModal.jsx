@@ -14,6 +14,18 @@ import { cores, espacamentos, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
+// Qualquer erro que chegue aqui sem ser ApiError veio de fora do ciclo
+// requisicao/resposta HTTP (fetch falhou antes de ter uma resposta pra
+// interpretar) - timeout, sem conexao, DNS indisponivel (UnknownHostException
+// no Android quando nao consegue resolver o host da API). Nesses casos
+// err.message costuma ser texto tecnico cru ("Network request failed", ou a
+// mensagem nativa da excecao) sem nenhum tratamento - nao deve ir direto pro
+// Toast que o aluno ve. ApiError (erro HTTP com resposta de verdade) continua
+// mostrando a mensagem vinda do backend normalmente.
+function ehErroDeRede(err) {
+  return !(err instanceof ApiError);
+}
+
 /**
  * Modal de "fazer avaliacao/quiz" reutilizado tanto pela lista de
  * Avaliacoes quanto pelo quiz inline dentro de um modulo em Conteudos —
@@ -82,7 +94,11 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         onSessionExpired?.();
         return;
       }
-      setErro(err.message || "Não foi possível enviar a avaliação agora.");
+      setErro(
+        ehErroDeRede(err)
+          ? "Sem conexão com o servidor. Verifique sua internet e tente novamente — suas respostas continuam salvas neste dispositivo."
+          : err.message || "Não foi possível enviar a avaliação agora."
+      );
     } finally {
       setEnviando(false);
     }
@@ -185,7 +201,11 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
         onSessionExpired?.();
         return;
       }
-      setErro(err.message || "Não foi possível carregar as questões agora.");
+      setErro(
+        ehErroDeRede(err)
+          ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+          : err.message || "Não foi possível carregar as questões agora."
+      );
       setFase("confirmar");
     }
   }
