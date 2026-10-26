@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { Animated as AnimatedRN, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import CapaCurso from "../components/CapaCurso.jsx";
 import { obterDisponibilidadeAvaliacao } from "../lib/avaliacoes.js";
@@ -9,7 +9,7 @@ import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 import { ROUTES } from "../lib/routes.js";
 import { DURACAO_TRANSICAO } from "../lib/transitions.js";
 
-const TouchableOpacityAnimado = Animated.createAnimatedComponent(TouchableOpacity);
+const TouchableOpacityAnimadoRN = AnimatedRN.createAnimatedComponent(TouchableOpacity);
 
 const ATALHOS = [
   { aba: ROUTES.CONTEUDOS, icone: "book-outline", rotulo: "Conteúdos" },
@@ -33,8 +33,8 @@ function obterSaudacao() {
    HeaderGlobal.jsx (persistente em todas as abas, nao so aqui). */
 export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
   const reduzMovimentoContinuar = useReducedMotion();
-  const escalaContinuar = useSharedValue(1);
-  const estiloAnimadoContinuar = useAnimatedStyle(() => ({ transform: [{ scale: escalaContinuar.value }] }));
+  // eslint-disable-next-line react-hooks/refs -- padrao idiomatico useRef(valorInicial).current pra extrair um Animated.Value estavel (mesma instancia em todo render), igual ao ja usado em MenuLateral.jsx.
+  const escalaContinuar = useRef(new AnimatedRN.Value(1)).current;
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
   const progressosPorCurso = useMemo(
@@ -86,18 +86,18 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
           </View>
 
           {proximoCurso ? (
-            <TouchableOpacityAnimado
+            <TouchableOpacityAnimadoRN
               accessibilityLabel={`Continuar estudando ${tituloCursoProximo}, ${formatPercent(proximoCurso.percentualConclusao)} concluído`}
               accessibilityRole="button"
               disabled={!onAbrirAba}
               onPress={() => onAbrirAba?.(ROUTES.CONTEUDOS, { cursoId: proximoCurso.cursoId })}
               onPressIn={() => {
-                if (!reduzMovimentoContinuar) escalaContinuar.value = withTiming(0.96, { duration: 100 });
+                if (!reduzMovimentoContinuar) AnimatedRN.timing(escalaContinuar, { duration: 100, toValue: 0.96, useNativeDriver: true }).start();
               }}
               onPressOut={() => {
-                if (!reduzMovimentoContinuar) escalaContinuar.value = withTiming(1, { duration: 120 });
+                if (!reduzMovimentoContinuar) AnimatedRN.timing(escalaContinuar, { duration: 120, toValue: 1, useNativeDriver: true }).start();
               }}
-              style={[styles.cartaoContinuar, estiloAnimadoContinuar]}
+              style={[styles.cartaoContinuar, { transform: [{ scale: escalaContinuar }] }]}
             >
               <CapaCurso curso={cursoProximo} size={52} />
               <View style={styles.cartaoContinuarConteudo}>
@@ -108,7 +108,7 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
                 </View>
               </View>
               <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
-            </TouchableOpacityAnimado>
+            </TouchableOpacityAnimadoRN>
           ) : null}
         </>
       )}
@@ -158,28 +158,31 @@ function Resumo({ atraso = 0, rotulo, valor }) {
 
 // Feedback de toque alem da opacidade padrao do TouchableOpacity: leve
 // "afundada" de escala enquanto pressionado, volta ao normal ao soltar.
+// Animated.Value classico do RN (nao Reanimated) — mesmo padrao ja usado em
+// MenuLateral.jsx, evita mutar SharedValue dentro de um callback de evento
+// (onPressIn/onPressOut), que o eslint-plugin-react-hooks recusa.
 function AtalhoBotao({ disabled, icone, onPress, rotulo }) {
   const reduzMovimento = useReducedMotion();
-  const escala = useSharedValue(1);
-  const estiloAnimado = useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
+  // eslint-disable-next-line react-hooks/refs -- padrao idiomatico useRef(valorInicial).current pra extrair um Animated.Value estavel (mesma instancia em todo render), igual ao ja usado em MenuLateral.jsx.
+  const escala = useRef(new AnimatedRN.Value(1)).current;
 
   return (
-    <TouchableOpacityAnimado
+    <TouchableOpacityAnimadoRN
       accessibilityLabel={rotulo}
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
       onPressIn={() => {
-        if (!reduzMovimento) escala.value = withTiming(0.96, { duration: 100 });
+        if (!reduzMovimento) AnimatedRN.timing(escala, { duration: 100, toValue: 0.96, useNativeDriver: true }).start();
       }}
       onPressOut={() => {
-        if (!reduzMovimento) escala.value = withTiming(1, { duration: 120 });
+        if (!reduzMovimento) AnimatedRN.timing(escala, { duration: 120, toValue: 1, useNativeDriver: true }).start();
       }}
-      style={[styles.atalho, estiloAnimado]}
+      style={[styles.atalho, { transform: [{ scale: escala }] }]}
     >
       <Ionicons color={cores.destaque} name={icone} size={22} />
       <Text style={styles.atalhoTexto}>{rotulo}</Text>
-    </TouchableOpacityAnimado>
+    </TouchableOpacityAnimadoRN>
   );
 }
 
