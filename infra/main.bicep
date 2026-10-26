@@ -12,7 +12,14 @@
 //     --template-file infra/main.bicep \
 //     --parameters appName=plataforma-ensino sqlAdminLogin=appadmin \
 //                  sqlAdminPassword='<senha-forte>' jwtKey='<chave-com-32+caracteres>' \
-//                  corsAllowedOrigin='https://plataforma-ensino.azurewebsites.net'
+//                  corsAllowedOrigin='https://plataforma-ensino.azurewebsites.net' \
+//                  iaApiKey='<chave-anthropic-opcional>'
+//
+// iaProvedor/iaApiKey/geminiApiKey sao opcionais (geracao de avaliacoes por IA
+// so fica indisponivel de forma graciosa se ficarem vazios) - mas cuidado:
+// omitir um parametro usa o default vazio, e appSettings e substituido por
+// inteiro a cada deploy deste template, entao rodar esse comando sem
+// reinformar a chave apaga uma que tenha sido setada manualmente depois.
 //
 // Ver infra/README.md para o passo a passo completo (inclusive o que nao
 // cabe em IaC: criar o service principal de deploy do GitHub Actions).
@@ -42,6 +49,17 @@ param jwtKey string
 
 @description('Origem (https://dominio) de onde o frontend/app mobile vai chamar a API - usado em Cors:AllowedOrigins e Frontend:BaseUrl.')
 param corsAllowedOrigin string
+
+@description('Provedor de IA usado para gerar questoes a partir de material (Anthropic ou Gemini) - ver IA:Provedor em appsettings.example.json. So a chave do provedor escolhido abaixo precisa estar preenchida.')
+param iaProvedor string = 'Anthropic'
+
+@secure()
+@description('Chave da API Anthropic (Claude) para geracao de avaliacoes/questoes por IA. Feature opcional: deixe vazio para manter a geracao por IA indisponivel (o app degrada graciosamente, nao derruba o boot). ATENCAO: appSettings e substituido por inteiro a cada deploy deste template - se deixar vazio aqui um redeploy apaga uma chave setada manualmente depois via `az webapp config appsettings set`.')
+param iaApiKey string = ''
+
+@secure()
+@description('Chave da API Gemini (Google) para geracao de avaliacoes/questoes por IA, usada quando iaProvedor=Gemini. Mesmo aviso de substituicao total do iaApiKey se acima.')
+param geminiApiKey string = ''
 
 var appServicePlanName = 'plan-${appName}'
 var webAppName = 'app-${appName}'
@@ -149,6 +167,9 @@ resource webApp 'Microsoft.Web/sites@2024-04-01' = {
         { name: 'AzureStorage__ConnectionString', value: storageConnectionString }
         { name: 'AzureStorage__ContainerName', value: uploadsContainerName }
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'IA__Provedor', value: iaProvedor }
+        { name: 'IA__ApiKey', value: iaApiKey }
+        { name: 'Gemini__ApiKey', value: geminiApiKey }
       ]
     }
   }

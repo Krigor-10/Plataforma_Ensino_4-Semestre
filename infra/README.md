@@ -34,6 +34,25 @@ de Storage Account globalmente únicos — se o deployment falhar por nome
 duplicado, mude `appName` e rode de novo. Guarde a senha do SQL e a chave
 JWT usadas aqui (não ficam em lugar nenhum além do que você guardar).
 
+### Geração de avaliações por IA (opcional)
+
+`iaProvedor` (`Anthropic` ou `Gemini`, default `Anthropic`), `iaApiKey` e
+`geminiApiKey` são parâmetros opcionais (default vazio) — sem eles, a
+geração de avaliações por IA fica indisponível de forma graciosa (o app
+sobe normalmente, só essa feature fica fora do ar). Se quiser habilitar,
+adicione ao comando acima, ex.: `iaApiKey='<chave-anthropic>'`.
+
+**Atenção**: `appSettings` é substituído por inteiro a cada `az deployment
+group create` desse template — rodar o comando de novo sem reinformar
+`iaApiKey`/`geminiApiKey` apaga qualquer chave setada manualmente depois
+via `az webapp config appsettings set` (mesma pegadinha já documentada
+para a connection string do SQL). Pra trocar só a chave de IA sem
+reprovisionar o resto:
+```bash
+az webapp config appsettings set --resource-group <seu-resource-group> \
+  --name <webAppName> --settings IA__ApiKey='<chave-anthropic>'
+```
+
 Anote os outputs do comando (`webAppName`, `webAppDefaultHostName`,
 `sqlServerFqdn`, `storageAccountName`) — são usados nos próximos passos.
 
