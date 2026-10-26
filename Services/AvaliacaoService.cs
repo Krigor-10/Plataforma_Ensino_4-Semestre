@@ -434,10 +434,17 @@ public class AvaliacaoService : IAvaliacaoService
         _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
         ValidarDadosQuestao(dto);
 
+        // ThenInclude de QuestaoBanco.Alternativas/Afirmativas e obrigatorio aqui: sem
+        // carregar essas colecoes, o RemoveRange mais abaixo opera sobre a lista vazia
+        // default (List<T> = new() no model) em vez das linhas reais do banco - nao
+        // lanca erro nenhum, so nunca apaga as alternativas/afirmativas antigas, que
+        // depois colidem com o indice unico (QuestaoBancoId, Letra/Numero) ao inserir
+        // as novas com a mesma letra/numero. Bug raiz do erro interno ao editar questao.
         var questaoPublicada = await _context.QuestoesPublicadas
             .Include(questao => questao.Alternativas)
             .Include(questao => questao.Afirmativas)
-            .Include(questao => questao.QuestaoBanco)
+            .Include(questao => questao.QuestaoBanco!).ThenInclude(banco => banco.Alternativas)
+            .Include(questao => questao.QuestaoBanco!).ThenInclude(banco => banco.Afirmativas)
             .FirstOrDefaultAsync(questao => questao.Id == questaoId && questao.AvaliacaoId == avaliacaoId)
             ?? throw new KeyNotFoundException("Questao da avaliacao nao encontrada.");
 
@@ -466,13 +473,27 @@ public class AvaliacaoService : IAvaliacaoService
         // Substitui as listas por completo em vez de casar item a item com o que ja
         // existia - mais simples, e seguro porque a guarda acima garante que ainda
         // nao ha nenhuma resposta de aluno presa a essas alternativas/afirmativas.
+        //
+        // As exclusoes precisam ser persistidas (SaveChangesAsync) ANTES de inserir
+        // as novas linhas: AlternativasQuestoesBanco/Publicadas e AfirmativasQuestoesBanco/
+        // Publicadas tem indice unico (QuestaoId, Letra/Numero), e como o professor
+        // normalmente mantem as mesmas letras/numeros (A/B/C/D) so trocando texto ou
+        // qual e a correta, o INSERT da nova linha colide com a antiga que ainda nao
+        // foi fisicamente apagada - EF Core nao garante DELETE antes de INSERT dentro
+        // da mesma SaveChangesAsync quando as duas linhas nao tem dependencia de FK
+        // entre si. Reproduzido em producao-like (SQL Server real, nao InMemory):
+        // SqlException 2601 em IX_AlternativasQuestoesBanco_QuestaoBancoId_Letra.
+        // Transacao garante que as duas SaveChangesAsync sao atomicas (tudo ou nada).
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         _context.AlternativasQuestoesBanco.RemoveRange(questaoBanco.Alternativas);
         _context.AfirmativasQuestoesBanco.RemoveRange(questaoBanco.Afirmativas);
-        questaoBanco.Alternativas = MontarAlternativasBanco(dto);
-        questaoBanco.Afirmativas = MontarAfirmativasBanco(dto);
-
         _context.AlternativasQuestoesPublicadas.RemoveRange(questaoPublicada.Alternativas);
         _context.AfirmativasQuestoesPublicadas.RemoveRange(questaoPublicada.Afirmativas);
+        await _context.SaveChangesAsync();
+
+        questaoBanco.Alternativas = MontarAlternativasBanco(dto);
+        questaoBanco.Afirmativas = MontarAfirmativasBanco(dto);
 
         questaoPublicada.ContextoSnapshot = questaoBanco.Contexto;
         questaoPublicada.EnunciadoSnapshot = questaoBanco.Enunciado;
@@ -484,6 +505,7 @@ public class AvaliacaoService : IAvaliacaoService
         questaoPublicada.Afirmativas = MontarAfirmativasPublicadas(questaoBanco.Afirmativas);
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return await _context.QuestoesPublicadas
             .AsNoTracking()
