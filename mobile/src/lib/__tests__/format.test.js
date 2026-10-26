@@ -27,6 +27,17 @@ describe("parseApiDate", () => {
   it("retorna null para data invalida", () => {
     expect(parseApiDate("nao-e-uma-data")).toBeNull();
   });
+
+  it("interpreta data ISO sem sufixo de fuso como UTC, igual ao Web (frontend/src/lib/format.js)", () => {
+    // Formato real devolvido pela API (EF Core le datetime2 do SQL Server como
+    // Kind=Unspecified, entao o JSON sai sem "Z") - sem esse ajuste, new Date()
+    // interpretaria como hora local do dispositivo em vez de UTC, podendo
+    // divergir do status calculado pelo Web pro mesmo dado (ver
+    // obterDisponibilidadeAvaliacao em avaliacoes.js).
+    const comZ = parseApiDate("2026-04-27T06:26:00Z");
+    const semZ = parseApiDate("2026-04-27T06:26:00");
+    expect(semZ.getTime()).toBe(comZ.getTime());
+  });
 });
 
 describe("formatPercent", () => {

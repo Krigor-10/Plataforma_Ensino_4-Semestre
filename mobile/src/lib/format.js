@@ -1,9 +1,25 @@
+// Mesmo criterio do Web (frontend/src/lib/format.js): o backend serializa
+// DateTime como ISO sem sufixo de timezone (ex. "2026-04-27T06:26:00", sem
+// "Z") porque o EF Core le datetime2 do SQL Server como Kind=Unspecified,
+// mesmo o valor sendo UTC. "2026-04-27T06:26:00" sem "Z" e interpretado pelo
+// JS como hora LOCAL do dispositivo, nao UTC - no RN isso usa o fuso do
+// aparelho do aluno, que pode diferir do servidor e fazer uma avaliacao ja
+// aberta parecer "Agendada" (ou o inverso) ate a diferenca de fuso passar.
+// Sem esse ajuste, mobile e Web podem calcular status de disponibilidade de
+// avaliacao (obterDisponibilidadeAvaliacao) de forma diferente a partir do
+// mesmo dado vindo da API.
 export function parseApiDate(value) {
   if (!value) {
     return null;
   }
 
-  const data = new Date(value);
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const texto = String(value).trim();
+  const serializadoUtcSemFuso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,7})?)?$/.test(texto);
+  const data = new Date(serializadoUtcSemFuso ? `${texto}Z` : texto);
   return Number.isNaN(data.getTime()) ? null : data;
 }
 
