@@ -18,6 +18,16 @@ Storage/Uploads/
 # de screenshot ao tirar as capturas de responsive-screenshots/*.png
 frontend/responsive-screenshots/edge-profile*/
 
+# Artefato de build do electron-builder (desktop/), nao deve ser versionado
+/desktop/dist/
+
+# Arquivo de lock temporario do Astah (gerado ao abrir um .asta pra edicao)
+*.asta.lock
+
+# Rascunho/backup de documentacao do PIM, nao sao entregas finais
+PIM 4°SEM/PIM 4 pré documentação do sistema.pdf
+PIM 4°SEM/PIM V4 PRÉ-OFICIAL.backup-antes-coderyse.docx
+
 # User-specific files
 *.rsuser
 *.suo
