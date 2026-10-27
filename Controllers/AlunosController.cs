@@ -37,7 +37,7 @@ namespace PlataformaEnsino.API.Controllers
 
         // POST: api/Alunos
         [HttpPost]
-        [Authorize(Roles = "Admin,Coordenador")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<AlunoResponseDto>> PostAluno([FromBody] CriarAlunoDto dto)
         {
             var aluno = await _alunoService.CriarAlunoAsync(dto);
