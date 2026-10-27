@@ -46,6 +46,26 @@ public class CertificadosController : ControllerBase
         return Ok(certificados.Select(MapResponse));
     }
 
+    [HttpGet("status")]
+    [Authorize(Roles = "Aluno")]
+    public async Task<IActionResult> ListarStatus()
+    {
+        var alunoId = ObterAlunoId();
+        if (!alunoId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o aluno autenticado." });
+        }
+
+        var status = await _certificadoService.ListarStatusCertificadosDoAlunoAsync(alunoId.Value);
+        return Ok(status.Select(item => new StatusCertificadoMatriculaDto
+        {
+            MatriculaId = item.Matricula.Id,
+            CursoId = item.Matricula.CursoId,
+            CertificadoDisponivel = item.CertificadoDisponivel,
+            PendenciasCertificado = item.Pendencias.ToList()
+        }));
+    }
+
     [HttpGet("verificar/{codigo}")]
     [AllowAnonymous]
     public async Task<IActionResult> Verificar(string codigo)

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Services;
@@ -286,6 +287,90 @@ public class CertificadoServiceTests
         var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
 
         Assert.NotNull(resultado.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task VerificarRequisitosAsync_NotaAbaixoDoMinimo_RetornaPendenciaSemLancarExcecaoNemEmitir()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(6.99m, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(6.99m);
+        context.SaveChanges();
+
+        var matriculaRecarregada = context.Matriculas
+            .Include(m => m.Curso)
+            .Include(m => m.ProgressosCurso)
+            .First(m => m.Id == matricula.Id);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var pendencias = await service.VerificarRequisitosAsync(matriculaRecarregada);
+
+        Assert.Contains("A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado.", pendencias);
+        Assert.Null(matriculaRecarregada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task VerificarRequisitosAsync_TodosRequisitosCumpridos_RetornaListaVazia()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var matriculaRecarregada = context.Matriculas
+            .Include(m => m.Curso)
+            .Include(m => m.ProgressosCurso)
+            .First(m => m.Id == matricula.Id);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var pendencias = await service.VerificarRequisitosAsync(matriculaRecarregada);
+
+        Assert.Empty(pendencias);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_RefleteCertificadoDisponivelPorMatricula()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var cursoOk = CriarCurso(contextoDeArranjo);
+        var turmaOk = CriarTurma(contextoDeArranjo, cursoOk.Id);
+        var matriculaOk = CriarMatriculaAprovada(contextoDeArranjo, aluno, cursoOk, turmaOk, percentualConclusao: 100);
+
+        var cursoIncompleto = CriarCurso(contextoDeArranjo);
+        var turmaIncompleto = CriarTurma(contextoDeArranjo, cursoIncompleto.Id);
+        var matriculaIncompleta = CriarMatriculaAprovada(contextoDeArranjo, aluno, cursoIncompleto, turmaIncompleto, percentualConclusao: 40);
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var status = await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id);
+
+        var statusOk = status.Single(item => item.Matricula.Id == matriculaOk.Id);
+        var statusIncompleto = status.Single(item => item.Matricula.Id == matriculaIncompleta.Id);
+
+        Assert.True(statusOk.CertificadoDisponivel);
+        Assert.Empty(statusOk.Pendencias);
+        Assert.False(statusIncompleto.CertificadoDisponivel);
+        Assert.Contains("O curso ainda nao foi concluido.", statusIncompleto.Pendencias);
+
+        // So verifica, nao emite - nenhuma das duas matriculas deve ter sido alterada.
+        Assert.Null(statusOk.Matricula.CertificadoEmitidoEm);
+        Assert.Null(statusIncompleto.Matricula.CertificadoEmitidoEm);
     }
 
     [Fact]
