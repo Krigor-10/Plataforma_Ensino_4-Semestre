@@ -16,7 +16,6 @@ public class MatriculaServiceTests
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
             context,
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
             new CursoService(
                 context,
                 new GenericRepository<Curso>(context),
@@ -55,70 +54,6 @@ public class MatriculaServiceTests
         context.Alunos.Add(aluno);
         context.SaveChanges();
         return aluno;
-    }
-
-    private static Matricula CriarMatriculaPendente(PlataformaContext context, int alunoId, int cursoId)
-    {
-        var matricula = new Matricula
-        {
-            AlunoId = alunoId,
-            CursoId = cursoId,
-            CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..10]
-        };
-
-        context.Matriculas.Add(matricula);
-        context.SaveChanges();
-        return matricula;
-    }
-
-    [Fact]
-    public async Task AprovarMatriculaAsync_AprovaSemDependerDeTurmaEAtualizaCodigoDoAluno()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
-
-        await service.AprovarMatriculaAsync(matricula.Id);
-
-        var matriculaAtualizada = await service.ObterMatriculaPorIdAsync(matricula.Id);
-        Assert.Equal(StatusMatricula.Aprovada, matriculaAtualizada.Status);
-        Assert.Null(matriculaAtualizada.TurmaId);
-
-        var alunoAtualizado = context.Alunos.Single(a => a.Id == aluno.Id);
-        Assert.NotEqual("Pendente", alunoAtualizado.Matricula);
-    }
-
-    [Fact]
-    public async Task RejeitarMatriculaAsync_MarcaComoRejeitada()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
-
-        await service.RejeitarMatriculaAsync(matricula.Id);
-
-        var matriculaAtualizada = await service.ObterMatriculaPorIdAsync(matricula.Id);
-        Assert.Equal(StatusMatricula.Rejeitada, matriculaAtualizada.Status);
-    }
-
-    [Fact]
-    public async Task AprovarMatriculasAutomaticamenteAsync_AprovaValidasEReportaErros()
-    {
-        var (service, context) = CriarService();
-        var curso = CriarCurso(context);
-        var aluno = CriarAluno(context);
-        var matricula = CriarMatriculaPendente(context, aluno.Id, curso.Id);
-
-        var resultado = await service.AprovarMatriculasAutomaticamenteAsync(new[] { matricula.Id, 999 });
-
-        Assert.Equal(2, resultado.TotalSolicitado);
-        Assert.Single(resultado.Aprovadas);
-        Assert.Single(resultado.Erros);
-        Assert.Equal(matricula.Id, resultado.Aprovadas[0].MatriculaId);
-        Assert.Equal(curso.Titulo, resultado.Aprovadas[0].CursoTitulo);
-        Assert.Equal(999, resultado.Erros[0].MatriculaId);
     }
 
     [Fact]

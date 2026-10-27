@@ -82,7 +82,6 @@ public class Matricula
     }
 
     public void Aprovar() => Status = StatusMatricula.Aprovada;
-    public void Rejeitar() => Status = StatusMatricula.Rejeitada;
     public void Cancelar() => Status = StatusMatricula.Cancelada;
 
     public void Reabrir()

@@ -3,8 +3,6 @@ using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
-using PlataformaEnsino.API.DTOs;
-
 
 namespace PlataformaEnsino.API.Services;
 
@@ -13,20 +11,17 @@ public class MatriculaService : IMatriculaService
     private readonly PlataformaContext _context;
     private readonly IMatriculaRepository _matriculaRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
-    private readonly INotificacaoService _notificacaoService;
     private readonly ICursoService _cursoService;
 
     public MatriculaService(
         IMatriculaRepository matriculaRepository,
         IGenericRepository<Aluno> alunoRepository,
         PlataformaContext context,
-        INotificacaoService notificacaoService,
         ICursoService cursoService)
     {
         _context = context;
         _matriculaRepository = matriculaRepository;
         _alunoRepository = alunoRepository;
-        _notificacaoService = notificacaoService;
         _cursoService = cursoService;
     }
 
@@ -103,63 +98,10 @@ public class MatriculaService : IMatriculaService
         return await _matriculaRepository.ObterMatriculasPorAlunoAsync(alunoId);
     }
 
-    public async Task<IEnumerable<MatriculaPendenteDto>> ListarMatriculasPendentesAsync(int? coordenadorId)
-    {
-        var matriculas = await _matriculaRepository.ObterMatriculasPendentesAsync(coordenadorId);
-
-        return matriculas.Select(m => new MatriculaPendenteDto
-        {
-            Id = m.Id,
-            CodigoRegistro = m.CodigoRegistro,
-            NomeAluno = m.Aluno?.Nome ?? string.Empty,
-            CpfMascarado = MascararCpf(m.Aluno?.Cpf ?? string.Empty),
-            NomeTurma = m.Turma?.NomeTurma ?? string.Empty,
-            CursoId = m.CursoId,
-            DataSolicitacao = m.DataSolicitacao
-        });
-    }
-
     public async Task<(IEnumerable<Matricula> Itens, int TotalItens)> ListarMatriculasAsync(int? pagina, int? tamanhoPagina, int? coordenadorId)
     {
         var (itens, totalItens) = await _matriculaRepository.ListarPaginadoAsync(pagina, tamanhoPagina, coordenadorId);
         return (itens, totalItens);
-    }
-
-    public Task<int?> ObterCursoIdDaMatriculaAsync(int matriculaId) =>
-        _matriculaRepository.ObterCursoIdAsync(matriculaId);
-
-    public async Task AprovarMatriculaAsync(int matriculaId)
-    {
-        var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
-            ?? throw new KeyNotFoundException("Matrícula não encontrada.");
-
-        if (matricula.Status != StatusMatricula.Pendente)
-        {
-            throw new InvalidOperationException("Apenas matriculas pendentes podem ser aprovadas.");
-        }
-
-        var aluno = await _alunoRepository.ObterPorIdAsync(matricula.AlunoId)
-            ?? throw new KeyNotFoundException("Aluno não encontrado.");
-
-        await AprovarNoCursoAsync(matricula, aluno);
-        await SalvarComProtecaoDeConcorrenciaAsync();
-
-        var tituloCurso = await ObterTituloCursoAsync(matricula.CursoId);
-
-        await _notificacaoService.NotificarAsync(
-            aluno.Id,
-            "Matricula aprovada",
-            $"Sua matricula no curso \"{tituloCurso}\" foi aprovada.",
-            TipoNotificacao.MatriculaAprovada,
-            "/app/cursos-matriculados");
-    }
-
-    private async Task<string> ObterTituloCursoAsync(int cursoId)
-    {
-        return await _context.Cursos
-            .Where(curso => curso.Id == cursoId)
-            .Select(curso => curso.Titulo)
-            .FirstOrDefaultAsync() ?? string.Empty;
     }
 
     /// <summary>
@@ -181,64 +123,6 @@ public class MatriculaService : IMatriculaService
         }
     }
 
-    public async Task<AprovacaoMatriculasLoteResultadoDto> AprovarMatriculasAutomaticamenteAsync(IEnumerable<int> matriculaIds)
-    {
-        var ids = matriculaIds
-            .Where(id => id > 0)
-            .Distinct()
-            .ToList();
-
-        if (ids.Count == 0)
-        {
-            throw new ArgumentException("Selecione ao menos uma matricula pendente para aprovacao em lote.");
-        }
-
-        var resultado = new AprovacaoMatriculasLoteResultadoDto
-        {
-            TotalSolicitado = ids.Count
-        };
-
-        foreach (var id in ids)
-        {
-            try
-            {
-                var aprovada = await AprovarMatriculaAutomaticamenteCoreAsync(id);
-                await SalvarComProtecaoDeConcorrenciaAsync();
-                resultado.Aprovadas.Add(aprovada);
-
-                await _notificacaoService.NotificarAsync(
-                    aprovada.AlunoId,
-                    "Matricula aprovada",
-                    $"Sua matricula no curso \"{aprovada.CursoTitulo}\" foi aprovada.",
-                    TipoNotificacao.MatriculaAprovada,
-                    "/app/cursos-matriculados");
-            }
-            catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or ArgumentException)
-            {
-                resultado.Erros.Add(await CriarErroAprovacaoAsync(id, ex.Message));
-            }
-        }
-
-        return resultado;
-    }
-
-    public async Task RejeitarMatriculaAsync(int matriculaId)
-    {
-        var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
-            ?? throw new KeyNotFoundException("Matrícula não encontrada.");
-
-        matricula.Rejeitar();
-
-        _matriculaRepository.Atualizar(matricula);
-        await _matriculaRepository.SalvarAlteracoesAsync();
-
-        await _notificacaoService.NotificarAsync(
-            matricula.AlunoId,
-            "Matricula rejeitada",
-            "Sua solicitacao de matricula foi rejeitada. Entre em contato com a coordenacao para mais detalhes.",
-            TipoNotificacao.MatriculaRejeitada,
-            "/app/matriculas");
-    }
     public async Task CancelarMatriculaAsync(int matriculaId)
     {
         var matricula = await _matriculaRepository.ObterPorIdAsync(matriculaId)
@@ -271,19 +155,6 @@ public class MatriculaService : IMatriculaService
         await _matriculaRepository.SalvarAlteracoesAsync();
     }
 
-    private static string MascararCpf(string cpf)
-    {
-        if (string.IsNullOrWhiteSpace(cpf))
-            return string.Empty;
-
-        var numeros = new string(cpf.Where(char.IsDigit).ToArray());
-
-        if (numeros.Length != 11)
-            return cpf;
-
-        return $"***.***.***-{numeros[^2]}{numeros[^1]}";
-    }
-
     private Task<string> GerarCodigoMatriculaAsync() =>
         CodigoRegistroGenerator.GerarCodigoUnicoAsync(
             CodigoRegistroGenerator.GerarMatricula,
@@ -309,7 +180,7 @@ public class MatriculaService : IMatriculaService
             codigo => _context.Alunos.AnyAsync(aluno => aluno.Id != alunoId && aluno.Matricula == codigo),
             "o aluno");
 
-    private async Task<AprovacaoMatriculaItemDto> AprovarMatriculaAutomaticamenteCoreAsync(int matriculaId)
+    private async Task AprovarMatriculaAutomaticamenteCoreAsync(int matriculaId)
     {
         var matricula = await _context.Matriculas
             .Include(m => m.Aluno)
@@ -325,27 +196,17 @@ public class MatriculaService : IMatriculaService
             ?? await _alunoRepository.ObterPorIdAsync(matricula.AlunoId)
             ?? throw new KeyNotFoundException("Aluno nao encontrado.");
 
-        var matriculaResultante = await AprovarNoCursoAsync(matricula, aluno);
-        var tituloCurso = await ObterTituloCursoAsync(matriculaResultante.CursoId);
-
-        return new AprovacaoMatriculaItemDto
-        {
-            MatriculaId = matriculaResultante.Id,
-            CodigoRegistro = matriculaResultante.CodigoRegistro,
-            AlunoId = aluno.Id,
-            CursoId = matriculaResultante.CursoId,
-            CursoTitulo = tituloCurso
-        };
+        await AprovarNoCursoAsync(matricula, aluno);
     }
 
     /// <summary>
-    /// Aprova uma matricula pendente diretamente no curso (sem turma) — usado
-    /// tanto pela aprovacao manual (<see cref="AprovarMatriculaAsync"/>) quanto
-    /// pela aprovacao automatica em lote
-    /// (<see cref="AprovarMatriculaAutomaticamenteCoreAsync"/>). Retorna a
-    /// matricula que ficou como a aprovada no curso: a própria
-    /// <paramref name="matricula"/>, ou a matricula já aprovada anteriormente
-    /// caso a pendência seja consolidada nela.
+    /// Aprova uma matricula pendente diretamente no curso (sem turma) —
+    /// unico caminho de aprovacao, usado por
+    /// <see cref="AprovarMatriculaAutomaticamenteCoreAsync"/> (fluxo
+    /// automatico de matricula). Retorna a matricula que ficou como a
+    /// aprovada no curso: a própria <paramref name="matricula"/>, ou a
+    /// matricula já aprovada anteriormente caso a pendência seja consolidada
+    /// nela.
     /// </summary>
     private async Task<Matricula> AprovarNoCursoAsync(Matricula matricula, Aluno aluno)
     {
@@ -421,7 +282,7 @@ public class MatriculaService : IMatriculaService
         }
     }
 
-    private async Task<AprovacaoMatriculaItemDto> ConsolidarMatriculaDuplicadaAsync(
+    private async Task ConsolidarMatriculaDuplicadaAsync(
         Matricula matriculaDuplicada,
         Matricula matriculaAtiva,
         Aluno aluno)
@@ -433,32 +294,5 @@ public class MatriculaService : IMatriculaService
 
         matriculaDuplicada.Cancelar();
         await GarantirCodigoAlunoAsync(aluno);
-
-        var tituloCurso = await ObterTituloCursoAsync(matriculaAtiva.CursoId);
-
-        return new AprovacaoMatriculaItemDto
-        {
-            MatriculaId = matriculaAtiva.Id,
-            CodigoRegistro = matriculaAtiva.CodigoRegistro,
-            CursoId = matriculaAtiva.CursoId,
-            CursoTitulo = tituloCurso
-        };
-    }
-
-    private async Task<AprovacaoMatriculaErroDto> CriarErroAprovacaoAsync(int matriculaId, string motivo)
-    {
-        var matricula = await _context.Matriculas
-            .AsNoTracking()
-            .Include(m => m.Aluno)
-            .FirstOrDefaultAsync(m => m.Id == matriculaId);
-
-        return new AprovacaoMatriculaErroDto
-        {
-            MatriculaId = matriculaId,
-            CodigoRegistro = matricula?.CodigoRegistro ?? string.Empty,
-            NomeAluno = matricula?.Aluno?.Nome ?? string.Empty,
-            CursoId = matricula?.CursoId ?? 0,
-            Motivo = motivo
-        };
     }
 }

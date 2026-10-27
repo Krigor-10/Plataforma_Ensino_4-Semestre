@@ -3,14 +3,17 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace PlataformaEnsino.API.Models;
 
+// Valores fixados explicitamente: matricula nunca e mais rejeitada
+// manualmente, mas ha notificacoes historicas gravadas com Tipo=1
+// (MatriculaRejeitada). Sem valor explicito, remover o nome deslocaria o
+// int de todo membro seguinte e corromperia essas notificacoes antigas.
 public enum TipoNotificacao
 {
-    MatriculaAprovada,
-    MatriculaRejeitada,
-    AvaliacaoCorrigida,
-    ConteudoPublicado,
-    PagamentoConfirmado,
-    CursoConcluidoPeloProfessor
+    MatriculaAprovada = 0,
+    AvaliacaoCorrigida = 2,
+    ConteudoPublicado = 3,
+    PagamentoConfirmado = 4,
+    CursoConcluidoPeloProfessor = 5
 }
 
 public class Notificacao

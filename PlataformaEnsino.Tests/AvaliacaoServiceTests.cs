@@ -115,7 +115,7 @@ public class AvaliacaoServiceTests
         return matricula;
     }
 
-    // Espelha o fluxo real de producao (MatriculaService.AprovarMatriculaAsync),
+    // Espelha o fluxo real de producao (MatriculaService.AprovarNoCursoAsync),
     // que nunca vincula TurmaId — ver pendencia_fase_b_remocao_turma na memoria.
     private static Matricula CriarMatriculaAprovadaSemTurma(PlataformaContext context, int alunoId, int cursoId)
     {

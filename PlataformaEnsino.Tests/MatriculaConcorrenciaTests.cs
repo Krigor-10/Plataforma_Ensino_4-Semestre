@@ -47,7 +47,6 @@ public class MatriculaConcorrenciaTests : IAsyncLifetime
             new MatriculaRepository(context),
             new GenericRepository<Aluno>(context),
             context,
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
             new CursoService(
                 context,
                 new GenericRepository<Curso>(context),
