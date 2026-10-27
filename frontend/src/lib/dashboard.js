@@ -12,8 +12,7 @@ export async function loadWorkspaceSnapshot(usuario) {
       coordenadores,
       professores,
       turmas,
-      matriculas,
-      pendentes
+      matriculas
     ] = await Promise.all([
       apiRequest("/Cursos"),
       apiRequest("/Modulos"),
@@ -21,8 +20,7 @@ export async function loadWorkspaceSnapshot(usuario) {
       role === "Admin" ? apiRequest("/Coordenadores") : Promise.resolve([]),
       apiRequest("/Professores"),
       apiRequest("/Turmas"),
-      apiRequest("/Matriculas"),
-      apiRequest("/Matriculas/pendentes")
+      apiRequest("/Matriculas")
     ]);
 
     return {
@@ -33,8 +31,7 @@ export async function loadWorkspaceSnapshot(usuario) {
       coordenadores,
       professores,
       turmas,
-      matriculas,
-      pendentes
+      matriculas
     };
   }
 

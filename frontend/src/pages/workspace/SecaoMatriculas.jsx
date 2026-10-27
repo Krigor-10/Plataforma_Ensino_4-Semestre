@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { TbArrowRight, TbCheck, TbClock, TbCreditCard, TbSearch, TbSend, TbX } from "react-icons/tb";
+import { useMemo, useState } from "react";
+import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -28,7 +28,7 @@ export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate,
     );
   }
 
-  return <VistaGestorMatriculas linhasMatriculas={linhasMatriculas} onRefresh={onRefresh} onSessionExpired={onSessionExpired} />;
+  return <VistaGestorMatriculas linhasMatriculas={linhasMatriculas} />;
 }
 
 /* Mapa cursoId -> matricula mais relevante do aluno (prioriza Aprovada > Pendente > Rejeitada/Cancelada) */
@@ -350,13 +350,11 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
   );
 }
 
-const TOM_TOAST_POR_RESULTADO = { success: "sucesso", warning: "aviso", error: "erro", info: "aviso" };
-
-function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }) {
-  const { mostrarToast } = useToast();
-  const [processandoLote, setProcessandoLote] = useState(false);
-  const [matriculasSelecionadas, setMatriculasSelecionadas] = useState(() => new Set());
-  const [abaAtiva, setAbaAtiva] = useState("pendentes");
+/* Lista de consulta do Admin: matricula e sempre automatica, entao nao ha
+   mais acao manual de aprovar/rejeitar aqui - so visualizacao por status,
+   util pra auditoria/suporte. */
+function VistaGestorMatriculas({ linhasMatriculas }) {
+  const [abaAtiva, setAbaAtiva] = useState("aprovadas");
 
   const matriculasPendentes = useMemo(
     () => linhasMatriculas.filter((matricula) => matricula.status === "Pendente"),
@@ -375,161 +373,10 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
     [linhasMatriculas]
   );
 
-  const idsPendentes = useMemo(() => new Set(matriculasPendentes.map((matricula) => matricula.id)), [matriculasPendentes]);
-
-  const matriculasPendentesSelecionadas = useMemo(
-    () => linhasMatriculas.filter((matricula) => matriculasSelecionadas.has(matricula.id) && matricula.status === "Pendente"),
-    [linhasMatriculas, matriculasSelecionadas]
-  );
-
-  const todasPendentesSelecionadas =
-    matriculasPendentes.length > 0 && matriculasPendentes.every((matricula) => matriculasSelecionadas.has(matricula.id));
-  const quantidadeSelecionada = matriculasPendentesSelecionadas.length;
-
-  useEffect(() => {
-    setMatriculasSelecionadas((atuais) => {
-      const proximas = new Set([...atuais].filter((id) => idsPendentes.has(id)));
-      return proximas.size === atuais.size ? atuais : proximas;
-    });
-  }, [idsPendentes]);
-
-  useEffect(() => {
-    if (abaAtiva !== "pendentes") {
-      setMatriculasSelecionadas(new Set());
-    }
-  }, [abaAtiva]);
-
-  async function executarLote(acao, resolverFeedback) {
-    try {
-      setProcessandoLote(true);
-
-      const resultado = await acao();
-      const feedback =
-        typeof resolverFeedback === "function"
-          ? resolverFeedback(resultado)
-          : { tone: "success", message: resolverFeedback };
-
-      mostrarToast(feedback.message, TOM_TOAST_POR_RESULTADO[feedback.tone] || "aviso");
-      if (feedback.tone !== "error") {
-        setMatriculasSelecionadas(new Set());
-      }
-      onRefresh?.();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired?.();
-        return;
-      }
-
-      mostrarToast(err.message || "Nao foi possivel atualizar a matricula.", "erro");
-    } finally {
-      setProcessandoLote(false);
-    }
-  }
-
-  function montarFeedbackAprovacao(resultado) {
-    const aprovadas = Number(resultado?.totalAprovado ?? resultado?.aprovadas?.length ?? 0);
-    const erros = Array.isArray(resultado?.erros) ? resultado.erros : [];
-    const resumoErros = erros
-      .slice(0, 3)
-      .map((erro) => {
-        const rotulo = erro.nomeAluno || erro.codigoRegistro || `Matricula #${erro.matriculaId}`;
-        return erro.motivo ? `${rotulo} (${erro.motivo})` : rotulo;
-      })
-      .join(", ");
-    const complementoErros =
-      erros.length > 3 ? ` e mais ${erros.length - 3}` : "";
-
-    if (aprovadas > 0 && erros.length > 0) {
-      return {
-        tone: "warning",
-        message: `${aprovadas} matricula${aprovadas > 1 ? "s aprovadas" : " aprovada"}. ${erros.length} nao ${erros.length > 1 ? "foram aprovadas" : "foi aprovada"}: ${resumoErros}${complementoErros}.`
-      };
-    }
-
-    if (aprovadas > 0) {
-      return {
-        tone: "success",
-        message: `${aprovadas} matricula${aprovadas > 1 ? "s aprovadas" : " aprovada"} automaticamente com sucesso.`
-      };
-    }
-
-    if (erros.length > 0) {
-      return {
-        tone: "error",
-        message: `Nenhuma matricula foi aprovada: ${resumoErros}${complementoErros}.`
-      };
-    }
-
-    return { tone: "info", message: "Nenhuma matricula pendente foi alterada." };
-  }
-
-  async function aprovarSelecionadas() {
-    if (!quantidadeSelecionada) {
-      mostrarToast("Selecione ao menos uma matricula pendente.", "erro");
-      return;
-    }
-
-    await executarLote(async () => {
-      return apiRequest("/Matriculas/aprovar-lote", {
-        method: "PUT",
-        body: JSON.stringify({
-          matriculaIds: matriculasPendentesSelecionadas.map((matricula) => matricula.id)
-        })
-      });
-    }, montarFeedbackAprovacao);
-  }
-
-  async function rejeitarSelecionadas() {
-    if (!quantidadeSelecionada) {
-      mostrarToast("Selecione ao menos uma matricula pendente.", "erro");
-      return;
-    }
-
-    await executarLote(async () => {
-      for (const matricula of matriculasPendentesSelecionadas) {
-        await apiRequest(`/Matriculas/${matricula.id}/rejeitar`, { method: "PUT" });
-      }
-    }, `${quantidadeSelecionada} matricula${quantidadeSelecionada > 1 ? "s rejeitadas" : " rejeitada"} com sucesso.`);
-  }
-
-  function alternarMatricula(matricula) {
-    if (matricula.status !== "Pendente" || processandoLote) {
-      return;
-    }
-
-    setMatriculasSelecionadas((atuais) => {
-      const proximas = new Set(atuais);
-
-      if (proximas.has(matricula.id)) {
-        proximas.delete(matricula.id);
-      } else {
-        proximas.add(matricula.id);
-      }
-
-      return proximas;
-    });
-  }
-
-  function alternarTodasPendentes() {
-    if (processandoLote || !matriculasPendentes.length) {
-      return;
-    }
-
-    setMatriculasSelecionadas((atuais) => {
-      if (todasPendentesSelecionadas) {
-        return new Set();
-      }
-
-      const proximas = new Set(atuais);
-      matriculasPendentes.forEach((matricula) => proximas.add(matricula.id));
-      return proximas;
-    });
-  }
-
   const abas = [
+    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length },
     { chave: "pendentes", rotulo: "Pendentes", contagem: matriculasPendentes.length },
     { chave: "rejeitadas", rotulo: "Rejeitadas", contagem: matriculasRejeitadas.length },
-    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length },
     { chave: "canceladas", rotulo: "Canceladas", contagem: matriculasCanceladas.length }
   ];
 
@@ -548,7 +395,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
         <div>
           <h2 className="cabecalho-pagina__titulo">Matriculas</h2>
           <p className="cabecalho-pagina__subtitulo">
-            {linhasMatriculas.length} no total - {matriculasPendentes.length} pendente{matriculasPendentes.length === 1 ? "" : "s"}
+            {linhasMatriculas.length} no total - matricula e sempre automatica, esta tela e so consulta.
           </p>
         </div>
       </header>
@@ -569,39 +416,10 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
         ))}
       </nav>
 
-      {abaAtiva === "pendentes" ? (
-        <div className="toolbar-massa">
-          <label className="table-bulk-toggle">
-            <input
-              checked={todasPendentesSelecionadas}
-              className="tabela-checkbox"
-              disabled={processandoLote || !matriculasPendentes.length}
-              onChange={alternarTodasPendentes}
-              type="checkbox"
-            />
-            <span>Selecionar todas as pendentes</span>
-          </label>
-          <div className="toolbar-massa__acoes">
-            <Botao disabled={processandoLote} onClick={aprovarSelecionadas} tamanho="pequeno" variante="sucesso">
-              <TbCheck aria-hidden="true" size={15} /> {processandoLote ? "Processando..." : "Aprovar selecionadas"}
-            </Botao>
-            <Botao disabled={processandoLote} onClick={rejeitarSelecionadas} tamanho="pequeno" variante="perigo">
-              <TbX aria-hidden="true" size={15} /> {processandoLote ? "Processando..." : "Rejeitar selecionadas"}
-            </Botao>
-          </div>
-          <span className="toolbar-massa__contador">
-            {quantidadeSelecionada
-              ? `${quantidadeSelecionada} selecionada${quantidadeSelecionada > 1 ? "s" : ""}`
-              : `${matriculasPendentes.length} pendente${matriculasPendentes.length === 1 ? "" : "s"}`}
-          </span>
-        </div>
-      ) : null}
-
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Matriculas" className="tabela-dados">
           <thead>
             <tr>
-              {abaAtiva === "pendentes" ? <th className="tabela-dados__col-selecao" scope="col" /> : null}
               <th scope="col">Protocolo</th>
               <th scope="col">Aluno</th>
               <th scope="col">Curso</th>
@@ -612,9 +430,9 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
           <tbody>
             {linhasDaAba.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={abaAtiva === "pendentes" ? 6 : 5}>
+                <td colSpan={5}>
                   {abaAtiva === "pendentes"
-                    ? "Nenhum aluno pendente de aprovacao."
+                    ? "Nenhuma matricula pendente encontrada."
                     : abaAtiva === "aprovadas"
                       ? "Nenhuma matricula aprovada encontrada."
                       : abaAtiva === "rejeitadas"
@@ -624,22 +442,7 @@ function VistaGestorMatriculas({ linhasMatriculas, onRefresh, onSessionExpired }
               </tr>
             ) : (
               linhasDaAba.map((matricula) => (
-                <tr
-                  className={matriculasSelecionadas.has(matricula.id) ? "tabela-linha-clicavel--selecionada" : undefined}
-                  key={matricula.id}
-                >
-                  {abaAtiva === "pendentes" ? (
-                    <td data-label="">
-                      <input
-                        aria-label={`Selecionar matricula de ${matricula.aluno}`}
-                        checked={matriculasSelecionadas.has(matricula.id)}
-                        className="tabela-checkbox"
-                        disabled={processandoLote}
-                        onChange={() => alternarMatricula(matricula)}
-                        type="checkbox"
-                      />
-                    </td>
-                  ) : null}
+                <tr key={matricula.id}>
                   <td data-label="Protocolo">{matricula.codigoRegistro || "Sem protocolo"}</td>
                   <td data-label="Aluno">{matricula.aluno}</td>
                   <td data-label="Curso">{matricula.curso}</td>

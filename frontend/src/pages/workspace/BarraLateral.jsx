@@ -76,7 +76,6 @@ export default function BarraLateral({
   onNavigate,
   onAbrirPerfil,
   onLogoutClick,
-  contadorMatriculasPendentes = 0,
 }) {
   function irPara(chave) {
     onNavigate(chave === "dashboard" ? "/app" : `/app/${chave}`);
@@ -163,17 +162,6 @@ export default function BarraLateral({
     return lista;
   })();
 
-  function renderBadge(chave) {
-    if (chave === "matriculas" && contadorMatriculasPendentes > 0) {
-      return (
-        <span className="sidebar__badge" aria-label={`${contadorMatriculasPendentes} matrículas pendentes`}>
-          {contadorMatriculasPendentes}
-        </span>
-      );
-    }
-    return null;
-  }
-
   return (
     <>
       {aberta && (
@@ -238,7 +226,6 @@ export default function BarraLateral({
                             >
                               <span className="sidebar__item-icone" aria-hidden="true">
                                 {ICONES_SECAO[filho.key]}
-                                {renderBadge(filho.key)}
                               </span>
                               <span className="sidebar__item-rotulo">{filho.label}</span>
                             </button>
@@ -261,7 +248,6 @@ export default function BarraLateral({
                   >
                     <span className="sidebar__item-icone" aria-hidden="true">
                       {ICONES_SECAO[item.key]}
-                      {renderBadge(item.key)}
                     </span>
                     <span className="sidebar__item-rotulo">{item.label}</span>
                   </button>

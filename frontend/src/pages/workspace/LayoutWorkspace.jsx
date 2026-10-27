@@ -15,7 +15,6 @@ export default function LayoutWorkspace({
   sections,
   cursos,
   modulos,
-  contadorMatriculasPendentes,
   onNavigate,
   onAbrirPerfil,
   onLogoutClick,
@@ -38,7 +37,6 @@ export default function LayoutWorkspace({
         onNavigate={onNavigate}
         onAbrirPerfil={onAbrirPerfil}
         onLogoutClick={onLogoutClick}
-        contadorMatriculasPendentes={contadorMatriculasPendentes}
       />
 
       <div className="layout-conteudo">

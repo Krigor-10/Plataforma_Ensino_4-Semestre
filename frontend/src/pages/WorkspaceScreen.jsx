@@ -268,19 +268,6 @@ export default function WorkspaceScreen({
     [alunoById, cursoById, pagamentoPorMatriculaId, professorById, progressoCursoPorMatriculaId, snapshot.matriculas, turmaById]
   );
 
-  const pendingRows = useMemo(
-    () =>
-      snapshot.pendentes.map((pendencia) => ({
-        id: pendencia.id,
-        nomeAluno: pendencia.nomeAluno,
-        curso: cursoById.get(pendencia.cursoId)?.titulo || `Curso #${pendencia.cursoId}`,
-        cpfMascarado: pendencia.cpfMascarado,
-        nomeTurma: pendencia.nomeTurma || null,
-        dataSolicitacao: pendencia.dataSolicitacao
-      })),
-    [cursoById, snapshot.pendentes]
-  );
-
   const studentApprovedCourseCount = useMemo(
     () =>
       new Set(
@@ -324,8 +311,7 @@ export default function WorkspaceScreen({
         { label: "Cursos no ar", value: snapshot.cursos.length, detail: "catalogo principal" },
         { label: "Modulos", value: snapshot.modulos.length, detail: "estrutura academica" },
         { label: "Alunos", value: snapshot.alunos.length, detail: "cadastros ativos" },
-        { label: "Matriculas", value: snapshot.matriculas.length, detail: "solicitacoes registradas" },
-        { label: "Pendentes", value: snapshot.pendentes.length, detail: "pedidos em analise" }
+        { label: "Matriculas", value: snapshot.matriculas.length, detail: "solicitacoes registradas" }
       ];
     }
 
@@ -360,7 +346,6 @@ export default function WorkspaceScreen({
     snapshot.conteudos,
     snapshot.modulos.length,
     snapshot.matriculas.length,
-    snapshot.pendentes.length,
     studentApprovedCourseCount
   ]);
 
@@ -422,8 +407,7 @@ export default function WorkspaceScreen({
 
     return [
       ...baseFacts,
-      { label: "Cursos no catalogo", value: `${snapshot.cursos.length}` },
-      { label: "Pendencias abertas", value: `${snapshot.pendentes.length}` }
+      { label: "Cursos no catalogo", value: `${snapshot.cursos.length}` }
     ];
   }, [
     isProfessor,
@@ -434,7 +418,6 @@ export default function WorkspaceScreen({
     professorTurmas.length,
     role,
     snapshot.cursos.length,
-    snapshot.pendentes.length,
     usuario.cpf,
     usuario.email,
     usuario.nome
@@ -461,8 +444,7 @@ export default function WorkspaceScreen({
 
     return [
       `${snapshot.cursos.length} curso(s) no catalogo`,
-      `${snapshot.alunos.length} aluno(s) ativos`,
-      `${snapshot.pendentes.length} pedido(s) em analise`
+      `${snapshot.alunos.length} aluno(s) ativos`
     ];
   }, [
     approvedStudentRows.length,
@@ -475,7 +457,6 @@ export default function WorkspaceScreen({
     snapshot.avaliacoes.length,
     snapshot.conteudos.length,
     snapshot.cursos.length,
-    snapshot.pendentes.length,
     studentApprovedCourseCount
   ]);
 
@@ -573,7 +554,6 @@ export default function WorkspaceScreen({
         sections={navSections}
         cursos={snapshot.cursos}
         modulos={snapshot.modulos}
-        contadorMatriculasPendentes={isManager ? snapshot.pendentes.length : 0}
         onNavigate={onNavigate}
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
@@ -625,7 +605,6 @@ export default function WorkspaceScreen({
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   onSessionExpired={onSessionExpired}
-                  pendencias={pendingRows}
                   professores={snapshot.professores}
                   usuario={usuario}
                 />

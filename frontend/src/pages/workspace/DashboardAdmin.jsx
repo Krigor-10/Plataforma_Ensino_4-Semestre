@@ -12,7 +12,6 @@ import {
   MdAssignment,
   MdAssignmentTurnedIn,
   MdBarChart,
-  MdChevronRight,
   MdDescription,
   MdGroups,
   MdLayers,
@@ -20,10 +19,8 @@ import {
   MdPeople,
   MdSchool
 } from "react-icons/md";
-import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
-import Insignia from "../../components/Insignia.jsx";
 import { parseApiDate } from "../../lib/format.js";
 
 const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -62,7 +59,7 @@ const ACESSO_RAPIDO = [
   { icone: <MdDescription size={20} />, rotulo: "Professores", secao: "professores" }
 ];
 
-export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, onSessionExpired, pendencias = [], professores = [], usuario }) {
+export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [], onMudarSecao, onSessionExpired, professores = [], usuario }) {
   const alunosAtivos = alunos.filter((aluno) => aluno.ativo).length;
   const totalUsuarios = alunos.length + professores.length + coordenadores.length;
   const aprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada").length;
@@ -71,14 +68,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
   const kpis = [
     { detalhe: `${professores.length} professor(es), ${coordenadores.length} coordenador(es)`, icone: <MdPeople size={22} />, rotulo: "Usuarios", valor: totalUsuarios },
     { corBorda: "var(--cor-info)", detalhe: `de ${alunos.length} cadastrados`, icone: <MdSchool size={22} />, rotulo: "Alunos ativos", valor: alunosAtivos },
-    {
-      corBorda: pendencias.length > 0 ? "var(--cor-aviso)" : undefined,
-      detalhe: "aguardando analise",
-      icone: <MdAssignment size={22} />,
-      rotulo: "Matriculas pend.",
-      valor: pendencias.length
-    },
-    { corBorda: "var(--cor-sucesso)", detalhe: "das matriculas analisadas", icone: <MdBarChart size={22} />, rotulo: "Taxa de aprovacao", valor: `${taxaAprovacao}%` }
+    { corBorda: "var(--cor-sucesso)", detalhe: "das matriculas registradas", icone: <MdBarChart size={22} />, rotulo: "Taxa de aprovacao", valor: `${taxaAprovacao}%` }
   ];
 
   const dadosGrafico = gerarDados6Meses(matriculas);
@@ -101,68 +91,28 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
         </div>
       </section>
 
-      <div className="grade-2" style={{ marginTop: "var(--espaco-xl)" }}>
-        <section aria-labelledby="titulo-matriculas-admin" className="painel-secao">
-          <header className="painel-secao__cabecalho">
-            <h2 className="painel-secao__titulo" id="titulo-matriculas-admin">
-              Matriculas pendentes
-              {pendencias.length > 0 ? <Insignia style={{ marginLeft: "8px" }} texto={String(pendencias.length)} variante="aviso" /> : null}
-            </h2>
-            <Botao onClick={() => onMudarSecao("matriculas")} tamanho="pequeno" variante="fantasma">
-              Ver todas <MdChevronRight aria-hidden="true" size={14} />
-            </Botao>
-          </header>
-          <div className="painel-secao__conteudo">
-            {pendencias.length === 0 ? (
-              <p className="texto-vazio">Nenhuma matricula pendente.</p>
-            ) : (
-              <ul className="lista-matriculas" role="list">
-                {pendencias.slice(0, 5).map((pendencia) => (
-                  <li className="item-matricula" key={pendencia.id}>
-                    <div className="item-matricula__info">
-                      <strong>{pendencia.nomeAluno}</strong>
-                      <span>
-                        {pendencia.nomeTurma ? `${pendencia.curso} - ${pendencia.nomeTurma}` : pendencia.curso}
-                      </span>
-                    </div>
-                    <Insignia texto="Pendente" variante="aviso" />
-                  </li>
-                ))}
-                {pendencias.length > 5 ? (
-                  <li className="admin-lista-mais">
-                    <button onClick={() => onMudarSecao("matriculas")} type="button">
-                      +{pendencias.length - 5} mais &rarr;
-                    </button>
-                  </li>
-                ) : null}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        <section aria-labelledby="titulo-acesso-rapido" className="painel-secao" style={{ alignSelf: "start" }}>
-          <header className="painel-secao__cabecalho">
-            <h2 className="painel-secao__titulo" id="titulo-acesso-rapido">Acesso rapido</h2>
-          </header>
-          <div className="painel-secao__conteudo">
-            <ul className="grade-acesso-rapido" role="list">
-              {ACESSO_RAPIDO.map((item) => (
-                <li key={item.secao}>
-                  <button
-                    aria-label={`Ir para ${item.rotulo}`}
-                    className="botao-acesso-rapido"
-                    onClick={() => onMudarSecao(item.secao)}
-                    type="button"
-                  >
-                    <span aria-hidden="true">{item.icone}</span>
-                    <span>{item.rotulo}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      </div>
+      <section aria-labelledby="titulo-acesso-rapido" className="painel-secao" style={{ marginTop: "var(--espaco-xl)" }}>
+        <header className="painel-secao__cabecalho">
+          <h2 className="painel-secao__titulo" id="titulo-acesso-rapido">Acesso rapido</h2>
+        </header>
+        <div className="painel-secao__conteudo">
+          <ul className="grade-acesso-rapido" role="list">
+            {ACESSO_RAPIDO.map((item) => (
+              <li key={item.secao}>
+                <button
+                  aria-label={`Ir para ${item.rotulo}`}
+                  className="botao-acesso-rapido"
+                  onClick={() => onMudarSecao(item.secao)}
+                  type="button"
+                >
+                  <span aria-hidden="true">{item.icone}</span>
+                  <span>{item.rotulo}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
       <section aria-labelledby="titulo-grafico-matriculas" className="painel-secao" style={{ marginTop: "var(--espaco-lg)" }}>
         <header className="painel-secao__cabecalho">
