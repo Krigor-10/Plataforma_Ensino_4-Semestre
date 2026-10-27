@@ -110,6 +110,8 @@ export async function demoRequest(endpoint, options = {}) {
       return emitirCertificadoDemo(getCertificadoMatriculaId(path));
     case path === "/Certificados/meus" && method === "GET":
       return listarCertificadosDemo();
+    case path === "/Certificados/status" && method === "GET":
+      return listarStatusCertificadosDemo();
     case /^\/Certificados\/verificar\/.+$/.test(path) && method === "GET":
       return verificarCertificadoDemo(getCertificadoVerificarCodigo(path));
     case path === "/ConteudosDidaticos" && method === "GET":
@@ -1150,6 +1152,70 @@ function rejectEnrollment(enrollmentId) {
   return { mensagem: "Matricula demo rejeitada com sucesso." };
 }
 
+/* Mesmas regras/mensagens de Services/CertificadoService.ObterPendenciasAsync
+   (backend) - fonte unica de verdade continua sendo o servidor real, isso
+   aqui e so pro modo demonstracao (sem backend) ficar consistente com a
+   mesma regra, nao uma segunda implementacao independente que pode divergir.
+   Retorna a lista de pendencias (vazia = certificado disponivel) em vez de
+   lancar, pra servir tanto emitirCertificadoDemo (lanca a 1a) quanto
+   listarStatusCertificadosDemo (expoe todas pra tela). */
+function obterPendenciasCertificadoDemo(db, matricula) {
+  const pendencias = [];
+
+  if (Number(matricula.status) !== 1) {
+    pendencias.push("A matricula ainda nao foi aprovada.");
+  }
+
+  if (!cursoTemAcessoLiberadoDemo(db, matricula)) {
+    pendencias.push("O pagamento deste curso ainda nao foi confirmado.");
+  }
+
+  const progresso = db.progressos.cursos.find((item) => item.matriculaId === matricula.id);
+  if (!progresso || Number(progresso.percentualConclusao) < 100) {
+    pendencias.push("O curso ainda nao foi concluido.");
+  }
+
+  // Demo mode ainda modela avaliacao por Turma, nao por Curso direto (ver
+  // listStudentEvaluations) - mesmo criterio aqui: avaliacoes formais
+  // (Prova/Exercicio, tipoAvaliacao != 1 = Quiz) publicadas na turma da
+  // matricula.
+  const avaliacoesFormaisPublicadas = (db.avaliacoes || []).filter(
+    (avaliacao) =>
+      avaliacao.turmaId === matricula.turmaId &&
+      Number(avaliacao.statusPublicacao) === 2 &&
+      Number(avaliacao.tipoAvaliacao) !== 1
+  );
+
+  if (avaliacoesFormaisPublicadas.length > 0) {
+    const existeAvaliacaoPendente = avaliacoesFormaisPublicadas.some((avaliacao) => {
+      const foiCorrigida = (db.tentativasAvaliacao || []).some(
+        (tentativa) =>
+          tentativa.avaliacaoId === avaliacao.id &&
+          tentativa.matriculaId === matricula.id &&
+          Number(tentativa.statusTentativa) === 3
+      );
+      return !foiCorrigida;
+    });
+
+    if (existeAvaliacaoPendente) {
+      pendencias.push("Ha avaliacoes (prova/exercicio) pendentes de correcao para concluir o curso.");
+    }
+
+    // Nota minima de aprovacao: so se aplica quando ha avaliacao formal
+    // publicada - curso so com quiz nunca exige nota minima.
+    if (Number(matricula.notaFinal || 0) < 7) {
+      pendencias.push("A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado.");
+    }
+  }
+
+  const curso = db.cursos.find((item) => item.id === matricula.cursoId);
+  if (curso && Number(curso.modeloCurso) === 3 && !curso.encerradoEm) {
+    pendencias.push("Este curso ainda nao foi encerrado pelo coordenador.");
+  }
+
+  return pendencias;
+}
+
 function emitirCertificadoDemo(matriculaId) {
   const user = requireRole("Aluno");
   const db = readDemoDb();
@@ -1160,17 +1226,9 @@ function emitirCertificadoDemo(matriculaId) {
     throw new DemoApiError("Matricula demo nao encontrada.", 404);
   }
 
-  if (Number(matricula.status) !== 1) {
-    throw new DemoApiError("A matricula ainda nao foi aprovada.", 400);
-  }
-
-  if (!cursoTemAcessoLiberadoDemo(db, matricula)) {
-    throw new DemoApiError("O pagamento deste curso ainda nao foi confirmado.", 400);
-  }
-
-  const progresso = db.progressos.cursos.find((item) => item.matriculaId === matriculaId);
-  if (!progresso || Number(progresso.percentualConclusao) < 100) {
-    throw new DemoApiError("O curso ainda nao foi concluido.", 400);
+  const pendencias = obterPendenciasCertificadoDemo(db, matricula);
+  if (pendencias.length > 0) {
+    throw new DemoApiError(pendencias[0], 400);
   }
 
   if (!matricula.certificadoEmitidoEm) {
@@ -1179,6 +1237,24 @@ function emitirCertificadoDemo(matriculaId) {
   }
 
   return buildCertificadoDemoResponse(db, matricula);
+}
+
+function listarStatusCertificadosDemo() {
+  const user = requireRole("Aluno");
+  const db = readDemoDb();
+  ensureProgressCollections(db);
+
+  return db.matriculas
+    .filter((matricula) => matricula.alunoId === user.id && Number(matricula.status) === 1)
+    .map((matricula) => {
+      const pendencias = obterPendenciasCertificadoDemo(db, matricula);
+      return {
+        matriculaId: matricula.id,
+        cursoId: matricula.cursoId,
+        certificadoDisponivel: pendencias.length === 0,
+        pendenciasCertificado: pendencias
+      };
+    });
 }
 
 function listarCertificadosDemo() {

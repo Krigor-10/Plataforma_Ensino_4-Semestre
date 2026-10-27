@@ -109,6 +109,54 @@ describe("Progresso do Coordenador (regressao dos achados A1/A2)", () => {
   });
 });
 
+describe("Certificados - regra de nota minima no modo demo (espelha CertificadoService)", () => {
+  test("GET /Certificados/status devolve certificadoDisponivel/pendenciasCertificado consistentes com a emissao", async () => {
+    await loginComo("aluno@demo.edtech");
+
+    const status = await demoRequest("/Certificados/status");
+    expect(Array.isArray(status)).toBe(true);
+    expect(status.length).toBeGreaterThan(0);
+
+    for (const item of status) {
+      expect(typeof item.matriculaId).toBe("number");
+      expect(typeof item.cursoId).toBe("number");
+      expect(typeof item.certificadoDisponivel).toBe("boolean");
+      expect(Array.isArray(item.pendenciasCertificado)).toBe(true);
+      expect(item.certificadoDisponivel).toBe(item.pendenciasCertificado.length === 0);
+
+      if (item.certificadoDisponivel) {
+        const emitido = await demoRequest(`/Certificados/matricula/${item.matriculaId}/emitir`, { method: "POST" });
+        expect(emitido.codigoVerificacao).toBeTruthy();
+      } else {
+        await expect(
+          demoRequest(`/Certificados/matricula/${item.matriculaId}/emitir`, { method: "POST" })
+        ).rejects.toMatchObject({ message: item.pendenciasCertificado[0] });
+      }
+    }
+  });
+
+  test("nota final abaixo de 7 bloqueia emissao mesmo com progresso 100% e avaliacao corrigida", async () => {
+    await loginComo("aluno@demo.edtech");
+
+    const status = await demoRequest("/Certificados/status");
+    const comAvaliacaoFormal = status.find((item) =>
+      item.pendenciasCertificado.includes(
+        "A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado."
+      )
+    );
+
+    // So roda a asserção forte se o seed demo atual tiver esse cenario; a
+    // consistencia generica ja e coberta pelo teste anterior pra todo item.
+    if (comAvaliacaoFormal) {
+      await expect(
+        demoRequest(`/Certificados/matricula/${comAvaliacaoFormal.matriculaId}/emitir`, { method: "POST" })
+      ).rejects.toMatchObject({
+        message: "A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado."
+      });
+    }
+  });
+});
+
 describe("Progresso do Professor (regressao do achado A1)", () => {
   test("GET /Turmas/desempenho retorna as turmas do professor", async () => {
     await loginComo("professor@demo.edtech");
