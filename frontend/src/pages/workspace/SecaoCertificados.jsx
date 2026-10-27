@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TbAward, TbCertificate, TbDownload, TbEye, TbLock, TbTrophy } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
@@ -51,6 +51,38 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
   const [certificadoEmitido, setCertificadoEmitido] = useState(null);
   const [emitindo, setEmitindo] = useState(false);
   const [erroEmissao, setErroEmissao] = useState("");
+  // Fonte unica de verdade pra "certificado disponivel" e o servidor (GET
+  // /Certificados/status) - nunca calcular essa regra aqui (percentual/nota
+  // locais sao so pra exibicao). Sem isso, um aluno com media abaixo de 7 ou
+  // com prova ainda sem correcao via o certificado "liberado" na lista e so
+  // descobria que nao podia mesmo emitir ao clicar e receber o erro da API.
+  const [statusPorMatriculaId, setStatusPorMatriculaId] = useState(new Map());
+
+  useEffect(() => {
+    let ignorar = false;
+
+    async function carregarStatus() {
+      try {
+        const resposta = await apiRequest("/Certificados/status");
+        if (!ignorar) {
+          setStatusPorMatriculaId(new Map(resposta.map((item) => [Number(item.matriculaId), item])));
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+        // Falha ao carregar status nao deve quebrar a tela - certificados so
+        // ficam indisponiveis (mais seguro que "liberados" por padrao).
+      }
+    }
+
+    carregarStatus();
+
+    return () => {
+      ignorar = true;
+    };
+  }, [onSessionExpired]);
 
   const progressoCursoPorMatricula = useMemo(
     () => new Map((progressos.cursos || []).map((progresso) => [Number(progresso.matriculaId), progresso])),
@@ -83,6 +115,9 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
     () =>
       matriculasAprovadas.map((matricula) => {
         const progressoCurso = progressoCursoPorMatricula.get(Number(matricula.id));
+        // Percentual e nota aqui sao so pra EXIBICAO (ex.: "73% concluido" ou
+        // a nota no card) - nunca usados pra decidir se o certificado pode
+        // ser emitido, isso vem exclusivamente de statusPorMatriculaId.
         const percentual = Number(progressoCurso?.percentualConclusao || 0);
         const notasAvaliacoes = avaliacoesPorCurso.get(Number(matricula.cursoId)) || [];
         const mediaAvaliacoes = notasAvaliacoes.length
@@ -90,16 +125,20 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
           : null;
         const nota = matricula.notaFinal > 0 ? matricula.notaFinal : mediaAvaliacoes;
 
+        const status = statusPorMatriculaId.get(Number(matricula.id));
+        const pendencias = status?.pendenciasCertificado || [];
+
         return {
           id: matricula.id,
           curso: matricula.curso,
           turma: matricula.turma,
           percentual,
           nota,
-          desbloqueado: percentual >= 100
+          desbloqueado: Boolean(status?.certificadoDisponivel),
+          pendencia: pendencias[0] || null
         };
       }),
-    [avaliacoesPorCurso, matriculasAprovadas, progressoCursoPorMatricula]
+    [avaliacoesPorCurso, matriculasAprovadas, progressoCursoPorMatricula, statusPorMatriculaId]
   );
 
   const certificadosDesbloqueados = certificados.filter((certificado) => certificado.desbloqueado);
@@ -200,7 +239,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
               ) : (
                 <div className="item-certificado__status">
                   <span className="item-certificado__nota" style={{ color: "var(--cor-texto-mudo)" }}>
-                    {formatPercent(certificado.percentual)} concluido
+                    {certificado.pendencia || `${formatPercent(certificado.percentual)} concluido`}
                   </span>
                 </div>
               )}
