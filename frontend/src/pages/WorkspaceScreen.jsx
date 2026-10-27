@@ -252,7 +252,7 @@ export default function WorkspaceScreen({
           turma:
             matricula.turma?.nomeTurma ||
             turmaById.get(matricula.turmaId)?.nomeTurma ||
-            "Aguardando turma",
+            null,
           professor:
             turmaById.get(matricula.turmaId)?.professorNome ||
             professorById.get(turmaById.get(matricula.turmaId)?.professorId)?.nome ||
@@ -275,7 +275,7 @@ export default function WorkspaceScreen({
         nomeAluno: pendencia.nomeAluno,
         curso: cursoById.get(pendencia.cursoId)?.titulo || `Curso #${pendencia.cursoId}`,
         cpfMascarado: pendencia.cpfMascarado,
-        nomeTurma: pendencia.nomeTurma || "Aguardando turma",
+        nomeTurma: pendencia.nomeTurma || null,
         dataSolicitacao: pendencia.dataSolicitacao
       })),
     [cursoById, snapshot.pendentes]

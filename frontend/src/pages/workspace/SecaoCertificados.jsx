@@ -16,7 +16,7 @@ function buildAchievements({ modulosConcluidos, percentualGeral, totalCertificad
     {
       id: "primeiro-passo",
       titulo: "Primeiro passo",
-      descricao: "Concluiu o 1o conteudo de uma turma.",
+      descricao: "Concluiu o 1o conteudo de um curso.",
       desbloqueada: totalConteudosConcluidos >= 1
     },
     {

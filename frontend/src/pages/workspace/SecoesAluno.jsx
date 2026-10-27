@@ -165,7 +165,7 @@ export function SecaoCursosAluno({
             cursoId: matricula.cursoId,
             curso: cursoPorId.get(matricula.cursoId)?.titulo || `Curso #${matricula.cursoId}`,
             turmaId: matricula.turmaId,
-            turma: turmaPorId.get(matricula.turmaId)?.nomeTurma || matricula.turma?.nomeTurma || "Turma em definicao",
+            turma: turmaPorId.get(matricula.turmaId)?.nomeTurma || matricula.turma?.nomeTurma || null,
             materiais: resumoTurma?.total || 0,
             modulos: modulosDoCurso.length || resumoTurma?.modulos.size || 0,
             progresso: progressoCurso?.percentualConclusao || 0,
@@ -2353,7 +2353,7 @@ function obterNomeTurmaMatricula(matricula, turmaPorId) {
   const turma = turmaPorId.get(turmaId);
   const turmaDaMatricula = typeof matricula.turma === "string" ? matricula.turma : matricula.turma?.nomeTurma;
 
-  return turma?.nomeTurma || turmaDaMatricula || matricula.nomeTurma || (turmaId ? `Turma #${turmaId}` : "Turma em definicao");
+  return turma?.nomeTurma || turmaDaMatricula || matricula.nomeTurma || (turmaId ? `Turma #${turmaId}` : null);
 }
 
 function obterIndiceAcentoAcademico(valor) {

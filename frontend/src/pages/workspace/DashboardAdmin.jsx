@@ -122,7 +122,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], matriculas = [
                     <div className="item-matricula__info">
                       <strong>{pendencia.nomeAluno}</strong>
                       <span>
-                        {pendencia.curso} - {pendencia.nomeTurma}
+                        {pendencia.nomeTurma ? `${pendencia.curso} - ${pendencia.nomeTurma}` : pendencia.curso}
                       </span>
                     </div>
                     <Insignia texto="Pendente" variante="aviso" />

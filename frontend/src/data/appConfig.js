@@ -145,7 +145,7 @@ export function getSectionMeta(section, role) {
       title: role === "Aluno" ? "Realizar avaliacao" : "Avaliacoes",
       description:
         role === "Aluno"
-          ? "Avaliacoes publicadas pelos professores para as suas turmas aprovadas."
+          ? "Avaliacoes publicadas pelos professores para os seus cursos aprovados."
           : "Escolha um curso para preparar provas, quizzes e exercicios."
     },
     matriculas: {
