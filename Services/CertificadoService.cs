@@ -47,6 +47,41 @@ public class CertificadoService : ICertificadoService
         return matricula;
     }
 
+    public async Task<ResultadoEmissaoLoteCertificados> EmitirCertificadosDoCursoAsync(int cursoId)
+    {
+        var matriculas = await _context.Matriculas
+            .Include(m => m.Aluno)
+            .Include(m => m.Curso)
+            .Include(m => m.Turma)
+            .Include(m => m.ProgressosCurso)
+            .Where(m => m.CursoId == cursoId && m.Status == StatusMatricula.Aprovada)
+            .ToListAsync();
+
+        var emitidos = 0;
+        var bloqueados = 0;
+
+        foreach (var matricula in matriculas)
+        {
+            var pendencias = await ObterPendenciasAsync(matricula);
+            if (pendencias.Count > 0)
+            {
+                bloqueados++;
+                continue;
+            }
+
+            var jaTinhaCertificado = matricula.CertificadoEmitidoEm is not null;
+            matricula.EmitirCertificado();
+            if (!jaTinhaCertificado)
+            {
+                emitidos++;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+
+        return new ResultadoEmissaoLoteCertificados(emitidos, bloqueados);
+    }
+
     public async Task<IReadOnlyList<string>> VerificarRequisitosAsync(Matricula matricula)
     {
         ArgumentNullException.ThrowIfNull(matricula);

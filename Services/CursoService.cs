@@ -13,17 +13,20 @@ public class CursoService : ICursoService
     private readonly IGenericRepository<Curso> _cursoRepository;
     private readonly IGenericRepository<Coordenador> _coordenadorRepository;
     private readonly INotificacaoService _notificacaoService;
+    private readonly ICertificadoService _certificadoService;
 
     public CursoService(
         PlataformaContext context,
         IGenericRepository<Curso> cursoRepository,
         IGenericRepository<Coordenador> coordenadorRepository,
-        INotificacaoService notificacaoService)
+        INotificacaoService notificacaoService,
+        ICertificadoService certificadoService)
     {
         _context = context;
         _cursoRepository = cursoRepository;
         _coordenadorRepository = coordenadorRepository;
         _notificacaoService = notificacaoService;
+        _certificadoService = certificadoService;
     }
 
     public async Task<Curso> CriarCursoAsync(CriarCursoDto dto, int criadoPorId)
@@ -249,9 +252,20 @@ public class CursoService : ICursoService
             throw new InvalidOperationException("Este curso ja esta encerrado.");
         }
 
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         curso.Encerrar(coordenadorId);
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
+
+        // Curso Acompanhado: o aluno nunca pede o certificado - o encerramento
+        // e o gatilho da emissao automatica pra quem ja cumpre os requisitos
+        // (ver ICertificadoService.EmitirCertificadosDoCursoAsync). Na mesma
+        // transacao do encerramento pra nao sobrar curso encerrado sem
+        // certificados se a emissao falhar no meio do caminho.
+        await _certificadoService.EmitirCertificadosDoCursoAsync(cursoId);
+
+        await transaction.CommitAsync();
     }
 
     public async Task ReabrirCursoAsync(int cursoId, int coordenadorId)

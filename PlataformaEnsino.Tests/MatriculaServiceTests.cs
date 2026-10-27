@@ -20,7 +20,8 @@ public class MatriculaServiceTests
                 context,
                 new GenericRepository<Curso>(context),
                 new GenericRepository<Coordenador>(context),
-                new NotificacaoService(context, NullLogger<NotificacaoService>.Instance)));
+                new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+                new CertificadoService(context, new AcessoAcademicoService(context))));
 
         return (service, context);
     }

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -14,7 +15,8 @@ public class CursoServiceTests
         context,
         new GenericRepository<Curso>(context),
         new GenericRepository<Coordenador>(context),
-        new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
+        new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+        new CertificadoService(context, new AcessoAcademicoService(context)));
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
@@ -81,6 +83,61 @@ public class CursoServiceTests
     {
         context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
         context.SaveChanges();
+    }
+
+    private static Aluno CriarAluno(PlataformaContext context)
+    {
+        var aluno = new Aluno
+        {
+            Nome = "Aluno Teste",
+            Email = $"{Guid.NewGuid():N}@teste.local",
+            Cpf = "11122233344",
+            Telefone = "11999990000",
+            Cep = "01001-000",
+            Rua = "Rua Teste",
+            Numero = "1",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Estado = "SP",
+            Matricula = "MAT-0001"
+        };
+        aluno.ConfigurarAcesso("Aluno", "hash-fake");
+
+        context.Alunos.Add(aluno);
+        context.SaveChanges();
+        return aluno;
+    }
+
+    private static Turma CriarTurma(PlataformaContext context, int cursoId)
+    {
+        var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = $"TUR-{Guid.NewGuid():N}"[..9], CursoId = cursoId };
+        context.Turmas.Add(turma);
+        context.SaveChanges();
+        return turma;
+    }
+
+    private static Matricula CriarMatriculaAprovada(PlataformaContext context, Aluno aluno, Curso curso, Turma turma)
+    {
+        var matricula = new Matricula
+        {
+            AlunoId = aluno.Id,
+            CursoId = curso.Id,
+            CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..16]
+        };
+        matricula.VincularTurma(turma.Id);
+        matricula.AprovarComTurma(turma.Id, curso.Id);
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+
+        context.ProgressosCursosAlunos.Add(new ProgressoCursoAluno
+        {
+            MatriculaId = matricula.Id,
+            CursoId = curso.Id,
+            PercentualConclusao = 100
+        });
+        context.SaveChanges();
+
+        return matricula;
     }
 
     [Theory]
@@ -220,6 +277,85 @@ public class CursoServiceTests
         // Marca de conclusao do professor nao e desfeita por reabrir — o
         // coordenador pode encerrar de novo sem o professor repetir a acao.
         Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+    }
+
+    [Fact]
+    public async Task EncerrarCursoAsync_AlunoComRequisitosCumpridos_EmiteCertificadoAutomaticamente()
+    {
+        // Regra de negocio: o aluno nunca pede o certificado - o encerramento
+        // do coordenador e o gatilho da emissao automatica (ver
+        // ICertificadoService.EmitirCertificadosDoCursoAsync).
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var aluno = CriarAluno(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EncerrarCursoAsync_AlunoComNotaAbaixoDoMinimo_NaoEmiteCertificado()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var aluno = CriarAluno(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(5, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(5m);
+        context.SaveChanges();
+
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task ReabrirCursoAsync_MatriculaComCertificadoJaEmitido_NaoApagaCertificado()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var aluno = CriarAluno(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+
+        var certificadoEmitidoEm = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id).CertificadoEmitidoEm;
+        Assert.NotNull(certificadoEmitidoEm);
+
+        await service.ReabrirCursoAsync(curso.Id, coordenador.Id);
+
+        var matriculaAposReabrir = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Equal(certificadoEmitidoEm, matriculaAposReabrir.CertificadoEmitidoEm);
     }
 
     [Fact]

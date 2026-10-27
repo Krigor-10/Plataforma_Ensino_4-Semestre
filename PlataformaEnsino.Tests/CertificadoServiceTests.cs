@@ -491,4 +491,192 @@ public class CertificadoServiceTests
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ObterCertificadoPorCodigoAsync("CODIGO-QUE-NAO-EXISTE"));
     }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_AlunoComCemPorCentoENotaSete_EmiteCertificado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(7, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(7m);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(1, resultado.Emitidos);
+        Assert.Equal(0, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Theory]
+    [InlineData(6.99)]
+    public async Task EmitirCertificadosDoCursoAsync_NotaAbaixoDoMinimo_NaoEmiteFicaBloqueado(decimal notaFinal)
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(notaFinal, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(notaFinal);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_ProgressoAbaixoDeCemPorCento_NaoEmiteFicaBloqueado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 80);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_AvaliacaoPublicadaSemCorrecao_NaoEmiteFicaBloqueado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Exercicio Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Exercicio };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_PagamentoPendente_NaoEmiteFicaBloqueado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Preco = 500;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_CursoSoComQuizSemAvaliacaoFormal_EmiteComCemPorCentoSemExigirNota()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(1, resultado.Emitidos);
+        Assert.Equal(0, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_ChamadoDuasVezes_MantemADataDeQuemJaTinhaCertificado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var primeiroResultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+        var primeiraData = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id).CertificadoEmitidoEm;
+
+        var segundoResultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+        var segundaData = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id).CertificadoEmitidoEm;
+
+        Assert.Equal(1, primeiroResultado.Emitidos);
+        Assert.Equal(0, segundoResultado.Emitidos);
+        Assert.Equal(primeiraData, segundaData);
+    }
 }

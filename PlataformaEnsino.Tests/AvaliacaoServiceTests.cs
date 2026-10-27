@@ -19,7 +19,8 @@ public class AvaliacaoServiceTests
             context,
             new GenericRepository<Curso>(context),
             new GenericRepository<Coordenador>(context),
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new CertificadoService(context, new AcessoAcademicoService(context)));
 
     private static Professor CriarProfessor(PlataformaContext context)
     {
