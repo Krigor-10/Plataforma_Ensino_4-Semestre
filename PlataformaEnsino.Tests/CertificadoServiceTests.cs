@@ -216,7 +216,70 @@ public class CertificadoServiceTests
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
         lancamento.RegistrarCorrecao(8, 1, OrigemCorrecaoNota.Automatica);
         contextoDeArranjo.LancamentosNotasAlunos.Add(lancamento);
+        // Fora do fluxo real, o lancamento nao passa por ProgressoAlunoService.
+        // RecalcularMediaCursoAsync, entao a NotaFinal da matricula precisa ser
+        // simulada aqui pra bater com o que o pipeline real calcularia (8/10 * 10 = 8).
+        matricula.LancarNotaFinal(8m);
         contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
+
+        Assert.NotNull(resultado.CertificadoEmitidoEm);
+    }
+
+    [Theory]
+    [InlineData(6.99, false)]
+    [InlineData(7.00, true)]
+    [InlineData(8.50, true)]
+    [InlineData(10.00, true)]
+    public async Task EmitirCertificadoAsync_NotaFinalVersusMediaMinima_SeguirCriterioDeAprovacao(decimal notaFinal, bool deveEmitir)
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(notaFinal, 1, OrigemCorrecaoNota.Automatica);
+        contextoDeArranjo.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(notaFinal);
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+
+        if (deveEmitir)
+        {
+            var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
+            Assert.NotNull(resultado.CertificadoEmitidoEm);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<ArgumentException>(() => service.EmitirCertificadoAsync(aluno.Id, matricula.Id));
+        }
+    }
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_CursoSoComQuizSemAvaliacaoFormal_NaoExigeNotaMinima()
+    {
+        // Cursos sem Prova/Exercicio publicada nunca calculam NotaFinal (fica 0,
+        // default da matricula) - a regra de nota minima nao pode bloquear esse caso.
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
 
         using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
         var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));

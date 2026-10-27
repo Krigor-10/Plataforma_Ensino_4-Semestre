@@ -61,6 +61,23 @@ public class CertificadoService : ICertificadoService
             throw new ArgumentException("Ha avaliacoes (prova/exercicio) pendentes de correcao para concluir o curso.");
         }
 
+        // Nota minima de aprovacao: so se aplica a cursos com avaliacao formal
+        // publicada (Prova/Exercicio) - cursos so com quiz/conteudo nunca calculam
+        // NotaFinal (fica no default 0, ver ProgressoAlunoService.RecalcularMediaCursoAsync)
+        // e nao devem ser bloqueados por essa regra. Concluir a avaliacao (checado
+        // acima) nao significa estar aprovado - a media precisa bater o minimo.
+        var possuiAvaliacaoFormalPublicada = await _context.Avaliacoes
+            .AsNoTracking()
+            .AnyAsync(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
+                avaliacao.CursoId == matricula.CursoId);
+
+        if (possuiAvaliacaoFormalPublicada && matricula.NotaFinal < 7m)
+        {
+            throw new ArgumentException("A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado.");
+        }
+
         // Curso Acompanhado tem conteudo liberado aos poucos pelo professor —
         // "100% concluido" so e um criterio estavel depois que o coordenador
         // encerra o curso (ver CursoService.EncerrarCursoAsync). Gratuito/
