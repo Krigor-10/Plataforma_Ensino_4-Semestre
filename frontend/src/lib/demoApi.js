@@ -92,16 +92,8 @@ export async function demoRequest(endpoint, options = {}) {
       return deleteModule(getNumericId(path));
     case path === "/Matriculas" && method === "GET":
       return listEnrollments();
-    case path === "/Matriculas/pendentes" && method === "GET":
-      return listPendingEnrollments();
     case /^\/Matriculas\/aluno\/\d+$/.test(path) && method === "GET":
       return listStudentEnrollments(getNumericId(path));
-    case path === "/Matriculas/aprovar-lote" && method === "PUT":
-      return approveEnrollmentsBatch(payload);
-    case /^\/Matriculas\/\d+\/aprovar$/.test(path) && method === "PUT":
-      return approveEnrollment(getEnrollmentActionId(path), payload);
-    case /^\/Matriculas\/\d+\/rejeitar$/.test(path) && method === "PUT":
-      return rejectEnrollment(getEnrollmentActionId(path));
     case path === "/Pagamentos/aluno" && method === "GET":
       return listStudentPayments();
     case /^\/Pagamentos\/\d+\/confirmar$/.test(path) && method === "POST":
@@ -854,12 +846,6 @@ function listEnrollments() {
   return hydrateEnrollments(db, db.matriculas);
 }
 
-function listPendingEnrollments() {
-  requireManager();
-  const db = readDemoDb();
-  return buildPendingEnrollments(db);
-}
-
 function listStudentEnrollments(studentId) {
   const user = requireAuthenticatedUser();
 
@@ -927,57 +913,6 @@ function hydratePayment(db, pagamento) {
     status: pagamento.status,
     criadoEm: pagamento.criadoEm,
     pagoEm: pagamento.pagoEm ?? null
-  };
-}
-
-function approveEnrollment(enrollmentId, turmaIdPayload) {
-  requireManager();
-
-  const turmaId = Number(turmaIdPayload);
-  if (!Number.isInteger(turmaId) || turmaId <= 0) {
-    throw new DemoApiError("Selecione uma turma demo valida para aprovar a matricula.", 400);
-  }
-
-  const db = readDemoDb();
-  approveEnrollmentInDb(db, enrollmentId, turmaId);
-  saveDemoDb(db);
-  return { mensagem: "Matricula demo aprovada com sucesso." };
-}
-
-function approveEnrollmentsBatch(payload) {
-  requireManager();
-
-  const db = readDemoDb();
-  const ids = Array.isArray(payload?.matriculaIds)
-    ? [...new Set(payload.matriculaIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))]
-    : [];
-
-  if (!ids.length) {
-    throw new DemoApiError("Selecione ao menos uma matricula pendente para aprovacao em lote.", 400);
-  }
-
-  const resultado = {
-    totalSolicitado: ids.length,
-    aprovadas: [],
-    erros: []
-  };
-
-  ids.forEach((id) => {
-    try {
-      resultado.aprovadas.push(approveEnrollmentInDb(db, id));
-    } catch (error) {
-      resultado.erros.push(buildEnrollmentApprovalError(db, id, error.message || "Nao foi possivel aprovar a matricula demo."));
-    }
-  });
-
-  if (resultado.aprovadas.length) {
-    saveDemoDb(db);
-  }
-
-  return {
-    ...resultado,
-    totalAprovado: resultado.aprovadas.length,
-    totalComErro: resultado.erros.length
   };
 }
 
@@ -1123,33 +1058,6 @@ function resolveDemoEnrollmentClass(db, matricula, turmaIdOverride = null) {
   }
 
   return turma;
-}
-
-function buildEnrollmentApprovalError(db, enrollmentId, motivo) {
-  const matricula = db.matriculas.find((item) => item.id === enrollmentId);
-  const aluno = matricula ? db.alunos.find((item) => item.id === matricula.alunoId) : null;
-
-  return {
-    matriculaId: enrollmentId,
-    codigoRegistro: matricula?.codigoRegistro || "",
-    nomeAluno: aluno?.nome || "",
-    cursoId: matricula?.cursoId || 0,
-    motivo
-  };
-}
-
-function rejectEnrollment(enrollmentId) {
-  requireManager();
-
-  const db = readDemoDb();
-  const matricula = db.matriculas.find((item) => item.id === enrollmentId);
-  if (!matricula) {
-    throw new DemoApiError("Matricula demo nao encontrada.", 404);
-  }
-
-  matricula.status = 2;
-  saveDemoDb(db);
-  return { mensagem: "Matricula demo rejeitada com sucesso." };
 }
 
 /* Mesmas regras/mensagens de Services/CertificadoService.ObterPendenciasAsync
@@ -2404,29 +2312,6 @@ function hydrateEnrollments(db, rows) {
     .sort((left, right) => new Date(right.dataSolicitacao || 0).getTime() - new Date(left.dataSolicitacao || 0).getTime());
 }
 
-function buildPendingEnrollments(db) {
-  const alunoById = new Map(db.alunos.map((aluno) => [aluno.id, aluno]));
-  const turmaById = new Map(db.turmas.map((turma) => [turma.id, turma]));
-
-  return db.matriculas
-    .filter((matricula) => Number(matricula.status) === 0)
-    .map((matricula) => {
-      const aluno = alunoById.get(matricula.alunoId);
-      const turma = matricula.turmaId ? turmaById.get(matricula.turmaId) : null;
-
-      return {
-        id: matricula.id,
-        codigoRegistro: matricula.codigoRegistro,
-        nomeAluno: aluno?.nome || `Aluno #${matricula.alunoId}`,
-        cursoId: matricula.cursoId,
-        cpfMascarado: maskCpf(aluno?.cpf || ""),
-        nomeTurma: turma?.nomeTurma || null,
-        dataSolicitacao: matricula.dataSolicitacao
-      };
-    })
-    .sort((left, right) => new Date(right.dataSolicitacao || 0).getTime() - new Date(left.dataSolicitacao || 0).getTime());
-}
-
 function hydrateContents(db, rows) {
   return clone(rows)
     .map((conteudo) => hydrateContent(db, conteudo))
@@ -3593,17 +3478,6 @@ function getCertificadoVerificarCodigo(path) {
   return decodeURIComponent(match?.[1] || "");
 }
 
-function getEnrollmentActionId(path) {
-  const match = String(path).match(/^\/Matriculas\/(\d+)\/(?:aprovar|rejeitar)$/);
-  const id = Number(match?.[1]);
-
-  if (!Number.isInteger(id)) {
-    throw new DemoApiError("Identificador demo invalido.", 400);
-  }
-
-  return id;
-}
-
 function getPagamentoConfirmActionId(path) {
   const match = String(path).match(/^\/Pagamentos\/(\d+)\/confirmar$/);
   const id = Number(match?.[1]);
@@ -3726,16 +3600,6 @@ function nextId(items) {
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
-}
-
-function maskCpf(value) {
-  const digits = onlyDigits(value);
-
-  if (digits.length !== 11) {
-    return value || "-";
-  }
-
-  return `***.***.***-${digits.slice(-2)}`;
 }
 
 function wait(ms) {
