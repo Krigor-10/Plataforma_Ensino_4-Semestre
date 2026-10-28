@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { BackHandler, ScrollView, StyleSheet, Text, View } from "react-native";
 import CartaoCursoAtivo from "../../components/CartaoCursoAtivo.jsx";
@@ -29,6 +30,7 @@ const NOTA_MINIMA_APROVACAO = 7;
    aqui — esse detalhamento continua exclusivo da aba Conteudos. */
 export default function ProgressoScreen({ snapshot }) {
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+  const navigation = useNavigation();
 
   // Mesmo ajuste de ConteudosScreen.jsx/AvaliacoesScreen.jsx: curso
   // selecionado e estado local, nao rota — sem isso o voltar fisico do
@@ -46,6 +48,14 @@ export default function ProgressoScreen({ snapshot }) {
 
     return () => assinatura.remove();
   }, [cursoSelecionadoId]);
+
+  // Mesmo ajuste de ConteudosScreen.jsx/AvaliacoesScreen.jsx: reseta o
+  // curso selecionado toda vez que a aba PROGRESSO e tocada na barra
+  // inferior, mesmo se ja estiver nela - `tabPress`, nao useFocusEffect, ver
+  // comentario equivalente em ConteudosScreen.jsx.
+  useEffect(() => {
+    return navigation.addListener("tabPress", () => setCursoSelecionadoId(null));
+  }, [navigation]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 

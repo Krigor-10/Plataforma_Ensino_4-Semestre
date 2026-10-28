@@ -86,6 +86,17 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     return () => assinatura.remove();
   }, [cursoSelecionadoId]);
 
+  // Mesmo ajuste de ConteudosScreen.jsx: reseta a navegacao interna (curso
+  // selecionado + filtro) toda vez que a aba AVALIACOES e tocada na barra
+  // inferior, mesmo se ja estiver nela - `tabPress`, nao useFocusEffect, ver
+  // comentario equivalente em ConteudosScreen.jsx.
+  useEffect(() => {
+    return navigation.addListener("tabPress", () => {
+      setCursoSelecionadoId(null);
+      setFiltro("todas");
+    });
+  }, [navigation]);
+
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
   const cursosMatriculados = useMemo(

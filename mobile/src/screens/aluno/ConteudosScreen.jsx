@@ -104,6 +104,22 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     return () => assinatura.remove();
   }, [cursoSelecionadoId]);
 
+  // Reseta a navegacao interna (curso selecionado + modulos abertos) toda
+  // vez que a aba CONTEUDOS e tocada na barra inferior, mesmo se ja estiver
+  // nela - sem isso, trocar de aba e voltar mantinha o curso/modulo aberto
+  // da visita anterior em vez de mostrar a grade de novo. `tabPress` (nao
+  // useFocusEffect): so dispara quando o ITEM da bottom bar e tocado, nunca
+  // ao reganhar foco por outro motivo (ex.: voltar de Perfil/Catalogo/
+  // Notificacoes, que tambem fica por cima do Tab.Navigator e devolveria
+  // foco sem o usuario ter tocado na aba de novo) - ver
+  // pendencia_mobile_conteudos_reset_navegacao_grade na memoria do projeto.
+  useEffect(() => {
+    return navigation.addListener("tabPress", () => {
+      setCursoSelecionadoId(null);
+      setModulosAbertos(new Set());
+    });
+  }, [navigation]);
+
   const grupos = useMemo(
     () =>
       agruparConteudosPorCurso({
