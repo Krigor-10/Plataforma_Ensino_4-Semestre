@@ -6,6 +6,12 @@ import { apiRequest } from "../lib/api.js";
 import { obterIniciais } from "../lib/format.js";
 import { cores, espacamentos } from "../lib/theme.js";
 
+// Mesmo intervalo usado no Web (BarraTopo.jsx) - sem isso, o badge so
+// atualizava ao montar o header ou ao marcar algo como lido, entao uma
+// notificacao nova (ex.: conteudo publicado pelo professor) nunca aparecia
+// pro aluno com o app ja aberto (Fase 8 da auditoria geral).
+const INTERVALO_POLL_NOTIFICACOES_MS = 30000;
+
 /* Header global do Aluno — antes vivia so dentro de HomeScreen.jsx, entao
    notificacoes/perfil sumiam ao navegar pras outras abas. Hoje e o `header`
    custom do AlunoStack (ver AlunoHeaderBar.jsx/AlunoWorkspace.jsx), montado uma
@@ -25,16 +31,22 @@ export default function HeaderGlobal({ notificacoesVersao, onAbrirBusca, onAbrir
 
     // Falha aqui e silenciosa de proposito (mesmo criterio do web): o badge
     // de notificacao nao e critico o suficiente pra interromper a tela.
-    apiRequest("/Notificacoes/nao-lidas/contagem")
-      .then((resposta) => {
-        if (!ignore) {
-          setNotificacoesNaoLidas(resposta?.total || 0);
-        }
-      })
-      .catch(() => {});
+    function buscarContagem() {
+      apiRequest("/Notificacoes/nao-lidas/contagem")
+        .then((resposta) => {
+          if (!ignore) {
+            setNotificacoesNaoLidas(resposta?.total || 0);
+          }
+        })
+        .catch(() => {});
+    }
+
+    buscarContagem();
+    const intervalo = setInterval(buscarContagem, INTERVALO_POLL_NOTIFICACOES_MS);
 
     return () => {
       ignore = true;
+      clearInterval(intervalo);
     };
   }, [notificacoesVersao]);
 
