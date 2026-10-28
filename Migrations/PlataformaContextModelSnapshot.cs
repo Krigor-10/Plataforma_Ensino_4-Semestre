@@ -57,7 +57,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoBancoId", "Numero")
                         .IsUnique();
 
-                    b.ToTable("AfirmativasQuestoesBanco", (string)null);
+                    b.ToTable("AfirmativasQuestoesBanco");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AfirmativaQuestaoPublicada", b =>
@@ -95,7 +95,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoPublicadaId", "Numero")
                         .IsUnique();
 
-                    b.ToTable("AfirmativasQuestoesPublicadas", (string)null);
+                    b.ToTable("AfirmativasQuestoesPublicadas");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AlternativaQuestaoBanco", b =>
@@ -133,7 +133,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoBancoId", "Letra")
                         .IsUnique();
 
-                    b.ToTable("AlternativasQuestoesBanco", (string)null);
+                    b.ToTable("AlternativasQuestoesBanco");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AlternativaQuestaoPublicada", b =>
@@ -171,7 +171,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("QuestaoPublicadaId", "Letra")
                         .IsUnique();
 
-                    b.ToTable("AlternativasQuestoesPublicadas", (string)null);
+                    b.ToTable("AlternativasQuestoesPublicadas");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.AnexoQuestaoBanco", b =>
@@ -207,7 +207,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("QuestaoBancoId");
 
-                    b.ToTable("AnexosQuestoesBanco", (string)null);
+                    b.ToTable("AnexosQuestoesBanco");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Avaliacao", b =>
@@ -294,7 +294,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("TurmaId");
 
-                    b.ToTable("Avaliacoes", (string)null);
+                    b.ToTable("Avaliacoes");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
@@ -327,6 +327,9 @@ namespace Sistema_Academico_Integrado.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ExcluidoEm")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("LinkUrl")
                         .IsRequired()
@@ -373,7 +376,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("TurmaId");
 
-                    b.ToTable("ConteudosDidaticos", (string)null);
+                    b.ToTable("ConteudosDidaticos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
@@ -441,7 +444,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("EncerradoPorId");
 
-                    b.ToTable("Cursos", (string)null);
+                    b.ToTable("Cursos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.LancamentoNotaAluno", b =>
@@ -504,7 +507,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "AvaliacaoId")
                         .IsUnique();
 
-                    b.ToTable("LancamentosNotasAlunos", (string)null);
+                    b.ToTable("LancamentosNotasAlunos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Matricula", b =>
@@ -563,7 +566,7 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada")
                         .HasFilter("[Status] = 1");
 
-                    b.ToTable("Matriculas", (string)null);
+                    b.ToTable("Matriculas");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Modulo", b =>
@@ -598,7 +601,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("CursoId", "Titulo")
                         .IsUnique();
 
-                    b.ToTable("Modulos", (string)null);
+                    b.ToTable("Modulos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Notificacao", b =>
@@ -674,7 +677,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId")
                         .IsUnique();
 
-                    b.ToTable("Pagamentos", (string)null);
+                    b.ToTable("Pagamentos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProfessorCurso", b =>
@@ -701,7 +704,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("ProfessorId", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("ProfessoresCursos", (string)null);
+                    b.ToTable("ProfessoresCursos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoConteudoAluno", b =>
@@ -746,7 +749,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "ConteudoDidaticoId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosConteudosAlunos", (string)null);
+                    b.ToTable("ProgressosConteudosAlunos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoCursoAluno", b =>
@@ -798,7 +801,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosCursosAlunos", (string)null);
+                    b.ToTable("ProgressosCursosAlunos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.ProgressoModuloAluno", b =>
@@ -856,7 +859,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "ModuloId")
                         .IsUnique();
 
-                    b.ToTable("ProgressosModulosAlunos", (string)null);
+                    b.ToTable("ProgressosModulosAlunos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.QuestaoBanco", b =>
@@ -920,7 +923,7 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.HasIndex("ProfessorAutorId");
 
-                    b.ToTable("QuestoesBanco", (string)null);
+                    b.ToTable("QuestoesBanco");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.QuestaoPublicada", b =>
@@ -970,7 +973,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("AvaliacaoId", "Ordem")
                         .IsUnique();
 
-                    b.ToTable("QuestoesPublicadas", (string)null);
+                    b.ToTable("QuestoesPublicadas");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.RefreshToken", b =>
@@ -1048,7 +1051,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("TentativaAvaliacaoId", "QuestaoPublicadaId")
                         .IsUnique();
 
-                    b.ToTable("RespostasAlunos", (string)null);
+                    b.ToTable("RespostasAlunos");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.TentativaAvaliacao", b =>
@@ -1091,7 +1094,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("MatriculaId", "AvaliacaoId", "NumeroTentativa")
                         .IsUnique();
 
-                    b.ToTable("TentativasAvaliacao", (string)null);
+                    b.ToTable("TentativasAvaliacao");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Turma", b =>
@@ -1133,7 +1136,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("NomeTurma", "CursoId")
                         .IsUnique();
 
-                    b.ToTable("Turmas", (string)null);
+                    b.ToTable("Turmas");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Usuario", b =>

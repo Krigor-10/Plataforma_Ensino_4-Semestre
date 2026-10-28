@@ -24,7 +24,7 @@ public class ConteudoDidaticoRepository : GenericRepository<ConteudoDidatico>, I
     {
         return await Context.ConteudosDidaticos
             .AsNoTracking()
-            .Where(conteudo => conteudo.ProfessorAutorId == professorId)
+            .Where(conteudo => conteudo.ProfessorAutorId == professorId && conteudo.ExcluidoEm == null)
             .Include(conteudo => conteudo.Turma)
             .Include(conteudo => conteudo.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
@@ -43,6 +43,7 @@ public class ConteudoDidaticoRepository : GenericRepository<ConteudoDidatico>, I
             .AsNoTracking()
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
+                conteudo.ExcluidoEm == null &&
                 Context.Matriculas.Any(matricula =>
                     matricula.AlunoId == alunoId &&
                     matricula.Status == StatusMatricula.Aprovada &&

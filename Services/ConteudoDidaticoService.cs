@@ -167,6 +167,11 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     {
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
 
+        if (conteudo.ExcluidoEm is not null)
+        {
+            throw new KeyNotFoundException("Conteudo didatico nao encontrado.");
+        }
+
         var possuiAvaliacaoVinculada = await _context.Avaliacoes.AnyAsync(avaliacao => avaliacao.ConteudoDidaticoId == id);
         if (possuiAvaliacaoVinculada)
         {
@@ -174,15 +179,18 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         }
 
         // ProgressoConteudoAluno->ConteudoDidatico e Cascade (ver ProgressoConfiguration) -
-        // sem este bloqueio, excluir um conteudo ja concluido por algum aluno apagaria o
-        // registro de progresso dele junto, sem recalcular ProgressoModulo/ProgressoCurso,
-        // deixando o percentual do aluno desatualizado (e, se esse era o unico item
-        // pendente, sem nenhuma acao possivel pra forcar um recalculo novo).
+        // apagar a linha de um conteudo ja concluido por algum aluno apagaria o registro de
+        // progresso dele junto, sem recalcular ProgressoModulo/ProgressoCurso, deixando o
+        // percentual do aluno desatualizado. Por isso vira soft-delete nesse caso: a linha
+        // continua existindo (progresso intacto), so some das listagens.
         var possuiProgressoDeAluno = await _context.ProgressosConteudosAlunos
             .AnyAsync(progresso => progresso.ConteudoDidaticoId == id);
         if (possuiProgressoDeAluno)
         {
-            throw new InvalidOperationException("Este conteudo ja foi concluido por pelo menos um aluno e nao pode ser excluido.");
+            conteudo.MarcarComoExcluido(DateTime.UtcNow);
+            _conteudoRepository.Atualizar(conteudo);
+            await _conteudoRepository.SalvarAlteracoesAsync();
+            return;
         }
 
         _conteudoRepository.Deletar(conteudo);

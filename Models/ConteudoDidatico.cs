@@ -36,6 +36,7 @@ public class ConteudoDidatico
     public DateTime? PublicadoEm { get; private set; }
     public DateTime CriadoEm { get; private set; } = DateTime.UtcNow;
     public DateTime? AtualizadoEm { get; private set; }
+    public DateTime? ExcluidoEm { get; private set; }
 
     [JsonIgnore]
     [ValidateNever]
@@ -96,5 +97,10 @@ public class ConteudoDidatico
         }
 
         PublicadoEm = null;
+    }
+
+    public void MarcarComoExcluido(DateTime? referencia = null)
+    {
+        ExcluidoEm = referencia ?? DateTime.UtcNow;
     }
 }

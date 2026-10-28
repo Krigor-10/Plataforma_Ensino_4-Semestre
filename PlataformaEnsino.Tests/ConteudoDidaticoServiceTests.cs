@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -286,11 +287,13 @@ public class ConteudoDidaticoServiceTests
     }
 
     [Fact]
-    public async Task ExcluirConteudoAsync_ComProgressoDeAluno_LancaInvalidOperation()
+    public async Task ExcluirConteudoAsync_ComProgressoDeAluno_FazSoftDeleteSemApagarProgresso()
     {
-        // Achado da Fase 6 da auditoria geral: ProgressoConteudoAluno->ConteudoDidatico
-        // e Cascade (ver ProgressoConfiguration) - sem este bloqueio, o historico de
-        // conclusao do aluno seria apagado junto, sem recalcular o progresso agregado.
+        // Achado da auditoria de conteudos (28/10): ProgressoConteudoAluno->ConteudoDidatico
+        // e Cascade (ver ProgressoConfiguration) - apagar a linha de um conteudo ja concluido
+        // apagaria o progresso do aluno junto, sem recalcular o agregado. Em vez de bloquear
+        // a exclusao, o conteudo agora e marcado como excluido (soft-delete) e some das
+        // listagens, preservando o historico de progresso intacto.
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var professor = CriarProfessor(context);
@@ -311,7 +314,43 @@ public class ConteudoDidaticoServiceTests
         });
         context.SaveChanges();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+
+        var conteudoNoBanco = context.ConteudosDidaticos.AsNoTracking().Single(c => c.Id == conteudo.Id);
+        Assert.NotNull(conteudoNoBanco.ExcluidoEm);
+        Assert.Single(context.ProgressosConteudosAlunos.Where(p => p.ConteudoDidaticoId == conteudo.Id));
+
+        var listaProfessor = await service.ListarConteudosPorProfessorAsync(professor.Id);
+        Assert.Empty(listaProfessor);
+
+        var listaAluno = await service.ListarConteudosPorAlunoAsync(aluno.Id);
+        Assert.Empty(listaAluno);
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_JaExcluido_LancaKeyNotFound()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var matricula = CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
+        context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
+        {
+            MatriculaId = matricula.Id,
+            ConteudoDidaticoId = conteudo.Id,
+            ModuloId = modulo.Id,
+            PercentualConclusao = 100
+        });
+        context.SaveChanges();
+        await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ExcluirConteudoAsync(conteudo.Id, professor.Id));
     }
 }
