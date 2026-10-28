@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createSessionStore } from "../../../shared/session.js";
+import { secureStorage } from "./secureStorage.js";
 
-export const { readSession, persistSession, clearSession } = createSessionStore(AsyncStorage);
+export const { readSession, persistSession, clearSession } = createSessionStore(secureStorage);

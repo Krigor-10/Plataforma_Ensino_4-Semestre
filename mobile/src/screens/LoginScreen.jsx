@@ -36,6 +36,17 @@ export default function LoginScreen({ onLogin }) {
       });
 
       if (resposta.usuario?.tipoUsuario !== "Aluno") {
+        // O login ja emitiu token/refreshToken validos no servidor antes de
+        // sabermos que esse perfil nao e suportado aqui - invalida os dois
+        // explicitamente (em vez de so descartar a resposta no cliente) pra
+        // nao deixar um refresh token residual utilizavel.
+        if (resposta.refreshToken) {
+          apiRequest("/Auth/logout", {
+            method: "POST",
+            body: JSON.stringify({ refreshToken: resposta.refreshToken })
+          }).catch(() => {});
+        }
+
         setErro("O app mobile e exclusivo para contas de Aluno no momento. Acesse pelo navegador (site) com esse perfil.");
         return;
       }
