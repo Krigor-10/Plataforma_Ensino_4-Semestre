@@ -12,16 +12,24 @@ import CursosScreen from "./CursosScreen.jsx";
 import CertificadosScreen from "./CertificadosScreen.jsx";
 import TelaComTransicao from "../../components/TelaComTransicao.jsx";
 import { ROUTES } from "../../lib/routes.js";
-import { cores } from "../../lib/theme.js";
+import { cores, espacamentos, raios } from "../../lib/theme.js";
 
 const Tab = createBottomTabNavigator();
 
+// 5 abas do redesign (docs/redesign-mobile/PROMPT-agente-mobile.md, secao 1).
+// ROUTES.CONTEUDOS continua apontando pra ConteudosScreen.jsx (ainda nao
+// restilizada - isso e trabalho da Rodada 3), so o rotulo/icone da aba virou
+// "Cursos" porque e essa tela que concentra a trilha do aluno agora.
+// ROUTES.CURSOS (a antiga tela "Cursos", hoje CursosScreen.jsx) saiu da barra
+// de proposito - continua nested no Tab.Navigator abaixo (acessivel via
+// MenuLateral) ate suas funcoes ainda necessarias (confirmar pagamento,
+// status do certificado) serem incorporadas a grade de Cursos na Rodada 3.
 const ABAS = [
   { chave: ROUTES.INICIO, icone: "home-outline", iconeAtivo: "home", rotulo: "Início" },
-  { chave: ROUTES.CONTEUDOS, icone: "book-outline", iconeAtivo: "book", rotulo: "Conteúdos" },
+  { chave: ROUTES.CONTEUDOS, icone: "school-outline", iconeAtivo: "school", rotulo: "Cursos" },
   { chave: ROUTES.AVALIACOES, icone: "clipboard-outline", iconeAtivo: "clipboard", rotulo: "Avaliações" },
   { chave: ROUTES.PROGRESSO, icone: "bar-chart-outline", iconeAtivo: "bar-chart", rotulo: "Progresso" },
-  { chave: ROUTES.CURSOS, icone: "school-outline", iconeAtivo: "school", rotulo: "Cursos" }
+  { chave: ROUTES.CERTIFICADOS, icone: "ribbon-outline", iconeAtivo: "ribbon", rotulo: "Certificados" }
 ];
 const ABAS_POR_CHAVE = Object.fromEntries(ABAS.map((aba) => [aba.chave, aba]));
 
@@ -50,10 +58,12 @@ function ItemAba({ ativa, config, onPress }) {
       onPress={onPress}
       style={estilos.tabItem}
     >
-      <Animated.View style={estiloIcone}>
-        <Ionicons color={ativa ? cores.destaque : cores.textoRotulo} name={ativa ? config.iconeAtivo : config.icone} size={20} />
-      </Animated.View>
-      <Text style={[estilos.tabTexto, ativa ? estilos.tabTextoAtivo : null]}>{config.rotulo}</Text>
+      <View style={[estilos.tabPilula, ativa ? estilos.tabPilulaAtiva : null]}>
+        <Animated.View style={estiloIcone}>
+          <Ionicons color={ativa ? cores.destaque : cores.textoRotulo} name={ativa ? config.iconeAtivo : config.icone} size={20} />
+        </Animated.View>
+        <Text style={[estilos.tabTexto, ativa ? estilos.tabTextoAtivo : null]}>{config.rotulo}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -64,10 +74,11 @@ function CustomTabBar({ state, navigation }) {
     <View style={[estilos.tabBar, { paddingBottom: insets.bottom || 10 }]}>
       {state.routes.map((route, index) => {
         const config = ABAS_POR_CHAVE[route.name];
-        // Rotas nested no Tab.Navigator que nao sao abas visiveis (ex.:
-        // Certificados, que mora aqui so pra manter a CustomTabBar visivel —
-        // ver AlunoWorkspace.jsx) nao tem entrada em ABAS/ABAS_POR_CHAVE de
-        // proposito, entao nao viram um 6o icone quebrado aqui.
+        // Rotas nested no Tab.Navigator que nao sao abas visiveis (hoje:
+        // ROUTES.CURSOS/CursosScreen.jsx, que mora aqui so pra manter a
+        // CustomTabBar visivel — ver AlunoWorkspace.jsx) nao tem entrada em
+        // ABAS/ABAS_POR_CHAVE de proposito, entao nao viram um 6o icone
+        // quebrado aqui.
         if (!config) {
           return null;
         }
@@ -141,6 +152,23 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
           </TelaComTransicao>
         )}
       </Tab.Screen>
+      <Tab.Screen name={ROUTES.CERTIFICADOS}>
+        {() => (
+          <TelaComTransicao>
+            <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />
+          </TelaComTransicao>
+        )}
+      </Tab.Screen>
+      {/* Nested aqui (nao como AlunoStack.Screen irmao do Tab.Navigator em
+          AlunoWorkspace.jsx) de proposito: navegar pra uma Screen de fora do
+          Tab.Navigator troca a arvore inteira, derrubando a CustomTabBar
+          junto. Vivendo dentro do Tab.Navigator, a barra permanece visivel
+          (so nao aparece como icone, ver CustomTabBar acima). Acessivel so
+          via sidebar (MenuLateral.jsx) agora - ponte temporaria da Rodada 1
+          do redesign: CursosScreen.jsx saiu da barra, mas suas funcoes ainda
+          necessarias (confirmar pagamento, ver matricula) so migram pra
+          grade de Cursos na Rodada 3; ate la este Screen continua existindo
+          pra nao perder essa funcionalidade no meio do caminho. */}
       <Tab.Screen name={ROUTES.CURSOS}>
         {({ navigation }) => (
           <TelaComTransicao>
@@ -151,20 +179,6 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
               snapshot={snapshot}
               usuario={usuario}
             />
-          </TelaComTransicao>
-        )}
-      </Tab.Screen>
-      {/* Nested aqui (nao como AlunoStack.Screen irmao do Tab.Navigator em
-          AlunoWorkspace.jsx) de proposito: navegar pra uma Screen de fora do
-          Tab.Navigator troca a arvore inteira, derrubando a CustomTabBar
-          junto. Vivendo dentro do Tab.Navigator, a barra permanece visivel
-          (so nao aparece como icone, ver CustomTabBar acima). Acessivel via
-          sidebar (MenuLateral.jsx) e pelo botao "Ver certificado" em
-          CursosScreen.jsx, nenhum dos dois muda. */}
-      <Tab.Screen name={ROUTES.CERTIFICADOS}>
-        {() => (
-          <TelaComTransicao>
-            <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />
           </TelaComTransicao>
         )}
       </Tab.Screen>
@@ -193,7 +207,20 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.fundoCartao,
     paddingTop: 10
   },
-  tabItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 2, minHeight: 44 },
+  tabItem: { flex: 1, alignItems: "center", justifyContent: "center", minHeight: 44 },
+  // Pilula de destaque da aba ativa (fundo roxo a 15%) - só aparece em volta
+  // do icone+rotulo quando selecionada, do contrario fica transparente (sem
+  // alterar o layout/alinhamento das abas inativas).
+  tabPilula: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: espacamentos.sm,
+    paddingVertical: 4,
+    borderRadius: raios.pilula,
+    backgroundColor: "transparent"
+  },
+  tabPilulaAtiva: { backgroundColor: "rgba(123, 47, 247, 0.15)" },
   tabTexto: { color: cores.textoRotulo, fontSize: 10, fontWeight: "600", textAlign: "center" },
   tabTextoAtivo: { color: cores.destaque }
 });

@@ -1,16 +1,24 @@
-// Paleta e tokens de radius espelhando exatamente os valores de referencia
-// do design system web (frontend/src/styles/base.css: --cor-sucesso/--cor-
-// erro/--cor-aviso/--raio-sm/--raio-md/--raio-lg) — cor de marca ja batia,
-// as 3 cores de status (sucesso/erro/aviso) divergiam antes desta correcao.
+// Paleta do redesign (ver docs/redesign-mobile/PROMPT-agente-mobile.md,
+// secao 2) - nomes de chave mantidos de proposito (as telas existentes ja os
+// usam), so os valores de fundo/texto/borda mudaram. Status (sucesso/erro/
+// aviso/informativo) ficam iguais, por pedido explicito do prompt. `destaque`
+// e a cor de marca, inalterada (ja era #7b2ff7); `acento` e nova.
 export const cores = {
-  fundo: "#000000",
-  fundoCartao: "#241a30",
-  fundoCartaoAtivo: "#2c1f3d",
-  bordaCartao: "#3a2a4a",
+  fundo: "#111319",
+  fundoCartao: "#1d1f26",
+  // "Cartao em destaque" do redesign (ex.: card ativo/selecionado) - mesma
+  // chave que ja existia pra esse papel, so o valor mudou.
+  fundoCartaoAtivo: "#22242e",
+  // Borda de cartao (1px, roxo a 20%). Divisorias finas (linhas separadoras
+  // dentro de um cartao) usam `divisoria` abaixo, nao esta - as duas eram a
+  // mesma cor antes do redesign, agora sao conceitos diferentes.
+  bordaCartao: "rgba(123, 47, 247, 0.2)",
+  divisoria: "rgba(255, 255, 255, 0.06)",
   destaque: "#7b2ff7",
-  texto: "#fff",
-  textoSuave: "#a89fb3",
-  textoRotulo: "#d8d2e0",
+  acento: "#9d67ff",
+  texto: "#e2e2ea",
+  textoSuave: "#ccc3d9",
+  textoRotulo: "#958da2",
   erro: "#ef4444",
   sucesso: "#22c55e",
   aviso: "#f59e0b",
@@ -28,7 +36,10 @@ export const cores = {
 export const raios = {
   sm: 6,
   md: 10,
-  lg: 16
+  lg: 16,
+  // Pilula (badge/status totalmente arredondado) - usado pelo destaque da
+  // aba ativa na bottom bar e pelos selos de status das telas futuras.
+  pilula: 999
 };
 
 // Escala de espacamento (padding/margin/gap) - cada tela reinventava seus
