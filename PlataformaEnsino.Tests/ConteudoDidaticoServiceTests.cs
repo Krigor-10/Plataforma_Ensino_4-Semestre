@@ -228,4 +228,90 @@ public class ConteudoDidaticoServiceTests
         var notificacoes = context.Notificacoes.Where(n => n.UsuarioId == aluno.Id).ToList();
         Assert.Single(notificacoes);
     }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_SemDependencias_Exclui()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+
+        await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+
+        Assert.Null(context.ConteudosDidaticos.Find(conteudo.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_OutroProfessor_LancaKeyNotFound()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var outroProfessor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.ExcluirConteudoAsync(conteudo.Id, outroProfessor.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_ComAvaliacaoVinculada_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+
+        var quiz = new Avaliacao { Titulo = "Quiz do material", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Quiz };
+        quiz.DefinirCurso(curso.Id);
+        quiz.ConteudoDidaticoId = conteudo.Id;
+        context.Avaliacoes.Add(quiz);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExcluirConteudoAsync(conteudo.Id, professor.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_ComProgressoDeAluno_LancaInvalidOperation()
+    {
+        // Achado da Fase 6 da auditoria geral: ProgressoConteudoAluno->ConteudoDidatico
+        // e Cascade (ver ProgressoConfiguration) - sem este bloqueio, o historico de
+        // conclusao do aluno seria apagado junto, sem recalcular o progresso agregado.
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var matricula = CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
+
+        context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
+        {
+            MatriculaId = matricula.Id,
+            ConteudoDidaticoId = conteudo.Id,
+            ModuloId = modulo.Id,
+            PercentualConclusao = 100
+        });
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExcluirConteudoAsync(conteudo.Id, professor.Id));
+    }
 }
