@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import Toast from "../../components/Toast.jsx";
-import { apiRequest, ApiError } from "../../lib/api.js";
+import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
@@ -59,7 +59,7 @@ const ICONE_TIPO_CONTEUDO = {
   5: "image-outline"
 };
 
-export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot, token }) {
+export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
@@ -147,8 +147,13 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     }
   }
 
-  function abrirConteudo(conteudo) {
-    const url = resolverUrlArquivo(conteudo.arquivoUrl || conteudo.linkUrl, token);
+  async function abrirConteudo(conteudo) {
+    // Busca um token valido na hora de abrir, em vez de usar um token vindo
+    // via prop (que pode ter sido emitido ha mais de Jwt:ExpireMinutes e
+    // nunca mais atualizado nesse componente) - renova sozinho se estiver
+    // vencendo. Ver shared/apiClient.js:obterTokenValido.
+    const tokenValido = await obterTokenValido();
+    const url = resolverUrlArquivo(conteudo.arquivoUrl || conteudo.linkUrl, tokenValido);
     if (url) {
       Linking.openURL(url).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
     }

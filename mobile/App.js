@@ -76,7 +76,6 @@ function App() {
                   onLogout={handleLogout}
                   onSessionExpired={handleLogout}
                   onUsuarioAtualizado={handleUsuarioAtualizado}
-                  token={session.token}
                   usuario={session.user}
                 />
               )}

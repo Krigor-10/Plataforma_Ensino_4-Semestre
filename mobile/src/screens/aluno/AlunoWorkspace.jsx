@@ -16,7 +16,7 @@ import { ROUTES } from "../../lib/routes.js";
 
 const AlunoStack = createNativeStackNavigator();
 
-export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, token, usuario }) {
+export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, usuario }) {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -113,7 +113,6 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
               onSessionExpired={onSessionExpired}
               snapshot={snapshot}
               tentarNovamente={tentarNovamente}
-              token={token}
               usuario={usuario}
             />
           )}

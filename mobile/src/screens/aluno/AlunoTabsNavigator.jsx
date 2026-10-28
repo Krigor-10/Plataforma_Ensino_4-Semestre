@@ -88,7 +88,7 @@ function CustomTabBar({ state, navigation }) {
   );
 }
 
-export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onSessionExpired, snapshot, tentarNovamente, token, usuario }) {
+export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onSessionExpired, snapshot, tentarNovamente, usuario }) {
   const insets = useSafeAreaInsets();
 
   if (carregando) {
@@ -123,7 +123,7 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
       <Tab.Screen name={ROUTES.CONTEUDOS}>
         {() => (
           <TelaComTransicao>
-            <ConteudosScreen onRecarregar={onRecarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} token={token} />
+            <ConteudosScreen onRecarregar={onRecarregar} onSessionExpired={onSessionExpired} snapshot={snapshot} />
           </TelaComTransicao>
         )}
       </Tab.Screen>

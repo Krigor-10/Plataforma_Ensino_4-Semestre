@@ -3,6 +3,56 @@ import { REFRESH_TOKEN_KEY, TOKEN_KEY } from "./sessionKeys.js";
 
 const AUTH_ENDPOINTS_SEM_RETRY = ["/auth/login", "/auth/refresh"];
 
+// Folga antes do "exp" do JWT pra considerar o token "vencendo" - cobre o
+// tempo de uma chamada de rede subsequente (ex.: abrir um arquivo logo apos
+// checar o token) nao cair numa janela de poucos segundos onde o token
+// ainda era valido na checagem mas ja expirou no servidor.
+const FOLGA_EXPIRACAO_TOKEN_MS = 60_000;
+
+// Base64url -> string, sem depender de atob/Buffer (nenhum dos dois e
+// garantido em todo ambiente que esse modulo roda - navegador, Node/Vitest
+// no Web, e Hermes/Jest no mobile). So decodifica o payload do JWT pra ler o
+// "exp"; nao precisa lidar com UTF-8 multibyte (claims desse token sao
+// numericos/ASCII).
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+function decodificarBase64(base64) {
+  let buffer = 0;
+  let bits = 0;
+  let saida = "";
+
+  for (const caractere of base64) {
+    const valor = BASE64_CHARS.indexOf(caractere);
+    if (valor === -1) {
+      continue;
+    }
+    buffer = (buffer << 6) | valor;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      saida += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+
+  return saida;
+}
+
+function obterExpiracaoDoToken(token) {
+  try {
+    const payloadBase64Url = token.split(".")[1];
+    if (!payloadBase64Url) {
+      return null;
+    }
+
+    const payloadBase64 = payloadBase64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(decodificarBase64(payloadBase64));
+
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export class ApiError extends Error {
   constructor(message, status) {
     super(message);
@@ -95,7 +145,37 @@ export function createApiClient({ baseUrl, storage }) {
     }
   }
 
-  return { apiRequest };
+  /**
+   * Le o token do storage e, se estiver vencendo (ou ja vencido), renova
+   * antes de devolver - pensado pra usos fora do apiRequest normal, onde o
+   * token precisa ir embutido numa URL (ex.: abrir um arquivo de /uploads
+   * via Linking.openURL no mobile, que nao passa pelo fetch com retry
+   * automatico de 401 acima). Reaproveita renovarToken/refreshEmAndamento,
+   * entao nunca dispara duas renovacoes concorrentes.
+   *
+   * Sem refresh token disponivel (ou se a renovacao falhar), devolve o
+   * token atual mesmo vencendo - e o unico valor que temos, e ainda assim
+   * cobre o caso comum (chamada acontece antes da expiracao real do
+   * servidor), em vez de simplesmente desistir de abrir o arquivo.
+   */
+  async function obterTokenValido() {
+    const token = await storage.getItem(TOKEN_KEY);
+    if (!token) {
+      return null;
+    }
+
+    const expiraEm = obterExpiracaoDoToken(token);
+    const estaVencendo = expiraEm !== null && expiraEm - FOLGA_EXPIRACAO_TOKEN_MS <= Date.now();
+
+    if (!estaVencendo) {
+      return token;
+    }
+
+    const tokenRenovado = await renovarToken();
+    return tokenRenovado || token;
+  }
+
+  return { apiRequest, obterTokenValido };
 }
 
 async function lerRespostaOuFalhar(response) {
