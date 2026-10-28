@@ -60,6 +60,62 @@ public class MatriculaService : IMatriculaService
     }
 
     /// <summary>
+    /// Compra atomica: funde matricular + confirmar pagamento num unico passo,
+    /// usada pelos botoes "Comprar"/"Começar grátis"/"Concluir compra" dos
+    /// apps (o aluno nao precisa mais de duas chamadas separadas). Matricula
+    /// com pagamento pendente so confirma o pagamento (nao duplica matricula).
+    /// Matricula ja aprovada sem pendencia (curso gratuito, ou pago e ja pago)
+    /// devolve conflito. Curso Acompanhado encerrado recusa via
+    /// MatricularComAprovacaoAutomaticaAsync -> GarantirCursoAbertoAsync.
+    /// </summary>
+    public async Task<Matricula> ComprarCursoAsync(int alunoId, int cursoId)
+    {
+        var transacaoJaAberta = _context.Database.CurrentTransaction is not null;
+        await using var transaction = transacaoJaAberta ? null : await _context.Database.BeginTransactionAsync();
+
+        var matriculaAprovada = await _context.Matriculas
+            .Include(m => m.Pagamentos)
+            .FirstOrDefaultAsync(m => m.AlunoId == alunoId && m.CursoId == cursoId && m.Status == StatusMatricula.Aprovada);
+
+        int matriculaId;
+
+        if (matriculaAprovada is not null)
+        {
+            var pagamentoPendente = matriculaAprovada.Pagamentos.FirstOrDefault(p => p.Status == StatusPagamento.Pendente);
+            if (pagamentoPendente is null)
+            {
+                throw new InvalidOperationException("Você já tem este curso.");
+            }
+
+            pagamentoPendente.ConfirmarPagamento();
+            await SalvarComProtecaoDeConcorrenciaAsync();
+            matriculaId = matriculaAprovada.Id;
+        }
+        else
+        {
+            var matriculaNova = await MatricularComAprovacaoAutomaticaAsync(alunoId, cursoId);
+            matriculaId = matriculaNova.Id;
+
+            var pagamentoRecente = await _context.Pagamentos
+                .FirstOrDefaultAsync(p => p.MatriculaId == matriculaId && p.Status == StatusPagamento.Pendente);
+
+            if (pagamentoRecente is not null)
+            {
+                pagamentoRecente.ConfirmarPagamento();
+                await SalvarComProtecaoDeConcorrenciaAsync();
+            }
+        }
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync();
+        }
+
+        return await _matriculaRepository.ObterMatriculaCompletaAsync(matriculaId)
+            ?? throw new KeyNotFoundException("Matrícula não encontrada após a compra.");
+    }
+
+    /// <summary>
     /// Cria a matricula em estado Pendente, sem turma — passo intermediario
     /// interno usado por <see cref="MatricularComAprovacaoAutomaticaAsync"/>
     /// antes de aprova-la automaticamente. Nao e mais exposto na interface

@@ -131,4 +131,110 @@ public class MatriculaServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id));
     }
+
+    [Fact]
+    public async Task ComprarCursoAsync_CursoPago_AprovaMatriculaEConfirmaPagamento()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
+        var pagamento = context.Pagamentos.Single(p => p.MatriculaId == matricula.Id);
+        Assert.Equal(StatusPagamento.Pago, pagamento.Status);
+        Assert.NotNull(pagamento.PagoEm);
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_CursoGratuito_AprovaSemCriarPagamento()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
+        Assert.False(context.Pagamentos.Any(p => p.MatriculaId == matricula.Id));
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_PagamentoJaPendente_ConcluiCompraSemDuplicarMatricula()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        var aluno = CriarAluno(context);
+
+        await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+
+        var matricula = await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        var aprovadas = context.Matriculas.Count(m =>
+            m.AlunoId == aluno.Id && m.CursoId == curso.Id && m.Status == StatusMatricula.Aprovada);
+        Assert.Equal(1, aprovadas);
+
+        var pagamentos = context.Pagamentos.Where(p => p.MatriculaId == matricula.Id).ToList();
+        Assert.Single(pagamentos);
+        Assert.Equal(StatusPagamento.Pago, pagamentos[0].Status);
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_CursoJaCompradoETotalmentePago_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        var aluno = CriarAluno(context);
+
+        await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ComprarCursoAsync(aluno.Id, curso.Id));
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_CursoGratuitoJaIniciado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+
+        await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ComprarCursoAsync(aluno.Id, curso.Id));
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_CursoAcompanhadoEncerrado_RecusaCompra()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ComprarCursoAsync(aluno.Id, curso.Id));
+    }
+
+    // Provider InMemory nao faz rollback real de transacao (so SqlServer, em
+    // producao) — por isso este teste de atomicidade usa uma falha que
+    // acontece ANTES de qualquer SaveChanges (curso inexistente), ponto em
+    // que "nada gravado" e garantido independente do provider.
+    [Fact]
+    public async Task ComprarCursoAsync_CursoInexistente_NaoGravaNadaELancaKeyNotFound()
+    {
+        var (service, context) = CriarService();
+        var aluno = CriarAluno(context);
+        var cursoInexistenteId = 999999;
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.ComprarCursoAsync(aluno.Id, cursoInexistenteId));
+
+        Assert.False(context.Matriculas.Any(m => m.AlunoId == aluno.Id));
+        Assert.False(context.Pagamentos.Any());
+    }
 }

@@ -73,6 +73,23 @@ public class MatriculasController : ControllerBase
         return CreatedAtAction(nameof(GetMatriculaPorId), new { id = matricula.Id }, MapResponse(matricula));
     }
 
+    // Rota de compra atomica: matricula + confirma pagamento (se o curso for
+    // pago) numa unica chamada, pra os botoes "Comprar"/"Começar grátis"/
+    // "Concluir compra" nao precisarem de dois passos manuais.
+    [HttpPost("comprar")]
+    [Authorize(Roles = "Aluno")]
+    public async Task<ActionResult<MatriculaResponseDto>> ComprarCurso([FromBody] ComprarCursoDto request)
+    {
+        var alunoId = User.ObterUsuarioId();
+        if (!alunoId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o aluno autenticado." });
+        }
+
+        var matricula = await _matriculaService.ComprarCursoAsync(alunoId.Value, request.CursoId);
+        return Ok(MapResponse(matricula));
+    }
+
     [HttpPut("{id:int}/cancelar")]
     public async Task<IActionResult> Cancelar(int id)
     {
