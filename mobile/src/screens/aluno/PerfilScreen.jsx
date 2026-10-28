@@ -2,12 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
-import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import ModalCentralizado from "../../components/ModalCentralizado.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
-import { formatCep, obterIniciais, onlyDigits } from "../../lib/format.js";
+import { formatCep, formatTelefone, obterIniciais, onlyDigits } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
 function estadoFormularioInicial(usuario) {
@@ -24,9 +23,26 @@ function estadoFormularioInicial(usuario) {
   };
 }
 
+// Endereco compacto em 2 linhas pro cartao ENDERECO (8_meu_perfil.png):
+// "{Rua}, {Numero} — {Bairro}" / "{Cidade} – {UF} · CEP {CEP}". Qualquer
+// pedaco faltando some junto com o separador dele (nunca deixa virgula/
+// traco sobrando); endereco todo vazio devolve null, pro chamador mostrar
+// "Nenhum endereço cadastrado".
+function formatarEnderecoCompacto(dados) {
+  const ruaNumero = [dados.rua?.trim(), dados.numero?.trim()].filter(Boolean).join(", ");
+  const linha1 = [ruaNumero, dados.bairro?.trim()].filter(Boolean).join(" — ");
+
+  const cidadeUf = [dados.cidade?.trim(), dados.estado?.trim()].filter(Boolean).join(" – ");
+  const cepFormatado = dados.cep ? formatCep(onlyDigits(dados.cep)) : "";
+  const linha2 = [cidadeUf, cepFormatado ? `CEP ${cepFormatado}` : ""].filter(Boolean).join(" · ");
+
+  const linhas = [linha1, linha2].filter(Boolean);
+  return linhas.length > 0 ? linhas : null;
+}
+
 const SENHA_INICIAL = { senhaAtual: "", novaSenha: "", confirmarNovaSenha: "" };
 
-export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtualizado, onVoltar, usuario }) {
+export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtualizado, usuario }) {
   const [dados, setDados] = useState(() => estadoFormularioInicial(usuario));
   const [mensagemPerfil, setMensagemPerfil] = useState(null);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
@@ -34,6 +50,8 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
   // edicao aberto, editando uma COPIA de `dados` (nao os dados persistidos
   // direto) — assim "Cancelar"/fechar o modal so descarta o rascunho, sem
   // nenhuma chance de deixar a tela de leitura com valor editado e nao salvo.
+  // Os dois botoes "Editar" (Dados pessoais e Endereco) abrem o MESMO modal,
+  // com todos os campos — nao ha modal separado por grupo.
   const [rascunhoPerfil, setRascunhoPerfil] = useState(null);
 
   const [senha, setSenha] = useState(SENHA_INICIAL);
@@ -176,46 +194,56 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
     setAlterandoSenha(false);
   }
 
+  const linhasEndereco = formatarEnderecoCompacto(dados);
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={estilos.container}>
     <ScrollView contentContainerStyle={estilos.corpo}>
-      <BotaoVoltar onPress={onVoltar} style={estilos.voltar} />
-
       <View style={estilos.identidadeCartao}>
         <View style={estilos.avatar}>
           <Text style={estilos.avatarTexto}>{obterIniciais(usuario?.nome)}</Text>
         </View>
-        <Text numberOfLines={1} style={estilos.identidadeNome}>{usuario?.nome}</Text>
-        <Text style={estilos.identidadePapel}>{usuario?.tipoUsuario}</Text>
-        <Text numberOfLines={1} style={estilos.identidadeEmail}>{usuario?.email}</Text>
+        <View style={estilos.identidadeTextos}>
+          <View style={estilos.identidadeNomeLinha}>
+            <Text numberOfLines={1} style={estilos.identidadeNome}>{usuario?.nome}</Text>
+            <View style={estilos.identidadePapelPilula}>
+              <Text style={estilos.identidadePapelTexto}>{usuario?.tipoUsuario}</Text>
+            </View>
+          </View>
+          <Text numberOfLines={1} style={estilos.identidadeEmail}>{usuario?.email}</Text>
+        </View>
       </View>
 
-      <View style={estilos.tituloSecaoLinha}>
-        <Text style={estilos.tituloSecao}>Dados pessoais</Text>
-        <TouchableOpacity
-          accessibilityHint="Abre o modal de edição dos seus dados pessoais"
-          accessibilityLabel="Editar dados pessoais"
-          accessibilityRole="button"
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          onPress={abrirEdicaoPerfil}
-          style={estilos.botaoEditar}
-        >
-          <Ionicons color={cores.destaque} name="pencil" size={18} />
-        </TouchableOpacity>
-      </View>
+      <TituloSecaoComEditar onEditar={abrirEdicaoPerfil} titulo="Dados pessoais" />
       <View style={estilos.cartao}>
         <CampoLeitura label="Nome completo" valor={dados.nome} />
+        <View style={estilos.divisoriaFina} />
         <CampoLeitura label="E-mail" valor={dados.email} />
-        <CampoLeitura label="Telefone" valor={dados.telefone} />
-        <CampoLeitura label="CEP" valor={dados.cep} />
-        <CampoLeitura label="Rua" valor={dados.rua} />
-        <CampoLeitura label="Numero" valor={dados.numero} />
-        <CampoLeitura label="Bairro" valor={dados.bairro} />
-        <CampoLeitura label="Cidade" valor={dados.cidade} />
-        <CampoLeitura label="UF" valor={dados.estado} />
-
-        <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
+        <View style={estilos.divisoriaFina} />
+        <CampoLeitura label="Telefone" valor={formatTelefone(dados.telefone)} />
       </View>
+
+      <TituloSecaoComEditar onEditar={abrirEdicaoPerfil} titulo="Endereço" />
+      <View style={estilos.cartao}>
+        <View style={estilos.enderecoLinha}>
+          <View style={estilos.enderecoIconeCirculo}>
+            <Ionicons color={cores.destaque} name="location-outline" size={18} />
+          </View>
+          <View style={estilos.enderecoTextos}>
+            {linhasEndereco ? (
+              linhasEndereco.map((linha, indice) => (
+                <Text key={indice} numberOfLines={1} style={indice === 0 ? estilos.enderecoLinhaPrincipal : estilos.enderecoLinhaSecundaria}>
+                  {linha}
+                </Text>
+              ))
+            ) : (
+              <Text style={estilos.enderecoLinhaSecundaria}>Nenhum endereço cadastrado</Text>
+            )}
+          </View>
+        </View>
+      </View>
+
+      <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
 
       <ModalCentralizado
         onFechar={fecharEdicaoPerfil}
@@ -237,7 +265,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         <Campo keyboardType="phone-pad" label="Telefone" onChangeText={(v) => atualizarCampoRascunho("telefone", v)} placeholder="(11) 99999-9999" value={rascunhoPerfil?.telefone || ""} />
         <Campo keyboardType="numeric" label="CEP" onChangeText={(v) => atualizarCampoRascunho("cep", v)} placeholder="00000-000" value={rascunhoPerfil?.cep || ""} />
         <Campo label="Rua" onChangeText={(v) => atualizarCampoRascunho("rua", v)} value={rascunhoPerfil?.rua || ""} />
-        <Campo label="Numero" onChangeText={(v) => atualizarCampoRascunho("numero", v)} value={rascunhoPerfil?.numero || ""} />
+        <Campo label="Número" onChangeText={(v) => atualizarCampoRascunho("numero", v)} value={rascunhoPerfil?.numero || ""} />
         <Campo label="Bairro" onChangeText={(v) => atualizarCampoRascunho("bairro", v)} value={rascunhoPerfil?.bairro || ""} />
         <Campo label="Cidade" onChangeText={(v) => atualizarCampoRascunho("cidade", v)} value={rascunhoPerfil?.cidade || ""} />
         <Campo autoCapitalize="characters" label="UF" maxLength={2} onChangeText={(v) => atualizarCampoRascunho("estado", v)} placeholder="SP" value={rascunhoPerfil?.estado || ""} />
@@ -245,7 +273,7 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         <Toast mensagem={mensagemPerfil?.texto} onFechar={() => setMensagemPerfil(null)} tipo={mensagemPerfil?.tipo} />
       </ModalCentralizado>
 
-      <Text style={estilos.tituloSecao}>Segurança da conta</Text>
+      <Text style={estilos.tituloSecaoRotulo}>Segurança da conta</Text>
       <View style={estilos.cartao}>
         {!alterandoSenha ? (
           <TouchableOpacity
@@ -258,7 +286,10 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
             <View style={estilos.linhaAlterarSenhaIcone}>
               <Ionicons color={cores.destaque} name="lock-closed-outline" size={18} />
             </View>
-            <Text style={estilos.linhaAlterarSenhaTexto}>Alterar senha</Text>
+            <View style={estilos.linhaAlterarSenhaTextos}>
+              <Text style={estilos.linhaAlterarSenhaTexto}>Alterar senha</Text>
+              <Text style={estilos.linhaAlterarSenhaLegenda}>Troque sua senha de acesso</Text>
+            </View>
             <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
           </TouchableOpacity>
         ) : (
@@ -281,13 +312,43 @@ export default function PerfilScreen({ onLogout, onSessionExpired, onUsuarioAtua
         )}
       </View>
 
-      <Botao accessibilityLabel="Sair da conta" icone="log-out-outline" onPress={() => setConfirmandoSaida(true)} style={estilos.botaoSair} variante="perigo">
-        Sair
+      <Botao
+        accessibilityLabel="Sair da conta"
+        icone="log-out-outline"
+        onPress={() => setConfirmandoSaida(true)}
+        style={estilos.botaoSair}
+        textoStyle={estilos.botaoSairTexto}
+        variante="perigo"
+      >
+        Sair da conta
       </Botao>
 
       <ModalConfirmarSaida onCancelar={() => setConfirmandoSaida(false)} onConfirmar={onLogout} visivel={confirmandoSaida} />
     </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+// Titulo de grupo (rotulo pequeno maiusculo) + botao de texto roxo "Editar"
+// com lapis — usado por Dados pessoais e Endereco, que abrem o MESMO modal
+// de edicao (abrirEdicaoPerfil). Segurança da conta nao tem acao no titulo,
+// usa so o `tituloSecaoRotulo` sozinho (ver JSX acima).
+function TituloSecaoComEditar({ onEditar, titulo }) {
+  return (
+    <View style={estilos.tituloSecaoLinha}>
+      <Text style={estilos.tituloSecaoRotulo}>{titulo}</Text>
+      <TouchableOpacity
+        accessibilityHint={`Abre o modal de edição de ${titulo.toLowerCase()}`}
+        accessibilityLabel={`Editar ${titulo.toLowerCase()}`}
+        accessibilityRole="button"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        onPress={onEditar}
+        style={estilos.botaoEditar}
+      >
+        <Ionicons color={cores.destaque} name="pencil" size={14} />
+        <Text style={estilos.botaoEditarTexto}>Editar</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -315,21 +376,40 @@ function CampoLeitura({ label, valor }) {
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: espacamentos.xl, paddingBottom: 40, gap: espacamentos.sm },
-  voltar: { alignSelf: "flex-start", marginBottom: 8 },
-  identidadeCartao: { alignItems: "center", backgroundColor: cores.fundoCartao, borderRadius: raios.lg, paddingVertical: espacamentos.xl, marginBottom: espacamentos.sm },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: cores.destaque, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
-  avatarTexto: { color: cores.texto, fontSize: 22, fontWeight: "800" },
-  identidadeNome: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "700", maxWidth: "85%", textAlign: "center" },
-  identidadePapel: { color: cores.textoSuave, fontSize: tipografia.corpo, marginTop: 2 },
-  identidadeEmail: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4, maxWidth: "85%" },
-  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 12, marginBottom: 8 },
-  // Linha com o titulo da secao + icone de lapis alinhado a direita — mesmo
-  // `tituloSecao` de base, so vira uma row quando precisa do botao de editar
-  // (Dados pessoais); Segurança da conta nao tem acao no titulo, continua
-  // usando `tituloSecao` sozinho.
+  identidadeCartao: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: espacamentos.lg,
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    padding: espacamentos.lg,
+    marginBottom: espacamentos.sm
+  },
+  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: cores.destaque, alignItems: "center", justifyContent: "center" },
+  avatarTexto: { color: cores.texto, fontSize: 26, fontWeight: "800" },
+  identidadeTextos: { flex: 1, gap: 4 },
+  identidadeNomeLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, flexWrap: "wrap" },
+  identidadeNome: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "700", flexShrink: 1 },
+  identidadePapelPilula: { borderWidth: 1, borderColor: cores.destaque, borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 2 },
+  identidadePapelTexto: { color: cores.destaque, fontSize: tipografia.legenda, fontWeight: "700" },
+  identidadeEmail: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  // Rotulo pequeno e maiusculo compartilhado pelos 3 grupos (Dados pessoais,
+  // Endereco, Segurança da conta) — mesmo papel do rotulo de secao do
+  // redesign web, so que sem o tamanho grande que a tela tinha antes.
+  tituloSecaoRotulo: {
+    color: cores.textoRotulo,
+    fontSize: tipografia.rotulo,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: 12,
+    marginBottom: 8
+  },
   tituloSecaoLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12, marginBottom: 8 },
-  botaoEditar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
+  botaoEditar: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 32, paddingHorizontal: 4 },
+  botaoEditarTexto: { color: cores.destaque, fontWeight: "600", fontSize: tipografia.rotulo },
   cartao: { backgroundColor: cores.fundoCartao, borderRadius: 12, padding: 16, gap: 12 },
+  divisoriaFina: { height: 1, backgroundColor: cores.divisoria },
   campo: { gap: 6 },
   rotulo: { color: cores.textoRotulo, fontSize: tipografia.corpo },
   entrada: {
@@ -345,19 +425,37 @@ const estilos = StyleSheet.create({
   // ativo — reforca que a tela de Perfil, no modo leitura, nao e um
   // formulario editavel.
   valorLeitura: { color: cores.texto, fontSize: tipografia.corpo, paddingVertical: 10 },
+  enderecoLinha: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.md },
+  enderecoIconeCirculo: {
+    width: 40,
+    height: 40,
+    borderRadius: raios.md,
+    backgroundColor: cores.bordaCartao,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  enderecoTextos: { flex: 1, gap: 2 },
+  enderecoLinhaPrincipal: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
+  enderecoLinhaSecundaria: { color: cores.textoSuave, fontSize: tipografia.rotulo },
   acoesEdicaoPerfil: { flexDirection: "row", gap: espacamentos.sm },
   acoesEdicaoPerfilBotao: { flex: 1 },
   linhaAlterarSenha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, minHeight: 44 },
   linhaAlterarSenhaIcone: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: cores.fundoCartaoAtivo,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: cores.bordaCartao,
     alignItems: "center",
     justifyContent: "center"
   },
-  linhaAlterarSenhaTexto: { flex: 1, color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
+  linhaAlterarSenhaTextos: { flex: 1, gap: 2 },
+  linhaAlterarSenhaTexto: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
+  linhaAlterarSenhaLegenda: { color: cores.textoSuave, fontSize: tipografia.legenda },
   acoesSenha: { flexDirection: "row", gap: espacamentos.sm, marginTop: 4 },
   acoesSenhaBotao: { flex: 1 },
-  botaoSair: { marginTop: 28 }
+  // Contorno vermelho so a ~40% opacidade (nao o `perigo` padrao do Botao,
+  // que usa cores.erro solido na borda) — "Sair da conta" fica discreto, so
+  // o ultimo item da tela, nao uma acao de igual peso visual as outras.
+  botaoSair: { marginTop: 28, borderColor: "rgba(239, 68, 68, 0.4)" },
+  botaoSairTexto: { fontWeight: "600" }
 });

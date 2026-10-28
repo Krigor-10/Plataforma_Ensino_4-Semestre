@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
@@ -14,7 +13,7 @@ const ICONE_TIPO = {
   PagamentoConfirmado: "card"
 };
 
-export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessionExpired, onVoltar }) {
+export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessionExpired }) {
   const [notificacoes, setNotificacoes] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -80,17 +79,14 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
 
   return (
     <View style={estilos.container}>
-      <View style={estilos.cabecalho}>
-        <BotaoVoltar onPress={onVoltar} />
-        {naoLidas > 0 ? (
+      {naoLidas > 0 ? (
+        <View style={estilos.cabecalho}>
           <TouchableOpacity onPress={marcarTodasComoLidas} style={estilos.marcarTodas}>
             <Ionicons color={cores.textoSuave} name="checkmark-done-outline" size={14} />
             <Text style={estilos.marcarTodasTexto}>Marcar todas como lidas</Text>
           </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <Text style={estilos.titulo}>Notificações</Text>
+        </View>
+      ) : null}
 
       {carregando ? (
         <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
@@ -139,10 +135,9 @@ function ItemNotificacao({ notificacao, onPress }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo, padding: espacamentos.xl },
-  cabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: espacamentos.sm },
+  cabecalho: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", marginBottom: espacamentos.sm },
   marcarTodas: { flexDirection: "row", alignItems: "center", gap: 4, minHeight: 44, paddingHorizontal: 4 },
   marcarTodasTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontWeight: "600" },
-  titulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.destaque, marginBottom: espacamentos.lg },
   corpo: { gap: espacamentos.sm, paddingBottom: espacamentos.xxl },
   cartao: {
     flexDirection: "row",

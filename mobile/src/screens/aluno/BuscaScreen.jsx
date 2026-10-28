@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { normalizarTermoBusca } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
@@ -16,6 +17,7 @@ const LIMITE_POR_GRUPO = 20;
    useMemo, sem chamada nova). Sem debounce: e um filtro sincrono sobre um
    array ja carregado, nao uma consulta remota. */
 export default function BuscaScreen({ navigation, onVoltar, snapshot }) {
+  const insets = useSafeAreaInsets();
   const [termo, setTermo] = useState("");
   const termoNormalizado = normalizarTermoBusca(termo);
 
@@ -74,7 +76,7 @@ export default function BuscaScreen({ navigation, onVoltar, snapshot }) {
 
   return (
     <View style={estilos.container}>
-      <View style={estilos.cabecalho}>
+      <View style={[estilos.cabecalho, { paddingTop: insets.top + espacamentos.md }]}>
         <TouchableOpacity
           accessibilityHint="Fecha a busca e volta pra tela anterior"
           accessibilityLabel="Voltar"

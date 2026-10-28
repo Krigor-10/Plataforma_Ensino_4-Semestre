@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import AlunoHeaderBar from "../../components/AlunoHeaderBar.jsx";
+import CabecalhoSimples from "../../components/CabecalhoSimples.jsx";
 import MenuLateral from "../../components/MenuLateral.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import AlunoTabsNavigator from "./AlunoTabsNavigator.jsx";
@@ -15,6 +16,16 @@ import { cores } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
 
 const AlunoStack = createNativeStackNavigator();
+
+// Telas empilhadas que usam o cabecalho leve (seta + titulo) em vez do
+// HeaderGlobal+ScreenIndicator completo — ver CabecalhoSimples.jsx. Busca
+// fica fora: tem seu proprio cabecalho embutido (voltar + campo de busca),
+// entao recebe `header: () => null` em vez de um titulo aqui.
+const TITULOS_CABECALHO_SIMPLES = {
+  [ROUTES.PERFIL]: "Meu perfil",
+  [ROUTES.CATALOGO]: "Catálogo",
+  [ROUTES.NOTIFICACOES]: "Notificações"
+};
 
 export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, usuario }) {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
@@ -78,8 +89,34 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
   return (
     <View style={estilos.container}>
       <AlunoStack.Navigator
+        screenListeners={({ route }) => ({
+          // Reporta a rota ativa do AlunoStack pro MenuLateral.jsx destacar o
+          // item certo (fora da arvore do Navigator, sem acesso direto a
+          // route). ALUNO_TABS (as 5 abas) limpa o destaque: nenhum item do
+          // menu corresponde a uma aba da bottom bar. Era responsabilidade
+          // de AlunoHeaderBar.jsx antes desta rodada — agora Perfil/Catalogo/
+          // Notificacoes usam CabecalhoSimples.jsx e Busca nao tem header
+          // nenhum, entao precisa viver no proprio Navigator pra continuar
+          // funcionando nas 5 rotas.
+          focus: () => setRotaAtivaChave(route.name === ROUTES.ALUNO_TABS ? null : route.name)
+        })}
         screenOptions={({ route, navigation }) => {
           navigationRef.current = navigation;
+
+          // Busca tem seu proprio cabecalho embutido (voltar + campo de
+          // busca) — ver BuscaScreen.jsx.
+          if (route.name === ROUTES.BUSCA) {
+            return { animation: "slide_from_right", header: () => null };
+          }
+
+          const tituloCabecalhoSimples = TITULOS_CABECALHO_SIMPLES[route.name];
+          if (tituloCabecalhoSimples) {
+            return {
+              animation: "slide_from_right",
+              header: () => <CabecalhoSimples onVoltar={() => navigation.goBack()} titulo={tituloCabecalhoSimples} />
+            };
+          }
+
           return {
             animation: "slide_from_right",
             header: () => (
@@ -87,7 +124,6 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
                 navigation={navigation}
                 notificacoesVersao={notificacoesVersao}
                 onAbrirMenu={() => setMenuAberto(true)}
-                onRotaAtivaMudou={setRotaAtivaChave}
                 route={route}
                 usuario={usuario}
               />
@@ -109,31 +145,28 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.PERFIL}>
-          {({ navigation }) => (
+          {() => (
             <PerfilScreen
               onLogout={onLogout}
               onSessionExpired={onSessionExpired}
               onUsuarioAtualizado={onUsuarioAtualizado}
-              onVoltar={() => navigation.goBack()}
               usuario={usuario}
             />
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.NOTIFICACOES}>
-          {({ navigation }) => (
+          {() => (
             <NotificacoesScreen
               onNotificacoesAtualizadas={() => setNotificacoesVersao((atual) => atual + 1)}
               onSessionExpired={onSessionExpired}
-              onVoltar={() => navigation.goBack()}
             />
           )}
         </AlunoStack.Screen>
         <AlunoStack.Screen name={ROUTES.CATALOGO}>
-          {({ navigation }) => (
+          {() => (
             <CatalogoScreen
               onRecarregar={recarregar}
               onSessionExpired={onSessionExpired}
-              onVoltar={() => navigation.goBack()}
               snapshot={snapshot}
               usuario={usuario}
             />

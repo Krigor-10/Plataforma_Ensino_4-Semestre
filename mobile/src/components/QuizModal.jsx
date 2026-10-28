@@ -319,12 +319,14 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
             </View>
 
             <View style={estilos.grade2x2}>
-              <BlocoResumo icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
-              <BlocoResumo cor={cores.informativo} corFundo={cores.informativoFundo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
-              {!ehQuiz ? (
-                <BlocoResumo cor={cores.destaque} corFundo={cores.bordaCartao} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
-              ) : null}
-              <BlocoResumo icone="repeat" rotulo="Tentativa" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
+              {agruparEmLinhasDeDois(blocosResumoAvaliacao(avaliacao, ehQuiz, tentativasRealizadas, tentativasPermitidas)).map((linha, indice) => (
+                <View key={indice} style={estilos.grade2x2Linha}>
+                  {linha.map((bloco) => (
+                    <BlocoResumo key={bloco.key} cor={bloco.cor} corFundo={bloco.corFundo} icone={bloco.icone} rotulo={bloco.rotulo} valor={bloco.valor} />
+                  ))}
+                  {linha.length === 1 ? <View style={estilos.grade2x2Espaco} /> : null}
+                </View>
+              ))}
             </View>
 
             {tentativasEsgotadas ? (
@@ -550,6 +552,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
                   <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
                 ) : null}
                 <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${tentativaNumeroAtual} de ${tentativasPermitidas}`} />
+                {ehQuiz ? <View style={estilos.resumoEspaco} /> : null}
               </View>
 
               {podeRefazer ? (
@@ -568,6 +571,41 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       </Modal>
     </>
   );
+}
+
+// Monta os dados dos blocos do grid "Antes de comecar" (quiz tem 3: sem
+// Nota maxima, prova tem 4) separado da renderizacao, pra poder agrupar em
+// linhas de 2 antes de desenhar — ver agruparEmLinhasDeDois.
+function blocosResumoAvaliacao(avaliacao, ehQuiz, tentativasRealizadas, tentativasPermitidas) {
+  return [
+    { key: "questoes", icone: "help-circle-outline", rotulo: "Questões", valor: String(avaliacao.totalQuestoes || 0) },
+    {
+      key: "tempo",
+      cor: cores.informativo,
+      corFundo: cores.informativoFundo,
+      icone: "time-outline",
+      rotulo: "Tempo limite",
+      valor: avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"
+    },
+    ...(!ehQuiz
+      ? [{ key: "nota", cor: cores.destaque, corFundo: cores.bordaCartao, icone: "trophy-outline", rotulo: "Nota máxima", valor: formatScore(avaliacao.notaMaxima) }]
+      : []),
+    { key: "tentativa", icone: "repeat", rotulo: "Tentativa", valor: `${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}` }
+  ];
+}
+
+// Divide uma lista de blocos em linhas de 2 — a largura de cada bloco vem
+// do `flex: 1` da linha (ver estilos.blocoResumo/resumoItem), nunca do
+// conteudo, senao a 1a e a 2a linha dividem o espaco de jeitos diferentes
+// conforme o texto ("Sem limite" vs "10") e as colunas ficam fora de prumo.
+// Linha com 1 bloco so (quantidade impar) recebe um espaco vazio do mesmo
+// `flex: 1` pra ele nao esticar at[e] a largura toda.
+function agruparEmLinhasDeDois(blocos) {
+  const linhas = [];
+  for (let indice = 0; indice < blocos.length; indice += 2) {
+    linhas.push(blocos.slice(indice, indice + 2));
+  }
+  return linhas;
 }
 
 // `cor` e opcional — rotulo neutro (Questoes, Tentativas) mantem o cinza
@@ -624,8 +662,9 @@ const estilos = StyleSheet.create({
   iconeFechar: { opacity: 0.75 },
   corpoFlex: { flex: 1 },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
-  resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
+  resumo: { flexDirection: "row", gap: espacamentos.md, marginBottom: espacamentos.xl },
+  resumoItem: { flex: 1, backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md },
+  resumoEspaco: { flex: 1 },
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
   resumoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
   resumoValor: { color: cores.texto, fontWeight: "700" },
@@ -655,8 +694,10 @@ const estilos = StyleSheet.create({
   sheetTitulo: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "600" },
   sheetModulo: { color: cores.textoSuave, fontSize: tipografia.corpo },
   sheetBotaoFechar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
-  grade2x2: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.lg },
-  blocoResumo: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: 12, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
+  grade2x2: { gap: espacamentos.md, marginBottom: espacamentos.lg },
+  grade2x2Linha: { flexDirection: "row", gap: espacamentos.md },
+  grade2x2Espaco: { flex: 1 },
+  blocoResumo: { flex: 1, backgroundColor: cores.fundoCartaoAtivo, borderRadius: 12, padding: espacamentos.md },
   blocoResumoIconeCirculo: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
   blocoResumoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginBottom: 2 },
   blocoResumoValor: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "600" },

@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
-import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -16,7 +15,7 @@ import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
    (ver cursosDisponiveis abaixo) — "pendente"/matricula ativa nunca
    aparecem aqui, so em CURSOS. Preco/gratuidade adicionado ao card (nao
    existia antes, pedido explicito). */
-export default function CatalogoScreen({ onRecarregar, onSessionExpired, onVoltar, snapshot, usuario }) {
+export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapshot, usuario }) {
   const [busca, setBusca] = useState("");
   const [processando, setProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
@@ -74,8 +73,6 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, onVolta
 
   return (
     <View style={estilos.container}>
-      <BotaoVoltar onPress={onVoltar} style={estilos.voltar} />
-
       {mensagem ? (
         <View style={estilos.mensagemContainer}>
           <Toast mensagem={mensagem.texto} onFechar={() => setMensagem(null)} tipo={mensagem.tipo} />
@@ -148,13 +145,6 @@ function ItemCursoCatalogo({ curso, onSolicitar, processando, temTurma }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  // marginLeft/marginRight explicitos (nao marginHorizontal): o BotaoVoltar
-  // base ja tem marginLeft: -6 (compensa o padding interno do icone pra
-  // alinhar com telas que tem padding proprio, ver Perfil/NotificacoesScreen),
-  // e no RN/Yoga um marginLeft explicito sempre vence marginHorizontal do
-  // mesmo lado — usar marginHorizontal aqui NAO sobrescrevia o -6, deixando o
-  // botao colado na borda esquerda. Precisa sobrescrever a mesma chave.
-  voltar: { marginLeft: espacamentos.xl, marginRight: espacamentos.xl, marginTop: espacamentos.lg },
   mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.md },
   buscaLinha: {
     flexDirection: "row",

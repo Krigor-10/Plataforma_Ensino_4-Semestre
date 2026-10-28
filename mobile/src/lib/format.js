@@ -105,6 +105,24 @@ export function formatCep(value) {
   return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
 
+// Celular (DDD + 9 digitos, 11 no total) vira "(11) 99999-0004"; fixo (DDD +
+// 8 digitos, 10 no total) vira "(11) 3333-4444". Sem DDD ou com qualquer
+// outro tamanho (numero incompleto, internacional etc.) mostra so os
+// digitos, sem tentar adivinhar onde cortar.
+export function formatTelefone(value) {
+  const digits = onlyDigits(value);
+
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return digits;
+}
+
 // Mesmo criterio de normalizarBusca em frontend/SecaoCursos.jsx — minusculas
 // + sem acentos, pra "avaliacao"/"Avaliação" baterem na mesma busca.
 export function normalizarTermoBusca(valor) {

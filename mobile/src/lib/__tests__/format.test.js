@@ -3,6 +3,7 @@ import {
   formatGrade,
   formatPercent,
   formatScore,
+  formatTelefone,
   formatarTempoRestante,
   normalizeContentType,
   normalizeEvaluationType,
@@ -156,5 +157,25 @@ describe("formatCep", () => {
 
   it("retorna o valor original (trim) quando nao tem 8 digitos", () => {
     expect(formatCep("123")).toBe("123");
+  });
+});
+
+describe("formatTelefone", () => {
+  it("formata celular (11 digitos) como (DD) 9XXXX-XXXX", () => {
+    expect(formatTelefone("11999990004")).toBe("(11) 99999-0004");
+  });
+
+  it("formata fixo (10 digitos) como (DD) XXXX-XXXX", () => {
+    expect(formatTelefone("1133334444")).toBe("(11) 3333-4444");
+  });
+
+  it("ignora caracteres nao numericos antes de formatar", () => {
+    expect(formatTelefone("(11) 99999-0004")).toBe("(11) 99999-0004");
+  });
+
+  it("mostra so os digitos quando nao tem DDD ou o tamanho e outro", () => {
+    expect(formatTelefone("999990004")).toBe("999990004");
+    expect(formatTelefone("123")).toBe("123");
+    expect(formatTelefone("")).toBe("");
   });
 });
