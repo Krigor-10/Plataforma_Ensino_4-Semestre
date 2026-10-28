@@ -95,6 +95,76 @@ describe("pagamento simulado", () => {
   });
 });
 
+describe("compra de cursos (pendencia_compra_cursos)", () => {
+  test("POST /Matriculas/comprar matricula e confirma o pagamento numa unica chamada", async () => {
+    const usuario = await loginComo("aluno@demo.edtech");
+
+    const matriculasAntes = await demoRequest(`/Matriculas/aluno/${usuario.id}`);
+    expect(matriculasAntes.some((matricula) => matricula.cursoId === 2)).toBe(false);
+
+    const resultado = await demoRequest("/Matriculas/comprar", {
+      method: "POST",
+      body: JSON.stringify({ cursoId: 2 })
+    });
+    expect(resultado.pagamentoConfirmado).toBe(true);
+
+    const matriculasDepois = await demoRequest(`/Matriculas/aluno/${usuario.id}`);
+    const novaMatricula = matriculasDepois.find((matricula) => matricula.cursoId === 2);
+    expect(novaMatricula).toBeTruthy();
+    expect(novaMatricula.status).toBe(1); // Aprovada
+
+    const pagamentos = await demoRequest("/Pagamentos/aluno");
+    const pagamentoCurso2 = pagamentos.find((pagamento) => pagamento.cursoId === 2);
+    expect(pagamentoCurso2.status).toBe(2); // Pago
+  });
+
+  test("POST /Matriculas/comprar recusa curso ja comprado (409)", async () => {
+    await loginComo("aluno@demo.edtech");
+
+    await demoRequest("/Matriculas/comprar", { method: "POST", body: JSON.stringify({ cursoId: 2 }) });
+
+    await expect(
+      demoRequest("/Matriculas/comprar", { method: "POST", body: JSON.stringify({ cursoId: 2 }) })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+
+  test("POST /Matriculas/comprar so confirma uma cobranca pendente existente, sem duplicar a matricula", async () => {
+    const usuario = await loginComo("aluno@demo.edtech");
+
+    const matriculasAntes = await demoRequest(`/Matriculas/aluno/${usuario.id}`);
+    const quantidadeAntes = matriculasAntes.length;
+
+    const [cobrancaPendente] = await demoRequest("/Pagamentos/aluno");
+    expect(cobrancaPendente.status).toBe(1); // Pendente
+
+    const resultado = await demoRequest("/Matriculas/comprar", {
+      method: "POST",
+      body: JSON.stringify({ cursoId: cobrancaPendente.cursoId })
+    });
+    expect(resultado.pagamentoConfirmado).toBe(true);
+
+    const matriculasDepois = await demoRequest(`/Matriculas/aluno/${usuario.id}`);
+    expect(matriculasDepois.length).toBe(quantidadeAntes);
+  });
+
+  test("POST /Matriculas (comecar gratis) matricula direto e cria cobranca pendente so se o curso for pago", async () => {
+    const usuario = await loginComo("aluno@demo.edtech");
+
+    const resultado = await demoRequest("/Matriculas", {
+      method: "POST",
+      body: JSON.stringify({ alunoId: usuario.id, cursoId: 2 })
+    });
+    expect(resultado.matriculaId).toBeTruthy();
+
+    const pagamentos = await demoRequest("/Pagamentos/aluno");
+    expect(pagamentos.some((pagamento) => pagamento.cursoId === 2 && pagamento.status === 1)).toBe(true);
+
+    await expect(
+      demoRequest("/Matriculas", { method: "POST", body: JSON.stringify({ alunoId: usuario.id, cursoId: 2 }) })
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
 describe("Progresso do Coordenador (regressao dos achados A1/A2)", () => {
   test("GET /Cursos/desempenho retorna os cursos sob coordenacao", async () => {
     await loginComo("coordenacao@demo.edtech");

@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { TbArrowRight, TbClock, TbCreditCard, TbSearch, TbSend } from "react-icons/tb";
+import { TbArrowRight, TbClock, TbCreditCard, TbSearch } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
+import ConfirmacaoCompraModal from "../../components/ConfirmacaoCompraModal.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -13,6 +14,7 @@ import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
 
 const PAGAMENTO_PENDENTE = 1;
+const MODELO_ACOMPANHADO = 3;
 
 export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate, onRefresh, onSessionExpired, usuario }) {
   if (ehAluno) {
@@ -50,10 +52,11 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    (upload real do Admin), com fallback pro dicionario estatico por titulo
    (getCourseCover), garantindo que as tres telas mostrem sempre a mesma
    imagem por curso. */
-export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onConfirmarPagamento, onEntrarNoCurso, onReabrir, onSolicitar, pagando, processando, solicitando }) {
+export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onComecarGratis, onComprar, onConcluirCompra, onEntrarNoCurso, onReabrir, processando }) {
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
   const progresso = clampPercent(matricula?.progresso);
   const rotuloEntrada = progresso >= 100 ? "Revisar curso" : progresso > 0 ? "Continuar curso" : "Iniciar curso";
+  const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
 
   return (
     <li className="catalogo-card">
@@ -73,6 +76,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
           {matricula && !compacto ? <Insignia texto={matricula.status} /> : null}
         </div>
         {!compacto ? <p className="catalogo-card__turma">{curso.descricao}</p> : null}
+        {!matricula && ehAcompanhado ? <Insignia texto="Com acompanhamento" /> : null}
 
         {matricula ? (
           <>
@@ -88,7 +92,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
             ) : null}
             {temPagamentoPendente ? (
               <InlineMessage tone="warning">
-                Pagamento pendente: {formatMoney(matricula.pagamentoValor)}.
+                Compra pendente: {formatMoney(matricula.pagamentoValor)}.
               </InlineMessage>
             ) : null}
             {compacto && matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
@@ -105,9 +109,9 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                   {processando ? "Reabrindo..." : "Reabrir solicitacao"}
                 </Botao>
               ) : null}
-              {temPagamentoPendente && onConfirmarPagamento ? (
-                <Botao disabled={pagando} onClick={onConfirmarPagamento} tamanho="pequeno" variante="sucesso">
-                  <TbCreditCard aria-hidden="true" size={14} /> {pagando ? "Confirmando..." : "Confirmar pagamento (simulado)"}
+              {temPagamentoPendente && onConcluirCompra ? (
+                <Botao onClick={onConcluirCompra} tamanho="pequeno" variante="sucesso">
+                  <TbCreditCard aria-hidden="true" size={14} /> Concluir compra
                 </Botao>
               ) : null}
               {matricula.status === "Aprovada" && !temPagamentoPendente && onEntrarNoCurso ? (
@@ -122,9 +126,15 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
             <span className="catalogo-card__codigo">
               {curso.ehGratuito ? <Insignia texto="Gratis" variante="sucesso" /> : formatMoney(curso.preco)}
             </span>
-            <Botao disabled={solicitando} onClick={onSolicitar} tamanho="pequeno" variante="primario">
-              <TbSend aria-hidden="true" size={14} /> {solicitando ? "Enviando..." : "Solicitar matricula"}
-            </Botao>
+            {curso.ehGratuito ? (
+              <Botao disabled={processando} onClick={onComecarGratis} tamanho="pequeno" variante="primario">
+                {processando ? "Começando..." : "Começar grátis"} <TbArrowRight aria-hidden="true" size={14} />
+              </Botao>
+            ) : (
+              <Botao onClick={onComprar} tamanho="pequeno" variante="primario">
+                <TbCreditCard aria-hidden="true" size={14} /> Comprar · {formatMoney(curso.preco)}
+              </Botao>
+            )}
           </footer>
         )}
       </div>
@@ -136,7 +146,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
 export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = [], onNavigate, onRefresh, onSessionExpired }) {
   const { mostrarToast } = useToast();
   const [matriculaProcessando, setMatriculaProcessando] = useState(null);
-  const [popupPagamento, setPopupPagamento] = useState(null);
+  const [cursoParaComprar, setCursoParaComprar] = useState(null);
 
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
   const cursosMatriculados = useMemo(
@@ -180,28 +190,6 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
     }
   }
 
-  async function confirmarPagamento(matricula, curso) {
-    setMatriculaProcessando(matricula.id);
-
-    try {
-      await apiRequest(`/Pagamentos/${matricula.id}/confirmar`, { method: "POST" });
-      setPopupPagamento({
-        cursoId: curso.id,
-        mensagem: `O pagamento do curso ${curso.titulo} foi confirmado e seu acesso ja esta disponivel.`
-      });
-      onRefresh?.();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired?.();
-        return;
-      }
-
-      mostrarToast(err.message || "Nao foi possivel confirmar o pagamento agora.", "erro");
-    } finally {
-      setMatriculaProcessando(null);
-    }
-  }
-
   return (
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
@@ -224,9 +212,8 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
                 key={curso.id}
                 matricula={matricula}
                 onCancelar={() => cancelarMatricula(matricula)}
-                onConfirmarPagamento={() => confirmarPagamento(matricula, curso)}
+                onConcluirCompra={() => setCursoParaComprar(curso)}
                 onReabrir={() => reabrirMatricula(matricula)}
-                pagando={matriculaProcessando === matricula.id}
                 processando={matriculaProcessando === matricula.id}
               />
             );
@@ -234,19 +221,16 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
         </ul>
       )}
 
-      {popupPagamento ? (
-        <PopupResultadoMatricula
-          acessoLiberado
-          mensagem={popupPagamento.mensagem}
-          onAcaoPrimaria={() => {
-            const cursoId = popupPagamento.cursoId;
-            setPopupPagamento(null);
-            onNavigate?.(`/app/conteudos/${cursoId}`);
-          }}
-          onFechar={() => setPopupPagamento(null)}
-          rotuloAcaoPrimaria="Acessar curso"
-        />
-      ) : null}
+      <ConfirmacaoCompraModal
+        curso={cursoParaComprar}
+        onCompraConfirmada={onRefresh}
+        onFechar={() => setCursoParaComprar(null)}
+        onIrParaCurso={(cursoId) => {
+          setCursoParaComprar(null);
+          onNavigate?.(`/app/conteudos/${cursoId}`);
+        }}
+        onSessionExpired={onSessionExpired}
+      />
     </div>
   );
 }
@@ -254,7 +238,8 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
 function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRefresh, onSessionExpired, usuario }) {
   const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
-  const [cursoSolicitando, setCursoSolicitando] = useState(null);
+  const [cursoComecando, setCursoComecando] = useState(null);
+  const [cursoParaComprar, setCursoParaComprar] = useState(null);
   const [popupMatricula, setPopupMatricula] = useState(null);
 
   const matriculaPorCursoId = useMemo(() => criarMatriculaPorCursoId(linhasMatriculas), [linhasMatriculas]);
@@ -268,8 +253,8 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
     [busca, cursos, matriculaPorCursoId]
   );
 
-  async function solicitarMatricula(curso) {
-    setCursoSolicitando(curso.id);
+  async function comecarGratis(curso) {
+    setCursoComecando(curso.id);
 
     try {
       await apiRequest("/Matriculas", {
@@ -277,12 +262,9 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
         body: JSON.stringify({ alunoId: usuario.id, cursoId: curso.id })
       });
 
-      const cursoEhPago = Number(curso.preco) > 0;
       setPopupMatricula({
-        acessoLiberado: !cursoEhPago,
-        mensagem: cursoEhPago
-          ? `Sua matricula no curso ${curso.titulo} foi registrada, mas o pagamento ainda esta pendente. O acesso ao curso sera liberado apos a confirmacao do pagamento.`
-          : `Sua matricula no curso ${curso.titulo} foi aprovada com sucesso. O curso ja esta disponivel em Meus Cursos.`
+        acessoLiberado: true,
+        mensagem: `Você começou o curso ${curso.titulo}. Ele já está disponível em Meus Cursos.`
       });
       onRefresh?.();
     } catch (err) {
@@ -291,9 +273,9 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
         return;
       }
 
-      mostrarToast(err.message || "Nao foi possivel solicitar a matricula agora.", "erro");
+      mostrarToast(err.message || "Nao foi possivel comecar o curso agora.", "erro");
     } finally {
-      setCursoSolicitando(null);
+      setCursoComecando(null);
     }
   }
 
@@ -302,7 +284,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
       <header className="cabecalho-pagina">
         <div>
           <h2 className="cabecalho-pagina__titulo">Catalogo de Cursos</h2>
-          <p className="cabecalho-pagina__subtitulo">Explore o catalogo e acompanhe suas solicitacoes de matricula.</p>
+          <p className="cabecalho-pagina__subtitulo">Explore o catalogo, comece os cursos gratuitos e compre os pagos.</p>
         </div>
         <label className="visualmente-oculto" htmlFor="busca-catalogo-aluno">Buscar curso</label>
         <div className="campo-busca campo-busca--cabecalho">
@@ -327,8 +309,9 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
               curso={curso}
               key={curso.id}
               matricula={matriculaPorCursoId.get(curso.id)}
-              onSolicitar={() => solicitarMatricula(curso)}
-              solicitando={cursoSolicitando === curso.id}
+              onComecarGratis={() => comecarGratis(curso)}
+              onComprar={() => setCursoParaComprar(curso)}
+              processando={cursoComecando === curso.id}
             />
           ))}
         </ul>
@@ -346,6 +329,17 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
           rotuloAcaoPrimaria={popupMatricula.acessoLiberado ? "Acessar Meus Cursos" : "Regularizar pagamento"}
         />
       ) : null}
+
+      <ConfirmacaoCompraModal
+        curso={cursoParaComprar}
+        onCompraConfirmada={onRefresh}
+        onFechar={() => setCursoParaComprar(null)}
+        onIrParaCurso={(cursoId) => {
+          setCursoParaComprar(null);
+          onNavigate?.(`/app/conteudos/${cursoId}`);
+        }}
+        onSessionExpired={onSessionExpired}
+      />
     </div>
   );
 }

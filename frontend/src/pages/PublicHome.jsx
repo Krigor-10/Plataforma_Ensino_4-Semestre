@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TbChevronDown, TbSend, TbX } from "react-icons/tb";
+import { TbArrowRight, TbChevronDown, TbCreditCard, TbX } from "react-icons/tb";
 import { MdPersonAdd } from "react-icons/md";
 import GlobalHeader from "../components/GlobalHeader.jsx";
 import Botao from "../components/Botao.jsx";
@@ -74,7 +74,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               <span className="secao-hero__titulo--destaque">Academy</span>
             </h1>
             <p className="secao-hero__descricao">
-              Escolha uma trilha, solicite sua matricula e acompanhe tudo em um painel academico integrado.
+              Escolha uma trilha, comece ou compre seu curso e acompanhe tudo em um painel academico integrado.
             </p>
 
             {isDemoMode ? (
@@ -91,7 +91,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                 className="linha-icone-texto"
                 style={{ gap: "0.5rem" }}
               >
-                <TbSend size={18} aria-hidden="true" /> Solicitar matricula
+                <TbArrowRight size={18} aria-hidden="true" /> Começar agora
               </Botao>
               <a href="#cursos" className="botao botao--fantasma botao--grande linha-icone-texto">
                 Ver cursos <TbChevronDown size={18} aria-hidden="true" />
@@ -120,13 +120,13 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               <div>
                 <p className="secao-cabecalho__etiqueta">Catalogo de cursos ativos</p>
                 <h2 className="secao-cabecalho__titulo" id="titulo-cursos">
-                  Escolha uma trilha e comece pela matricula
+                  Escolha uma trilha e comece agora
                 </h2>
               </div>
               <p className="secao-cabecalho__subtitulo">
                 {status === "loading"
                   ? "Lendo os cursos publicados..."
-                  : `${courses.length} curso(s) disponivel(is) para matricula.`}
+                  : `${courses.length} curso(s) disponivel(is).`}
               </p>
             </header>
 
@@ -170,10 +170,18 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                         variante="primario"
                         tamanho="pequeno"
                         onClick={() => onNavigate(`/cadastro/${curso.id}`)}
-                        aria-label={`Cadastrar-se em ${curso.titulo}`}
+                        aria-label={curso.ehGratuito ? `Começar grátis em ${curso.titulo}` : `Comprar ${curso.titulo}`}
                         className="linha-icone-texto"
                       >
-                        <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
+                        {curso.ehGratuito ? (
+                          <>
+                            <MdPersonAdd size={18} aria-hidden="true" /> Começar grátis
+                          </>
+                        ) : (
+                          <>
+                            <TbCreditCard size={18} aria-hidden="true" /> Comprar · {formatMoney(curso.preco)}
+                          </>
+                        )}
                       </Botao>
                     </footer>
                   </article>
@@ -194,7 +202,15 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
                 <TbX size={15} aria-hidden="true" /> Fechar
               </Botao>
               <Botao variante="primario" onClick={() => { setCursoModal(null); onNavigate(`/cadastro/${cursoModal.id}`); }} className="linha-icone-texto">
-                <MdPersonAdd size={18} aria-hidden="true" /> Cadastrar-se
+                {cursoModal.ehGratuito ? (
+                  <>
+                    <MdPersonAdd size={18} aria-hidden="true" /> Começar grátis
+                  </>
+                ) : (
+                  <>
+                    <TbCreditCard size={18} aria-hidden="true" /> Comprar · {formatMoney(cursoModal.preco)}
+                  </>
+                )}
               </Botao>
             </footer>
           }

@@ -92,6 +92,10 @@ export async function demoRequest(endpoint, options = {}) {
       return deleteModule(getNumericId(path));
     case path === "/Matriculas" && method === "GET":
       return listEnrollments();
+    case path === "/Matriculas" && method === "POST":
+      return matricularDemo(payload);
+    case path === "/Matriculas/comprar" && method === "POST":
+      return comprarCursoDemo(payload);
     case /^\/Matriculas\/aluno\/\d+$/.test(path) && method === "GET":
       return listStudentEnrollments(getNumericId(path));
     case path === "/Pagamentos/aluno" && method === "GET":
@@ -898,6 +902,111 @@ function confirmarPagamentoDemo(matriculaId) {
   saveDemoDb(db);
 
   return hydratePayment(db, pagamento);
+}
+
+/* "Comecar gratis" (pendencia_compra_cursos): matricula direta num curso
+   ainda nao cursado, usada pelo Catalogo so pra cursos gratuitos (pago
+   sempre passa por comprarCursoDemo abaixo). Reaproveita a mesma
+   aprovacao automatica do cadastro (approveEnrollmentInDb), por isso ainda
+   exige uma turma demo cadastrada pro curso - mesma limitacao que o
+   cadastro ja tinha, nao e algo novo desta rodada. */
+function matricularDemo(payload) {
+  const user = requireRole("Aluno");
+  const db = readDemoDb();
+  ensurePagamentosCollection(db);
+
+  const cursoId = Number(payload.cursoId);
+  const curso = db.cursos.find((item) => item.id === cursoId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  if (db.matriculas.some((item) => item.alunoId === user.id && item.cursoId === cursoId)) {
+    throw new DemoApiError("Você já tem este curso.", 409);
+  }
+
+  if (Number(curso.modeloCurso) === 3 && curso.encerradoEm) {
+    throw new DemoApiError("Este curso já foi encerrado.", 422);
+  }
+
+  const matriculaId = nextId(db.matriculas);
+  db.matriculas.push({
+    id: matriculaId,
+    codigoRegistro: nextDemoRegistrationCode(db.matriculas, "MAT"),
+    alunoId: user.id,
+    cursoId,
+    turmaId: null,
+    status: 0,
+    notaFinal: 0,
+    dataSolicitacao: new Date().toISOString()
+  });
+
+  approveEnrollmentInDb(db, matriculaId);
+  saveDemoDb(db);
+
+  return { matriculaId, cursoId };
+}
+
+/* Espelha Services/MatriculaService.ComprarCursoAsync: matricula (se ainda
+   nao existir) + confirma o pagamento numa so chamada. Matricula com
+   pagamento Pendente so confirma (nao duplica); curso ja comprado (pago ou
+   gratuito sem cobranca) recusa com conflito; Acompanhado encerrado recusa
+   so na primeira compra (quem ja tem matricula so esta concluindo uma
+   compra ja iniciada, nao abrindo uma nova). */
+function comprarCursoDemo(payload) {
+  const user = requireRole("Aluno");
+  const db = readDemoDb();
+  ensurePagamentosCollection(db);
+
+  const cursoId = Number(payload.cursoId);
+  const curso = db.cursos.find((item) => item.id === cursoId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  let matricula = db.matriculas.find((item) => item.alunoId === user.id && item.cursoId === cursoId);
+  let matriculaRecemCriada = false;
+
+  if (!matricula) {
+    if (Number(curso.modeloCurso) === 3 && curso.encerradoEm) {
+      throw new DemoApiError("Este curso já foi encerrado.", 422);
+    }
+
+    const matriculaId = nextId(db.matriculas);
+    db.matriculas.push({
+      id: matriculaId,
+      codigoRegistro: nextDemoRegistrationCode(db.matriculas, "MAT"),
+      alunoId: user.id,
+      cursoId,
+      turmaId: null,
+      status: 0,
+      notaFinal: 0,
+      dataSolicitacao: new Date().toISOString()
+    });
+    approveEnrollmentInDb(db, matriculaId);
+    matricula = db.matriculas.find((item) => item.id === matriculaId);
+    matriculaRecemCriada = true;
+  }
+
+  const pagamento = db.pagamentos.find((item) => item.matriculaId === matricula.id);
+
+  if (!pagamento) {
+    if (matriculaRecemCriada) {
+      saveDemoDb(db);
+      return { matriculaId: matricula.id, cursoId, pagamentoConfirmado: false };
+    }
+    throw new DemoApiError("Você já tem este curso.", 409);
+  }
+
+  if (pagamento.status === 2) {
+    throw new DemoApiError("Você já tem este curso.", 409);
+  }
+
+  pagamento.status = 2;
+  pagamento.pagoEm = new Date().toISOString();
+  saveDemoDb(db);
+
+  return { matriculaId: matricula.id, cursoId, pagamentoConfirmado: true };
 }
 
 function hydratePayment(db, pagamento) {

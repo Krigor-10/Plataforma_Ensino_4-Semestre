@@ -36,12 +36,26 @@ export const PUBLIC_NAV_LINKS = [
 ];
 
 const HIDDEN_PUBLIC_COURSE_TITLES = new Set(["product analytics para edtech"]);
+const MODELO_CURSO_ACOMPANHADO = 3;
 
-/* Mesma regra de visibilidade usada pela Home Publica: um curso so conta como
-   "disponivel no catalogo publico" se nao estiver na lista de titulos ocultos. */
+/* Mesma regra de visibilidade usada pela Home Publica, pelo Catalogo (aluno)
+   e pelo Cadastro: um curso so conta como "disponivel pra quem ainda nao o
+   tem" se nao estiver na lista de titulos ocultos e, sendo Acompanhado, se
+   ainda nao tiver sido encerrado pelo coordenador (pendencia_compra_cursos -
+   quem nao tem o curso nao pode mais comprar/comecar um Acompanhado
+   encerrado; quem ja tem matricula continua vendo o curso normalmente nas
+   proprias telas, essa regra so afeta descoberta). */
 export function isCursoVisivelNoCatalogoPublico(curso) {
   const titulo = String(curso?.titulo || "").trim().toLowerCase();
-  return !HIDDEN_PUBLIC_COURSE_TITLES.has(titulo);
+  if (HIDDEN_PUBLIC_COURSE_TITLES.has(titulo)) {
+    return false;
+  }
+
+  if (Number(curso?.modeloCurso) === MODELO_CURSO_ACOMPANHADO && curso?.encerradoEm) {
+    return false;
+  }
+
+  return true;
 }
 
 export const CURATED_COURSES = [

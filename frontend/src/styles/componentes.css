@@ -419,6 +419,85 @@
   color: var(--cor-aviso);
 }
 
+/* Confirmacao de compra (Catalogo + Meus Cursos) — equivalente ao
+   ConfirmacaoCompraSheet.jsx do mobile. */
+.modal-confirmacao-compra__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+.modal-confirmacao-compra__capa {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--raio-md);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--cor-borda);
+}
+
+.modal-confirmacao-compra__cabecalho-textos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-xs);
+  min-width: 0;
+}
+
+.modal-confirmacao-compra__titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-confirmacao-compra__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--cor-fundo-elevado);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-md);
+  margin-bottom: var(--espaco-md);
+  font-weight: 700;
+}
+
+.modal-confirmacao-compra__aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+  background: var(--cor-fundo-elevado);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-md);
+  margin: 0 0 var(--espaco-md);
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-sm);
+}
+
+.modal-confirmacao-compra__sucesso {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  text-align: center;
+  padding: var(--espaco-md) 0;
+}
+
+.modal-confirmacao-compra__sucesso p {
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+.modal-confirmacao-compra__sucesso-icone {
+  align-items: center;
+  border-radius: var(--raio-circular);
+  display: flex;
+  height: 3.5rem;
+  justify-content: center;
+  width: 3.5rem;
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
 /* Coluna de acoes (menu "...") sem cabecalho visivel nas tabelas de gestao. */
 .tabela-dados__col-acoes {
   width: 3rem;

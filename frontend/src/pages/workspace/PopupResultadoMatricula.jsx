@@ -18,7 +18,7 @@ export default function PopupResultadoMatricula({
     <Modal
       className="popup-resultado-matricula"
       onFechar={onFechar}
-      titulo={acessoLiberado ? "Matricula aprovada!" : "Pagamento pendente"}
+      titulo={acessoLiberado ? "Curso liberado!" : "Pagamento pendente"}
       rodape={
         <footer className="modal-rodape">
           {!acessoLiberado ? (
