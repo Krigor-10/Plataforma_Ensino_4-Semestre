@@ -1,5 +1,5 @@
-import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
-import { useEffect } from "react";
+import { getFocusedRouteNameFromRoute, useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import { View } from "react-native";
 import HeaderGlobal from "./HeaderGlobal.jsx";
 import ScreenIndicator from "./ScreenIndicator.jsx";
@@ -32,13 +32,25 @@ export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrir
     : route.name;
   const info = TELAS_INFO[nomeAtivo];
 
-  // Reporta a rota realmente focada pro AlunoWorkspace.jsx repassar ao
-  // MenuLateral.jsx (fora da arvore do Navigator, sem acesso direto a esse
-  // calculo) — mesmo nome que ja usamos aqui pra montar o ScreenIndicator,
-  // sem duplicar a logica de foco em outro lugar.
-  useEffect(() => {
-    onRotaAtivaMudou?.(nomeAtivo);
-  }, [nomeAtivo, onRotaAtivaMudou]);
+  // Reporta a rota ativa pro AlunoWorkspace.jsx repassar ao MenuLateral.jsx
+  // (fora da arvore do Navigator, sem acesso direto a esse calculo) — mas
+  // usando route.name (a rota do AlunoStack), nao nomeAtivo (a aba focada
+  // DENTRO do AlunoTabs): o menu so tem itens para Perfil/Catalogo, nenhuma
+  // aba da bottom bar corresponde a um item dele, entao estar em qualquer
+  // aba (Inicio, Cursos, ...) deve limpar o destaque do menu, nunca manter
+  // o de uma tela anterior. useFocusEffect, NAO useEffect comum: no
+  // native-stack cada tela da pilha continua montada quando fica por baixo
+  // (voltar e instantaneo), entao o header de uma tela que o aluno ja saiu
+  // (ex.: Perfil) nunca desmonta nem muda suas deps ao voltar pro Inicio —
+  // um useEffect comum so rodaria de novo se route.name mudasse, e o do
+  // Inicio nunca muda. useFocusEffect roda de novo toda vez que ESTA tela
+  // reganha foco de verdade, que e o sinal certo pra "voltei pra AlunoTabs,
+  // atualiza o destaque do menu".
+  useFocusEffect(
+    useCallback(() => {
+      onRotaAtivaMudou?.(route.name === ROUTES.ALUNO_TABS ? null : route.name);
+    }, [route.name, onRotaAtivaMudou])
+  );
 
   return (
     <View style={{ backgroundColor: cores.fundo }}>

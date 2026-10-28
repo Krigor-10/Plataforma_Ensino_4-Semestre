@@ -3,14 +3,13 @@ import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, Scr
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Botao from "./Botao.jsx";
-import ModalCentralizado from "./ModalCentralizado.jsx";
 import ModalConfirmarSaida from "./ModalConfirmarSaida.jsx";
 import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
-import { formatarTempoRestante, formatPercent, formatScore, normalizeQuestionType } from "../lib/format.js";
+import { formatarTempoRestante, formatPercent, formatScore, normalizeEvaluationType, normalizeQuestionType } from "../lib/format.js";
 import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
-import { cores, espacamentos, tipografia } from "../lib/theme.js";
+import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 const TIPO_QUIZ = 1;
 
@@ -262,6 +261,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
     return null;
   }
 
+  const ehQuiz = Number(avaliacao.tipoAvaliacao) === TIPO_QUIZ;
   const questaoAtual = questoes[indiceAtual] || null;
   const ehUltimaQuestao = indiceAtual === questoes.length - 1;
   const corrigida = resultado ? Number(resultado.statusTentativa) === 3 : false;
@@ -272,40 +272,85 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const tentativaNumeroAtual = Math.min(tentativasRealizadas + 1 + tentativaOffset, tentativasPermitidas);
   const podeRefazer = Boolean(resultado) && tentativaNumeroAtual < tentativasPermitidas;
 
-  // Fase "confirmar" vive num dialogo CENTRALIZADO separado (ModalCentralizado,
-  // mesmo conceito do Web: avaliacaoParaConfirmar vs avaliacaoEmExecucao sao
-  // dois modais distintos em SecoesAluno.jsx) — nao cabia no Modal fullscreen
-  // de execucao, que precisa ocupar a tela toda pro cronometro/navegacao
-  // entre questoes. iniciar() so troca `fase`, entao o dialogo centralizado
-  // some e o Modal fullscreen abaixo assume (fase "carregando"->"execucao")
-  // sem nenhuma mudanca na logica de carregamento/envio.
+  // Fase "confirmar" vive num painel que sobe de baixo (bottom sheet) —
+  // mesmo conceito de dialogo separado do Web (avaliacaoParaConfirmar vs
+  // avaliacaoEmExecucao sao dois modais distintos em SecoesAluno.jsx), so
+  // que aqui sobe por baixo em vez de centralizar. Nao cabia no Modal
+  // fullscreen de execucao, que precisa ocupar a tela toda pro
+  // cronometro/navegacao entre questoes. iniciar() so troca `fase`, entao o
+  // painel some e o Modal fullscreen abaixo assume (fase
+  // "carregando"->"execucao") sem nenhuma mudanca na logica de
+  // carregamento/envio.
   return (
     <>
-      <ModalCentralizado
-        onFechar={onFechar}
-        titulo="Antes de começar"
-        visivel={visivel && fase === "confirmar"}
-        rodape={
-          tentativasEsgotadas ? (
-            <Text style={estilos.tentativasEsgotadasTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
-          ) : (
-            <Botao icone="play" onPress={iniciar} variante="primario">Iniciar avaliação</Botao>
-          )
-        }
-      >
-        <Text style={estilos.dialogoAvaliacaoTitulo}>{avaliacao.titulo}</Text>
+      <Modal animationType="slide" onRequestClose={onFechar} transparent visible={visivel && fase === "confirmar"}>
+        <View style={estilos.sheetOverlay}>
+          <TouchableOpacity
+            accessibilityElementsHidden
+            accessibilityRole="none"
+            activeOpacity={1}
+            importantForAccessibility="no"
+            onPress={onFechar}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[estilos.sheet, { paddingBottom: insets.bottom + espacamentos.lg }]}>
+            <View style={estilos.sheetAlcaLinha}>
+              <View style={estilos.sheetAlca} />
+            </View>
 
-        <View style={estilos.resumo}>
-          <ResumoItem icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
-          <ResumoItem cor={cores.informativo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
-          {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-            <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
-          ) : null}
-          <ResumoItem icone="repeat" rotulo="Tentativas" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
+            <View style={estilos.sheetCabecalho}>
+              <View style={estilos.sheetCabecalhoTextos}>
+                <View style={estilos.seloTipo}>
+                  <Text style={estilos.seloTipoTexto}>{normalizeEvaluationType(avaliacao.tipoAvaliacao).toUpperCase()}</Text>
+                </View>
+                <Text numberOfLines={2} style={estilos.sheetTitulo}>{avaliacao.titulo}</Text>
+                {avaliacao.moduloTitulo ? <Text numberOfLines={1} style={estilos.sheetModulo}>{avaliacao.moduloTitulo}</Text> : null}
+              </View>
+              <TouchableOpacity
+                accessibilityHint="Fecha o painel sem iniciar a avaliação"
+                accessibilityLabel="Fechar"
+                accessibilityRole="button"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                onPress={onFechar}
+                style={estilos.sheetBotaoFechar}
+              >
+                <Ionicons color={cores.textoSuave} name="close" size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={estilos.grade2x2}>
+              <BlocoResumo icone="help-circle-outline" rotulo="Questões" valor={String(avaliacao.totalQuestoes || 0)} />
+              <BlocoResumo cor={cores.informativo} corFundo={cores.informativoFundo} icone="time-outline" rotulo="Tempo limite" valor={avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"} />
+              {!ehQuiz ? (
+                <BlocoResumo cor={cores.destaque} corFundo={cores.bordaCartao} icone="trophy-outline" rotulo="Nota máxima" valor={formatScore(avaliacao.notaMaxima)} />
+              ) : null}
+              <BlocoResumo icone="repeat" rotulo="Tentativa" valor={`${Math.min(tentativasRealizadas + 1, tentativasPermitidas)} de ${tentativasPermitidas}`} />
+            </View>
+
+            {tentativasEsgotadas ? (
+              <View style={estilos.sheetAvisoCartaoEsgotado}>
+                <Ionicons color={cores.aviso} name="alert-circle-outline" size={18} />
+                <Text style={estilos.sheetAvisoEsgotadoTexto}>Você já utilizou todas as tentativas permitidas para esta avaliação.</Text>
+              </View>
+            ) : (
+              <View style={estilos.sheetAvisoCartao}>
+                <Ionicons color={cores.acento} name="information-circle-outline" size={18} />
+                <View style={estilos.sheetAvisoTextos}>
+                  <Text style={estilos.sheetAvisoTexto}>Suas respostas ficam salvas neste aparelho enquanto você responde.</Text>
+                  <Text style={estilos.sheetAvisoTexto}>Ao enviar, você vê o resultado assim que a correção terminar.</Text>
+                </View>
+              </View>
+            )}
+
+            <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
+
+            <Botao disabled={tentativasEsgotadas} icone="play" onPress={iniciar} style={estilos.sheetBotaoIniciar} variante="primario">
+              Iniciar avaliação
+            </Botao>
+            <Botao onPress={onFechar} variante="fantasma">Agora não</Botao>
+          </View>
         </View>
-
-        <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
-      </ModalCentralizado>
+      </Modal>
 
       <Modal animationType="slide" onRequestClose={() => !enviando && tentarFecharExecucao()} presentationStyle="pageSheet" visible={visivel && fase !== "confirmar"}>
       <View style={estilos.container}>
@@ -477,24 +522,33 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
 
               <Text style={estilos.resultadoTitulo}>{corrigida ? "Avaliação corrigida" : "Respostas enviadas"}</Text>
               <Text style={estilos.resultadoDescricao}>
-                {corrigida
-                  ? "A correção automática foi concluída e sua nota já está disponível abaixo."
-                  : "Suas respostas foram registradas. Questões dissertativas aguardam correção do professor."}
+                {ehQuiz
+                  ? "Suas respostas foram registradas."
+                  : corrigida
+                    ? "A correção automática foi concluída e sua nota já está disponível abaixo."
+                    : "Suas respostas foram registradas. Questões dissertativas aguardam correção do professor."}
               </Text>
-              <Text style={estilos.resultadoPorcentagem}>{formatPercent(porcentagem)}</Text>
-              <View style={estilos.resultadoBarraFundo}>
-                <View
-                  style={[
-                    estilos.resultadoBarraPreenchida,
-                    { width: `${Math.max(0, Math.min(porcentagem, 100))}%` }
-                  ]}
-                />
-              </View>
+
+              {!ehQuiz ? (
+                <>
+                  <Text style={estilos.resultadoPorcentagem}>{formatPercent(porcentagem)}</Text>
+                  <View style={estilos.resultadoBarraFundo}>
+                    <View
+                      style={[
+                        estilos.resultadoBarraPreenchida,
+                        { width: `${Math.max(0, Math.min(porcentagem, 100))}%` }
+                      ]}
+                    />
+                  </View>
+                </>
+              ) : null}
 
               <View style={estilos.resultadoDivisor} />
 
               <View style={estilos.resumo}>
-                <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
+                {!ehQuiz ? (
+                  <ResumoItem cor={cores.destaque} icone="trophy-outline" rotulo="Nota obtida" valor={`${formatScore(resultado.notaBruta)} / ${formatScore(resultado.notaMaxima)}`} />
+                ) : null}
                 <ResumoItem icone="repeat" rotulo="Tentativas usadas" valor={`${tentativaNumeroAtual} de ${tentativasPermitidas}`} />
               </View>
 
@@ -532,6 +586,23 @@ function ResumoItem({ cor = cores.textoSuave, icone, rotulo, valor }) {
   );
 }
 
+// Bloco da grade 2x2 do painel "Antes de começar" — mesmo papel do
+// ResumoItem acima (icone + rotulo + valor), mas com o icone num circulo
+// tingido em vez de so colorido, pro layout de blocos quadrados do bottom
+// sheet (ResumoItem continua servindo as fases execucao/resultado, que nao
+// mudam nesta rodada).
+function BlocoResumo({ cor = cores.textoSuave, corFundo = cores.divisoria, icone, rotulo, valor }) {
+  return (
+    <View style={estilos.blocoResumo}>
+      <View style={[estilos.blocoResumoIconeCirculo, { backgroundColor: corFundo }]}>
+        <Ionicons color={cor} name={icone} size={16} />
+      </View>
+      <Text style={estilos.blocoResumoRotulo}>{rotulo}</Text>
+      <Text style={estilos.blocoResumoValor}>{valor}</Text>
+    </View>
+  );
+}
+
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   cabecalho: {
@@ -553,13 +624,48 @@ const estilos = StyleSheet.create({
   iconeFechar: { opacity: 0.75 },
   corpoFlex: { flex: 1 },
   corpo: { padding: espacamentos.xl, paddingBottom: 40 },
-  dialogoAvaliacaoTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", marginBottom: espacamentos.lg },
   resumo: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.xl },
   resumoItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
   resumoRotuloLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.xs, marginBottom: 4 },
   resumoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
   resumoValor: { color: cores.texto, fontWeight: "700" },
-  tentativasEsgotadasTexto: { color: cores.erro, textAlign: "center", lineHeight: 20 },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.65)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: cores.fundoCartao,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(123, 47, 247, 0.3)",
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.sm,
+    maxHeight: "90%"
+  },
+  sheetAlcaLinha: { alignItems: "center", paddingVertical: espacamentos.sm },
+  sheetAlca: { width: 36, height: 4, borderRadius: raios.pilula, backgroundColor: cores.divisoria },
+  sheetCabecalho: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: espacamentos.md, marginBottom: espacamentos.lg },
+  sheetCabecalhoTextos: { flex: 1, gap: espacamentos.xs },
+  seloTipo: {
+    backgroundColor: cores.fundoCartaoAtivo,
+    borderRadius: raios.sm,
+    alignSelf: "flex-start",
+    paddingHorizontal: espacamentos.sm,
+    paddingVertical: 3
+  },
+  seloTipoTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700", letterSpacing: 0.5 },
+  sheetTitulo: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "600" },
+  sheetModulo: { color: cores.textoSuave, fontSize: tipografia.corpo },
+  sheetBotaoFechar: { minWidth: 32, minHeight: 32, alignItems: "center", justifyContent: "center" },
+  grade2x2: { flexDirection: "row", flexWrap: "wrap", gap: espacamentos.md, marginBottom: espacamentos.lg },
+  blocoResumo: { backgroundColor: cores.fundoCartaoAtivo, borderRadius: 12, padding: espacamentos.md, minWidth: "45%", flexGrow: 1 },
+  blocoResumoIconeCirculo: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
+  blocoResumoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginBottom: 2 },
+  blocoResumoValor: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "600" },
+  sheetAvisoCartao: { flexDirection: "row", gap: espacamentos.sm, backgroundColor: cores.fundoCartaoAtivo, borderRadius: raios.md, padding: espacamentos.md, marginBottom: espacamentos.lg },
+  sheetAvisoTextos: { flex: 1, gap: 4 },
+  sheetAvisoTexto: { color: cores.textoSuave, fontSize: tipografia.corpo, lineHeight: 18 },
+  sheetAvisoCartaoEsgotado: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, backgroundColor: cores.avisoFundo, borderRadius: raios.md, padding: espacamentos.md, marginBottom: espacamentos.lg },
+  sheetAvisoEsgotadoTexto: { color: cores.aviso, flex: 1, lineHeight: 20 },
+  sheetBotaoIniciar: { minHeight: 48, marginBottom: espacamentos.xs },
   passos: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   contador: { color: cores.textoSuave },
   cronometroLinha: { flexDirection: "row", alignItems: "center", gap: 4 },

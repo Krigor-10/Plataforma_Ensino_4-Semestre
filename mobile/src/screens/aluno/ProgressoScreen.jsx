@@ -224,7 +224,12 @@ export default function ProgressoScreen({ snapshot }) {
 
 function RequisitoLinha({ atingido, rotulo }) {
   return (
-    <View accessibilityLabel={`${rotulo}. ${atingido ? "Atingido" : "Pendente"}.`} accessible style={estilos.requisitoLinha}>
+    <View
+      accessibilityHint="Indica se este requisito para o certificado já foi cumprido"
+      accessibilityLabel={`${rotulo}. ${atingido ? "Atingido" : "Pendente"}.`}
+      accessible
+      style={estilos.requisitoLinha}
+    >
       <View style={estilos.requisitoTextos}>
         <Ionicons
           color={atingido ? cores.sucesso : cores.textoSuave}

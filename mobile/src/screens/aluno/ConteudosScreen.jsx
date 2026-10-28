@@ -360,6 +360,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                         <Text style={estilos.moduloProgressoValor}>{Math.round(percentualModulo)}%</Text>
                       </View>
                       <View
+                        accessibilityHint="Representação visual do progresso do módulo em barra"
                         accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
                         accessible
                         style={estilos.barraFundoFina}
@@ -457,7 +458,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         {conteudo.bloqueado ? (
           <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
         ) : conteudo.concluido ? (
-          <Animated.View accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso, estiloCheck]}>
+          <Animated.View accessibilityHint="Indica que este conteúdo já foi concluído" accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso, estiloCheck]}>
             <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
             <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
           </Animated.View>
@@ -518,7 +519,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
           <Text style={estilos.botaoContornoTexto}>Responder</Text>
         </TouchableOpacity>
       ) : concluidoQuiz ? (
-        <View accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso]}>
+        <View accessibilityHint="Indica que este quiz já foi concluído" accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso]}>
           <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
           <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
         </View>

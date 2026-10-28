@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, BackHandler, Dimensions, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { obterIniciais } from "../lib/format.js";
 import { cores, espacamentos, raios, sombra, tipografia } from "../lib/theme.js";
@@ -22,9 +23,9 @@ const GRUPOS = [
     ]
   },
   {
-    titulo: "Navegação",
+    titulo: "Explorar",
     itens: [
-      { chave: ROUTES.CATALOGO, dica: "Abre o catalogo de cursos disponiveis", icone: "storefront-outline", rotulo: "Catálogo" }
+      { chave: ROUTES.CATALOGO, dica: "Abre o catalogo de cursos disponiveis", icone: "storefront-outline", rotulo: "Catálogo de cursos" }
     ]
   }
 ];
@@ -87,11 +88,14 @@ export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSa
           </TouchableOpacity>
 
           <View style={estilos.identidade}>
-            <View style={estilos.avatar}>
+            <LinearGradient colors={[cores.destaque, cores.acento]} style={estilos.avatar}>
               <Text style={estilos.avatarTexto}>{obterIniciais(usuario?.nome)}</Text>
-            </View>
+            </LinearGradient>
             <Text numberOfLines={1} style={estilos.nome}>{usuario?.nome}</Text>
-            <Text style={estilos.papel}>{usuario?.tipoUsuario}</Text>
+            <View style={estilos.papelPilula}>
+              <Text style={estilos.papelPilulaTexto}>{usuario?.tipoUsuario}</Text>
+            </View>
+            <Text numberOfLines={1} style={estilos.email}>{usuario?.email}</Text>
           </View>
 
           <ScrollView contentContainerStyle={estilos.lista}>
@@ -110,8 +114,11 @@ export default function MenuLateral({ aberto, onFechar, onNavegar, onSolicitarSa
                       onPress={() => onNavegar(item.chave)}
                       style={[estilos.item, ativo ? estilos.itemAtivo : null]}
                     >
-                      <Ionicons color={ativo ? cores.destaque : cores.textoSuave} name={item.icone} size={20} />
-                      <Text style={[estilos.itemTexto, ativo ? estilos.itemTextoAtivo : null]}>{item.rotulo}</Text>
+                      <View style={estilos.itemEsquerda}>
+                        <Ionicons color={ativo ? cores.destaque : cores.textoSuave} name={item.icone} size={20} />
+                        <Text style={[estilos.itemTexto, ativo ? estilos.itemTextoAtivo : null]}>{item.rotulo}</Text>
+                      </View>
+                      <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} />
                     </TouchableOpacity>
                   );
                 })}
@@ -156,13 +163,22 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     paddingBottom: espacamentos.lg,
     borderBottomWidth: 1,
-    borderBottomColor: cores.bordaCartao,
+    borderBottomColor: cores.divisoria,
     marginBottom: espacamentos.sm
   },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: cores.destaque, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
+  avatar: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", marginBottom: espacamentos.sm },
   avatarTexto: { color: cores.texto, fontSize: 20, fontWeight: "800" },
   nome: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, maxWidth: "100%" },
-  papel: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
+  papelPilula: {
+    borderWidth: 1,
+    borderColor: cores.destaque,
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.md,
+    paddingVertical: 2,
+    marginTop: espacamentos.xs
+  },
+  papelPilulaTexto: { color: cores.destaque, fontSize: tipografia.rotulo, fontWeight: "700" },
+  email: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: espacamentos.xs, maxWidth: "100%" },
   lista: { gap: espacamentos.sm, paddingVertical: espacamentos.sm },
   grupo: { gap: 4 },
   grupoTitulo: {
@@ -177,13 +193,14 @@ const estilos = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    gap: espacamentos.md,
+    justifyContent: "space-between",
     minHeight: 48,
     paddingHorizontal: espacamentos.sm,
-    borderRadius: raios.md
+    borderRadius: 12
   },
+  itemEsquerda: { flexDirection: "row", alignItems: "center", gap: espacamentos.md, flex: 1 },
   itemAtivo: { backgroundColor: cores.fundoCartaoAtivo },
-  itemTexto: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
+  itemTexto: { color: cores.texto, fontWeight: "600", fontSize: 15 },
   itemTextoAtivo: { color: cores.destaque, fontWeight: "700" },
   itemSair: {
     flexDirection: "row",
@@ -193,7 +210,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: espacamentos.sm,
     borderRadius: raios.md,
     borderTopWidth: 1,
-    borderTopColor: cores.bordaCartao,
+    borderTopColor: cores.divisoria,
     marginTop: espacamentos.sm,
     paddingTop: espacamentos.md
   },
