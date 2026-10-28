@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Share, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import BannerGradiente from "../../components/BannerGradiente.jsx";
 import Botao from "../../components/Botao.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
@@ -10,13 +8,9 @@ import { construirMapaStatusCertificados, obterStatusCertificado } from "../../l
 import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
-export default function CertificadosScreen({ onSessionExpired, snapshot }) {
-  const [certificadoAberto, setCertificadoAberto] = useState(null);
-  const [certificadoEmitido, setCertificadoEmitido] = useState(null);
-  const [emitindo, setEmitindo] = useState(false);
-  const [erroEmissao, setErroEmissao] = useState("");
-  const insets = useSafeAreaInsets();
+const NOTA_MINIMA_APROVACAO = 7;
 
+export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   // Mesmo padrao do Web (SecaoCertificados.jsx): o servidor e a unica fonte de
   // verdade pra "desbloqueado" - comeca vazio (= tudo bloqueado) de proposito,
   // nunca libera por padrao enquanto o status real nao chega. Recarrega
@@ -98,47 +92,46 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
     [cursoPorId, mapaStatusCertificados, notasPorCurso, progressoCursoPorMatricula, snapshot.matriculas, turmaPorId]
   );
 
-  const desbloqueados = certificados.filter((certificado) => certificado.desbloqueado).length;
+  const certificadosDesbloqueados = useMemo(() => certificados.filter((certificado) => certificado.desbloqueado), [certificados]);
+  const certificadosBloqueados = useMemo(() => certificados.filter((certificado) => !certificado.desbloqueado), [certificados]);
 
-  async function verCertificado(certificado, { compartilharAoEmitir = false } = {}) {
-    setCertificadoAberto(certificado);
-    setCertificadoEmitido(null);
-    setErroEmissao("");
-    setEmitindo(true);
+  // O aluno nunca "pede" o certificado (regra do redesign) - assim que o
+  // status do servidor confirma que esta desbloqueado, a tela ja emite
+  // (POST e idempotente - Matricula.EmitirCertificado usa ??=, nunca troca
+  // a data de quem ja tinha) e mostra o certificado inteiro na propria tela,
+  // sem precisar de um toque extra nem de modal.
+  const requisitadosRef = useRef(new Set());
+  const [certificadosEmitidos, setCertificadosEmitidos] = useState(() => new Map());
 
-    try {
-      const resposta = await apiRequest(`/Certificados/matricula/${certificado.matriculaId}/emitir`, { method: "POST" });
-      setCertificadoEmitido(resposta);
-      if (compartilharAoEmitir) {
-        await compartilhar(resposta);
-      }
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired?.();
+  useEffect(() => {
+    certificadosDesbloqueados.forEach((certificado) => {
+      if (requisitadosRef.current.has(certificado.matriculaId)) {
         return;
       }
-      setErroEmissao(err.message || "Não foi possível emitir o certificado agora.");
-    } finally {
-      setEmitindo(false);
-    }
-  }
+      requisitadosRef.current.add(certificado.matriculaId);
 
-  function fechar() {
-    setCertificadoAberto(null);
-    setCertificadoEmitido(null);
-    setErroEmissao("");
-  }
+      apiRequest(`/Certificados/matricula/${certificado.matriculaId}/emitir`, { method: "POST" })
+        .then((dados) => {
+          setCertificadosEmitidos((atual) => new Map(atual).set(certificado.matriculaId, { dados, erro: "" }));
+        })
+        .catch((err) => {
+          if (err instanceof ApiError && err.status === 401) {
+            onSessionExpired?.();
+            return;
+          }
+          setCertificadosEmitidos((atual) =>
+            new Map(atual).set(certificado.matriculaId, { dados: null, erro: err.message || "Não foi possível carregar o certificado agora." })
+          );
+        });
+    });
+  }, [certificadosDesbloqueados, onSessionExpired]);
 
-  async function compartilhar(certificado = certificadoEmitido) {
-    if (!certificado) {
-      return;
-    }
-
-    await Share.share({
+  function compartilhar(dados) {
+    Share.share({
       message:
-        `Certificado de conclusao — ${certificado.cursoTitulo}\n` +
-        `${certificado.alunoNome} — nota final ${formatGrade(certificado.notaFinal)} de 10,0\n` +
-        `Codigo de verificacao: ${certificado.codigoVerificacao}`
+        `Certificado de conclusao — ${dados.cursoTitulo}\n` +
+        `${dados.alunoNome} — nota final ${formatGrade(dados.notaFinal)} de 10,0\n` +
+        `Codigo de verificacao: ${dados.codigoVerificacao}`
     }).catch(() => {});
   }
 
@@ -151,171 +144,192 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   }
 
   return (
-    <View style={estilos.container}>
-      <BannerGradiente accessibilityLabel={`${desbloqueados} certificados conquistados de ${certificados.length} cursos`} icone="trophy-outline">
-        <View style={estilos.resumoStats}>
-          <View style={estilos.resumoStatItem}>
-            <Text style={estilos.resumoValor}>{desbloqueados}</Text>
-            <Text style={estilos.resumoRotulo}>Conquistados</Text>
-          </View>
-          <View style={estilos.resumoSep} />
-          <View style={estilos.resumoStatItem}>
-            <Text style={estilos.resumoValor}>{certificados.length}</Text>
-            <Text style={estilos.resumoRotulo}>Cursos</Text>
+    <ScrollView contentContainerStyle={estilos.container}>
+      <Text style={estilos.tituloTela}>Suas certificações acadêmicas e conquistas profissionais</Text>
+
+      <View style={estilos.statsLinha}>
+        <View style={estilos.statCartao}>
+          <Text style={estilos.statRotulo}>Conquistados</Text>
+          <View style={estilos.statLinha}>
+            <Text style={estilos.statValor}>{certificadosDesbloqueados.length}</Text>
+            <Ionicons color={cores.destaque} name="ribbon" size={20} />
           </View>
         </View>
-      </BannerGradiente>
+        <View style={estilos.statCartao}>
+          <Text style={estilos.statRotulo}>Cursos em trilha</Text>
+          <View style={estilos.statLinha}>
+            <Text style={estilos.statValor}>{certificados.length}</Text>
+            <Ionicons color={cores.destaque} name="school" size={20} />
+          </View>
+        </View>
+      </View>
 
-      <ScrollView contentContainerStyle={estilos.corpo}>
-        {certificados.map((certificado) => (
-          <View key={certificado.matriculaId} style={estilos.cartao}>
-            <View style={estilos.cartaoTopo}>
-              <View style={estilos.cartaoIcone}>
-                <Ionicons
-                  color={certificado.desbloqueado ? cores.destaque : cores.bloqueado}
-                  name="ribbon-outline"
-                  size={20}
-                />
-              </View>
-              <View style={estilos.cartaoTextos}>
-                <Text numberOfLines={2} style={estilos.cartaoTitulo}>{certificado.cursoTitulo}</Text>
-                {certificado.turmaNome ? <Text style={estilos.cartaoMeta}>{certificado.turmaNome}</Text> : null}
+      <View style={estilos.avisoCartao}>
+        <Ionicons color={cores.destaque} name="shield-checkmark-outline" size={18} />
+        <Text style={estilos.avisoTexto}>
+          O certificado é liberado automaticamente quando você conclui 100% do curso com média final ≥ 7,00.
+        </Text>
+      </View>
 
-                {certificado.desbloqueado ? (
-                  <Text style={estilos.notaTexto}>Nota {formatGrade(certificado.nota)} / 10</Text>
-                ) : (
-                  <Text style={estilos.percentualTexto}>{Math.round(certificado.percentual)}% concluído</Text>
-                )}
+      {certificadosDesbloqueados.map((certificado) => {
+        const emitido = certificadosEmitidos.get(certificado.matriculaId);
+
+        return (
+          <View key={certificado.matriculaId}>
+            <View style={estilos.secaoCabecalho}>
+              <Text style={estilos.tituloSecao}>Certificado Conquistado</Text>
+              <View style={estilos.pillAutentico}>
+                <Text style={estilos.pillAutenticoTexto}>Autêntico</Text>
               </View>
             </View>
 
-            <View style={estilos.cartaoAcoes}>
-              <TouchableOpacity
-                accessibilityLabel={`Ver certificado de ${certificado.cursoTitulo}`}
-                accessibilityRole="button"
-                disabled={!certificado.desbloqueado}
-                onPress={() => verCertificado(certificado)}
-                style={[estilos.botaoIcone, !certificado.desbloqueado ? estilos.botaoIconeDesabilitado : null]}
-              >
-                <Ionicons color={certificado.desbloqueado ? cores.destaque : cores.bloqueado} name="eye-outline" size={22} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityLabel={`Baixar certificado de ${certificado.cursoTitulo}`}
-                accessibilityRole="button"
-                disabled={!certificado.desbloqueado}
-                onPress={() => verCertificado(certificado, { compartilharAoEmitir: true })}
-                style={[estilos.botaoIcone, !certificado.desbloqueado ? estilos.botaoIconeDesabilitado : null]}
-              >
-                <Ionicons color={certificado.desbloqueado ? cores.destaque : cores.bloqueado} name="download-outline" size={22} />
-              </TouchableOpacity>
-            </View>
-            {!certificado.desbloqueado ? (
-              <Text style={estilos.bloqueadoTexto}>{certificado.pendencias[0] || "Conclua o curso para desbloquear"}</Text>
-            ) : null}
-          </View>
-        ))}
-      </ScrollView>
-
-      <Modal animationType="slide" onRequestClose={fechar} presentationStyle="pageSheet" visible={Boolean(certificadoAberto)}>
-        <View style={estilos.modalContainer}>
-          <View style={[estilos.modalCabecalho, { paddingTop: insets.top + 16 }]}>
-            <Text numberOfLines={1} style={estilos.modalTitulo}>{certificadoAberto?.cursoTitulo}</Text>
-            <TouchableOpacity
-              accessibilityLabel="Fechar certificado"
-              accessibilityRole="button"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={fechar}
-              style={estilos.modalBotaoFechar}
-            >
-              <Ionicons color={cores.erro} name="close" size={22} style={estilos.iconeFechar} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView contentContainerStyle={estilos.modalConteudo} style={estilos.modalScroll}>
-            {emitindo ? (
-              <ActivityIndicator color={cores.destaque} style={{ marginTop: 40 }} />
-            ) : erroEmissao ? (
-              <Toast mensagem={erroEmissao} onFechar={() => setErroEmissao("")} tipo="erro" />
-            ) : certificadoEmitido ? (
-              <View style={estilos.certificado}>
+            {!emitido ? (
+              <View style={estilos.cartaoCertificado}>
+                <ActivityIndicator color={cores.destaque} />
+              </View>
+            ) : emitido.erro ? (
+              <View style={estilos.cartaoCertificado}>
+                <Toast mensagem={emitido.erro} tipo="erro" />
+              </View>
+            ) : (
+              <View style={estilos.cartaoCertificado}>
+                <Text style={estilos.certificadoMarca}>CODERYSE ACADEMY · OFICIAL</Text>
                 <Text style={estilos.certificadoEyebrow}>CERTIFICADO DE CONCLUSÃO</Text>
                 <Text style={estilos.certificadoIntro}>Outorgado a</Text>
-                <Text style={estilos.certificadoNome}>{certificadoEmitido.alunoNome}</Text>
+                <Text style={estilos.certificadoNome}>{emitido.dados.alunoNome}</Text>
                 <Text style={estilos.certificadoTexto}>
-                  Por ter concluído com aproveitamento o curso de{" "}
-                  <Text style={estilos.certificadoDestaque}>{certificadoEmitido.cursoTitulo}</Text>
-                  {certificadoEmitido.turmaNome ? ` na turma ${certificadoEmitido.turmaNome}` : ""}, com nota final{" "}
-                  {formatGrade(certificadoEmitido.notaFinal)} de 10,0.
+                  pela conclusão com êxito de{" "}
+                  <Text style={estilos.certificadoDestaque}>{emitido.dados.cursoTitulo}</Text>
+                  {emitido.dados.turmaNome ? ` na turma ${emitido.dados.turmaNome}` : ""}, com nota final{" "}
+                  {formatGrade(emitido.dados.notaFinal)} de 10,0.
                 </Text>
-                <Text style={estilos.certificadoData}>{formatDate(certificadoEmitido.emitidoEm)}</Text>
-                <Text style={estilos.certificadoEscola}>Oferecido pela escola: CodeRyse Academy</Text>
-                <Text style={estilos.certificadoVerificacao}>Código de verificação: {certificadoEmitido.codigoVerificacao}</Text>
-              </View>
-            ) : null}
-          </ScrollView>
 
-          <View style={estilos.modalAcoes}>
-            <Botao disabled={!certificadoEmitido} icone="share-social-outline" onPress={() => compartilhar()} variante="primario">
-              Compartilhar
-            </Botao>
+                <View style={estilos.certificadoDivisor} />
+
+                <View style={estilos.certificadoInfoLinha}>
+                  <View style={estilos.certificadoInfoItem}>
+                    <Text style={estilos.certificadoInfoRotulo}>Emitido em</Text>
+                    <Text style={estilos.certificadoInfoValor}>{formatDate(emitido.dados.emitidoEm)}</Text>
+                  </View>
+                  <View style={estilos.certificadoInfoItem}>
+                    <Text style={estilos.certificadoInfoRotulo}>Instituição</Text>
+                    <Text style={estilos.certificadoInfoValor}>CodeRyse</Text>
+                  </View>
+                </View>
+
+                <Text style={estilos.certificadoVerificacaoRotulo}>Código de verificação</Text>
+                <Text style={estilos.certificadoVerificacaoValor}>{emitido.dados.codigoVerificacao}</Text>
+
+                <Botao
+                  icone="share-social-outline"
+                  onPress={() => compartilhar(emitido.dados)}
+                  style={estilos.botaoCompartilhar}
+                  variante="primario"
+                >
+                  Compartilhar
+                </Botao>
+              </View>
+            )}
           </View>
-        </View>
-      </Modal>
-    </View>
+        );
+      })}
+
+      {certificadosBloqueados.length > 0 ? (
+        <>
+          <View style={estilos.secaoCabecalho}>
+            <Text style={estilos.tituloSecao}>Em andamento</Text>
+            <Text style={estilos.contagemRestantes}>{certificadosBloqueados.length} restante{certificadosBloqueados.length === 1 ? "" : "s"}</Text>
+          </View>
+
+          {certificadosBloqueados.map((certificado) => (
+            <View key={certificado.matriculaId} style={estilos.cartaoBloqueado}>
+              <View style={estilos.bloqueadoTopo}>
+                <Text numberOfLines={2} style={estilos.bloqueadoTitulo}>{certificado.cursoTitulo}</Text>
+                <Ionicons color={cores.textoSuave} name="lock-closed-outline" size={18} />
+              </View>
+              <Text numberOfLines={2} style={estilos.bloqueadoPendencia}>
+                {certificado.pendencias[0] || "Conclua o curso para desbloquear"}
+              </Text>
+
+              <View style={estilos.bloqueadoRodape}>
+                <Text style={estilos.bloqueadoPercentual}>{Math.round(certificado.percentual)}% concluído</Text>
+                <Text style={estilos.bloqueadoMeta}>Média ≥ {formatGrade(NOTA_MINIMA_APROVACAO)}</Text>
+              </View>
+              <View style={estilos.barraFundo}>
+                <View style={[estilos.barraPreenchida, { width: `${Math.max(0, Math.min(certificado.percentual, 100))}%` }]} />
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const estilos = StyleSheet.create({
-  container: { flex: 1, backgroundColor: cores.fundo },
-  resumoStats: { flexDirection: "row", alignItems: "center", gap: espacamentos.lg, flex: 1 },
-  resumoStatItem: { alignItems: "center" },
-  resumoSep: { width: 1, height: 28, backgroundColor: "rgba(255, 255, 255, 0.25)" },
-  resumoValor: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800" },
-  resumoRotulo: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
-  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.xs, gap: espacamentos.md },
-  cartao: { backgroundColor: cores.fundoCartao, borderRadius: raios.md, padding: espacamentos.lg },
-  cartaoTopo: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.sm },
-  cartaoIcone: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: cores.fundoCartaoAtivo,
+  container: { flexGrow: 1, backgroundColor: cores.fundo, padding: espacamentos.xl, gap: espacamentos.md },
+  tituloTela: { color: cores.textoRotulo, fontSize: tipografia.rotulo },
+  statsLinha: { flexDirection: "row", gap: espacamentos.sm },
+  statCartao: {
+    flex: 1,
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    padding: espacamentos.md
+  },
+  statRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  statLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: espacamentos.xs },
+  statValor: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800" },
+  avisoCartao: {
+    flexDirection: "row",
+    gap: espacamentos.sm,
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    padding: espacamentos.md,
+    alignItems: "center"
+  },
+  avisoTexto: { color: cores.textoRotulo, fontSize: tipografia.rotulo, flex: 1, lineHeight: 18 },
+  secaoCabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: espacamentos.sm },
+  tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
+  pillAutentico: { backgroundColor: cores.bordaCartao, borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3 },
+  pillAutenticoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.legenda },
+  contagemRestantes: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  cartaoCertificado: {
+    backgroundColor: cores.fundoCartao,
+    borderRadius: raios.lg,
+    borderWidth: 1,
+    borderColor: cores.destaque,
+    padding: espacamentos.xl,
     alignItems: "center",
+    gap: 6,
+    minHeight: 80,
     justifyContent: "center"
   },
-  cartaoTextos: { flex: 1 },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: 15 },
-  cartaoMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
-  notaTexto: { color: cores.sucesso, fontWeight: "700", marginTop: 8 },
-  percentualTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 8 },
-  cartaoAcoes: { flexDirection: "row", gap: espacamentos.md, marginTop: espacamentos.md },
-  botaoIcone: { minWidth: 44, minHeight: 44, borderRadius: raios.sm, backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
-  botaoIconeDesabilitado: { opacity: 0.4 },
-  bloqueadoTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: espacamentos.sm },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 },
-  modalContainer: { flex: 1, backgroundColor: cores.fundo },
-  modalCabecalho: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: cores.bordaCartao
-  },
-  modalTitulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1, marginRight: espacamentos.md },
-  modalBotaoFechar: { padding: 4 },
-  iconeFechar: { opacity: 0.75 },
-  modalScroll: { flexShrink: 1 },
-  modalConteudo: { padding: espacamentos.xl, paddingBottom: 12 },
-  modalAcoes: { flexDirection: "row", gap: 10, padding: espacamentos.xl, paddingTop: 0 },
-  certificado: { borderWidth: 1, borderColor: cores.destaque, borderRadius: 14, padding: 20, alignItems: "center", gap: 10 },
-  certificadoEyebrow: { color: cores.destaque, fontWeight: "800", fontSize: tipografia.rotulo, letterSpacing: 1 },
-  certificadoIntro: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 8 },
+  certificadoMarca: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700", letterSpacing: 0.5, alignSelf: "flex-start" },
+  certificadoEyebrow: { color: cores.destaque, fontWeight: "800", fontSize: tipografia.rotulo, letterSpacing: 1, marginTop: espacamentos.sm },
+  certificadoIntro: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: espacamentos.sm },
   certificadoNome: { color: cores.texto, fontWeight: "800", fontSize: tipografia.destaque, textAlign: "center" },
-  certificadoTexto: { color: cores.textoRotulo, fontSize: tipografia.corpo, textAlign: "center", lineHeight: 19 },
+  certificadoTexto: { color: cores.textoRotulo, fontSize: tipografia.corpo, textAlign: "center", lineHeight: 19, marginTop: 4 },
   certificadoDestaque: { color: cores.texto, fontWeight: "700" },
-  certificadoData: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 6 },
-  certificadoEscola: { color: cores.textoSuave, fontSize: tipografia.rotulo },
-  certificadoVerificacao: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 8, textAlign: "center" }
+  certificadoDivisor: { height: 1, backgroundColor: cores.divisoria, alignSelf: "stretch", marginVertical: espacamentos.md },
+  certificadoInfoLinha: { flexDirection: "row", gap: espacamentos.xl, alignSelf: "stretch", justifyContent: "center" },
+  certificadoInfoItem: { alignItems: "center" },
+  certificadoInfoRotulo: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  certificadoInfoValor: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo, marginTop: 2 },
+  certificadoVerificacaoRotulo: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md },
+  certificadoVerificacaoValor: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo, letterSpacing: 1 },
+  botaoCompartilhar: { marginTop: espacamentos.lg, alignSelf: "stretch" },
+  cartaoBloqueado: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, borderWidth: 1, borderColor: cores.bordaCartao, padding: espacamentos.lg },
+  bloqueadoTopo: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: espacamentos.sm },
+  bloqueadoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, flex: 1 },
+  bloqueadoPendencia: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
+  bloqueadoRodape: { flexDirection: "row", justifyContent: "space-between", marginTop: espacamentos.md },
+  bloqueadoPercentual: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  bloqueadoMeta: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  barraFundo: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: 4 },
+  barraPreenchida: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
+  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60, paddingHorizontal: 24 }
 });
