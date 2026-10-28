@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Modal, Share, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,6 +6,7 @@ import BannerGradiente from "../../components/BannerGradiente.jsx";
 import Botao from "../../components/Botao.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
+import { construirMapaStatusCertificados, obterStatusCertificado } from "../../lib/certificados.js";
 import { formatDate, formatGrade, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 
@@ -15,6 +16,39 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   const [emitindo, setEmitindo] = useState(false);
   const [erroEmissao, setErroEmissao] = useState("");
   const insets = useSafeAreaInsets();
+
+  // Mesmo padrao do Web (SecaoCertificados.jsx): o servidor e a unica fonte de
+  // verdade pra "desbloqueado" - comeca vazio (= tudo bloqueado) de proposito,
+  // nunca libera por padrao enquanto o status real nao chega. Recarrega
+  // sempre que o snapshot do workspace for recarregado (onRecarregar em
+  // AlunoWorkspace.jsx troca a referencia de `snapshot`).
+  const [mapaStatusCertificados, setMapaStatusCertificados] = useState(() => construirMapaStatusCertificados([]));
+
+  useEffect(() => {
+    let ignorar = false;
+
+    async function carregarStatus() {
+      try {
+        const resposta = await apiRequest("/Certificados/status");
+        if (!ignorar) {
+          setMapaStatusCertificados(construirMapaStatusCertificados(resposta));
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+        // Falha ao carregar o status nao deve quebrar a tela - certificados
+        // so ficam indisponiveis (mais seguro que "liberados" por padrao).
+      }
+    }
+
+    carregarStatus();
+
+    return () => {
+      ignorar = true;
+    };
+  }, [onSessionExpired, snapshot]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
   const turmaPorId = useMemo(() => new Map(snapshot.turmas.map((turma) => [turma.id, turma])), [snapshot.turmas]);
@@ -42,10 +76,14 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
         .filter((matricula) => normalizeStatus(matricula.status) === "Aprovada")
         .map((matricula) => {
           const progresso = progressoCursoPorMatricula.get(matricula.id);
+          // Percentual e nota aqui sao so pra EXIBICAO (ex.: "73% concluido")
+          // - nunca usados pra decidir se o certificado pode ser emitido,
+          // isso vem exclusivamente do status do servidor abaixo.
           const percentual = Number(progresso?.percentualConclusao) || 0;
           const notas = notasPorCurso.get(matricula.cursoId) || [];
           const mediaAvaliacoes = notas.length ? notas.reduce((soma, nota) => soma + nota, 0) / notas.length : null;
           const nota = matricula.notaFinal > 0 ? matricula.notaFinal : mediaAvaliacoes;
+          const status = obterStatusCertificado(mapaStatusCertificados, matricula.id);
 
           return {
             matriculaId: matricula.id,
@@ -53,10 +91,11 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
             turmaNome: matricula.turmaId ? turmaPorId.get(matricula.turmaId)?.nomeTurma : null,
             percentual,
             nota,
-            desbloqueado: percentual >= 100
+            desbloqueado: status.desbloqueado,
+            pendencias: status.pendencias
           };
         }),
-    [cursoPorId, notasPorCurso, progressoCursoPorMatricula, snapshot.matriculas, turmaPorId]
+    [cursoPorId, mapaStatusCertificados, notasPorCurso, progressoCursoPorMatricula, snapshot.matriculas, turmaPorId]
   );
 
   const desbloqueados = certificados.filter((certificado) => certificado.desbloqueado).length;
@@ -170,7 +209,9 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                 <Ionicons color={certificado.desbloqueado ? cores.destaque : cores.bloqueado} name="download-outline" size={22} />
               </TouchableOpacity>
             </View>
-            {!certificado.desbloqueado ? <Text style={estilos.bloqueadoTexto}>Conclua o curso para desbloquear</Text> : null}
+            {!certificado.desbloqueado ? (
+              <Text style={estilos.bloqueadoTexto}>{certificado.pendencias[0] || "Conclua o curso para desbloquear"}</Text>
+            ) : null}
           </View>
         ))}
       </ScrollView>
