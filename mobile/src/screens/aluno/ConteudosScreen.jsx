@@ -24,6 +24,7 @@ import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
+import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
 
@@ -68,7 +69,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
-  const [processandoPagamentoId, setProcessandoPagamentoId] = useState(null);
+  const [cursoParaComprar, setCursoParaComprar] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -117,6 +118,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     return navigation.addListener("tabPress", () => {
       setCursoSelecionadoId(null);
       setModulosAbertos(new Set());
+      setCursoParaComprar(null);
     });
   }, [navigation]);
 
@@ -154,6 +156,8 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     [snapshot.pagamentos]
   );
 
+  const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
+
   const itensGrade = useMemo(
     () =>
       grupos.map((grupo) => {
@@ -171,26 +175,14 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     [grupos, matriculaPorCursoId, pagamentoPorMatriculaId]
   );
 
-  async function confirmarPagamento(item) {
-    if (!item.matriculaId) {
-      return;
-    }
-
-    setProcessandoPagamentoId(item.matriculaId);
-    setMensagem(null);
-
-    try {
-      await apiRequest(`/Pagamentos/${item.matriculaId}/confirmar`, { method: "POST" });
-      setMensagem({ tipo: "sucesso", texto: "Pagamento confirmado." });
-      await onRecarregar();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired?.();
-        return;
-      }
-      setMensagem({ tipo: "erro", texto: err.message || "Não foi possível confirmar o pagamento agora." });
-    } finally {
-      setProcessandoPagamentoId(null);
+  // Abre o mesmo painel de confirmacao do Catalogo (ConfirmacaoCompraSheet,
+  // POST /Matriculas/comprar) pra concluir a compra de uma matricula com
+  // pagamento pendente — precisa do curso completo (preco/modeloCurso), que
+  // itensGrade nao carrega, por isso busca em snapshot.cursos por id.
+  function abrirConfirmacaoCompra(item) {
+    const curso = cursoPorId.get(item.id);
+    if (curso) {
+      setCursoParaComprar(curso);
     }
   }
 
@@ -275,9 +267,20 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         <GradeCursosConteudos
           accessibilityLabelPrefix="Ver conteúdos de"
           itens={itensGrade}
-          onConfirmarPagamento={confirmarPagamento}
+          onConcluirCompra={abrirConfirmacaoCompra}
           onSelecionar={setCursoSelecionadoId}
-          processandoPagamentoId={processandoPagamentoId}
+        />
+
+        <ConfirmacaoCompraSheet
+          curso={cursoParaComprar}
+          onCompraConfirmada={onRecarregar}
+          onFechar={() => setCursoParaComprar(null)}
+          onIrParaCurso={(cursoId) => {
+            setCursoParaComprar(null);
+            setCursoSelecionadoId(cursoId);
+          }}
+          onSessionExpired={onSessionExpired}
+          visivel={Boolean(cursoParaComprar)}
         />
       </View>
     );

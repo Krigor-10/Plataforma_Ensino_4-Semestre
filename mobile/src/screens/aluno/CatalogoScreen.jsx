@@ -1,74 +1,70 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
+import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { ROUTES } from "../../lib/routes.js";
+
+const MODELO_ACOMPANHADO = 3;
 
 /* Catalogo de descoberta — extraido da antiga aba "Catalogo" de
    MatriculasScreen.jsx (hoje CursosScreen.jsx) por pedido do usuario: so
    acessivel pela sidebar, nao e mais aba da Bottom Nav nem parte de
    CURSOS. So lista cursos em que o aluno AINDA NAO tem nenhuma matricula
    (ver cursosDisponiveis abaixo) — "pendente"/matricula ativa nunca
-   aparecem aqui, so em CURSOS. Preco/gratuidade adicionado ao card (nao
-   existia antes, pedido explicito). */
+   aparecem aqui, so em CURSOS.
+
+   Turma deixou de ser exigida pra comprar (pendencia_compra_cursos): o
+   aluno "compra" cursos pagos (abre ConfirmacaoCompraSheet, que chama
+   POST /Matriculas/comprar) e "comeca gratis" os gratuitos (POST
+   /Matriculas direto, sem confirmacao). Acompanhado ja encerrado nao
+   aparece pra quem ainda nao tem o curso. */
 export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapshot, usuario }) {
   const [busca, setBusca] = useState("");
   const [processando, setProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
+  const [cursoParaComprar, setCursoParaComprar] = useState(null);
+  const navigation = useNavigation();
 
   const cursoIdsMatriculados = useMemo(() => new Set(snapshot.matriculas.map((matricula) => matricula.cursoId)), [snapshot.matriculas]);
-
-  const turmasPorCursoId = useMemo(() => {
-    const mapa = new Map();
-    snapshot.turmas.forEach((turma) => {
-      const lista = mapa.get(turma.cursoId) || [];
-      lista.push(turma);
-      mapa.set(turma.cursoId, lista);
-    });
-    return mapa;
-  }, [snapshot.turmas]);
 
   const cursosDisponiveis = useMemo(
     () =>
       snapshot.cursos
         .filter((curso) => !cursoIdsMatriculados.has(curso.id))
+        .filter((curso) => !(Number(curso.modeloCurso) === MODELO_ACOMPANHADO && curso.encerradoEm))
         .filter((curso) => curso.titulo.toLowerCase().includes(busca.toLowerCase())),
     [snapshot.cursos, cursoIdsMatriculados, busca]
   );
 
-  async function solicitar(curso) {
-    const temTurma = (turmasPorCursoId.get(curso.id) || []).length > 0;
-    if (!temTurma) {
-      return;
-    }
-
+  async function comecarGratis(curso) {
     setProcessando(curso.id);
     setMensagem(null);
 
     try {
       await apiRequest("/Matriculas", { method: "POST", body: JSON.stringify({ alunoId: usuario.id, cursoId: curso.id }) });
-
-      const cursoEhPago = Number(curso.preco) > 0;
-      setMensagem({
-        tipo: "sucesso",
-        texto: cursoEhPago
-          ? `Matrícula em ${curso.titulo} aprovada — confirme o pagamento pendente em Cursos para liberar o acesso.`
-          : `Matrícula em ${curso.titulo} aprovada. Seu acesso já está liberado em Cursos.`
-      });
+      setMensagem({ tipo: "sucesso", texto: `Você começou ${curso.titulo}. Seu acesso já está liberado em Cursos.` });
       await onRecarregar();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
-      setMensagem({ tipo: "erro", texto: err.message || "Não foi possível solicitar a matrícula agora." });
+      setMensagem({ tipo: "erro", texto: err.message || "Não foi possível começar o curso agora." });
     } finally {
       setProcessando(null);
     }
+  }
+
+  function irParaCurso(cursoId) {
+    setCursoParaComprar(null);
+    navigation.navigate(ROUTES.ALUNO_TABS, { params: { cursoId }, screen: ROUTES.CONTEUDOS });
   }
 
   return (
@@ -99,18 +95,28 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
         renderItem={({ item: curso }) => (
           <ItemCursoCatalogo
             curso={curso}
-            onSolicitar={() => solicitar(curso)}
+            onComecarGratis={() => comecarGratis(curso)}
+            onComprar={() => setCursoParaComprar(curso)}
             processando={processando === curso.id}
-            temTurma={(turmasPorCursoId.get(curso.id) || []).length > 0}
           />
         )}
+      />
+
+      <ConfirmacaoCompraSheet
+        curso={cursoParaComprar}
+        onCompraConfirmada={onRecarregar}
+        onFechar={() => setCursoParaComprar(null)}
+        onIrParaCurso={irParaCurso}
+        onSessionExpired={onSessionExpired}
+        visivel={Boolean(cursoParaComprar)}
       />
     </View>
   );
 }
 
-function ItemCursoCatalogo({ curso, onSolicitar, processando, temTurma }) {
+function ItemCursoCatalogo({ curso, onComecarGratis, onComprar, processando }) {
   const gratuito = !(Number(curso.preco) > 0);
+  const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
 
   return (
     <View style={estilos.cartaoLinha}>
@@ -123,21 +129,20 @@ function ItemCursoCatalogo({ curso, onSolicitar, processando, temTurma }) {
           </Text>
         </View>
         {curso.descricao ? <Text numberOfLines={2} style={estilos.cartaoMeta}>{curso.descricao}</Text> : null}
-        <View style={estilos.disponibilidadeLinha}>
-          <Ionicons
-            color={temTurma ? cores.sucesso : cores.textoSuave}
-            name={temTurma ? "checkmark-circle-outline" : "close-circle-outline"}
-            size={14}
-          />
-          <Text style={[estilos.disponibilidadeTexto, { color: temTurma ? cores.sucesso : cores.textoSuave }]}>
-            {temTurma ? "Matrículas abertas" : "Sem turma disponível"}
-          </Text>
-        </View>
-        {temTurma ? (
-          <Botao carregando={processando} onPress={onSolicitar} style={estilos.botaoAcaoCartao} variante="primario">
-            Solicitar matrícula
-          </Botao>
+        {ehAcompanhado ? (
+          <View style={estilos.seloAcompanhamento}>
+            <Text style={estilos.seloAcompanhamentoTexto}>Com acompanhamento</Text>
+          </View>
         ) : null}
+        <Botao
+          carregando={processando}
+          icone={gratuito ? undefined : "card"}
+          onPress={gratuito ? onComecarGratis : onComprar}
+          style={estilos.botaoAcaoCartao}
+          variante="primario"
+        >
+          {gratuito ? "Começar grátis" : `Comprar · ${formatMoney(curso.preco)}`}
+        </Botao>
       </View>
     </View>
   );
@@ -166,8 +171,15 @@ const estilos = StyleSheet.create({
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, flex: 1 },
   precoTexto: { color: cores.textoRotulo, fontWeight: "700", fontSize: tipografia.rotulo },
   cartaoMeta: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
-  disponibilidadeLinha: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: espacamentos.sm },
-  disponibilidadeTexto: { fontSize: tipografia.rotulo, fontWeight: "600" },
+  seloAcompanhamento: {
+    alignSelf: "flex-start",
+    backgroundColor: cores.fundoCartaoAtivo,
+    borderRadius: raios.sm,
+    paddingHorizontal: espacamentos.sm,
+    paddingVertical: 3,
+    marginTop: espacamentos.sm
+  },
+  seloAcompanhamentoTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700" },
   botaoAcaoCartao: { marginTop: 12 },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 }
 });

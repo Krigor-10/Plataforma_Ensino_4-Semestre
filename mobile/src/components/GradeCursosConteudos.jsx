@@ -7,7 +7,7 @@ import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 function obterStatus(item) {
   if (item.pagamentoPendente) {
-    return { cor: cores.aviso, corFundo: cores.avisoFundo, rotulo: "Pagamento pendente" };
+    return { cor: cores.aviso, corFundo: cores.avisoFundo, rotulo: "Compra pendente" };
   }
 
   const percentual = Math.max(0, Math.min(Number(item.progresso) || 0, 100));
@@ -26,12 +26,13 @@ function obterStatus(item) {
    CapaCurso.jsx (usado tambem por Home/Catalogo), so a funcao
    resolverImagemCurso e compartilhada. Cada item carrega o progresso e, se
    a matricula aprovada ainda nao teve o pagamento confirmado, os dados pra
-   mostrar a pilula "Pagamento pendente" + botao "Confirmar" (mesmo fluxo
-   que antes vivia em CursosScreen.jsx, removida nesta rodada do redesign -
+   mostrar a pilula "Compra pendente" + botao "Concluir compra" (abre
+   ConfirmacaoCompraSheet.jsx, pendencia_compra_cursos; fluxo que antes
+   vivia em CursosScreen.jsx, removida nesta rodada do redesign -
    suas outras funcoes, incluindo "Cancelar solicitacao", eram inalcancaveis
    desde que matricula virou sempre automatica, ver pendencia_matriculas_
    sempre_automatica_2026_10_27 na memoria do projeto). */
-export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onConfirmarPagamento, onSelecionar, processandoPagamentoId }) {
+export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onConcluirCompra, onSelecionar, processandoPagamentoId }) {
   return (
     <FlatList
       columnWrapperStyle={estilos.linha}
@@ -43,7 +44,7 @@ export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, 
         <CardCurso
           accessibilityLabelPrefix={accessibilityLabelPrefix}
           item={item}
-          onConfirmarPagamento={onConfirmarPagamento}
+          onConcluirCompra={onConcluirCompra}
           onSelecionar={onSelecionar}
           processando={processandoPagamentoId === item.matriculaId}
         />
@@ -52,7 +53,7 @@ export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, 
   );
 }
 
-function CardCurso({ accessibilityLabelPrefix, item, onConfirmarPagamento, onSelecionar, processando }) {
+function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecionar, processando }) {
   const { curso, id, pagamentoPendente, progresso, valorPagamento } = item;
   const tituloCurso = curso?.titulo || `Curso #${id}`;
   const capa = resolverImagemCurso(curso);
@@ -95,12 +96,12 @@ function CardCurso({ accessibilityLabelPrefix, item, onConfirmarPagamento, onSel
             {valorPagamento ? <Text style={estilos.pagamentoValor}>{formatMoney(valorPagamento)}</Text> : null}
             <Botao
               carregando={processando}
-              onPress={() => onConfirmarPagamento?.(item)}
+              onPress={() => onConcluirCompra?.(item)}
               style={estilos.botaoPagamento}
               textoStyle={estilos.botaoPagamentoTexto}
               variante="sucesso"
             >
-              Confirmar
+              Concluir compra
             </Botao>
           </View>
         ) : null}
