@@ -67,15 +67,6 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
 
   function navegarDoMenu(rota) {
     setMenuAberto(false);
-    // Cursos e Certificados vivem dentro do AlunoTabsNavigator (nested, pra
-    // Certificados manter a barra inferior visivel — ver AlunoTabsNavigator.jsx),
-    // nao sao Screens diretas do AlunoStack como Catalogo/Perfil/Notificacoes
-    // — precisam do shorthand {screen} pra navegacao descer um nivel.
-    if (rota === ROUTES.CURSOS || rota === ROUTES.CERTIFICADOS) {
-      navigationRef.current?.navigate(ROUTES.ALUNO_TABS, { screen: rota });
-      return;
-    }
-
     navigationRef.current?.navigate(rota);
   }
 

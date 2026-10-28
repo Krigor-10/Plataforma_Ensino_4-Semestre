@@ -9,12 +9,11 @@ import { ROUTES } from "../lib/routes.js";
 const LARGURA_MENU = Math.min(320, Dimensions.get("window").width * 0.8);
 
 // Redesign (docs/redesign-mobile/PROMPT-agente-mobile.md, secao 1): o menu
-// fica so com Meu perfil + Catalogo, ja que Cursos e Certificados viraram
-// abas da bottom bar (ver AlunoTabsNavigator.jsx). "Minhas matrículas" e
-// uma PONTE TEMPORARIA da Rodada 1: aponta pra CursosScreen.jsx (ROUTES.
-// CURSOS), que saiu da bottom bar mas ainda e o unico lugar com confirmar-
-// pagamento/cancelar - some daqui assim que a Rodada 3 (grade de Cursos)
-// incorporar essas funcoes, deixando o menu igual ao prompt pede.
+// fica so com Meu perfil + Catalogo - Cursos e Certificados viraram abas da
+// bottom bar (ver AlunoTabsNavigator.jsx). A antiga tela "Cursos"
+// (CursosScreen.jsx, confirmar pagamento/ver matricula) foi removida na
+// Rodada 3 do redesign: suas funcoes ainda necessarias ja migraram pra
+// GradeCursosConteudos.jsx.
 const GRUPOS = [
   {
     titulo: "Conta",
@@ -25,15 +24,13 @@ const GRUPOS = [
   {
     titulo: "Navegação",
     itens: [
-      { chave: ROUTES.CATALOGO, dica: "Abre o catalogo de cursos disponiveis", icone: "storefront-outline", rotulo: "Catálogo" },
-      { chave: ROUTES.CURSOS, dica: "Abre suas matriculas (pagamento, cancelamento)", icone: "receipt-outline", rotulo: "Minhas matrículas" }
+      { chave: ROUTES.CATALOGO, dica: "Abre o catalogo de cursos disponiveis", icone: "storefront-outline", rotulo: "Catálogo" }
     ]
   }
 ];
 
-/* Menu lateral (drawer) do Aluno — agrupa Navegacao (Catalogo + a ponte
-   temporaria "Minhas matrículas", ver nota acima) e Conta (Meu perfil +
-   Sair). Usa o <Modal> nativo do RN (mesmo padrao ja usado em QuizModal/
+/* Menu lateral (drawer) do Aluno — agrupa Navegacao (so Catalogo) e
+   Conta (Meu perfil + Sair). Usa o <Modal> nativo do RN (mesmo padrao ja usado em QuizModal/
    PerfilScreen/ConteudosScreen) pra ganhar o onRequestClose do botao fisico
    de voltar do Android de graca; o slide lateral e so um Animated.View por
    cima, nao e o Modal que anima. O painel precisa vir ANTES do overlay

@@ -8,14 +8,11 @@ import { ROUTES } from "../lib/routes.js";
 
 // ROUTES.CONTEUDOS virou a aba "Cursos" no redesign (AlunoTabsNavigator.jsx)
 // - titulo/icone aqui acompanham isso pro cabecalho bater com a bottom bar.
-// ROUTES.CURSOS (CursosScreen.jsx, ponte temporaria da Rodada 1 - ver
-// MenuLateral.jsx) usa "Minhas matrículas" pra nao colidir com o nome novo.
 const TELAS_INFO = {
   [ROUTES.INICIO]: { icone: "home", titulo: "Início" },
   [ROUTES.CONTEUDOS]: { icone: "school", titulo: "Cursos" },
   [ROUTES.AVALIACOES]: { icone: "clipboard", titulo: "Avaliações" },
   [ROUTES.PROGRESSO]: { icone: "bar-chart", titulo: "Progresso" },
-  [ROUTES.CURSOS]: { icone: "receipt", titulo: "Minhas matrículas" },
   [ROUTES.CATALOGO]: { icone: "storefront", titulo: "Catálogo" },
   [ROUTES.CERTIFICADOS]: { icone: "ribbon", titulo: "Certificados" },
   [ROUTES.PERFIL]: { icone: "person", titulo: "Meu perfil" },

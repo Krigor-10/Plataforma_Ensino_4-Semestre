@@ -77,8 +77,8 @@ export const tamanhosIcone = {
 };
 
 // Elevacao - preset unico de sombra pra cartoes/modais que precisam se
-// destacar do fundo preto da tela; usado em CursosScreen, MenuLateral
-// e ModalConfirmarSaida.
+// destacar do fundo preto da tela; usado em MenuLateral e
+// ModalConfirmarSaida.
 export const sombra = {
   cartao: {
     shadowColor: "#000",

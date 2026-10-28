@@ -1,43 +1,66 @@
 import { Ionicons } from "@expo/vector-icons";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Botao from "./Botao.jsx";
 import { resolverImagemCurso } from "../lib/courseCovers.js";
+import { formatMoney } from "../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
-/* Grade de 2 colunas pra selecao de curso na tela Conteudos, isolada de
-   SeletorCurso.jsx (usado por Avaliacoes/Progresso) e CapaCurso.jsx (usado
-   tambem por Cursos/Catalogo/Home) — nao reutiliza esses dois componentes
-   visuais pra nao vazar a mudanca de layout pra essas outras telas, so a
-   funcao resolverImagemCurso (resolucao de imagem por imagemUrl/titulo) e
-   compartilhada. */
-export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onSelecionar, titulo = "Selecione um curso" }) {
+function obterStatus(item) {
+  if (item.pagamentoPendente) {
+    return { cor: cores.aviso, corFundo: cores.avisoFundo, rotulo: "Pagamento pendente" };
+  }
+
+  const percentual = Math.max(0, Math.min(Number(item.progresso) || 0, 100));
+  if (percentual >= 100) {
+    return { cor: cores.sucesso, corFundo: cores.sucessoFundo, rotulo: "Concluído" };
+  }
+  if (percentual <= 0) {
+    return { cor: cores.textoSuave, corFundo: cores.fundoCartaoAtivo, rotulo: "Não iniciado" };
+  }
+  return { cor: cores.destaque, corFundo: cores.bordaCartao, rotulo: "Em andamento" };
+}
+
+/* Grade de 2 colunas pra selecao de curso na tela Cursos (redesign, docs/
+   redesign-mobile/PROMPT-agente-mobile.md, secao 3, 2a_cursos_grade.png) -
+   isolada de SeletorCurso.jsx (usado por Avaliacoes/Progresso) e
+   CapaCurso.jsx (usado tambem por Home/Catalogo), so a funcao
+   resolverImagemCurso e compartilhada. Cada item carrega o progresso e, se
+   a matricula aprovada ainda nao teve o pagamento confirmado, os dados pra
+   mostrar a pilula "Pagamento pendente" + botao "Confirmar" (mesmo fluxo
+   que antes vivia em CursosScreen.jsx, removida nesta rodada do redesign -
+   suas outras funcoes, incluindo "Cancelar solicitacao", eram inalcancaveis
+   desde que matricula virou sempre automatica, ver pendencia_matriculas_
+   sempre_automatica_2026_10_27 na memoria do projeto). */
+export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onConfirmarPagamento, onSelecionar, processandoPagamentoId }) {
   return (
-    <>
-      <Text style={estilos.titulo}>{titulo}</Text>
-      <FlatList
-        columnWrapperStyle={estilos.linha}
-        contentContainerStyle={estilos.lista}
-        data={itens}
-        keyExtractor={(item) => String(item.id)}
-        numColumns={2}
-        renderItem={({ item }) => (
-          <CardCurso accessibilityLabelPrefix={accessibilityLabelPrefix} curso={item.curso} id={item.id} onSelecionar={onSelecionar} />
-        )}
-      />
-    </>
+    <FlatList
+      columnWrapperStyle={estilos.linha}
+      contentContainerStyle={estilos.lista}
+      data={itens}
+      keyExtractor={(item) => String(item.id)}
+      numColumns={2}
+      renderItem={({ item }) => (
+        <CardCurso
+          accessibilityLabelPrefix={accessibilityLabelPrefix}
+          item={item}
+          onConfirmarPagamento={onConfirmarPagamento}
+          onSelecionar={onSelecionar}
+          processando={processandoPagamentoId === item.matriculaId}
+        />
+      )}
+    />
   );
 }
 
-function CardCurso({ accessibilityLabelPrefix, curso, id, onSelecionar }) {
+function CardCurso({ accessibilityLabelPrefix, item, onConfirmarPagamento, onSelecionar, processando }) {
+  const { curso, id, pagamentoPendente, progresso, valorPagamento } = item;
   const tituloCurso = curso?.titulo || `Curso #${id}`;
   const capa = resolverImagemCurso(curso);
+  const status = obterStatus(item);
+  const percentual = Math.max(0, Math.min(Number(progresso) || 0, 100));
 
-  return (
-    <TouchableOpacity
-      accessibilityLabel={`${accessibilityLabelPrefix} ${tituloCurso}`}
-      accessibilityRole="button"
-      onPress={() => onSelecionar(id)}
-      style={estilos.cartao}
-    >
+  const corpoCartao = (
+    <>
       <View style={estilos.capa}>
         {capa ? (
           <Image resizeMode="cover" source={capa} style={estilos.capaImagem} />
@@ -50,18 +73,59 @@ function CardCurso({ accessibilityLabelPrefix, curso, id, onSelecionar }) {
 
       <View style={estilos.corpo}>
         <Text numberOfLines={2} style={estilos.cartaoTitulo}>{tituloCurso}</Text>
+
+        {!pagamentoPendente ? (
+          <>
+            <View style={estilos.barraFundo}>
+              <View style={[estilos.barraPreenchida, { width: `${percentual}%` }]} />
+            </View>
+            <Text style={estilos.percentualTexto}>{Math.round(percentual)}%</Text>
+          </>
+        ) : null}
+
         <View style={estilos.rodape}>
-          <View style={estilos.botaoAcesso}>
-            <Ionicons color={cores.destaque} name="chevron-forward" size={18} />
+          <View style={[estilos.pill, { backgroundColor: status.corFundo }]}>
+            <Text numberOfLines={1} style={[estilos.pillTexto, { color: status.cor }]}>{status.rotulo}</Text>
           </View>
+          {!pagamentoPendente ? <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} /> : null}
         </View>
+
+        {pagamentoPendente ? (
+          <View style={estilos.pagamentoLinha}>
+            {valorPagamento ? <Text style={estilos.pagamentoValor}>{formatMoney(valorPagamento)}</Text> : null}
+            <Botao
+              carregando={processando}
+              onPress={() => onConfirmarPagamento?.(item)}
+              style={estilos.botaoPagamento}
+              textoStyle={estilos.botaoPagamentoTexto}
+              variante="sucesso"
+            >
+              Confirmar
+            </Botao>
+          </View>
+        ) : null}
       </View>
+    </>
+  );
+
+  if (pagamentoPendente) {
+    return <View style={estilos.cartao}>{corpoCartao}</View>;
+  }
+
+  return (
+    <TouchableOpacity
+      accessibilityHint="Abre a trilha do curso"
+      accessibilityLabel={`${accessibilityLabelPrefix} ${tituloCurso}`}
+      accessibilityRole="button"
+      onPress={() => onSelecionar(id)}
+      style={estilos.cartao}
+    >
+      {corpoCartao}
     </TouchableOpacity>
   );
 }
 
 const estilos = StyleSheet.create({
-  titulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, padding: espacamentos.xl, paddingBottom: espacamentos.md },
   lista: { paddingHorizontal: espacamentos.xl, paddingBottom: espacamentos.xl },
   linha: { justifyContent: "space-between" },
   cartao: {
@@ -78,13 +142,14 @@ const estilos = StyleSheet.create({
   capaMarcador: { backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
   corpo: { padding: espacamentos.sm },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.corpo, minHeight: tipografia.corpo * 2.4 },
-  rodape: { flexDirection: "row", justifyContent: "flex-end", marginTop: espacamentos.xs },
-  botaoAcesso: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: cores.fundoCartaoAtivo,
-    alignItems: "center",
-    justifyContent: "center"
-  }
+  barraFundo: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.xs },
+  barraPreenchida: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
+  percentualTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 4 },
+  rodape: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: espacamentos.sm, gap: espacamentos.xs },
+  pill: { borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, flexShrink: 1 },
+  pillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
+  pagamentoLinha: { marginTop: espacamentos.sm, gap: espacamentos.xs },
+  pagamentoValor: { color: cores.aviso, fontWeight: "700", fontSize: tipografia.legenda },
+  botaoPagamento: { paddingVertical: 8, paddingHorizontal: 12, minHeight: 36 },
+  botaoPagamentoTexto: { fontSize: tipografia.rotulo }
 });

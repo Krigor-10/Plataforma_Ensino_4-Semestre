@@ -8,7 +8,6 @@ import HomeScreen from "../HomeScreen.jsx";
 import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
-import CursosScreen from "./CursosScreen.jsx";
 import CertificadosScreen from "./CertificadosScreen.jsx";
 import TelaComTransicao from "../../components/TelaComTransicao.jsx";
 import { ROUTES } from "../../lib/routes.js";
@@ -17,13 +16,14 @@ import { cores, espacamentos, raios } from "../../lib/theme.js";
 const Tab = createBottomTabNavigator();
 
 // 5 abas do redesign (docs/redesign-mobile/PROMPT-agente-mobile.md, secao 1).
-// ROUTES.CONTEUDOS continua apontando pra ConteudosScreen.jsx (ainda nao
-// restilizada - isso e trabalho da Rodada 3), so o rotulo/icone da aba virou
-// "Cursos" porque e essa tela que concentra a trilha do aluno agora.
-// ROUTES.CURSOS (a antiga tela "Cursos", hoje CursosScreen.jsx) saiu da barra
-// de proposito - continua nested no Tab.Navigator abaixo (acessivel via
-// MenuLateral) ate suas funcoes ainda necessarias (confirmar pagamento,
-// status do certificado) serem incorporadas a grade de Cursos na Rodada 3.
+// ROUTES.CONTEUDOS aponta pra ConteudosScreen.jsx - virou a aba "Cursos"
+// porque e essa tela que concentra a trilha do aluno (grade de selecao +
+// modulos). A antiga tela "Cursos" (CursosScreen.jsx) foi removida na
+// Rodada 3: suas funcoes ainda necessarias (confirmar pagamento) ja
+// migraram pra GradeCursosConteudos.jsx; "Cancelar solicitacao" nao migrou
+// de proposito - matricula e sempre automatica desde pendencia_matriculas_
+// sempre_automatica_2026_10_27, entao nenhum card real alcancava mais
+// aquele estado.
 const ABAS = [
   { chave: ROUTES.INICIO, icone: "home-outline", iconeAtivo: "home", rotulo: "Início" },
   { chave: ROUTES.CONTEUDOS, icone: "school-outline", iconeAtivo: "school", rotulo: "Cursos" },
@@ -74,11 +74,10 @@ function CustomTabBar({ state, navigation }) {
     <View style={[estilos.tabBar, { paddingBottom: insets.bottom || 10 }]}>
       {state.routes.map((route, index) => {
         const config = ABAS_POR_CHAVE[route.name];
-        // Rotas nested no Tab.Navigator que nao sao abas visiveis (hoje:
-        // ROUTES.CURSOS/CursosScreen.jsx, que mora aqui so pra manter a
-        // CustomTabBar visivel — ver AlunoWorkspace.jsx) nao tem entrada em
-        // ABAS/ABAS_POR_CHAVE de proposito, entao nao viram um 6o icone
-        // quebrado aqui.
+        // Guarda defensiva: hoje toda rota do Tab.Navigator tem entrada em
+        // ABAS, mas se algum dia voltar a existir uma rota nested sem icone
+        // proprio (mesmo truque ja usado antes pra Certificados/Cursos), ela
+        // simplesmente nao vira um icone quebrado aqui.
         if (!config) {
           return null;
         }
@@ -156,29 +155,6 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
         {() => (
           <TelaComTransicao>
             <CertificadosScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />
-          </TelaComTransicao>
-        )}
-      </Tab.Screen>
-      {/* Nested aqui (nao como AlunoStack.Screen irmao do Tab.Navigator em
-          AlunoWorkspace.jsx) de proposito: navegar pra uma Screen de fora do
-          Tab.Navigator troca a arvore inteira, derrubando a CustomTabBar
-          junto. Vivendo dentro do Tab.Navigator, a barra permanece visivel
-          (so nao aparece como icone, ver CustomTabBar acima). Acessivel so
-          via sidebar (MenuLateral.jsx) agora - ponte temporaria da Rodada 1
-          do redesign: CursosScreen.jsx saiu da barra, mas suas funcoes ainda
-          necessarias (confirmar pagamento, ver matricula) so migram pra
-          grade de Cursos na Rodada 3; ate la este Screen continua existindo
-          pra nao perder essa funcionalidade no meio do caminho. */}
-      <Tab.Screen name={ROUTES.CURSOS}>
-        {({ navigation }) => (
-          <TelaComTransicao>
-            <CursosScreen
-              navigation={navigation}
-              onRecarregar={onRecarregar}
-              onSessionExpired={onSessionExpired}
-              snapshot={snapshot}
-              usuario={usuario}
-            />
           </TelaComTransicao>
         )}
       </Tab.Screen>

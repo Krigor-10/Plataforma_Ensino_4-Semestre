@@ -15,16 +15,19 @@ import {
   View
 } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
+import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { resolverUrlArquivo } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
-import { formatQuestoes, normalizeContentType } from "../../lib/format.js";
+import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { ROUTES } from "../../lib/routes.js";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
-import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
+
+const PAGAMENTO_PENDENTE = 1;
 
 // Monta uma lista plana de linhas (conteudo + quiz vinculado + quiz solto do
 // modulo) na ordem de exibicao, pra renderizar o modulo como uma lista unica
@@ -65,6 +68,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
+  const [processandoPagamentoId, setProcessandoPagamentoId] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -114,6 +118,65 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   );
 
   const cursoAtivo = grupos.find((curso) => curso.id === cursoSelecionadoId) || null;
+
+  // Matricula aprovada + pagamento ainda nao confirmado - mesmo criterio que
+  // antes vivia em CursosScreen.jsx (removida nesta rodada do redesign, ver
+  // GradeCursosConteudos.jsx), reaproveitado aqui pra colocar a pilula
+  // "Pagamento pendente" + o botao "Confirmar" direto na grade de cursos.
+  const matriculaPorCursoId = useMemo(
+    () =>
+      new Map(
+        snapshot.matriculas
+          .filter((matricula) => normalizeStatus(matricula.status) === "Aprovada")
+          .map((matricula) => [matricula.cursoId, matricula])
+      ),
+    [snapshot.matriculas]
+  );
+
+  const pagamentoPorMatriculaId = useMemo(
+    () => new Map((snapshot.pagamentos || []).map((pagamento) => [pagamento.matriculaId, pagamento])),
+    [snapshot.pagamentos]
+  );
+
+  const itensGrade = useMemo(
+    () =>
+      grupos.map((grupo) => {
+        const matricula = matriculaPorCursoId.get(grupo.id);
+        const pagamento = matricula ? pagamentoPorMatriculaId.get(matricula.id) : null;
+        return {
+          curso: { imagemUrl: grupo.imagemUrl, titulo: grupo.titulo },
+          id: grupo.id,
+          matriculaId: matricula?.id ?? null,
+          pagamentoPendente: Boolean(pagamento && pagamento.status === PAGAMENTO_PENDENTE),
+          progresso: grupo.progresso,
+          valorPagamento: pagamento?.valor
+        };
+      }),
+    [grupos, matriculaPorCursoId, pagamentoPorMatriculaId]
+  );
+
+  async function confirmarPagamento(item) {
+    if (!item.matriculaId) {
+      return;
+    }
+
+    setProcessandoPagamentoId(item.matriculaId);
+    setMensagem(null);
+
+    try {
+      await apiRequest(`/Pagamentos/${item.matriculaId}/confirmar`, { method: "POST" });
+      setMensagem({ tipo: "sucesso", texto: "Pagamento confirmado." });
+      await onRecarregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      setMensagem({ tipo: "erro", texto: err.message || "Não foi possível confirmar o pagamento agora." });
+    } finally {
+      setProcessandoPagamentoId(null);
+    }
+  }
 
   function alternarModulo(moduloId) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -170,10 +233,35 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   if (!cursoAtivo) {
     return (
       <View style={estilos.container}>
+        <View style={estilos.cabecalhoGrade}>
+          <View style={estilos.cabecalhoGradeTextos}>
+            <Text style={estilos.tituloGrade}>Cursos</Text>
+            <Text style={estilos.subtituloGrade}>Escolha um curso para continuar sua trilha</Text>
+          </View>
+          <TouchableOpacity
+            accessibilityHint="Abre o catálogo de cursos disponíveis"
+            accessibilityLabel="Ver catálogo"
+            accessibilityRole="button"
+            onPress={() => navigation.navigate(ROUTES.CATALOGO)}
+            style={estilos.botaoCatalogo}
+          >
+            <Ionicons color={cores.destaque} name="compass-outline" size={16} />
+            <Text style={estilos.botaoCatalogoTexto}>Ver catálogo</Text>
+          </TouchableOpacity>
+        </View>
+
+        {mensagem ? (
+          <View style={estilos.mensagemGradeContainer}>
+            <Toast mensagem={mensagem.texto} onFechar={() => setMensagem(null)} tipo={mensagem.tipo} />
+          </View>
+        ) : null}
+
         <GradeCursosConteudos
           accessibilityLabelPrefix="Ver conteúdos de"
-          itens={grupos.map((curso) => ({ curso, id: curso.id }))}
+          itens={itensGrade}
+          onConfirmarPagamento={confirmarPagamento}
           onSelecionar={setCursoSelecionadoId}
+          processandoPagamentoId={processandoPagamentoId}
         />
       </View>
     );
@@ -191,21 +279,20 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
       </TouchableOpacity>
 
       <View style={estilos.cabecalhoCurso}>
+        <CapaCurso curso={cursoAtivo} size={48} />
         <View style={estilos.cabecalhoCursoTextos}>
           <Text numberOfLines={2} style={estilos.tituloCursoAtivo}>{cursoAtivo.titulo}</Text>
-          <Text style={estilos.subtituloCurso}>{cursoAtivo.modulos.length} módulo(s)</Text>
+          <Text style={estilos.subtituloCurso}>Progresso na trilha</Text>
+          <View style={estilos.cabecalhoBarraFundo}>
+            <View style={[estilos.cabecalhoBarraPreenchida, { width: `${Math.max(0, Math.min(cursoAtivo.progresso, 100))}%` }]} />
+          </View>
         </View>
-        <ProgressoCircular percentual={cursoAtivo.progresso} size={48} />
+        <Text style={estilos.cabecalhoPercentual}>{Math.round(Math.max(0, Math.min(cursoAtivo.progresso, 100)))}%</Text>
       </View>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
         {cursoAtivo.proximoConteudo ? (
-          <TouchableOpacity
-            accessibilityLabel={`Continue de onde parou: ${cursoAtivo.proximoConteudo.titulo}`}
-            accessibilityRole="button"
-            onPress={() => alternarModulo(cursoAtivo.proximoConteudo.moduloId)}
-            style={estilos.continuar}
-          >
+          <View style={estilos.continuar}>
             <View style={estilos.continuarIcone}>
               <Ionicons color={cores.destaque} name="play-circle-outline" size={20} />
             </View>
@@ -213,7 +300,17 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
               <Text style={estilos.continuarRotulo}>Continue de onde parou</Text>
               <Text numberOfLines={1} style={estilos.continuarTitulo}>{cursoAtivo.proximoConteudo.titulo}</Text>
             </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityHint="Abre o módulo com o próximo conteúdo pendente"
+              accessibilityLabel={`Abrir ${cursoAtivo.proximoConteudo.titulo}`}
+              accessibilityRole="button"
+              onPress={() => alternarModulo(cursoAtivo.proximoConteudo.moduloId)}
+              style={estilos.continuarBotao}
+            >
+              <Text style={estilos.continuarBotaoTexto}>Abrir</Text>
+              <Ionicons color={cores.texto} name="arrow-forward" size={14} />
+            </TouchableOpacity>
+          </View>
         ) : null}
 
         <Toast mensagem={mensagem?.texto} onFechar={() => setMensagem(null)} tipo={mensagem?.tipo} />
@@ -235,25 +332,41 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                 onPress={() => alternarModulo(modulo.id)}
                 style={estilos.moduloCabecalho}
               >
-                <View style={estilos.moduloIcone}>
-                  <Ionicons
-                    color={modulo.bloqueado ? cores.bloqueado : cores.destaque}
-                    name={modulo.bloqueado ? "lock-closed-outline" : "layers-outline"}
-                    size={18}
-                  />
-                </View>
+                {modulo.bloqueado ? (
+                  <View style={estilos.moduloIcone}>
+                    <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={18} />
+                  </View>
+                ) : null}
                 <View style={{ flex: 1 }}>
+                  {!modulo.bloqueado ? (
+                    <View
+                      style={[
+                        estilos.moduloPill,
+                        { backgroundColor: moduloConcluido ? cores.sucessoFundo : cores.informativoFundo }
+                      ]}
+                    >
+                      <Text style={[estilos.moduloPillTexto, { color: moduloConcluido ? cores.sucesso : cores.informativo }]}>
+                        {moduloConcluido ? "✓ Concluído" : "Em andamento"}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text numberOfLines={2} style={estilos.moduloTitulo}>{modulo.titulo}</Text>
                   {modulo.bloqueado ? (
                     <Text style={estilos.moduloContagem}>Conclua o módulo anterior para desbloquear</Text>
                   ) : totalConteudos > 0 ? (
-                    <View
-                      accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
-                      accessible
-                      style={estilos.barraFundoFina}
-                    >
-                      <View style={[estilos.barraPreenchidaFina, { width: `${percentualModulo}%` }]} />
-                    </View>
+                    <>
+                      <View style={estilos.moduloProgressoLinha}>
+                        <Text style={estilos.moduloProgressoRotulo}>Progresso da trilha</Text>
+                        <Text style={estilos.moduloProgressoValor}>{Math.round(percentualModulo)}%</Text>
+                      </View>
+                      <View
+                        accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
+                        accessible
+                        style={estilos.barraFundoFina}
+                      >
+                        <View style={[estilos.barraPreenchidaFina, { width: `${percentualModulo}%` }]} />
+                      </View>
+                    </>
                   ) : null}
                 </View>
                 <Ionicons
@@ -344,8 +457,9 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         {conteudo.bloqueado ? (
           <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
         ) : conteudo.concluido ? (
-          <Animated.View accessibilityLabel="Concluído" accessible style={estiloCheck}>
-            <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
+          <Animated.View accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso, estiloCheck]}>
+            <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
+            <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
           </Animated.View>
         ) : processando ? (
           <ActivityIndicator color={cores.destaque} size="small" />
@@ -355,9 +469,9 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
             accessibilityRole="button"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             onPress={() => marcarConcluido(conteudo.id)}
-            style={estilos.linhaCheckbox}
+            style={estilos.botaoContorno}
           >
-            <Ionicons color={cores.textoRotulo} name="ellipse-outline" size={22} />
+            <Text style={estilos.botaoContornoTexto}>Concluir</Text>
           </TouchableOpacity>
         )}
       </>
@@ -394,10 +508,19 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
         <Text style={estilos.linhaMeta}>Quiz · {formatQuestoes(quiz.totalQuestoes)} · sem nota</Text>
       </View>
       {disponibilidade.podeRealizar ? (
-        <Ionicons color={cores.destaque} name="play-circle" size={24} />
+        <TouchableOpacity
+          accessibilityHint="Abre o quiz para responder"
+          accessibilityLabel={`Responder quiz ${quiz.titulo}`}
+          accessibilityRole="button"
+          onPress={() => onAbrirQuiz(quiz)}
+          style={estilos.botaoContorno}
+        >
+          <Text style={estilos.botaoContornoTexto}>Responder</Text>
+        </TouchableOpacity>
       ) : concluidoQuiz ? (
-        <View accessibilityLabel="Concluído" accessible>
-          <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
+        <View accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso]}>
+          <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
+          <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
         </View>
       ) : (
         <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
@@ -444,8 +567,36 @@ const estilos = StyleSheet.create({
   },
   cabecalhoCursoTextos: { flex: 1, minWidth: 160 },
   tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
-  subtituloCurso: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4 },
+  subtituloCurso: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4, marginBottom: 6 },
+  cabecalhoBarraFundo: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden" },
+  cabecalhoBarraPreenchida: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
+  cabecalhoPercentual: { color: cores.texto, fontWeight: "800", fontSize: tipografia.subtitulo },
   corpo: { padding: espacamentos.xl, paddingTop: 0, paddingBottom: 40 },
+  // Cabecalho da grade de selecao de curso (redesign, 2a_cursos_grade.png).
+  cabecalhoGrade: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: espacamentos.md,
+    paddingHorizontal: espacamentos.xl,
+    paddingTop: espacamentos.xl,
+    paddingBottom: espacamentos.md
+  },
+  cabecalhoGradeTextos: { flex: 1 },
+  tituloGrade: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
+  subtituloGrade: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4 },
+  botaoCatalogo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.md,
+    minHeight: 36
+  },
+  botaoCatalogoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo },
+  mensagemGradeContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
   continuar: {
     flexDirection: "row",
     alignItems: "center",
@@ -468,6 +619,16 @@ const estilos = StyleSheet.create({
   continuarTextos: { flex: 1 },
   continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo, marginBottom: 4 },
   continuarTitulo: { color: cores.texto, fontWeight: "600" },
+  continuarBotao: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: cores.destaque,
+    borderRadius: raios.sm,
+    paddingHorizontal: espacamentos.md,
+    minHeight: 36
+  },
+  continuarBotaoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
   modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
   moduloCabecalho: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, padding: 14 },
   moduloIcone: {
@@ -478,9 +639,14 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center"
   },
+  moduloPill: { alignSelf: "flex-start", borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, marginBottom: 6 },
+  moduloPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
   moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   moduloContagem: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
-  barraFundoFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.sm },
+  moduloProgressoLinha: { flexDirection: "row", justifyContent: "space-between", marginTop: espacamentos.sm },
+  moduloProgressoRotulo: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  moduloProgressoValor: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700" },
+  barraFundoFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.xs },
   barraPreenchidaFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
   itensLista: { paddingBottom: espacamentos.xs },
   // Linha de lista unica (Material 3): sem fundo/borda proprios, separadas
@@ -503,7 +669,26 @@ const estilos = StyleSheet.create({
   linhaTextos: { flex: 1 },
   linhaTitulo: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
   linhaMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2 },
-  linhaCheckbox: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", marginRight: -11 },
+  botaoContorno: {
+    borderWidth: 1,
+    borderColor: cores.destaque,
+    borderRadius: raios.sm,
+    paddingHorizontal: espacamentos.md,
+    minHeight: 36,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  botaoContornoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.sm,
+    paddingVertical: 4
+  },
+  statusPillSucesso: { backgroundColor: cores.sucessoFundo },
+  statusPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
   vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md },
   vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
 });

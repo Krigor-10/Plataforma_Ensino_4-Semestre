@@ -10,7 +10,6 @@ export const ROUTES = {
   CONTEUDOS: "conteudos",
   AVALIACOES: "avaliacoes",
   PROGRESSO: "progresso",
-  CURSOS: "cursos",
   CATALOGO: "catalogo",
   CERTIFICADOS: "certificados"
 };
