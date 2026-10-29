@@ -1027,12 +1027,6 @@ function TrilhaConteudosProfessor({
                                     </span>
                                     <p className="atividades-curso__meta">
                                       <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                                      {!conteudoAtivo ? (
-                                        <>
-                                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                          <Insignia texto={normalizePublicationStatus(conteudo.statusPublicacao)} />
-                                        </>
-                                      ) : null}
                                       {quizVinculado ? (
                                         <>
                                           <span aria-hidden="true" className="atividades-curso__separador">·</span>
@@ -1044,6 +1038,12 @@ function TrilhaConteudosProfessor({
                                     </p>
                                   </div>
                                   <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
+                                    {!conteudoAtivo ? (
+                                      <Insignia
+                                        className="atividades-curso__status-badge"
+                                        texto={normalizePublicationStatus(conteudo.statusPublicacao)}
+                                      />
+                                    ) : null}
                                     <button
                                       aria-label={`Mover ${conteudo.titulo} para cima`}
                                       className="atividades-curso__reordenar"
