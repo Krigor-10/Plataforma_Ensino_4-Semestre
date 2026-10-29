@@ -654,6 +654,7 @@ export default function WorkspaceScreen({
                 matriculas={snapshot.matriculas}
                 modulos={snapshot.modulos}
                 onNavigate={onNavigate}
+                onSessionExpired={onSessionExpired}
                 progressos={snapshot.progressos}
                 turmas={snapshot.turmas}
               />

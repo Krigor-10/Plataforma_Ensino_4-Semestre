@@ -94,10 +94,45 @@ export function SecaoCursosAluno({
   matriculas,
   modulos = [],
   onNavigate,
+  onSessionExpired,
   progressos = {},
   turmas
 }) {
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+
+  // Fonte unica de verdade pra "certificado disponivel" e o servidor (GET
+  // /Certificados/status, ver CertificadoService.ObterPendenciasAsync) -
+  // nunca o percentual de progresso local (que nao sabe de avaliacao
+  // formal/nota minima/curso Acompanhado ainda nao encerrado). Mesmo padrao
+  // ja usado em SecaoCertificados.jsx.
+  const [statusCertificadoPorMatriculaId, setStatusCertificadoPorMatriculaId] = useState(new Map());
+
+  useEffect(() => {
+    let ignorar = false;
+
+    async function carregarStatusCertificado() {
+      try {
+        const resposta = await apiRequest("/Certificados/status");
+        if (!ignorar) {
+          setStatusCertificadoPorMatriculaId(new Map(resposta.map((item) => [Number(item.matriculaId), item])));
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+        // Falha ao carregar status nao deve quebrar a tela - certificado so
+        // fica indisponivel (mais seguro que "liberado" por padrao).
+      }
+    }
+
+    carregarStatusCertificado();
+
+    return () => {
+      ignorar = true;
+    };
+  }, [onSessionExpired]);
+
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const modulosPorCursoId = useMemo(() => agruparModulosPorCurso(modulos), [modulos]);
@@ -274,7 +309,8 @@ export function SecaoCursosAluno({
     return {
       ...linha,
       modulos,
-      proximaAcao
+      proximaAcao,
+      certificadoDisponivel: Boolean(statusCertificadoPorMatriculaId.get(Number(linha.id))?.certificadoDisponivel)
     };
   }, [
     avaliacoes,
@@ -282,7 +318,8 @@ export function SecaoCursosAluno({
     linhaSelecionada,
     modulosPorCursoId,
     progressoConteudoPorConteudoId,
-    progressoModuloPorChave
+    progressoModuloPorChave,
+    statusCertificadoPorMatriculaId
   ]);
 
   function selecionarCurso(cursoId) {
@@ -333,7 +370,10 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
     (total, modulo) => total + modulo.conteudos.filter((conteudo) => conteudo.concluido).length,
     0
   );
-  const certificadoDesbloqueado = percentual >= 100;
+  // Nunca usar percentual>=100 aqui - ele nao sabe de avaliacao formal/nota
+  // minima/correcao pendente/curso Acompanhado ainda nao encerrado.
+  // detalhe.certificadoDisponivel vem de GET /Certificados/status.
+  const certificadoDesbloqueado = Boolean(detalhe.certificadoDisponivel);
 
   function alternarModulo(moduloId) {
     setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
