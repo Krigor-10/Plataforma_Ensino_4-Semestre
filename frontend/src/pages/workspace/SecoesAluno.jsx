@@ -535,6 +535,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   const [tempoRestanteSegundos, setTempoRestanteSegundos] = useState(null);
   const [revisaoAberta, setRevisaoAberta] = useState(false);
   const [revisaoDireta, setRevisaoDireta] = useState(null);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
   const tempoRestanteRef = useRef(null);
   tempoRestanteRef.current = tempoRestanteSegundos;
 
@@ -567,7 +568,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
 
     function handleKeyDown(event) {
       if (event.key === "Escape" && !enviandoRespostas) {
-        fecharExecucaoAvaliacao();
+        tentarFecharExecucao();
       }
     }
 
@@ -678,6 +679,20 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     setResultadoTentativa(null);
     setRevisaoAberta(false);
     setTempoRestanteSegundos(null);
+    setConfirmandoSaida(false);
+  }
+
+  // Fechar (X, Esc ou botao "Sair") enquanto a tentativa esta em andamento
+  // nao pode sair direto - pede confirmacao, pra nao perder respostas por
+  // engano. Sem tentativa carregada ainda, ou depois do resultado (ja
+  // enviado de verdade), fecha direto: nao ha "abandono" real a confirmar.
+  function tentarFecharExecucao() {
+    if (!avaliacaoEmExecucao || resultadoTentativa || carregandoQuestoes) {
+      fecharExecucaoAvaliacao();
+      return;
+    }
+
+    setConfirmandoSaida(true);
   }
 
   function refazerAvaliacao() {
@@ -892,7 +907,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
         <Modal
           className={resultadoTentativa ? "modal-caixa--resultado-avaliacao" : "modal-caixa--avaliacao modal-caixa--avaliacao-execucao"}
           fecharComoVoltar={ehQuizExecucao && !resultadoTentativa}
-          onFechar={fecharExecucaoAvaliacao}
+          onFechar={tentarFecharExecucao}
           titulo={avaliacaoEmExecucao.titulo}
           rodape={
             resultadoTentativa ? (
@@ -1043,7 +1058,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                   ) : null}
                   <Botao
                     disabled={enviandoRespostas}
-                    onClick={fecharExecucaoAvaliacao}
+                    onClick={tentarFecharExecucao}
                     tamanho="pequeno"
                     type="button"
                     variante="perigo"
@@ -1146,6 +1161,44 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
             </>
           )}
         </Modal>
+        {confirmandoSaida ? (() => {
+          const totalRespondidas = questoes.filter(questaoRespondida).length;
+          const nomeAtividade = ehQuizExecucao ? "quiz" : "avaliacao";
+          const acaoEnvio = ehQuizExecucao ? "Confirmar" : "Enviar avaliacao";
+
+          return (
+            <Modal
+              onFechar={() => setConfirmandoSaida(false)}
+              titulo="Sair sem finalizar?"
+              rodape={
+                <footer className="modal-rodape">
+                  <Botao
+                    className="linha-icone-texto"
+                    onClick={fecharExecucaoAvaliacao}
+                    type="button"
+                    variante="perigo"
+                  >
+                    <TbX aria-hidden="true" size={15} /> Sair do {nomeAtividade}
+                  </Botao>
+                  <Botao
+                    className="linha-icone-texto"
+                    onClick={() => setConfirmandoSaida(false)}
+                    type="button"
+                    variante="sucesso"
+                  >
+                    <TbPlayerPlay aria-hidden="true" size={15} /> Continuar {nomeAtividade}
+                  </Botao>
+                </footer>
+              }
+            >
+              <p>
+                {totalRespondidas === 0
+                  ? `Voce ainda nao concluiu este ${nomeAtividade}. Deseja sair sem finalizar?`
+                  : `Voce ja respondeu ${totalRespondidas} de ${questoes.length} questoes. Suas respostas ficam salvas e voce pode continuar depois, mas o ${nomeAtividade} so e enviado quando voce clicar em "${acaoEnvio}". Deseja sair sem finalizar?`}
+              </p>
+            </Modal>
+          );
+        })() : null}
         {revisaoAberta && resultadoTentativa ? (
           <RevisaoTentativaAvaliacao
             avaliacaoId={avaliacaoEmExecucao.id}
@@ -1466,6 +1519,20 @@ export function SecaoConteudosAluno({
     [progressosConteudos]
   );
 
+  // Fonte de verdade do progresso de modulo/curso e o backend
+  // (ProgressoAlunoService.RecalcularModuloAsync/RecalcularCursoAsync), que
+  // pondera quiz junto com conteudo via PesoProgresso e so conta o quiz
+  // apos envio valido (todas as questoes respondidas) - nunca por abrir o
+  // modal ou navegar entre questoes. Mesmo padrao de SecaoCursosAluno.
+  const progressoCursoPorMatricula = useMemo(
+    () => new Map((progressos.cursos || []).map((progresso) => [progresso.matriculaId, progresso])),
+    [progressos.cursos]
+  );
+  const progressoModuloPorChave = useMemo(
+    () => new Map((progressos.modulos || []).map((progresso) => [`${progresso.matriculaId}-${progresso.moduloId}`, progresso])),
+    [progressos.modulos]
+  );
+
   useEffect(() => {
     const idsConteudosVisiveis = new Set(conteudos.map((conteudo) => conteudo.id));
 
@@ -1518,7 +1585,8 @@ export function SecaoConteudosAluno({
         turmas: new Set(),
         modulos: new Map(),
         totalConteudos: 0,
-        concluidos: 0
+        concluidos: 0,
+        matriculaId: null
       };
 
       cursosMapeados.set(chaveCurso, curso);
@@ -1549,6 +1617,7 @@ export function SecaoConteudosAluno({
     matriculasAprovadas.forEach((matricula) => {
       const cursoId = Number(matricula.cursoId);
       const curso = garantirCurso(cursoId, obterTituloCursoMatricula(matricula, cursoPorId), `matricula-${matricula.id}`);
+      curso.matriculaId = matricula.id;
       curso.turmas.add(obterNomeTurmaMatricula(matricula, turmaPorId));
 
       (modulosPorCursoId.get(cursoId) || []).forEach((modulo) => {
@@ -1611,11 +1680,24 @@ export function SecaoConteudosAluno({
       });
 
     return [...cursosMapeados.values()].map((curso) => {
+      const progressoCurso = curso.matriculaId != null ? progressoCursoPorMatricula.get(curso.matriculaId) : null;
+
       const modulos = [...curso.modulos.values()]
-        .map((modulo) => ({
-          ...modulo,
-          progresso: modulo.conteudos.length ? (modulo.concluidos / modulo.conteudos.length) * 100 : 0
-        }))
+        .map((modulo) => {
+          const progressoModulo =
+            curso.matriculaId != null ? progressoModuloPorChave.get(`${curso.matriculaId}-${modulo.id}`) : null;
+
+          return {
+            ...modulo,
+            progresso:
+              progressoModulo?.percentualConclusao ??
+              (modulo.conteudos.length ? (modulo.concluidos / modulo.conteudos.length) * 100 : 0),
+            // Com progresso real do backend, "concluido" tambem considera o(s)
+            // quiz(zes) do modulo (PesoProgresso) - nao so os conteudos, que e
+            // o unico criterio quando ainda nao ha registro de progresso.
+            concluido: progressoModulo ? estaConcluido(progressoModulo) : modulo.concluidos === modulo.conteudos.length
+          };
+        })
         .sort((moduloA, moduloB) => {
           const dataA = timestampFromApiDate(moduloA.dataCriacao);
           const dataB = timestampFromApiDate(moduloB.dataCriacao);
@@ -1630,7 +1712,8 @@ export function SecaoConteudosAluno({
       return {
         ...curso,
         turmas: [...curso.turmas].filter(Boolean).sort((left, right) => left.localeCompare(right, "pt-BR")),
-        progresso: curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0,
+        progresso:
+          progressoCurso?.percentualConclusao ?? (curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0),
         modulos
       };
     });
@@ -1643,6 +1726,8 @@ export function SecaoConteudosAluno({
     moduloPorId,
     modulosPorCursoId,
     progressoConteudoPorConteudoId,
+    progressoCursoPorMatricula,
+    progressoModuloPorChave,
     turmaPorId
   ]);
 
@@ -1861,8 +1946,8 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
             const moduloAnterior = modulosVisiveis[indiceModulo - 1];
             const bloqueado = Boolean(moduloAnterior) && moduloAnterior.concluidos < moduloAnterior.conteudos.length;
             const estaAberto = !bloqueado && modulosAbertos.has(modulo.id);
-            const percentualModulo = modulo.conteudos.length ? Math.round((modulo.concluidos / modulo.conteudos.length) * 100) : 0;
-            const moduloConcluido = !bloqueado && modulo.concluidos === modulo.conteudos.length;
+            const percentualModulo = Math.round(clampPercent(modulo.progresso));
+            const moduloConcluido = !bloqueado && modulo.concluido;
             const idListaModulo = `conteudos-modulo-lista-${modulo.id}`;
 
             return (
