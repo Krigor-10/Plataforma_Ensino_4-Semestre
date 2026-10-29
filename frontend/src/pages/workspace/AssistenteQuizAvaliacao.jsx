@@ -5,7 +5,7 @@ import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
-import { ApiError, apiRequest } from "../../lib/api.js";
+import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { parseApiDate } from "../../lib/format.js";
 
 const TIPO_QUIZ = "1";
@@ -248,6 +248,9 @@ export function AssistenteQuizAvaliacao({
   const [salvandoQuestao, setSalvandoQuestao] = useState(false);
   const [mensagemQuestoes, setMensagemQuestoes] = useState({ tone: "", message: "" });
   const [questaoParaExcluir, setQuestaoParaExcluir] = useState(null);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  const [anexoParaExcluir, setAnexoParaExcluir] = useState(null);
+  const [excluindoAnexo, setExcluindoAnexo] = useState(false);
 
   async function carregarQuestoesAvaliacao(avaliacaoId) {
     setCarregandoQuestoes(true);
@@ -286,6 +289,15 @@ export function AssistenteQuizAvaliacao({
     () => modulosDisponiveis.find((modulo) => String(modulo.id) === dadosFormulario.moduloId) || null,
     [dadosFormulario.moduloId, modulosDisponiveis]
   );
+
+  // Anexo de imagem exige uma QuestaoBanco ja existente (so uma questao salva
+  // tem id/questaoBancoId) - por isso so aparece em modo edicao.
+  const questaoEmEdicaoAtual = useMemo(
+    () => questoesAvaliacao.find((questao) => questao.id === questaoEmEdicaoId) || null,
+    [questoesAvaliacao, questaoEmEdicaoId]
+  );
+  const questaoBancoIdAtual = questaoEmEdicaoAtual?.questaoBancoId ?? null;
+  const anexosQuestaoAtual = questaoEmEdicaoAtual?.anexos ?? [];
 
   const materiaisPorModuloId = useMemo(() => {
     const agrupados = new Map();
@@ -750,6 +762,63 @@ export function AssistenteQuizAvaliacao({
     }
   }
 
+  async function enviarAnexoQuestao(event) {
+    const arquivo = event.target.files?.[0];
+    if (!arquivo || !questaoBancoIdAtual) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    formData.append("titulo", arquivo.name);
+    formData.append("tipoAnexo", "Imagem");
+
+    setEnviandoAnexo(true);
+    setMensagemQuestoes({ tone: "", message: "" });
+
+    try {
+      await apiRequest(`/Avaliacoes/questoes-banco/${questaoBancoIdAtual}/anexos`, { method: "POST", body: formData });
+      mostrarToast("Imagem anexada a questao.", "sucesso");
+      await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel anexar a imagem agora." });
+    } finally {
+      setEnviandoAnexo(false);
+      event.target.value = "";
+    }
+  }
+
+  async function confirmarExclusaoAnexo() {
+    if (!anexoParaExcluir) {
+      return;
+    }
+
+    const { questaoBancoId, anexo } = anexoParaExcluir;
+    setExcluindoAnexo(true);
+
+    try {
+      await apiRequest(`/Avaliacoes/questoes-banco/${questaoBancoId}/anexos/${anexo.id}`, { method: "DELETE" });
+      mostrarToast("Imagem removida da questao.", "sucesso");
+      setAnexoParaExcluir(null);
+      await carregarQuestoesAvaliacao(avaliacaoAssistenteId);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      setMensagemQuestoes({ tone: "error", message: err.message || "Nao foi possivel remover a imagem agora." });
+      setAnexoParaExcluir(null);
+    } finally {
+      setExcluindoAnexo(false);
+    }
+  }
+
   return (
     <>
       <Modal
@@ -1123,6 +1192,49 @@ export function AssistenteQuizAvaliacao({
                       <textarea className="campo__entrada" disabled={salvandoQuestao} id="questao-enunciado" name="enunciado" onChange={atualizarCampoFormularioQuestao} placeholder="Digite a pergunta." value={dadosFormularioQuestao.enunciado} />
                     </div>
 
+                    <div className="campo">
+                      <span className="campo__rotulo">Imagem da questao</span>
+                      {questaoBancoIdAtual ? (
+                        <>
+                          {anexosQuestaoAtual.length > 0 ? (
+                            <ul className="questao-anexos-lista" role="list">
+                              {anexosQuestaoAtual.map((anexo) => (
+                                <li className="questao-anexo-item" key={anexo.id}>
+                                  {anexo.tipoAnexo === "Imagem" ? (
+                                    <img alt={anexo.titulo} className="questao-anexo-item__imagem" src={resolverUrlArquivo(anexo.arquivoUrl)} />
+                                  ) : (
+                                    <span className="questao-anexo-item__arquivo">{anexo.titulo}</span>
+                                  )}
+                                  <Botao
+                                    aria-label={`Remover imagem ${anexo.titulo}`}
+                                    disabled={excluindoAnexo}
+                                    onClick={() => setAnexoParaExcluir({ questaoBancoId: questaoBancoIdAtual, anexo })}
+                                    tamanho="pequeno"
+                                    type="button"
+                                    variante="perigo"
+                                  >
+                                    <MdDelete aria-hidden="true" size={15} />
+                                  </Botao>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          <input
+                            accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                            className="campo__entrada"
+                            disabled={enviandoAnexo}
+                            onChange={enviarAnexoQuestao}
+                            type="file"
+                          />
+                          <p className="campo__ajuda">{enviandoAnexo ? "Enviando imagem..." : "PNG, JPG, WEBP ou GIF - ate 5MB."}</p>
+                        </>
+                      ) : (
+                        <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                          Salve a questao para poder anexar uma imagem.
+                        </p>
+                      )}
+                    </div>
+
                     {Number(dadosFormularioQuestao.tipoQuestao) === 4 ? (
                       <div className="campo">
                         <span className="campo__rotulo">Afirmativas</span>
@@ -1370,6 +1482,27 @@ export function AssistenteQuizAvaliacao({
         >
           <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             Deseja excluir a questao <strong>&ldquo;{questaoParaExcluir.enunciado}&rdquo;</strong>? Esta acao nao pode ser desfeita.
+          </p>
+        </Modal>
+      ) : null}
+
+      {anexoParaExcluir ? (
+        <Modal
+          onFechar={() => setAnexoParaExcluir(null)}
+          titulo="Remover imagem"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={excluindoAnexo} onClick={() => setAnexoParaExcluir(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={excluindoAnexo} onClick={confirmarExclusaoAnexo} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {excluindoAnexo ? "Removendo..." : "Confirmar remocao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+            Deseja remover a imagem <strong>&ldquo;{anexoParaExcluir.anexo.titulo}&rdquo;</strong> desta questao? Esta acao nao pode ser desfeita.
           </p>
         </Modal>
       ) : null}

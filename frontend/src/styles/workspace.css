@@ -6107,6 +6107,41 @@
   text-decoration: underline;
 }
 
+.questao-anexos-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm);
+  list-style: none;
+  margin: 0 0 var(--espaco-sm);
+  padding: 0;
+}
+
+.questao-anexo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espaco-xs);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm);
+}
+
+.questao-anexo-item__imagem {
+  width: 6rem;
+  height: 6rem;
+  object-fit: cover;
+  border-radius: var(--raio-sm);
+}
+
+.questao-anexo-item__arquivo {
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+  max-width: 6rem;
+  text-align: center;
+  word-break: break-word;
+}
+
 .quiz-afirmativas {
   list-style: none;
   margin: 0 0 var(--espaco-md);
