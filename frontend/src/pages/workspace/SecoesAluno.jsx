@@ -114,11 +114,19 @@ export function SecaoCursosAluno({
     [progressos.conteudos]
   );
 
-  const resumoConteudosPorTurma = useMemo(() => {
+  // Agrupado por CursoId, nao TurmaId: desde a matricula automatica (ver
+  // pendencia_fase_b_remocao_turma na memoria do projeto), boa parte das
+  // matriculas nao tem turma nenhuma vinculada (matricula.turmaId null),
+  // enquanto os conteudos continuam tendo turmaId (da turma padrao unica do
+  // curso) - filtrar por turmaId ficava sempre vazio pra esses alunos. Curso
+  // so pode ter uma turma (TurmaService.CriarTurmaAsync), entao agrupar por
+  // curso nunca perde nada e corrige o caso sem turma.
+  const resumoConteudosPorCurso = useMemo(() => {
     const resumo = new Map();
 
     conteudos.forEach((conteudo) => {
-      const resumoAtual = resumo.get(conteudo.turmaId) || {
+      const cursoId = Number(conteudo.cursoId);
+      const resumoAtual = resumo.get(cursoId) || {
         total: 0,
         modulos: new Set(),
         ultimaPublicacao: null
@@ -132,7 +140,7 @@ export function SecaoCursosAluno({
         resumoAtual.ultimaPublicacao = dataCandidata;
       }
 
-      resumo.set(conteudo.turmaId, resumoAtual);
+      resumo.set(cursoId, resumoAtual);
     });
 
     return resumo;
@@ -159,7 +167,7 @@ export function SecaoCursosAluno({
           return nomeTurmaA.localeCompare(nomeTurmaB, "pt-BR");
         })
         .map((matricula) => {
-          const resumoTurma = resumoConteudosPorTurma.get(matricula.turmaId) || null;
+          const resumoCurso = resumoConteudosPorCurso.get(Number(matricula.cursoId)) || null;
           const progressoCurso = progressoCursoPorMatricula.get(matricula.id);
           const modulosDoCurso = modulosPorCursoId.get(Number(matricula.cursoId)) || [];
 
@@ -169,14 +177,14 @@ export function SecaoCursosAluno({
             curso: cursoPorId.get(matricula.cursoId)?.titulo || `Curso #${matricula.cursoId}`,
             turmaId: matricula.turmaId,
             turma: turmaPorId.get(matricula.turmaId)?.nomeTurma || matricula.turma?.nomeTurma || null,
-            materiais: resumoTurma?.total || 0,
-            modulos: modulosDoCurso.length || resumoTurma?.modulos.size || 0,
+            materiais: resumoCurso?.total || 0,
+            modulos: modulosDoCurso.length || resumoCurso?.modulos.size || 0,
             progresso: progressoCurso?.percentualConclusao || 0,
-            ultimaPublicacao: resumoTurma?.ultimaPublicacao || null,
+            ultimaPublicacao: resumoCurso?.ultimaPublicacao || null,
             notaFinal: matricula.notaFinal ?? 0
           };
         }),
-    [cursoPorId, matriculaIdsComPagamentoPendente, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorTurma, turmaPorId]
+    [cursoPorId, matriculaIdsComPagamentoPendente, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorCurso, turmaPorId]
   );
 
   const linhaSelecionada = useMemo(
@@ -191,7 +199,7 @@ export function SecaoCursosAluno({
     }
 
     const grupos = new Map();
-    const avaliacoesDaTurma = avaliacoes.filter((avaliacao) => avaliacao.turmaId === linha.turmaId);
+    const avaliacoesDoCurso = avaliacoes.filter((avaliacao) => Number(avaliacao.cursoId) === Number(linha.cursoId));
 
     function garantirGrupo(moduloId, tituloModulo) {
       const chave = moduloId || `sem-modulo-${tituloModulo || "geral"}`;
@@ -212,7 +220,7 @@ export function SecaoCursosAluno({
     });
 
     conteudos
-      .filter((conteudo) => conteudo.turmaId === linha.turmaId)
+      .filter((conteudo) => Number(conteudo.cursoId) === Number(linha.cursoId))
       .sort((conteudoA, conteudoB) => {
         const comparacaoModulo = (conteudoA.moduloTitulo || "").localeCompare(conteudoB.moduloTitulo || "", "pt-BR");
         if (comparacaoModulo !== 0) {
@@ -230,7 +238,7 @@ export function SecaoCursosAluno({
         grupo.conteudos.push(conteudo);
       });
 
-    avaliacoesDaTurma.forEach((avaliacao) => {
+    avaliacoesDoCurso.forEach((avaliacao) => {
       const grupo = garantirGrupo(avaliacao.moduloId, avaliacao.moduloTitulo);
       grupo.avaliacoes.push(avaliacao);
     });
@@ -355,7 +363,7 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
       </div>
 
       {modulosComConteudo.length === 0 ? (
-        <EmptyState message="Este curso ainda nao possui modulos publicados para a sua turma." />
+        <EmptyState message="Este curso ainda nao possui modulos publicados." />
       ) : (
         <div className="atividades-curso__lista-modulos">
           {modulosComConteudo.map((modulo, indice) => {

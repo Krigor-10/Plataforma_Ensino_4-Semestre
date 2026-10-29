@@ -391,6 +391,19 @@
   max-width: 62ch;
 }
 
+.workspace-erro-carga {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-md);
+}
+
+.workspace-erro-carga .inline-message {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
 .workspace-hero__actions,
 .metric-grid,
 .panel-grid,

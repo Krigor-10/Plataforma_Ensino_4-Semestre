@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdLogout } from "react-icons/md";
-import { TbX } from "react-icons/tb";
+import { TbRefresh, TbX } from "react-icons/tb";
+import Botao from "../components/Botao.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
@@ -573,7 +574,20 @@ export default function WorkspaceScreen({
           </div>
         ) : null}
 
-        {error ? <InlineMessage tone="error">{error}</InlineMessage> : null}
+        {error ? (
+          <div className="workspace-erro-carga">
+            <InlineMessage tone="error">{error}</InlineMessage>
+            <Botao
+              className="linha-icone-texto"
+              onClick={() => setRefreshKey((current) => current + 1)}
+              tamanho="pequeno"
+              type="button"
+              variante="secundario"
+            >
+              <TbRefresh aria-hidden="true" size={15} /> Tentar novamente
+            </Botao>
+          </div>
+        ) : null}
 
         {status !== "loading" || hasData ? (
           <ErrorBoundary key={`${activeSection}-${route.param || ""}`}>
