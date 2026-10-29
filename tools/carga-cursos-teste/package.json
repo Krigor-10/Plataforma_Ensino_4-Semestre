@@ -1,0 +1,8 @@
+{
+  "name": "carga-cursos-teste",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "carga": "node carregar.js"
+  }
+}
