@@ -1,0 +1,1814 @@
+{
+  "versao": 1,
+  "cursos": [
+    {
+      "chave": "gratis-ia",
+      "titulo": "Introdução à Inteligência Artificial",
+      "descricao": "Curso gratuito: conceitos fundamentais, história, ética, regulamentação e criação de bons prompts. Baseado na apostila de IA da Esesp.",
+      "preco": 0,
+      "modeloCurso": "Gratuito",
+      "turma": {
+        "nomeTurma": "Turma de teste – IA"
+      },
+      "modulos": [
+        {
+          "titulo": "Fundamentos",
+          "aulas": [
+            {
+              "titulo": "O que é IA e conceitos fundamentais",
+              "descricao": "Algoritmos, machine learning, redes neurais, transformers, LLMs e IA generativa.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/ia-m1-a1.pdf"
+            },
+            {
+              "titulo": "História, empresas e produtos de IA",
+              "descricao": "Marcos da IA, empresas e produtos, aplicações na administração pública e benefícios.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/ia-m1-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Fundamentos",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · IA · Fundamentos · 1",
+                "contexto": "",
+                "enunciado": "Qual tipo de aprendizado treina o modelo com dados rotulados?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Fundamentos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Supervisionado",
+                    "ehCorreta": true,
+                    "justificativa": "No aprendizado supervisionado, cada exemplo de treino já vem com a resposta (rótulo)."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Não supervisionado",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Por reforço",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Generativo",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · IA · Fundamentos · 2",
+                "contexto": "",
+                "enunciado": "Em que ano Alan Turing propôs o Teste de Turing?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Fundamentos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "1943",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "1950",
+                    "ehCorreta": true,
+                    "justificativa": "Em 1950 Turing propôs o teste para avaliar se uma máquina demonstra comportamento inteligente."
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "1997",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "2016",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · IA · Fundamentos · 3",
+                "contexto": "",
+                "enunciado": "Qual arquitetura é a base dos LLMs, como GPT-4, Claude e Gemini?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Fundamentos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Rede convolucional (CNN)",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Rede recorrente (RNN)",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Transformer",
+                    "ehCorreta": true,
+                    "justificativa": "Os LLMs são baseados na arquitetura Transformer."
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Árvore de decisão",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        },
+        {
+          "titulo": "Uso responsável",
+          "aulas": [
+            {
+              "titulo": "Ética, regulamentação e mau uso",
+              "descricao": "Alucinações, deepfakes, código de ética, regulamentação no Brasil e o que evitar ao usar IA.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/ia-m2-a1.pdf"
+            },
+            {
+              "titulo": "IAs atuais e criação de bons prompts",
+              "descricao": "Para que servem as IAs atuais e os quatro pilares de um bom prompt.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/ia-m2-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Uso responsável",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · IA · Uso responsável · 1",
+                "contexto": "",
+                "enunciado": "Vídeo falso que troca o rosto ou a voz de uma pessoa é chamado de:",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Uso responsável",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Chatbot",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Deepfake",
+                    "ehCorreta": true,
+                    "justificativa": "Deepfake é o uso de IA para manipular rostos e vozes em vídeos, áudios ou imagens."
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Prompt",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Algoritmo",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · IA · Uso responsável · 2",
+                "contexto": "",
+                "enunciado": "Qual lei brasileira trata da proteção de dados pessoais?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Uso responsável",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "LGPD",
+                    "ehCorreta": true,
+                    "justificativa": "A Lei Geral de Proteção de Dados (LGPD) afeta diretamente o uso de IA."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "CLT",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "ECA",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "CDC",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · IA · Uso responsável · 3",
+                "contexto": "",
+                "enunciado": "Qual destas atitudes faz parte de um bom prompt?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "IA · Uso responsável",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Ser vago para a IA decidir",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Definir um objetivo claro",
+                    "ehCorreta": true,
+                    "justificativa": "Definir objetivos claros é o primeiro dos quatro pilares de um bom prompt."
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Omitir o contexto",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Pedir tudo numa frase só",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        }
+      ],
+      "avaliacaoFinal": {
+        "titulo": "Avaliação final – Introdução à IA",
+        "descricao": "5 questões no modelo ENADE. Nota mínima 7,0 para o certificado.",
+        "tipoAvaliacao": "Prova",
+        "moduloId": null,
+        "tentativasPermitidas": 3,
+        "tempoLimiteMinutos": 40,
+        "notaMaxima": 10,
+        "questoes": [
+          {
+            "tituloInterno": "IA · Alucinação em modelos de linguagem (Senna e o ChatGPT)",
+            "contexto": "Um colunista perguntou a um assistente de IA: “Descreva o acidente entre Ayrton Senna e Satoru Nakajima em Interlagos, 1990”. O assistente respondeu, com riqueza de detalhes, que o carro de Senna saiu da pista, bateu no muro, pegou fogo e que o piloto morreu no hospital. Na realidade, o toque foi leve: Senna quebrou apenas o bico do carro, continuou na prova e terminou em terceiro lugar. Ele morreu quatro anos depois, em Ímola, em outro acidente. A figura reproduz a manchete publicada sobre o caso.\n\nApostila “Inteligência Artificial” – Esesp, 2025 (com adaptações). Fonte original: UOL, 13/02/2023.",
+            "enunciado": "Esse episódio ilustra principalmente qual limitação dos modelos de linguagem de grande escala (LLMs)?",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Inteligência Artificial",
+            "subtema": "Ética e limitações",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "A apostila apresenta o caso como exemplo dos desafios éticos da IA: o ChatGPT descreveu um acidente que não aconteceu daquela forma. Modelos de linguagem geram o texto mais provável a partir de padrões aprendidos, sem garantia de veracidade. Por isso não devem ser tratados como fonte confiável sem checagem — e quem repassa a informação deve deixar claro que ela foi gerada por IA.",
+            "referenciasBibliograficas": "Questão elaborada para o CodeRyse com base na apostila “Inteligência Artificial” – Esesp, 2025.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "Alucinação: o modelo gera informações falsas com aparência de fato verdadeiro.",
+                "ehCorreta": true,
+                "justificativa": "Correta. O modelo produziu um relato coerente e detalhado, mas falso — o que se chama de alucinação. Por isso as respostas de IA precisam ser verificadas."
+              },
+              {
+                "letra": "B",
+                "texto": "Deepfake: o modelo manipula vídeos para trocar o rosto de pessoas reais.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. Deepfake é a manipulação de vídeo, áudio ou imagem (como o caso Miles Fisher/Tom Cruise); aqui houve apenas texto inventado."
+              },
+              {
+                "letra": "C",
+                "texto": "Superinteligência: o modelo desenvolve objetivos próprios, contrários aos humanos.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. A IA atual é “narrow” (específica) e não tem desejos ou motivações próprias."
+              },
+              {
+                "letra": "D",
+                "texto": "Viés algorítmico: o modelo discrimina grupos por causa de dados de treino enviesados.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. Viés algorítmico envolve discriminação causada pelos dados; o erro do caso é factual, não discriminatório."
+              },
+              {
+                "letra": "E",
+                "texto": "Falta de processamento de linguagem natural: o modelo não entende a pergunta feita.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. O modelo entendeu a pergunta e respondeu no tema; o problema é que os fatos estavam errados."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": [
+              {
+                "titulo": "Figura 1 – O acidente de Senna e o ChatGPT",
+                "arquivo": "figuras/ia-senna-chatgpt.png"
+              }
+            ]
+          },
+          {
+            "tituloInterno": "IA · Os quatro pilares de um bom prompt",
+            "contexto": "Greg Brockman, presidente da OpenAI, compartilhou um framework de quatro pilares para criar prompts eficazes. A figura mostra a “anatomia” de um prompt organizada nesses pilares: objetivo (Goal), formato da resposta (Return Format), alertas (Warnings) e contexto (Context Dump).\n\nApostila “Inteligência Artificial” – Esesp, 2025 (com adaptações). Fonte original: Exame.",
+            "enunciado": "Considerando esse framework, avalie as afirmativas a seguir.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Inteligência Artificial",
+            "subtema": "Criação de prompts",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "Os quatro pilares apresentados na apostila são: definir objetivos claros, especificar o formato da resposta, incluir alertas e avisos e fornecer contexto detalhado. Seguindo-os, o prompt dá à IA informações suficientes para gerar respostas precisas e personalizadas.",
+            "referenciasBibliograficas": "Questão elaborada para o CodeRyse com base na apostila “Inteligência Artificial” – Esesp, 2025.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "I e II.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "I e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "I, II e III.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: C."
+              },
+              {
+                "letra": "D",
+                "texto": "II, III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "E",
+                "texto": "I, II, III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "Um bom prompt define com clareza o objetivo, isto é, exatamente o que se deseja obter.",
+                "ehCorreta": true,
+                "justificativa": "Correta. É o primeiro pilar: “Defina objetivos claros”."
+              },
+              {
+                "numero": "II",
+                "texto": "Indicar como a resposta deve ser estruturada (campos, lista, tabela) ajuda a IA a entregar o resultado esperado.",
+                "ehCorreta": true,
+                "justificativa": "Correta. É o pilar “Especifique o formato da resposta”."
+              },
+              {
+                "numero": "III",
+                "texto": "Incluir alertas, como pedir que a IA confirme se as informações existem e estão corretas, reduz respostas imprecisas.",
+                "ehCorreta": true,
+                "justificativa": "Correta. É o pilar “Inclua alertas e avisos”."
+              },
+              {
+                "numero": "IV",
+                "texto": "O contexto pessoal deve ser omitido, pois detalhes adicionais confundem o modelo e pioram a resposta.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. O quarto pilar é justamente “Forneça contexto detalhado”, que personaliza a resposta."
+              }
+            ],
+            "anexos": [
+              {
+                "titulo": "Figura – Anatomia de um prompt (Greg Brockman)",
+                "arquivo": "figuras/ia-anatomia-prompt.png"
+              }
+            ]
+          },
+          {
+            "tituloInterno": "IA · Transformers e autoatenção (asserção-razão)",
+            "contexto": "Os Transformers são uma arquitetura de aprendizado profundo introduzida no artigo “Attention is All You Need” (2017). Essa abordagem permitiu avanços significativos em tradução automática, chatbots e geração de texto, além de servir como base para os Modelos de Linguagem de Grande Escala (LLMs).\n\nApostila “Inteligência Artificial” – Esesp, 2025 (com adaptações).",
+            "enunciado": "Considerando o texto, avalie as asserções a seguir e a relação proposta entre elas.\n\nI. Os Transformers substituíram as redes neurais recorrentes (RNNs) em muitas tarefas de processamento de linguagem natural.\n\nPORQUE\n\nII. Os Transformers utilizam mecanismos de autoatenção para processar sequências inteiras de dados simultaneamente, o que os torna mais eficientes e escaláveis.\n\nA respeito dessas asserções, assinale a opção correta.",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Inteligência Artificial",
+            "subtema": "Conceitos fundamentais",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "As RNNs processam dados sequenciais passo a passo e sofrem com o desvanecimento de gradiente. Os Transformers, com autoatenção, processam a sequência inteira ao mesmo tempo, o que os tornou mais eficientes e escaláveis e deu origem aos LLMs (GPT-4, Claude, Gemini).",
+            "referenciasBibliograficas": "Questão elaborada para o CodeRyse com base na apostila “Inteligência Artificial” – Esesp, 2025.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "As asserções I e II são proposições verdadeiras, e a II é uma justificativa correta da I.",
+                "ehCorreta": true,
+                "justificativa": "Correta. As duas são verdadeiras e a autoatenção (processar a sequência inteira de uma vez) é o motivo de os Transformers terem substituído as RNNs."
+              },
+              {
+                "letra": "B",
+                "texto": "As asserções I e II são proposições verdadeiras, mas a II não é uma justificativa correta da I.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. A II explica a I: é a eficiência da autoatenção que levou à substituição."
+              },
+              {
+                "letra": "C",
+                "texto": "A asserção I é uma proposição verdadeira, e a II é uma proposição falsa.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. A II é verdadeira: a autoatenção processa a sequência inteira simultaneamente."
+              },
+              {
+                "letra": "D",
+                "texto": "A asserção I é uma proposição falsa, e a II é uma proposição verdadeira.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. A I é verdadeira: a apostila afirma que os Transformers substituíram as RNNs em NLP."
+              },
+              {
+                "letra": "E",
+                "texto": "As asserções I e II são proposições falsas.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. As duas asserções estão de acordo com a apostila."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "IA · Tipos de aprendizado de máquina",
+            "contexto": "Machine Learning é um subconjunto da IA focado no aprendizado a partir de dados. Esse processo ocorre por meio de diferentes técnicas, como aprendizado supervisionado, não supervisionado e por reforço.\n\nApostila “Inteligência Artificial” – Esesp, 2025 (com adaptações).\n\nUm banco treinou um modelo com milhares de transações antigas, cada uma marcada pela equipe como “fraude” ou “legítima”. Depois do treino, o modelo passou a classificar novas transações automaticamente.",
+            "enunciado": "Nesse cenário, a técnica utilizada é o aprendizado",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Inteligência Artificial",
+            "subtema": "Machine Learning",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "Segundo a apostila: no aprendizado supervisionado os modelos são treinados com dados rotulados; no não supervisionado descobrem padrões sem rótulos; e no aprendizado por reforço aprendem por tentativa e erro. Detecção de fraude é um uso típico citado entre os benefícios da IA.",
+            "referenciasBibliograficas": "Questão elaborada para o CodeRyse com base na apostila “Inteligência Artificial” – Esesp, 2025.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "supervisionado, pois o modelo foi treinado com dados rotulados.",
+                "ehCorreta": true,
+                "justificativa": "Correta. As transações vieram marcadas (rotuladas) como fraude ou legítima: isso é aprendizado supervisionado."
+              },
+              {
+                "letra": "B",
+                "texto": "não supervisionado, pois o modelo descobriu padrões sem rótulos.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. No não supervisionado não há rótulos; aqui cada transação tinha rótulo."
+              },
+              {
+                "letra": "C",
+                "texto": "por reforço, pois o modelo aprendeu por tentativa e erro com recompensas.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. Não houve tentativa e erro com recompensas; o modelo aprendeu com exemplos já classificados."
+              },
+              {
+                "letra": "D",
+                "texto": "generativo, pois o modelo cria novos conteúdos, como textos e imagens.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. O modelo classifica transações; ele não gera conteúdo novo."
+              },
+              {
+                "letra": "E",
+                "texto": "por regras fixas, pois o modelo não aprende com os dados de treino.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. O modelo aprendeu com os dados de treino, o que caracteriza machine learning."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "IA · Regulamentação no Brasil (PL 2.338/2023)",
+            "contexto": "O Projeto de Lei 2.338/2023 visa regulamentar o uso da Inteligência Artificial no Brasil, estabelecendo diretrizes para que essas tecnologias sejam utilizadas de forma ética, segura e transparente, promovendo a inovação enquanto protege os direitos fundamentais dos cidadãos.\n\nApostila “Inteligência Artificial” – Esesp, 2025 (com adaptações).",
+            "enunciado": "Sobre os principais pontos do PL 2.338/2023, avalie as afirmativas.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Inteligência Artificial",
+            "subtema": "Regulamentação",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "Os pontos do PL 2.338/2023 apresentados na apostila são: princípios éticos, responsabilização, transparência, proibição de práticas abusivas (como manipulação de comportamento e vigilância massiva) e fomento à inovação.",
+            "referenciasBibliograficas": "Questão elaborada para o CodeRyse com base na apostila “Inteligência Artificial” – Esesp, 2025.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "I e II.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "II e III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "I, II e IV.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: D."
+              },
+              {
+                "letra": "E",
+                "texto": "I, III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "Os sistemas de IA devem respeitar a dignidade humana, a privacidade, a não discriminação e a transparência.",
+                "ehCorreta": true,
+                "justificativa": "Correta. São os princípios éticos estabelecidos pelo projeto."
+              },
+              {
+                "numero": "II",
+                "texto": "Empresas e desenvolvedores podem ser responsabilizados por danos causados por sistemas de IA.",
+                "ehCorreta": true,
+                "justificativa": "Correta. O projeto prevê responsabilização, fiscalização e sanções."
+              },
+              {
+                "numero": "III",
+                "texto": "O uso de IA para vigilância massiva é permitido, desde que o sistema seja explicável.",
+                "ehCorreta": false,
+                "justificativa": "Incorreta. O projeto proíbe práticas abusivas, como vigilância massiva e manipulação de comportamento."
+              },
+              {
+                "numero": "IV",
+                "texto": "Os usuários devem ter acesso a informações claras sobre como as decisões são tomadas, especialmente em saúde, segurança e justiça.",
+                "ehCorreta": true,
+                "justificativa": "Correta. É o ponto de transparência (sistemas “explicáveis”)."
+              }
+            ],
+            "anexos": []
+          }
+        ]
+      }
+    },
+    {
+      "chave": "pago-eng-software",
+      "titulo": "Engenharia de Software",
+      "descricao": "Requisitos, engenharia de requisitos, arquitetura, gestão de configuração, métodos ágeis e gestão de projetos, com questões do ENADE comentadas.",
+      "preco": 29.9,
+      "modeloCurso": "PagoPacote",
+      "turma": {
+        "nomeTurma": "Turma de teste – Engenharia de Software"
+      },
+      "modulos": [
+        {
+          "titulo": "Requisitos",
+          "aulas": [
+            {
+              "titulo": "Requisitos de software",
+              "descricao": "Requisitos funcionais e não funcionais, com exemplos e critérios objetivos.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/es-m1-a1.pdf"
+            },
+            {
+              "titulo": "Engenharia de requisitos",
+              "descricao": "Elicitação, especificação e validação de requisitos.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/es-m1-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Requisitos",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · Eng. Software · Requisitos · 1",
+                "contexto": "",
+                "enunciado": "“O sistema deve permitir buscar clientes pelo nome” é um requisito:",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Requisitos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Funcional",
+                    "ehCorreta": true,
+                    "justificativa": "Descreve um serviço que o sistema deve prestar, então é funcional."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Não funcional",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "De hardware",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "De prazo",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Eng. Software · Requisitos · 2",
+                "contexto": "",
+                "enunciado": "“O sistema deve responder em até 2 segundos” é um requisito:",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Requisitos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Funcional",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Não funcional",
+                    "ehCorreta": true,
+                    "justificativa": "Tempo de resposta é uma característica do sistema como um todo: requisito não funcional."
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "De negócio",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "De interface",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Eng. Software · Requisitos · 3",
+                "contexto": "",
+                "enunciado": "A etapa que descobre os requisitos conversando com os stakeholders é a:",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Requisitos",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Validação",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Especificação",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Elicitação",
+                    "ehCorreta": true,
+                    "justificativa": "Elicitação é a descoberta dos requisitos por meio da interação com os stakeholders."
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Implantação",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        },
+        {
+          "titulo": "Projeto e processo",
+          "aulas": [
+            {
+              "titulo": "Arquitetura e gestão de mudanças",
+              "descricao": "Estilos arquiteturais, MVC, gestão de configuração e tipos de manutenção.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/es-m2-a1.pdf"
+            },
+            {
+              "titulo": "Métodos ágeis e gestão de projetos",
+              "descricao": "Scrum, XP, Kanban, modelos de processo e áreas de conhecimento do PMBOK.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/es-m2-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Projeto e processo",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · Eng. Software · Projeto e processo · 1",
+                "contexto": "",
+                "enunciado": "No padrão MVC, quem guarda os dados e a lógica de negócio?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Projeto e processo",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Visão",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Controle",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Modelo",
+                    "ehCorreta": true,
+                    "justificativa": "O Modelo armazena os dados e contém a lógica do negócio."
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Roteador",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Eng. Software · Projeto e processo · 2",
+                "contexto": "",
+                "enunciado": "No Scrum, o ciclo curto de desenvolvimento se chama:",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Projeto e processo",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Sprint",
+                    "ehCorreta": true,
+                    "justificativa": "A sprint é o ciclo de trabalho de duração fixa do Scrum."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Backlog",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Kanban",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Release",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Eng. Software · Projeto e processo · 3",
+                "contexto": "",
+                "enunciado": "Qual tipo de manutenção corrige erros do software?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Eng. Software · Projeto e processo",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Corretiva",
+                    "ehCorreta": true,
+                    "justificativa": "A manutenção corretiva corrige erros que não foram encontrados nos testes."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Adaptativa",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Perfectiva",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Preventiva",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        }
+      ],
+      "avaliacaoFinal": {
+        "titulo": "Avaliação final – Engenharia de Software",
+        "descricao": "5 questões no modelo ENADE. Nota mínima 7,0 para o certificado.",
+        "tipoAvaliacao": "Prova",
+        "moduloId": null,
+        "tentativasPermitidas": 3,
+        "tempoLimiteMinutos": 40,
+        "notaMaxima": 10,
+        "questoes": [
+          {
+            "tituloInterno": "B3 Q1 · Requisitos funcionais (Enade 2021 Q9)",
+            "contexto": "Leia o texto a seguir.\n\nA etapa de definição de requisitos é voltada para estabelecer quais as funções são requeridas pelo sistema e as restrições sobre a operação e o desenvolvimento do software. Os requisitos de software podem ser classificados como requisitos funcionais e não funcionais.\n\nSOMMERVILLE, I. Engenharia de Software, 10. ed. São Paulo: Pearson Education, 2019 (com adaptações).",
+            "enunciado": "Considerando as informações do texto, assinale a alternativa em que o item é um requisito funcional.",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Engenharia de Software",
+            "subtema": "Requisitos funcionais e não funcionais",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "A questão testa conhecimentos básicos a respeito de requisitos de sistemas de software. Vamos, a seguir, relembrar os principais conceitos envolvidos nesse tema.\n\nREQUISITOS FUNCIONAIS E REQUISITOS NÃO FUNCIONAIS\n\nOs requisitos estabelecem quais funcionalidades um software deve apresentar, assim como as restrições às quais ele será submetido. Os requisitos de sistema são comumente classificados em funcionais e não funcionais.\n\nOs requisitos funcionais são as declarações dos serviços que o sistema deve prestar, de como o software deve reagir a determinadas entradas e de como deve se comportar em determinadas situações. De forma geral, eles dizem o que o software “deve fazer”. Em alguns casos, os requisitos funcionais podem, também, estabelecer tarefas ou comportamentos que o sistema deve evitar.\n\nComo exemplo, podemos imaginar um sistema de cadastro de clientes encomendado por uma empresa a um desenvolvedor. Os itens listados a seguir correspondem a alguns dos requisitos funcionais desse sistema, expressos em linguagem natural.\n\n• Cada funcionário que utiliza o sistema deve ser identificado exclusivamente por seu número funcional, que corresponde a um código numérico de 6 dígitos.\n\n• Um funcionário deve poder fazer a busca de clientes por nome e sobrenome.\n\n• O sistema deve gerar, semanalmente, um relatório contendo a lista e a contagem do número de clientes cadastrados no período.\n\nA imprecisão na especificação de requisitos pode levar a conflitos entre clientes e desenvolvedores. Por isso, requisitos devem ser bem especificados, sem ambiguidades. Os requisitos não funcionais, conforme o nome sugere, são aqueles que não têm relação direta com as funcionalidades oferecidas pelo software. Esses requisitos especificam ou restringem as características do sistema como um todo. Eles podem ser relacionados a propriedades do sistema, como confiabilidade, tempo de resposta e uso de memória. Muitos requisitos não funcionais também surgem por necessidades dos usuários relacionadas a restrições orçamentárias, políticas organizacionais, necessidade de interoperabilidade com outros sistemas, normas de segurança ou legislação relativa à privacidade.\n\nComo exemplo, vamos voltar a imaginar o sistema de cadastro de clientes. Os itens listados abaixo correspondem a alguns dos requisitos não funcionais desse sistema.\n\n• O sistema deve ficar disponível para os funcionários de todas as filiais da empresa durante o expediente (de segunda a sexta, das 8h às 17h).\n\n• O tempo que o sistema pode permanecer fora do ar no expediente não deve ultrapassar 5 segundos em qualquer dia.\n\n• O sistema deve implementar providências para garantir a privacidade dos clientes cadastrados.\n\n• O programa deve ser executado no sistema operacional Windows 11.\n\nSempre que possível, os requisitos não funcionais devem ser escritos adotando critérios quantitativos, de forma que possam ser testados objetivamente. Isso ajuda a evitar divergências interpretativas entre clientes e equipes de desenvolvimento. Como exemplo, considere o requisito a seguir.\n\n• Os funcionários devem ser capazes de utilizar todas as funções do sistema com pouco tempo de treinamento.\n\nPerceba que o significado de “pouco tempo” é subjetivo. Para o cliente, pode significar algumas horas de treinamento. Para os desenvolvedores, pode significar algumas semanas. Como fazemos, então, para contornar essa inconsistência? Devemos tornar o requisito objetivo, conforme exposto a seguir, com um critério quantitativo estipulado.\n\n• Os funcionários devem ser capazes de utilizar todas as funções do sistema após três horas de treinamento.",
+            "referenciasBibliograficas": "Questão 9 – Enade 2021 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 14.\n\nIndicações bibliográficas:\n• HIRAMA, K. Engenharia de software: qualidade e produtividade com tecnologia. Rio de Janeiro: Elsevier, 2011.\n• PRESSMAN, R. S.; MAXIM, B. R. Engenharia de software: uma abordagem profissional. Porto Alegre: AMGH, 2021.\n• SOMMERVILLE, I. Engenharia de software. São Paulo: Pearson Education do Brasil, 2018.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "O software deve ser operacionalizado no sistema Linux.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O sistema operacional no qual o software deverá ser operacionalizado corresponde a um requisito não funcional, pois não corresponde diretamente a uma funcionalidade esperada para o software."
+              },
+              {
+                "letra": "B",
+                "texto": "O tempo de desenvolvimento não deve ultrapassar seis meses.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O tempo disponibilizado para o desenvolvimento do software é um requisito não funcional, pois não corresponde diretamente a uma funcionalidade esperada."
+              },
+              {
+                "letra": "C",
+                "texto": "O software deve emitir relatórios de compras a cada quinze dias.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. A emissão de relatórios periódicos é uma possível funcionalidade de um software. Logo, esse requisito é classificado como funcional."
+              },
+              {
+                "letra": "D",
+                "texto": "O tempo de resposta do sistema não deve ultrapassar 30 segundos.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O tempo de resposta do sistema é um requisito não funcional, pois não corresponde diretamente a uma funcionalidade."
+              },
+              {
+                "letra": "E",
+                "texto": "A base de dados deve ser protegida para acesso apenas de usuários autorizados.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O nível de proteção da base de dados é um requisito não funcional, pois não corresponde diretamente a uma funcionalidade."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "B3 Q2 · Engenharia de requisitos e artefatos (Enade 2021 Q18)",
+            "contexto": "Leia o texto a seguir.\n\nA engenharia de requisitos é uma área que inclui quatro subprocessos relacionados de alto nível. Esses subprocessos são: 1) avaliação se o sistema será útil para a empresa (estudo de viabilidade); 2) obtenção de requisitos (elicitação de requisitos); 3) conversão desses requisitos em alguma forma padrão (especificação); 4) verificação se os requisitos realmente definem o sistema que o cliente deseja (validação).\n\nSOMMERVILLE, I. Engenharia de Software. São Paulo: Pearson Addison-Wesley, 2017 (com adaptações).\n\nUma equipe de Tecnologia da Informação (TI) de uma empresa de consultoria desenvolverá um software de Suporte Técnico para uma grande empresa fornecedora de equipamentos eletrônicos. O estudo de viabilidade do software já foi realizado e aprovado. A equipe de Tecnologia da Informação seguirá os três subprocessos seguintes de alto nível de engenharia de requisitos descritos no texto de Sommerville, ou seja, os subprocessos de elicitação de requisitos, especificação e validação.",
+            "enunciado": "Para esses três subprocessos, quais são os artefatos que podem ser utilizados por essa equipe de Tecnologia da Informação?",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Engenharia de Software",
+            "subtema": "Engenharia de requisitos",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "A questão avalia conhecimentos a respeito das atividades envolvidas na engenharia de requisitos, abordando técnicas e notações utilizadas em cada uma dessas atividades. Vamos, a seguir, estudar o tema.\n\nATIVIDADES DA ENGENHARIA DE REQUISITOS\n\nOs requisitos de software são o conjunto de funcionalidades, características e restrições que um sistema deve atender para satisfazer às necessidades dos usuários e às metas do projeto.\n\nA engenharia de requisitos é uma disciplina da área de engenharia de software que envolve três atividades fundamentais:\n\n• a descoberta dos requisitos por meio da interação com os stakeholders (elicitação);\n\n• a conversão desses requisitos em uma forma padrão (especificação);\n\n• a averiguação de que os requisitos realmente definem o sistema que o cliente espera (validação).\n\nO estudo de viabilidade não faz parte diretamente da engenharia de requisitos, mas é uma etapa preliminar importante no ciclo de vida de um projeto de software. O estudo de viabilidade ocorre antes do início das três atividades fundamentais da engenharia de requisitos, e está relacionado à decisão de determinar se é viável ou apropriado prosseguir com um projeto de software. Vamos, a seguir, estudar cada uma das atividades mencionadas.\n\nELICITAÇÃO DE REQUISITOS\n\nA elicitação de requisitos é a primeira atividade fundamental da engenharia de requisitos e envolve um contato direto com os stakeholders do sistema. Os stakeholders são as partes interessadas no sistema, como usuários finais, gerentes de produto, equipe de desenvolvimento, equipe de marketing, acionistas e autoridades reguladoras que certificam a aceitabilidade do sistema.\n\nOs objetivos da elicitação de requisitos são compreender o trabalho que os stakeholders realizam e entender como eles usariam o novo sistema. As tarefas envolvidas nesse processo são elencadas a seguir.\n\n1) Descoberta e compreensão dos requisitos: é o processo de interagir com os stakeholders para “descobrir” os seus requisitos de usuário.\n\n2) Classificação e organização dos requisitos: é o processo de pegar um conjunto não estruturado de requisitos, agrupar os requisitos relacionados e organizá-los em grupos coerentes.\n\n3) Priorização e negociação de requisitos: quando há o envolvimento de muitos stakeholders, os requisitos provavelmente entrarão em conflito. Este estágio envolve a resolução desses possíveis conflitos.\n\n4) Documentação dos requisitos: um rascunho da documentação dos requisitos de usuário é feito neste estágio.\n\nNa figura 1, vemos um diagrama que ilustra a atividade de elicitação de requisitos. Note que a figura sugere tarefas iterativas, com feedback contínuo de cada tarefa para as demais. O ciclo do processo começa com a descoberta dos requisitos e termina com a sua documentação, mas a compreensão que o analista tem dos requisitos aumenta a cada rodada do ciclo, que só deve terminar quando o documento de requisitos de usuário for produzido de forma definitiva. Os requisitos de usuário quase sempre são escritos em linguagem natural, complementados por diagramas e tabelas apropriados.\n\nSOMMERVILLE, I. Engenharia de software. São Paulo: Pearson Education do Brasil, 2018, p. 97.\n\nAs técnicas de elicitação dos requisitos envolvem encontros com os stakeholders para descobrir informações sobre o sistema proposto. É necessário investir tempo para entender como as pessoas trabalham e o que elas produzem. Existem duas abordagens fundamentais para a elicitação de requisitos, elencadas a seguir.\n\n• Entrevistas: nesta abordagem, há uma conversa com as pessoas a respeito do que elas fazem.\n\n• Observação ou etnografia: nesta abordagem, observam-se as pessoas executando seus trabalhos para ver quais ferramentas elas usam, como usam etc.\n\nESPECIFICAÇÃO DE REQUISITOS\n\nA especificação de requisitos é a segunda atividade fundamental da engenharia de requisitos. A atividade é destinada a escrever os requisitos de usuário do sistema em um documento de requisitos de sistema. Esses requisitos de sistema devem ser claros, completos e consistentes.\n\nOs requisitos de usuário quase sempre são escritos em linguagem natural. Os requisitos de sistema são versões ampliadas dos requisitos de usuário, que os engenheiros de software utilizam como ponto de partida para o projeto do sistema de software.\n\nOs requisitos de sistema também podem ser escritos em linguagem natural, mas outras notações baseadas em formulários, em gráficos ou em modelos matemáticos podem ser aplicadas. Essas notações garantem maior precisão e maior nível de detalhamento aos requisitos, quando comparados aos escritos em linguagem natural.\n\nNo quadro 1, são mostradas as possíveis notações que podemos utilizar para escrever requisitos de sistema.\n\nNOTAÇÃO\n\nDESCRIÇÃO\n\nSentenças em linguagem natural Por meio dessa notação, os requisitos são escritos usando frases numeradas em linguagem natural. Cada frase deve expressar um requisito.\n\nLinguagem natural estruturada Os requisitos são escritos em linguagem natural em um formulário ou template. Cada campo fornece informações sobre um aspecto do requisito.\n\nNotações gráficas Modelos gráficos, suplementados por anotações em texto, são utilizados para definir os requisitos funcionais do sistema. São usados, com frequência, os diagramas de casos de uso e de sequência da UML (Unified Modeling Language).\n\nEspecificações matemáticas Essas notações baseiam-se em conceitos matemáticos, como as máquinas de estados finitos ou conjuntos.\n\nSOMMERVILLE, 2018, p. 104 (com adaptações).\n\nVALIDAÇÃO DE REQUISITOS\n\nA validação de requisitos é a terceira atividade fundamental da engenharia de requisitos. A atividade é destinada a conferir se os requisitos, tanto de usuário quanto de sistema, definem o sistema que o cliente realmente quer. Essa atividade sobrepõe-se às etapas de elicitação e de análise, já que é voltada a encontrar problemas em cada uma delas. A validação de requisitos é muito importante, pois erros em um documento de requisitos podem levar a grandes custos de retrabalho, quando esses problemas são descobertos durante o desenvolvimento ou após o sistema entrar em funcionamento.\n\nAlgumas técnicas de validação de requisitos podem ser utilizadas individualmente ou em conjunto. Essas técnicas são resumidas no quadro 2.\n\nTÉCNICA\n\nDESCRIÇÃO\n\nRevisões de requisitos Os requisitos são sistematicamente analisados por uma equipe de revisores, que procuram por erros e por inconsistências.\n\nPrototipação Essa técnica envolve o desenvolvimento de um modelo executável do sistema e o uso desse modelo com os usuários finais e clientes para verificar se ele satisfaz suas necessidades e expectativas. Os stakeholders experimentam o sistema e opinam sobre mudanças nos requisitos.\n\nGeração de casos de teste Os requisitos devem ser testáveis. Se os testes dos requisitos forem concebidos como parte do processo de validação, eles frequentemente revelarão os problemas existentes nos requisitos.\n\nSOMMERVILLE, 2018, p. 113 (com adaptações).",
+            "referenciasBibliograficas": "Questão 18 – Enade 2021 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 14.\n\nIndicações bibliográficas:\n• HIRAMA, K. Engenharia de software: qualidade e produtividade com tecnologia. Rio de Janeiro: Elsevier, 2011.\n• PRESSMAN, R. S.; MAXIM, B. R. Engenharia de software: uma abordagem profissional. Porto Alegre: AMGH, 2021.\n• SOMMERVILLE, I. Engenharia de software. São Paulo: Pearson Education do Brasil, 2018.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "Documento de entrevista com usuários; modelo de caso de uso para os requisitos funcionais; prototipação de telas.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. A equipe de Tecnologia da Informação seguirá as três atividades de engenharia de requisitos: elicitação, especificação e validação. O documento de entrevista com usuários é um artefato da etapa de elicitação. O modelo de caso de uso para os requisitos funcionais é uma notação da etapa de especificação. Já a prototipação de telas é uma técnica da etapa de validação. Logo, esses artefatos podem ser utilizados por essa equipe."
+              },
+              {
+                "letra": "B",
+                "texto": "Documento de estudo de viabilidade; modelo de caso de uso para os requisitos funcionais; prototipação de telas.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O documento de estudo de viabilidade não faz parte das atividades de elicitação, de especificação ou de validação de requisitos. O estudo de viabilidade é realizado antes desses processos."
+              },
+              {
+                "letra": "C",
+                "texto": "Matriz de rastreabilidade; modelo de caso de uso para os requisitos não-funcionais; prototipação de telas.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. As mudanças no ambiente de negócios, nas organizações e nas tecnologias nos levam a mudanças nos requisitos de um sistema de software. O gerenciamento de requisitos é o processo de gerenciar e controlar essas mudanças. Nesse contexto, podem ser utilizadas as matrizes de rastreabilidade, que associam os requisitos às suas origens e os rastreia durante todo o ciclo de vida do projeto. Logo, as matrizes de rastreabilidade não são um artifício específico das etapas de elicitação, de especificação e de validação de requisitos. Além disso, diagramas de casos de uso, de forma geral, descrevem as funcionalidades propostas para o sistema. Logo, seu foco são os requisitos funcionais."
+              },
+              {
+                "letra": "D",
+                "texto": "Documento de entrevista com usuários; modelo de caso de uso para os requisitos não-funcionais; matriz de rastreabilidade.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. As mudanças no ambiente de negócios, nas organizações e nas tecnologias nos levam a mudanças nos requisitos de um sistema de software. O gerenciamento de requisitos é o processo de gerenciar e controlar essas mudanças. Nesse contexto, podem ser utilizadas as matrizes de rastreabilidade, que associam os requisitos às suas origens e os rastreia durante todo o ciclo de vida do projeto. Logo, as matrizes de rastreabilidade não são um artifício específico das etapas de elicitação, de especificação e de validação de requisitos. Além disso, diagramas de casos de uso, de forma geral, descrevem as funcionalidades propostas para o sistema. Logo, seu foco são os requisitos funcionais."
+              },
+              {
+                "letra": "E",
+                "texto": "Documento de estudo de viabilidade; modelo de caso de uso para os requisitos funcionais; matriz de rastreabilidade.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O documento de estudo de viabilidade não faz parte das atividades de elicitação, de especificação ou de validação de requisitos. Além disso, as matrizes de rastreabilidade não são um artifício específico das etapas de elicitação, de especificação e de validação de requisitos."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": [
+              {
+                "titulo": "Figura 1. O processo de elicitação de requisitos (SOMMERVILLE, 2018, p. 97)",
+                "arquivo": "figuras/b3-q2-elicitacao.png"
+              }
+            ]
+          },
+          {
+            "tituloInterno": "B3 Q5 · Gerência de Configuração de Software (Enade 2021 Q22)",
+            "contexto": "Um ponto importante para fábricas de software é a garantia de que seus produtos e/ou serviços acompanhem as diversas mudanças ocasionadas pelo mundo corporativo. As restrições de orçamento ou cronograma, reestruturação do negócio, modificações de regras de negócio ou novas necessidades do cliente, geram mudanças inevitáveis. Nesse cenário, a utilização de um processo de Gerência de Configuração de Software (GCS) que contemple características necessárias para gerenciar e controlar a evolução de um software, por meio do controle formal de versão e solicitação de mudanças, é extremamente importante.",
+            "enunciado": "Sobre o processo de Gerência de Configuração de Software (GCS), avalie as afirmativas.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Engenharia de Software",
+            "subtema": "Gestão de configuração",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "GESTÃO DE CONFIGURAÇÃO DE SOFTWARE\n\nA questão testa conhecimentos a respeito das atividades envolvidas na gestão de configuração de software. A nomenclatura presente nas alternativas da questão corresponde à utilizada por Roger Pressman e Bruce Maxim, no livro intitulado “Engenharia de Software: uma abordagem profissional”.\n\nConforme abordamos na Introdução Teórica da questão 4, a gestão de configuração de software (SCM, do termo em inglês “software configuration management”) é responsável por identificar, organizar e controlar modificações ao longo do clico de vida do software. No enunciado da presente questão, é usado o termo gerência de configuração de software (GCS), que corresponde ao mesmo conceito.\n\nSe você não está confortável com esse assunto, consulte a Introdução Teórica da questão 4, onde as atividades envolvidas na GCS são detalhadas.",
+            "referenciasBibliograficas": "Questão 22 – Enade 2021 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 14.\n\nIndicações bibliográficas:\n• MORAIS, I. S. de (org.). Engenharia de software. São Paulo: Pearson Education do Brasil, 2017.\n• PRESSMAN, R. S.; MAXIM, B. R. Engenharia de software: uma abordagem profissional. Porto Alegre: AMGH, 2021.\n• SOMMERVILLE, I. Engenharia de software. São Paulo: Pearson Education do Brasil, 2018.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "I e II.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: A."
+              },
+              {
+                "letra": "B",
+                "texto": "II e III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "I, II e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "E",
+                "texto": "I, III e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "O controle de versão possibilita o compartilhamento de dados e a edição colaborativa, permitindo a gestão de diferentes ramos de desenvolvimento e possibilitando a existência de diferentes versões de forma simultânea.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. Na atividade de controle de versão, é criada uma atualização do arquivo original logo que a alteração for feita. Alternativamente, os objetos a serem alterados podem ser “retirados” do banco de dados do projeto e, assim que a alteração é feita, os objetos são então “colocados” novamente no banco de dados, e são usados mecanismos de controle de versão apropriados para gerar a próxima versão do software. O controle de versão permite o acompanhamento das alterações feitas, facilitando o trabalho colaborativo e a gestão de diferentes versões."
+              },
+              {
+                "numero": "II",
+                "texto": "A auditoria de configuração é uma atividade de garantia de qualidade do sistema que tem por objetivo assegurar que a qualidade do software seja mantida quando feitas alterações requisitadas.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. A auditoria de configuração é uma das atividades da GCS que verifica se a configuração do software está em conformidade com as políticas, com os padrões e com os requisitos estabelecidos. Desse modo, a auditoria de configuração tem o objetivo de assegurar que a qualidade do software seja mantida quando feitas alterações requisitadas."
+              },
+              {
+                "numero": "III",
+                "texto": "O relatório de status de configuração possui informações sobre o GCS, tendo por objetivo manter o cliente informado sobre as alterações, e deve ser gerado ao final do processo.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. O relatório de status de configuração não necessariamente é gerado apenas ao final do processo. Ele pode ser gerado em diferentes fases do desenvolvimento, para informar sobre o estado da configuração."
+              },
+              {
+                "numero": "IV",
+                "texto": "A GCS proporciona um conjunto de atividades de acompanhamento e controle de mudanças que é iniciado logo depois que o software for fornecido ao cliente e colocado em operação.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. As atividades de GCS geralmente acontecem desde as fases iniciais do desenvolvimento e continuam por todo o ciclo de vida do software. Portanto, tais atividades não são limitadas apenas ao período após o fornecimento do software ao cliente."
+              }
+            ],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "B3 Q8 · Gerenciamento de partes interessadas (Enade 2021 Q14)",
+            "contexto": "Um projeto de integração de um ERP com um CRM não implementou todos os serviços esperados e há falhas nos serviços já implementados. Uma auditoria avaliou a situação e identificou que há desentendimentos entre os membros da equipe; os membros da qualidade não compreendem o que deve ser avaliado; demandas de novos solicitantes aparecem constantemente; e o patrocinador demora muito a responder às solicitações da equipe. Tudo isso fez com que o projeto ficasse bastante atrasado e com orçamento excedido.",
+            "enunciado": "Considerando o cenário descrito, o gerente de projeto deve priorizar o gerenciamento de",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Engenharia de Software",
+            "subtema": "Gestão de projetos (PMBOK)",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "A questão retrata uma situação que diz respeito, diretamente, a uma das áreas de conhecimento estipuladas no guia PMBOK (Project Management Body of Knowledge).\n\nÁREAS DE CONHECIMENTO DO PMBOK\n\nO guia PMBOK é o principal documento de referência para os profissionais da gestão de projetos. Nele, são descritas boas práticas que devem ser adotadas por gestores.\n\nO PMBOK está dividido em 10 áreas de conhecimento, visando a apresentar os processos críticos para a gestão de projetos. De forma resumida e simplificada, cada uma dessas áreas é apresentada, a seguir.\n\n• Integração: o gerenciamento da integração do projeto envolve tomadas de decisão ligadas aos objetivos do projeto, assim como o processo de desenvolvimento e de execução do plano de gerenciamento. De forma resumida, essa área faz a coordenação dos diversos elementos do projeto.\n\n• Escopo: o gerenciamento do escopo é relativo ao atendimento dos requisitos para o desenvolvimento e a finalização do projeto. Entre as responsabilidades dessa área, estão a coleta e a definição dos requisitos.\n\n• Tempo: o gerenciamento do tempo é relativo a processos que asseguram a conclusão do projeto nos prazos estabelecidos.\n\n• Custo: a gestão dos custos visa a garantir que o projeto será concluído dentro do orçamento aprovado.\n\n• Qualidade: o gerenciamento da qualidade objetiva garantir que o projeto seja concluído em conformidade com os requisitos e com as especificações definidas em seu escopo.\n\n• Recursos humanos: o gerenciamento de recursos humanos visa a utilizar de forma eficaz a força de trabalho das pessoas envolvidas no desenvolvimento do projeto.\n\n• Comunicações: o gerenciamento de comunicações inclui um conjunto de processos que asseguram a geração, a coleta, a distribuição, o armazenamento e o controle das informações do projeto.\n\n• Riscos: o gerenciamento de riscos envolve a definição, a análise e a resposta aos riscos do projeto. Ele antecipa futuras necessidades ou mudanças, permitindo a tomada de decisão com antecedência.\n\n• Aquisições: o gerenciamento de aquisições procede determinando o que, quando e como comprar ou adquirir bens ou serviços externos à organização.\n\n• Partes interessadas: o gerenciamento de partes interessadas consiste em processos necessários para identificar, planejar, gerenciar e controlar as partes interessadas de um projeto. Essa área é responsável por coordenar as interações entre os stakeholders.\n\n2. Resolução da questão De acordo com o enunciado, uma auditoria identificou que há desentendimentos entre os membros da equipe. Esses membros são considerados como partes interessadas (ou stakeholders), pois fazem parte do grupo de pessoas que são influenciadas pelo projeto. O gerenciamento de partes interessadas é, justamente, responsável por coordenar as interações entre os stakeholders.\n\nAlternativa correta: E.",
+            "referenciasBibliograficas": "Questão 14 – Enade 2021 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 14.\n\nIndicações bibliográficas:\n• KEELING, R.; BRANCO, R. H. F. Gestão de projetos. São Paulo: Saraiva Educação, 2019.\n• SOUZA, C. P. da S. Gestão de projetos. Curitiba: Contentus, 2020.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "custo.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "tempo.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "escopo.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "qualidade.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "E",
+                "texto": "partes interessadas.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. De acordo com o enunciado, uma auditoria identificou que há desentendimentos entre os membros da equipe. Esses membros são considerados como partes interessadas (ou stakeholders), pois fazem parte do grupo de pessoas que são influenciadas pelo projeto. O gerenciamento de partes interessadas é, justamente, responsável por coordenar as interações entre os stakeholders."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "B1 Q7 · Manutenção de software legado (Enade 2021 Q23)",
+            "contexto": "A evolução de sistemas de software legados pode ser dividida em três categorias: manutenção, modernização e substituição. De acordo com a figura a seguir, conforme o tempo aumenta, a quantidade de funcionalidades também cresce. No primeiro período de evolução a manutenção é realizada, pois as necessidades de negócio são alteradas e o sistema precisa suprir as mudanças por meio da manutenção. No segundo período é realizada a modernização do sistema, pois as necessidades de negócio continuam a crescer, mas há mudanças mais significativas que se fazem necessárias. Além da substituição do sistema de software, nos casos em que o modelo de negócio não atende mais a necessidade da empresa, a manutenção e modernização também não são mais suficientes.\n\nSEACORD, R. C.; PLAKOSH, D.; LEWIS, G. A. Modernizing Legacy Systems. Boston: Pearson Education, 2003 (com adaptações).\n\nDe acordo com a figura apresentada e considerando um sistema de software implantado de ERP (Enterprise Resource Planning - Planejamento de Recursos Empresariais) contendo um conjunto de módulos que integra todos os departamentos existentes de uma empresa, observou-se a necessidade de criação de um relatório gerencial de comissão da equipe de vendas.",
+            "enunciado": "Nesse contexto, é correto afirmar que a manutenção a ser realizada é",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Engenharia de Software",
+            "subtema": "Tipos de manutenção de software",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "TIPOS DE MANUTENÇÃO DE SOFTWARE\n\nSistemas de software legados são produtos em obsolescência que, normalmente, estão sendo utilizados por uma companhia há muitos anos. No geral, eles são desenvolvidos para ter um longo ciclo de vida. Naturalmente, eles requerem modificações ao longo do tempo. Nesse contexto, a manutenção de um sistema de software legado consiste nos processos de atualização, de correção e de prevenção de problemas em um sistema de software, com o intuito de manter o software operacional no ambiente do usuário. As atividades de manutenção são tipicamente gerenciadas pelo processo de gestão de configuração de software (SCM), que administra as alterações do sistema ao longo de todo o seu ciclo de vida. Existem quatro tipos principais de manutenção de software, elencados a seguir.\n\n• Corretiva: este tipo de manutenção é realizado para corrigir erros existentes no software, que não foram identificados ao longo do processo de testes. A correção de bugs, de erros de lógica e de problemas de desempenho são exemplos de manutenções corretivas.\n\n• Adaptativa: esta manutenção tem como intuito adaptar o software a novas condições de trabalho, como inseri-lo em um novo ambiente ou fazê-lo funcionar sob novos requisitos de sistema. É exemplo de manutenções adaptativas a tarefa de tornar um software compatível com um novo sistema operacional ou com um novo hardware.\n\n• Perfectiva (ou evolutiva): a manutenção perfectiva tem como foco a adição de novas funcionalidades ao sistema, assim como a melhoria das funcionalidades existentes. Isso inclui a implementação de novos requisitos ou de novas funcionalidades, que não estavam previstas no projeto original.\n\n• Preventiva: este tipo de manutenção tem como principal objetivo melhorar a confiabilidade do sistema. Esse tipo de manutenção procura tratar situações que poderão causar erros no software, de maneira a evitar que problemas aconteçam no futuro. Em média, 50% do tempo dos desenvolvedores costuma ser dedicado à manutenção perfectiva, enquanto as manutenções adaptativa, corretiva e preventiva ocupam, respectivamente, 25%, 21% e 4%. Podemos observar essa distribuição de tempo no gráfico da figura 1.\n\nPRESSMAN e MAXIM, 2021 (com adaptações).",
+            "referenciasBibliograficas": "Questão 23 – Enade 2021 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 18.\n\nIndicações bibliográficas:\n• PRESSMAN, R. S.; MAXIM, B. R. Engenharia de software: uma abordagem profissional. Porto Alegre: AMGH, 2021.\n• SOMMERVILLE, I. Engenharia de software. São Paulo: Pearson Education do Brasil, 2018.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "corretiva.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. A manutenção corretiva é realizada para corrigir erros existentes no software. Esse não é o caso da situação explicitada no enunciado."
+              },
+              {
+                "letra": "B",
+                "texto": "evolutiva.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. A manutenção evolutiva (ou perfectiva) é realizada quando há necessidade de adicionar novas funcionalidades ao sistema de software, ou melhorar as funcionalidades já existentes. No contexto da questão, a criação de um relatório gerencial é considerada como a adição de uma nova funcionalidade."
+              },
+              {
+                "letra": "C",
+                "texto": "funcional.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O termo “funcional” não é um termo padrão no contexto da manutenção de software."
+              },
+              {
+                "letra": "D",
+                "texto": "preventiva.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. A manutenção preventiva é realizada para evitar futuros problemas, não para adicionar funcionalidades."
+              },
+              {
+                "letra": "E",
+                "texto": "adaptativa.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. A manutenção adaptativa é realizada para adaptar o software a novos ambientes ou a novos requisitos de sistema. Seu foco não é adicionar funcionalidades, mas sim adaptar as funcionalidades existentes a um novo cenário."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": [
+              {
+                "titulo": "Figura – Evolução de sistemas legados (SEACORD; PLAKOSH; LEWIS, 2003)",
+                "arquivo": "figuras/b1-q7-evolucao-legado.png"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chave": "acompanhado-redes",
+      "titulo": "Redes e Infraestrutura",
+      "descricao": "Protocolos TCP/IP, FTP, servidores web, gerência de redes com SNMP e virtualização, com acompanhamento de professor e questões do ENADE comentadas.",
+      "preco": 59.9,
+      "modeloCurso": "Acompanhado",
+      "turma": {
+        "nomeTurma": "Turma de teste – Redes e Infraestrutura"
+      },
+      "modulos": [
+        {
+          "titulo": "Protocolos e serviços",
+          "aulas": [
+            {
+              "titulo": "TCP/IP, camada de transporte e IPv6",
+              "descricao": "Portas, sockets, multiplexação, TCP x UDP e o protocolo IPv6.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/rd-m1-a1.pdf"
+            },
+            {
+              "titulo": "FTP e servidor web",
+              "descricao": "Protocolo FTP, handshake triplo, virtual hosting e DNS.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/rd-m1-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Protocolos e serviços",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · Redes · Protocolos e serviços · 1",
+                "contexto": "",
+                "enunciado": "Junto com o endereço IP, o que identifica o processo de destino?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Protocolos e serviços",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "A porta",
+                    "ehCorreta": true,
+                    "justificativa": "A combinação endereço IP + porta permite chegar ao processo certo na máquina."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "O endereço MAC",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "A máscara de rede",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "O DNS",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Redes · Protocolos e serviços · 2",
+                "contexto": "",
+                "enunciado": "Qual protocolo estabelece uma conexão antes de enviar os dados?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Protocolos e serviços",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "TCP",
+                    "ehCorreta": true,
+                    "justificativa": "O TCP exige o estabelecimento de conexão entre os processos (handshake triplo)."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "UDP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "IP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "ICMP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Redes · Protocolos e serviços · 3",
+                "contexto": "",
+                "enunciado": "Qual é a porta padrão da conexão de controle do FTP?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Protocolos e serviços",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "21",
+                    "ehCorreta": true,
+                    "justificativa": "A conexão de controle do FTP usa normalmente a porta 21 do servidor."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "22",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "80",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "443",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        },
+        {
+          "titulo": "Gestão e infraestrutura",
+          "aulas": [
+            {
+              "titulo": "Gerência de redes (SNMP)",
+              "descricao": "Protocolo SNMP, comandos PING e TRACERT e o modelo OSI.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/rd-m2-a1.pdf"
+            },
+            {
+              "titulo": "Virtualização, TI verde e Marco Civil",
+              "descricao": "Virtualização de servidores, sustentabilidade em TI e o Marco Civil da Internet.",
+              "tipoConteudo": "Pdf",
+              "arquivo": "aulas/rd-m2-a2.pdf"
+            }
+          ],
+          "quiz": {
+            "titulo": "Quiz · Gestão e infraestrutura",
+            "descricao": "3 perguntas rápidas, sem nota.",
+            "tentativasPermitidas": 3,
+            "questoes": [
+              {
+                "tituloInterno": "Quiz · Redes · Gestão e infraestrutura · 1",
+                "contexto": "",
+                "enunciado": "Qual protocolo o comando PING utiliza?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Gestão e infraestrutura",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "ICMP",
+                    "ehCorreta": true,
+                    "justificativa": "O PING usa o protocolo ICMP para medir o tempo de ida e volta dos pacotes."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "SNMP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "SMTP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "FTP",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Redes · Gestão e infraestrutura · 2",
+                "contexto": "",
+                "enunciado": "Como se chama a base de informações de gerência de cada agente SNMP?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Gestão e infraestrutura",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "MIB",
+                    "ehCorreta": true,
+                    "justificativa": "Cada agente tem um banco de dados de gerência chamado MIB (Management Information Base)."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "DNS",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "VLAN",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "OSI",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              },
+              {
+                "tituloInterno": "Quiz · Redes · Gestão e infraestrutura · 3",
+                "contexto": "",
+                "enunciado": "Que software executa máquinas virtuais diretamente sobre o hardware?",
+                "tipoQuestao": "MultiplaEscolha",
+                "tema": "Redes · Gestão e infraestrutura",
+                "subtema": "",
+                "dificuldade": 1,
+                "explicacaoPosResposta": "",
+                "referenciasBibliograficas": "",
+                "pontos": 1,
+                "alternativas": [
+                  {
+                    "letra": "A",
+                    "texto": "Hipervisor",
+                    "ehCorreta": true,
+                    "justificativa": "O hypervisor é um sistema operacional mínimo projetado para executar máquinas virtuais."
+                  },
+                  {
+                    "letra": "B",
+                    "texto": "Navegador",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "C",
+                    "texto": "Firewall",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  },
+                  {
+                    "letra": "D",
+                    "texto": "Compilador",
+                    "ehCorreta": false,
+                    "justificativa": ""
+                  }
+                ],
+                "afirmativas": [],
+                "anexos": []
+              }
+            ]
+          }
+        }
+      ],
+      "avaliacaoFinal": {
+        "titulo": "Avaliação final – Redes e Infraestrutura",
+        "descricao": "5 questões no modelo ENADE. Nota mínima 7,0 para o certificado.",
+        "tipoAvaliacao": "Prova",
+        "moduloId": null,
+        "tentativasPermitidas": 3,
+        "tempoLimiteMinutos": 40,
+        "notaMaxima": 10,
+        "questoes": [
+          {
+            "tituloInterno": "B1 Q1 · Protocolos TCP e UDP (Enade 2017 Q11)",
+            "contexto": "Em uma rede de computadores baseada na arquitetura TCP/IP, a camada de transporte fornece o serviço de comunicação fim a fim entre os processos de aplicações executadas em cada um dos hospedeiros. Do ponto de vista das aplicações, a comunicação lógica fim a fim significa que tudo se passa como se os hospedeiros que rodam os pares de processos estivessem conectados diretamente. A figura a seguir mostra o recorte de uma rede com três hospedeiros e quatro processos. Observe a existência de uma comunicação lógica entre os processos P1 e P3 e entre os processos P2 e P4.\n\nKUROSE, J. F.; ROSS, K. W. Redes de computadores e a internet: uma abordagem top-down. 5. ed. São Paulo: Addison Wesley, 2010 (com adaptações).",
+            "enunciado": "Com base na figura apresentada, assinale a opção correta.",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Redes de Computadores",
+            "subtema": "Protocolos TCP e UDP",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "PROTOCOLOS TCP E UDP\n\nA questão aborda o uso dos protocolos TCP e UDP em um cenário bastante simplificado. Um dos pontos explorados pela questão refere-se aos processos de multiplexação e de demultiplexação. Para compreendermos esses conceitos, podemos imaginar um cenário no qual um computador está executando diversos processos simultaneamente. Suponha que mais de um processo está conectado a outros processos, execute em outros computadores e se comunique via uma rede que utiliza os protocolos TCP/IP. O sistema operacional, por meio dos seus serviços de rede, especificamente da implementação da pilha de protocolos TCP/IP, deve fazer com que cada processo \"veja\" apenas a sua comunicação, separando os diversos fluxos de dados dos processos executando em paralelo.\n\nA pilha de protocolos TCP/IP, também chamados de protocolos internet, utiliza uma estratégia na qual identificamos cada máquina, ou, mais precisamente, cada interface de rede, por meio de um endereço IP. Mas, além do endereço IP, um processo pode utilizar uma ou mais portas. A associação do endereço IP e da porta permite que vários processos executando em um mesmo computador se comuniquem com outros processos paralelamente.\n\nA ligação entre os processos executando em diferentes máquinas é feita com a ajuda de sockets (traduções possíveis para esse termo seriam “tomada” ou “encaixe”, mas, normalmente, utilizamos o vocábulo em inglês). Do ponto de vista do processo, a comunicação é feita pelo envio das informações para o socket, sendo que os demais cuidados são feitos pela pilha de protocolos TCP/IP. Na criação do socket, usamos o endereço IP da máquina que desejamos contactar e a porta associada a determinado serviço ou processo. De forma simplificada, podemos pensar que uma porta é um número de 16 bits utilizado de forma a selecionar o processo ao qual queremos nos conectar. Reforçamos que precisamos de duas informações: o endereço IP e o número da porta.\n\nA ideia de porta permite que, em uma mesma máquina executando vários processos diferentes e simultâneos, possam ser estabelecidos fluxos de comunicação individuais para cada um dos processos. Além disso, todos esses processos vão utilizar a mesma interface de rede e o mesmo endereço IP (associado a essa interface). Assim, por exemplo, em um mesmo computador, podem ser executados simultaneamente um servidor web na porta 80 e um servidor de ftp na porta 21. Os dois processos têm seus fluxos de dados individuais e separados, pois trabalham em portas diferentes. No entanto, o endereço IP é o mesmo. Tanto o protocolo UDP quanto o protocolo TCP oferecem um mecanismo de porta (ambos são protocolos da camada de transporte). No caso do protocolo UDP, contudo, a comunicação é feita sem o estabelecimento de conexão, mas utilizando sockets. Vale notar que o protocolo TCP exige o estabelecimento de uma conexão entre os processos e também usa sockets para a comunicação.",
+            "referenciasBibliograficas": "Questão 11 – Enade 2017 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 18.\n\nIndicações bibliográficas:\n• KUROSE, J. F.; ROSS, K. W. Redes de computadores e a Internet: uma abordagem top-down. 6. ed. São Paulo: Pearson Education do Brasil, 2014.\n• SILBERSCHATZ, A.; GALVIN, P. B.; GAGNE. G. Fundamentos de sistemas operacionais. 4. ed. Rio de Janeiro: LTC, 2015.\n• TANENBAUM, A. S.; BOS, H. Sistemas operacionais modernos. 4. ed. São Paulo: Pearson Education do Brasil, 2016.\n• TANENBAUM, A. S.; WETHERALL, J. Redes de computadores. 5. ed. São Paulo: Pearson Education do Brasil, 2011.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "O processo P3 se conecta a P1 por meio de um número de porta UDP, que é um identificador exclusivo entre 0 e 1023.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. Para que o processo P3 se conecte ao processo P1, precisamos utilizar a combinação de um endereço IP e de uma porta. O valor da porta é especificado por um número de 16 bits. Logo, há 2^16 = 65.536 possibilidades. Assim, o número das portas varia de 0 até 65.535. No entanto, devemos lembrar que as portas mais baixas (de 0 até 1023) são reservadas."
+              },
+              {
+                "letra": "B",
+                "texto": "No hospedeiro do meio, o serviço de multiplexação/demultiplexação fornecido pela camada de transporte garante a entrega dos dados ao processo de aplicação apropriado.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. Os processos de multiplexação e de demultiplexação permitem que a camada de transporte seja capaz de \"coletar\" e \"distribuir\" as diversas informações enviadas aos diversos processos ou recebidas pelos diversos processos que executam simultaneamente em um sistema operacional. Por exemplo, dois programas que executam em uma mesma máquina podem enviar para um servidor na rede ou receber dados de um servidor na rede, sendo que a camada de transporte tem de ser capaz de separar essas informações e entregá-las ao processo correspondente."
+              },
+              {
+                "letra": "C",
+                "texto": "O endereço IP de destino contido no cabeçalho do protocolo TCP identifica o hospedeiro para o qual o segmento está sendo enviado e garante a comunicação fim a fim.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. Ainda que o enunciado afirme que a rede utilizada é baseada na arquitetura TCP/IP, não é possível saber se a aplicação usa o protocolo TCP ou o protocolo UDP para a camada de transporte. Caso seja empregado o protocolo UDP, não podemos garantir a entrega dos pacotes. Adicionalmente, mesmo no caso TCP, seriam necessárias outras informações, como a porta do destino."
+              },
+              {
+                "letra": "D",
+                "texto": "O protocolo de camada de transporte usado na comunicação entre os pares de processos é o TCP, que utiliza uma apresentação de três vias para estabelecer a comunicação fim a fim.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. Não podemos garantir, pelo contexto do enunciado, que o protocolo da camada de transporte utilizado seja o TCP. Outra possibilidade é o uso do protocolo UDP e, também, da camada de transporte."
+              },
+              {
+                "letra": "E",
+                "texto": "No protocolo de camada de transporte utilizado na comunicação entre os processos P2 e P4, cada segmento de dados enviado entre esses dois processos obterá uma confirmação de recebimento.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. Não sabemos se o protocolo utilizado é o TCP ou o UDP. Se fosse o protocolo UDP, não haveria garantia da entrega de pacotes."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": [
+              {
+                "titulo": "Figura – Rede com três hospedeiros e quatro processos (KUROSE; ROSS, 2010)",
+                "arquivo": "figuras/b1-q1-processos-tcpip.png"
+              }
+            ]
+          },
+          {
+            "tituloInterno": "B1 Q2 · Cabeçalho IPv6 (Enade 2017 Q13)",
+            "contexto": "O protocolo IPv6 foi desenvolvido para substituir o IPv4, tendo sua implementação ocasionado várias mudanças importantes, como a capacidade de endereçamento expandida, o cabeçalho aprimorado de 40 bytes e a rotulação de fluxo e prioridade.",
+            "enunciado": "Considerando essas informações, avalie as afirmativas a seguir, relativas à descrição dos campos de cabeçalho IPv6.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Redes de Computadores",
+            "subtema": "Protocolo IP",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "PROTOCOLO IP\n\nO IP é um protocolo da camada de rede fundamental para a construção da Internet e das diversas redes baseadas na pilha de protocolos TCP/IP. Podemos dizer que a versão IPv4 é uma das mais populares. No entanto, tal versão apresenta um problema: a limitação com relação ao seu espaço de endereçamento.\n\nO endereço IP é um número de 32 bits, o que impõe uma restrição ao número máximo de endereços possíveis de aproximadamente 4 bilhões. Em virtude do crescimento de uso e a popularização da Internet, esse número se tornou claramente insuficiente. Com as finalidades de ampliar o espaço de endereçamento disponível e de melhorar diversos aspectos do protocolo, foi criada uma nova versão, o padrão IPv6, que dispõe de um espaço de endereçamento muito maior, além de oferecer as funcionalidades de rotulação de fluxo e de prioridade.",
+            "referenciasBibliograficas": "Questão 13 – Enade 2017 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 18.\n\nIndicações bibliográficas:\n• KUROSE, J. F.; ROSS, K. W. Redes de computadores e a Internet: uma abordagem top-down. 6. ed. São Paulo: Pearson Education do Brasil, 2014.\n• SILBERSCHATZ, A.; GALVIN, P. B.; GAGNE. G. Fundamentos de sistemas operacionais. 4. ed. Rio de Janeiro: LTC, 2015.\n• TANENBAUM, A. S.; BOS, H. Sistemas operacionais modernos. 4. ed. São Paulo: Pearson Education do Brasil, 2016.\n• TANENBAUM, A. S.; WETHERALL, J. Redes de computadores. 5. ed. São Paulo: Pearson Education do Brasil, 2011.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "II e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "I, II e III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "I, III e V.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "III, IV e V.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: D."
+              },
+              {
+                "letra": "E",
+                "texto": "I, II, IV e V.",
+                "ehCorreta": false,
+                "justificativa": ""
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "Em \"endereço de origem\" e \"endereço de destino\", cada campo possui 64 bits, tendo sido expandidos os 32 bits usados no IPv4.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. No IPv6, os campos \"endereço de origem\" e \"endereço de destino\" têm 128 bits de tamanho, e não 64 bits, como indicado no texto da afirmativa."
+              },
+              {
+                "numero": "II",
+                "texto": "Em se tratando do cabeçalho IPv6, insere-se o valor 32 no campo \"versão\" de 4 bits que é usado para identificar a versão do protocolo IP.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. O valor a ser inserido é o número 6 (na forma decimal) ou 0110 (na forma binária), e não 32, como indicado no texto da afirmativa."
+              },
+              {
+                "numero": "III",
+                "texto": "O campo \"próximo cabeçalho\" identifica o protocolo ao qual os dados presentes no datagrama serão entregues, por exemplo, TCP ou UDP.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. Esse campo é normalmente utilizado para indicar qual é o protocolo a ser utilizado pela camada de transporte, ou seja, se é o protocolo TCP ou o protocolo UDP."
+              },
+              {
+                "numero": "IV",
+                "texto": "No IPv6, o campo \"classe de tráfego\" de 8 bits é semelhante ao campo \"tipo de serviço\" do IPv4, ambos utilizados para diferenciar os tipos de pacotes IP.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O campo \"classe de tráfego\" (em inglês, \"traffic class\") tem duas funções: classificação dos pacotes (via o campo \"differentiated services\"); identificação de congestionamento."
+              },
+              {
+                "numero": "V",
+                "texto": "O valor do campo \"limite de saltos\" é decrementado em um para cada roteador que repassa o pacote; caso a contagem do limite de salto chegue a zero, o pacote será descartado.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O objetivo desse campo é limitar a durabilidade dos dados em circulação em uma rede, evitando que pacotes muito antigos (e que provavelmente se tornaram inúteis) fiquem circulando indefinidamente e congestionando a rede de modo desnecessário."
+              }
+            ],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "B2 Q4 · Protocolo SNMP (Enade 2014 Q23)",
+            "contexto": "A gestão de elementos de redes baseada na pilha de protocolos TCP/IP tem como seu principal protocolo de gerenciamento o SNMP (Simple Network Management Protocol).",
+            "enunciado": "Acerca do protocolo SMTP, avalie as afirmativas a seguir.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Redes de Computadores",
+            "subtema": "Gerência de redes (SNMP)",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "PROTOCOLO SNMP\n\nRedes de computadores são ambientes complexos, em que dispositivos de diferentes tipos e com diferentes finalidades interagem. O papel do administrador de redes é gerenciar essa estrutura complexa, garantindo o seu bom funcionamento.\n\nCom a finalidade de facilitar o gerenciamento de redes de computadores que utilizam o protocolo TCP/IP, foi criado o Protocolo de Gerenciamento de Redes Simples (SNMP). Não devemos confundir o protocolo SNMP com o protocolo SMTP (Simple Mail Transfer Protocol), desenvolvido com intenção distinta (transmissão de correio eletrônico).\n\nO protocolo SNMP foi ciado para auxiliar no gerenciamento da rede, permitindo que sejam coletadas informações dos dispositivos nela conectados. Além da coleta das informações, o protocolo também possibilita o controle de equipamentos por meio do envio de comandos.\n\nDo ponto de vista arquitetural, o protocolo SNMP é composto por gerentes e agentes. A estação gerenciadora (ou gerente) é normalmente uma máquina que o administrador utiliza para a monitoração e para o controle da rede, enquanto os agentes são os equipamentos gerenciados. Tipicamente, os agentes podem ser os diversos roteadores e switches, além de outros computadores.\n\nÉ interessante observar que, na arquitetura do protocolo SNMP, ocorre uma espécie de “inversão de papéis”: o gerente atua como um cliente dos agentes, que fornecem dados como um servidor. Cada agente apresenta um banco de dados com as informações de gerenciamento, chamado de MIB, ou Management Information Base, que vai fornecer informações para o seu gerenciamento.\n\nSegundo Forouzan (2008), além do MIB, o protocolo SNMP também utiliza outro protocolo auxiliar, o SMI (Structure of Management Information), que define as regras para o estabelecimento de nomes a objetos, estabelece tipos de objeto (inclusive abrangência e comprimento) e mostra como codificar objetos e valores.\n\nNo entanto, no mesmo texto afirma-se que o MIB cria um conjunto de objetos com nomes, tipos e relações entre si para uma entidade a ser gerenciada” (FOROUZAN, 2008).\n\nDessa forma, podemos dizer que o SNMP utiliza os protocolos auxiliares MIB e SMI. O protocolo UDP (User Datagram Protocolo) é utilizado para a comunicação entre o(s) gerente(s) e os agentes. A decisão de utilizar o protocolo UDP em vez do protocolo TCP (Transmission Control Protocol) é proposital: o monitoramento da rede deve ocorrer mesmo quando essa rede se encontra com problemas (especialmente nesses casos) e deve ter o menor custo de transmissão possível. Por não oferecer garantia de entrega, o protocolo UDP não impõe sobrecarga adicional à rede. O protocolo IP é utilizado para transmitir os pacotes SNMP ao seu destino.\n\nO protocolo SNMP passou por diferentes versões, sendo que a sua versão inicial, denominada SNMPv1, foi definida na RFC 1157, em 1990. Essa primeira versão oferecia poucos recursos de segurança. Versões posteriores (SNMPv2 e SNMPv3) adicionaram mais funcionalidades de segurança e novos recursos de gerenciamento.\n\nCOMANDOS PING E TRACERT\n\nOs comandos PING e TRACERT são utilizados para o diagnóstico de problemas de rede na maioria dos sistemas operacionais.\n\nO programa PING utiliza o protocolo ICPM (Internet Control Message Protocol) para enviar pacotes pela rede e mede o tempo de ida e volta desses pacotes, sendo útil para identificar o funcionamento básico da comunicação.\n\nO programa TRACERT funciona de forma um pouco diferente, apresentando a rota seguida pelos pacotes e o tempo associado aos trechos dessa rota. Diferentes implementações podem utilizar o protocolo UDP ou ICMP, dependendo do sistema operacional utilizado.\n\nMODELO OSI\n\nA organização ISO (International Standartization Organization), em conjunto com outras entidades, criou o modelo OSI (Open System Interconnection) em parte como uma tentativa de padronizar os equipamentos e os protocolos de rede, em uma época em que era muito comum o uso de padrões proprietários (final da década de 1970). Contudo, por uma série de razões, algumas de natureza técnicas e outras de natureza comercial, o modelo OSI acabou sendo mais um referencial idealizado do que um padrão utilizado de forma prática. Vale notar que a pilha de protocolos TCP/IP antecede o modelo OSI, sendo mais simples e tornando-se muito mais popular, o que pode ter contribuído para o uso mais teórico do modelo OSI.\n\nA figura 1 apresenta, de forma sumária, a organização em 7 camadas definidas pelo modelo OSI.",
+            "referenciasBibliograficas": "Questão 23 – Enade 2014 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 17.\n\nIndicações bibliográficas:\n• FOROUZAN, A. B. Comunicação de dados e redes de computadores. São Paulo: McGraw-Hill, 2008.\n• MAURO, D.; SCHMIDT, K. Essential SNMP: help for system and network administrators. 2. ed. Sebastopol: O’Reilly, 2005.\n• TANENBAUM, A. S.; WHETHERALL, D. J. Redes de computadores. São Paulo: Pearson Prentice Hall, 2011.\n• TORRES, G. Redes de computadores. Rio de Janeiro: Novaterra, 2013.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "I.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "I e II.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "II e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "E",
+                "texto": "III e IV.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: E."
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "É baseado numa estrutura de comunicação requisição/resposta, não suportando outro tipo de comunicação.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. O protocolo SNMP permite que o agente envie também notificações para o gerente."
+              },
+              {
+                "numero": "II",
+                "texto": "É implementado por diversas aplicações, como PING e TRACERT, nas quais o comando é emitido pelo dispositivo cliente.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. O protocolo SNMP é baseado em diversos outros protocolos, como os protocolos SMI, MIB, UDP e IP. O programa PING e o programa TRACERT não estão relacionados ao protocolo SNMP. Contudo, é possível obter informações similares aos resultados dos comandos PING e TRACERT pela utilização do protocolo SNMP (às vezes, chamado de “SNMP ping”). É importante ter em mente que o PING “tradicional” é baseado em outro protocolo, o protocolo ICMP (Internet Control Message Protocol), e não no protocolo SNMP."
+              },
+              {
+                "numero": "III",
+                "texto": "Permite o monitoramento de elementos de rede, como roteadores e switches, podendo ser utilizado para servidores e estações de trabalho, desde que se tenha o suporte ao SNMP instalado.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O protocolo SNMP pode ser utilizado para monitorar diferentes tipos de equipamentos. Os agentes devem apresentar um programa que funcione como um servidor, acessado pelo gerente por meio da porta UDP."
+              },
+              {
+                "numero": "IV",
+                "texto": "Gerencia elementos em qualquer rede IP alcançável e permite o encaminhamento de pacotes de uma rede para outra.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O protocolo funciona desde que o equipamento monitorado apresente suporte ao protocolo SNMP e que haja uma rede IP capaz de transportar os pacotes entre os agentes e o(s) gerente(s)."
+              }
+            ],
+            "anexos": [
+              {
+                "titulo": "Figura 1. Modelo OSI",
+                "arquivo": "figuras/b2-osi.png"
+              }
+            ]
+          },
+          {
+            "tituloInterno": "B2 Q2 · Versões do SNMP (Enade 2014 Q19)",
+            "contexto": "Leia o texto a seguir.\n\nA solução de gerência padronizada mais usada no mundo chama-se Internet-Standard Network Management Framework. Essa solução é mais conhecida como Gerência SNMP (Simple Network Management Protocol). Esse modelo descreve não apenas o protocolo de gerenciamento, mas também um conjunto de regras que são usadas para definir as informações que podem ser utilizadas.\n\nRose, T. M. The Simple Book: An Introduction to Network Management. 2. ed. Prentice-Hall, 1996 (com adaptações).",
+            "enunciado": "Em relação aos protocolos de gerenciamento de rede, avalie as afirmativas.",
+            "tipoQuestao": "AfirmativasCombinadas",
+            "tema": "Redes de Computadores",
+            "subtema": "Gerência de redes (SNMP)",
+            "dificuldade": 3,
+            "explicacaoPosResposta": "PROTOCOLO SNMP\n\nRedes de computadores são ambientes complexos, em que dispositivos de diferentes tipos e com diferentes finalidades interagem. O papel do administrador de redes é gerenciar essa estrutura complexa, garantindo o seu bom funcionamento.\n\nCom a finalidade de facilitar o gerenciamento de redes de computadores que utilizam o protocolo TCP/IP, foi criado o Protocolo de Gerenciamento de Redes Simples (SNMP). Não devemos confundir o protocolo SNMP com o protocolo SMTP (Simple Mail Transfer Protocol), desenvolvido com intenção distinta (transmissão de correio eletrônico).\n\nO protocolo SNMP foi ciado para auxiliar no gerenciamento da rede, permitindo que sejam coletadas informações dos dispositivos nela conectados. Além da coleta das informações, o protocolo também possibilita o controle de equipamentos por meio do envio de comandos.\n\nDo ponto de vista arquitetural, o protocolo SNMP é composto por gerentes e agentes. A estação gerenciadora (ou gerente) é normalmente uma máquina que o administrador utiliza para a monitoração e para o controle da rede, enquanto os agentes são os equipamentos gerenciados. Tipicamente, os agentes podem ser os diversos roteadores e switches, além de outros computadores.\n\nÉ interessante observar que, na arquitetura do protocolo SNMP, ocorre uma espécie de “inversão de papéis”: o gerente atua como um cliente dos agentes, que fornecem dados como um servidor. Cada agente apresenta um banco de dados com as informações de gerenciamento, chamado de MIB, ou Management Information Base, que vai fornecer informações para o seu gerenciamento.\n\nSegundo Forouzan (2008), além do MIB, o protocolo SNMP também utiliza outro protocolo auxiliar, o SMI (Structure of Management Information), que define as regras para o estabelecimento de nomes a objetos, estabelece tipos de objeto (inclusive abrangência e comprimento) e mostra como codificar objetos e valores.\n\nNo entanto, no mesmo texto afirma-se que o MIB cria um conjunto de objetos com nomes, tipos e relações entre si para uma entidade a ser gerenciada” (FOROUZAN, 2008).\n\nDessa forma, podemos dizer que o SNMP utiliza os protocolos auxiliares MIB e SMI. O protocolo UDP (User Datagram Protocolo) é utilizado para a comunicação entre o(s) gerente(s) e os agentes. A decisão de utilizar o protocolo UDP em vez do protocolo TCP (Transmission Control Protocol) é proposital: o monitoramento da rede deve ocorrer mesmo quando essa rede se encontra com problemas (especialmente nesses casos) e deve ter o menor custo de transmissão possível. Por não oferecer garantia de entrega, o protocolo UDP não impõe sobrecarga adicional à rede. O protocolo IP é utilizado para transmitir os pacotes SNMP ao seu destino.\n\nO protocolo SNMP passou por diferentes versões, sendo que a sua versão inicial, denominada SNMPv1, foi definida na RFC 1157, em 1990. Essa primeira versão oferecia poucos recursos de segurança. Versões posteriores (SNMPv2 e SNMPv3) adicionaram mais funcionalidades de segurança e novos recursos de gerenciamento.\n\nCOMANDOS PING E TRACERT\n\nOs comandos PING e TRACERT são utilizados para o diagnóstico de problemas de rede na maioria dos sistemas operacionais.\n\nO programa PING utiliza o protocolo ICPM (Internet Control Message Protocol) para enviar pacotes pela rede e mede o tempo de ida e volta desses pacotes, sendo útil para identificar o funcionamento básico da comunicação.\n\nO programa TRACERT funciona de forma um pouco diferente, apresentando a rota seguida pelos pacotes e o tempo associado aos trechos dessa rota. Diferentes implementações podem utilizar o protocolo UDP ou ICMP, dependendo do sistema operacional utilizado.\n\nMODELO OSI\n\nA organização ISO (International Standartization Organization), em conjunto com outras entidades, criou o modelo OSI (Open System Interconnection) em parte como uma tentativa de padronizar os equipamentos e os protocolos de rede, em uma época em que era muito comum o uso de padrões proprietários (final da década de 1970). Contudo, por uma série de razões, algumas de natureza técnicas e outras de natureza comercial, o modelo OSI acabou sendo mais um referencial idealizado do que um padrão utilizado de forma prática. Vale notar que a pilha de protocolos TCP/IP antecede o modelo OSI, sendo mais simples e tornando-se muito mais popular, o que pode ter contribuído para o uso mais teórico do modelo OSI.\n\nA figura 1 apresenta, de forma sumária, a organização em 7 camadas definidas pelo modelo OSI.",
+            "referenciasBibliograficas": "Questão 19 – Enade 2014 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 17.\n\nIndicações bibliográficas:\n• FOROUZAN, A. B. Comunicação de dados e redes de computadores. São Paulo: McGraw-Hill, 2008.\n• MAURO, D.; SCHMIDT, K. Essential SNMP: help for system and network administrators. 2. ed. Sebastopol: O’Reilly, 2005.\n• TANENBAUM, A. S.; WHETHERALL, D. J. Redes de computadores. São Paulo: Pearson Prentice Hall, 2011.\n• TORRES, G. Redes de computadores. Rio de Janeiro: Novaterra, 2013.",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "I e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "B",
+                "texto": "II e III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "C",
+                "texto": "II e IV.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "D",
+                "texto": "I, II e III.",
+                "ehCorreta": false,
+                "justificativa": ""
+              },
+              {
+                "letra": "E",
+                "texto": "I, III e IV.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta: E."
+              }
+            ],
+            "afirmativas": [
+              {
+                "numero": "I",
+                "texto": "O SNMP atua na camada 7 do modelo OSI.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O protocolo SNMP atua na camada de aplicação (camada 7) do modelo OSI, que é um modelo conceitual de um sistema de telecomunicações."
+              },
+              {
+                "numero": "II",
+                "texto": "Apenas o SNMPv1 usa a noção de comunidades para estabelecer um grau de confiança entre os agentes e os gerentes, o SNMPv2 e o SNMPv3 utilizam um subsistema de segurança que fornece serviços de autenticação e privacidade baseados no usuário.",
+                "ehCorreta": false,
+                "justificativa": "Afirmativa incorreta. Apenas o SNMPv3 apresenta um subsistema sofisticado de segurança, adicionando elementos como autenticação forte e comunicação privada entre as entidades gerenciadas."
+              },
+              {
+                "numero": "III",
+                "texto": "O SNMPv2 fornece gerenciamento de rede centralizado e distribuído incluindo aprimoramentos na sua estrutura e gerenciamento.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O SNMPv2 é uma evolução do SNMPv1, com a incorporação de algumas novas funcionalidades e melhorias de segurança do protocolo. Vale notar que mudanças de fato relevantes no aspecto da segurança foram apenas adicionadas na versão SNMPv3."
+              },
+              {
+                "numero": "IV",
+                "texto": "O SNMPv3 foi criado para solucionar as questões de segurança das versões anteriores, fornecendo acesso seguro às informações de gerenciamento por meio de autenticação e criptografia de pacotes.",
+                "ehCorreta": true,
+                "justificativa": "Afirmativa correta. O SNMPv2 é uma evolução do SNMPv1, com a incorporação de algumas novas funcionalidades e melhorias de segurança do protocolo. Vale notar que mudanças de fato relevantes no aspecto da segurança foram apenas adicionadas na versão SNMPv3."
+              }
+            ],
+            "anexos": []
+          },
+          {
+            "tituloInterno": "B2 Q7 · Formas de virtualização (Enade 2014 Q27)",
+            "contexto": "Virtualização não é uma tecnologia nova e está presente desde o tempo dos primeiros sistemas de grande porte. Recentemente, o termo tornou-se onipresente em infraestrutura de TI, representando qualquer tipo de método de ofuscação, em que um processo de TI é removido do seu ambiente operacional físico, tornando-se virtual. Por isso, a virtualização pode ser aplicada a quase todas as partes de uma infraestrutura de TI.",
+            "enunciado": "Sobre as diversas formas de virtualização de infraestrutura de TI é correto afirmar que",
+            "tipoQuestao": "MultiplaEscolha",
+            "tema": "Infraestrutura de TI",
+            "subtema": "Virtualização",
+            "dificuldade": 2,
+            "explicacaoPosResposta": "VIRTUALIZAÇÃO DE SERVIDORES\n\nAtualmente, computadores têm enorme capacidade de processamento. Essa capacidade é muito superior ao consumo típico de uma única aplicação. Além disso, as máquinas atuais dispõem de extraordinária capacidade de entrada e saída de dados. No processo de entrada e de saída de dados em uma máquina, é possível que ela fique ociosa por muito tempo. Isso significa que uma mesma máquina poderia ser utilizada para duas ou mais aplicações simultaneamente e, dessa forma, ela apresentaria uso mais eficiente.\n\nIsso não é uma novidade no mundo da computação. Desde a década de 1970, sistemas multiusuários e multitarefas tornaram-se comuns, com o objetivo de aproveitar a capacidade de processamento das máquinas, porque tais sistemas operacionais ainda não tinham “virtualizado” a máquina, como é usual nas tecnologias atuais. Cada usuário utilizava o sistema de forma independente e os diversos recursos das máquinas (processamento, armazenamento e comunicação) eram compartilhados entre os usuários; somente o sistema operacional era único para todos os usuários do sistema. Em alguns sistemas pioneiros, podia existir uma forma rudimentar de máquina virtual.\n\nUm dos grandes objetivos no desenvolvimento de um sistema operacional é o de isolar os processos em execução e o de isolar usuários entre si. Cada usuário deve ser capaz de utilizar o sistema e influenciar ao mínimo os demais usuários do sistema (a menos que isso seja desejado, como no caso de comunicação). Cada processo deve executar de forma independente dos demais (também se excetuando os casos em que há essa comunicação deliberada).\n\nNo caso limite, o objetivo passa a rodar mais de um sistema operacional em uma mesma máquina, ao mesmo tempo. E mais do que apenas abstrair somente o acesso ao hardware, passa-se a querer abstrair completamente o seu funcionamento e oferecer a possibilidade de simulação em um ou mais hardwares virtuais. Dessa forma, é possível criar “máquinas virtuais”, definidas por software. Essa é a ideia básica da virtualização.\n\nA virtualização oferece uma série de vantagens. As várias máquinas virtuais, rodando em uma máquina real, podem rodar diferentes sistemas operacionais. Elas têm configurações específicas para cada aplicação e podem levar a um processo de atualização e migração rápido e eficiente dos recursos de informática previamente instalados e/ou em uso em dada empresa. Contudo, existe um custo computacional associado a esse tipo de solução, uma vez que uma série de operações que eram feitas por um hardware dedicado agora são feitas por uma camada de software.\n\nNa figura 1, é possível ver o cenário convencional, com aplicações executando diretamente em um servidor. Os diversos aplicativos rodam no sistema operacional diretamente instalado na máquina real.\n\nUma outra possibilidade é a ilustrada na figura 2.\n\nMARSHALL, REYNOLDS e MCCROY, 2006 (com adaptações).\n\nNo caso da figura 2, um conjunto de máquinas virtuais executa em um hardware real. Cada máquina virtual pode executar um sistema operacional diferente e ter um conjunto de configurações específicas. Além disso, cada aplicativo que executa dentro de cada uma das máquinas virtuais está completamente isolado dos aplicativos que rodam nas demais máquinas virtuais. A “máquina real” executa um hypervisor, uma espécie de sistema operacional mínimo, especialmente projetado para executar máquinas virtuais. Essa é a principal estrutura utilizada em servidores de empresas que vendem serviços de virtualização. Finalmente, na figura 3, apresenta-se outra possibilidade: um sistema operacional que executa no hardware real e que tem instalado um software de virtualização (como alguns produtos para desktop da VMWare ou o VirtualBox da Oracle, entre outros). Esse software, por sua vez, “virtualiza” a máquina real e torna-a capaz de executar diversas máquinas virtuais, cada uma com um sistema operacional potencialmente diferente. Essa abordagem é bastante comum em desktops e workstations, em função da sua praticidade.\n\nMARSHALL, REYNOLDS e MCCROY, 2006 (com adaptações).\n\nA configuração da figura 3 impõe um custo computacional mais elevado do que o da configuração da figura 2, que tende a ser mais eficiente, e, por isso, é bastante utilizada em servidores.",
+            "referenciasBibliograficas": "Questão 27 – Enade 2014 — Material Instrucional Específico – ADS – CQA/UNIP – Tomo 17.\n\nIndicações bibliográficas:\n• Ver indicações bibliográficas das questões 7 e 8 do Tomo 17 (MARSHALL; REYNOLDS; MCCROY, 2006; VERAS, 2011).",
+            "pontos": 2,
+            "alternativas": [
+              {
+                "letra": "A",
+                "texto": "a virtualização de switches implica em um controle direto das interfaces de rede de um equipamento hospedeiro por suas máquinas virtuais.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. A camada de virtualização deve isolar o controle direto da placa de rede das máquinas virtuais."
+              },
+              {
+                "letra": "B",
+                "texto": "as Redes Locais Virtuais (VLANs) não podem ser consideradas exemplos de virtualização de rede, pois não permitem independência no acesso à rede.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. VLANs são exemplos de virtualização, pois criam uma estrutura de redes lógicas virtuais independentes e rodam em uma mesma rede física."
+              },
+              {
+                "letra": "C",
+                "texto": "o uso de servidores de terminais, um exemplo de virtualização de desktops, torna complexa a entrega de novas estações de trabalho e sua respectiva administração.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. O uso de servidores de terminais simplifica e barateia a entrega de novas estações de trabalho para os funcionários em uma empresa, uma vez que a TI pode inclusive entregar máquinas mais simples e baratas para os funcionários, enquanto os servidores de terminais centralizam a configuração mais complexa."
+              },
+              {
+                "letra": "D",
+                "texto": "a virtualização de armazenamento trata da técnica na qual os discos de dados são abstraídos do sistema operacional que os utiliza, não importando onde estejam fisicamente instalados.",
+                "ehCorreta": true,
+                "justificativa": "Alternativa correta. A virtualização de armazenamento possibilita que o sistema operacional trabalhe com diferentes dispositivos em diferentes localizações de forma transparente."
+              },
+              {
+                "letra": "E",
+                "texto": "os valores maiores de manutenção e um tempo maior de indisponibilidade são custos associados à virtualização de servidores, e são mais elevados quando comparados ao modelo de servidores físicos.",
+                "ehCorreta": false,
+                "justificativa": "Alternativa incorreta. A virtualização de servidores tem justamente o papel de reduzir o custo de manutenção e diminuir o tempo de indisponibilidade, uma vez que várias máquinas virtuais rodam sob um mesmo servidor físico."
+              }
+            ],
+            "afirmativas": [],
+            "anexos": []
+          }
+        ]
+      }
+    }
+  ]
+}
