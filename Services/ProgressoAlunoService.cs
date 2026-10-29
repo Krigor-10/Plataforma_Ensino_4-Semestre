@@ -215,6 +215,58 @@ public class ProgressoAlunoService : IProgressoAlunoService
         await _context.SaveChangesAsync();
     }
 
+    public async Task<LiberacaoAvaliacoesInfo> ObterLiberacaoAvaliacoesAsync(int matriculaId)
+    {
+        var matricula = await _context.Matriculas
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == matriculaId)
+            ?? throw new KeyNotFoundException("Matricula nao encontrada.");
+
+        // Busca os modulos do curso (nao so os que tem conteudo) pra um modulo
+        // sem nenhum conteudo publicado contar como "completo" (nada pendente),
+        // em vez de ficar de fora do calculo (GroupBy de uma lista vazia nao
+        // gera grupo nenhum pra esse modulo).
+        var moduloIds = await _context.Modulos
+            .AsNoTracking()
+            .Where(modulo => modulo.CursoId == matricula.CursoId)
+            .Select(modulo => modulo.Id)
+            .ToListAsync();
+
+        var conteudosCurso = await _context.ConteudosDidaticos
+            .AsNoTracking()
+            .Where(conteudo =>
+                conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
+                conteudo.CursoId == matricula.CursoId)
+            .Select(conteudo => new { conteudo.Id, conteudo.ModuloId })
+            .ToListAsync();
+
+        var conteudoIds = conteudosCurso.Select(conteudo => conteudo.Id).ToList();
+        var concluidosIds = await _context.ProgressosConteudosAlunos
+            .AsNoTracking()
+            .Where(progresso =>
+                progresso.MatriculaId == matriculaId &&
+                conteudoIds.Contains(progresso.ConteudoDidaticoId) &&
+                progresso.StatusProgresso == StatusProgressoAprendizagem.Concluido)
+            .Select(progresso => progresso.ConteudoDidaticoId)
+            .ToListAsync();
+        var concluidos = concluidosIds.ToHashSet();
+
+        // Quiz de modulo so exige os CONTEUDOS daquele modulo (nao o proprio
+        // quiz) - senao vira dependencia circular com ProgressoModuloAluno, que
+        // ja conta o quiz no peso do modulo.
+        var conteudosPorModulo = conteudosCurso.ToLookup(conteudo => conteudo.ModuloId);
+        var modulosComConteudoCompleto = moduloIds
+            .Where(moduloId => conteudosPorModulo[moduloId].All(conteudo => concluidos.Contains(conteudo.Id)))
+            .ToHashSet();
+
+        var cursoConteudosCompleto = conteudosCurso.All(conteudo => concluidos.Contains(conteudo.Id));
+
+        var (quizzesCurso, quizzesConcluidosIds) = await ObterQuizzesDoCursoAsync(matricula);
+        var cursoQuizzesCompleto = quizzesCurso.All(quiz => quizzesConcluidosIds.Contains(quiz.Id));
+
+        return new LiberacaoAvaliacoesInfo(modulosComConteudoCompleto, cursoConteudosCompleto && cursoQuizzesCompleto);
+    }
+
     private async Task RecalcularMediaModuloAsync(Matricula matricula, int moduloId, DateTime now)
     {
         // Quiz nao entra na media - e atividade formativa (RecalcularProgressoQuizAsync

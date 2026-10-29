@@ -120,13 +120,37 @@ public class AvaliacaoService : IAvaliacaoService
             .ThenBy(avaliacao => avaliacao.Titulo)
             .ToListAsync();
 
-        return avaliacoes.Select(avaliacao =>
-            MapAvaliacaoAluno(
+        // Cache por matricula pra nao recalcular a liberacao de progresso uma
+        // vez pra cada avaliacao do mesmo curso.
+        var liberacaoPorMatriculaId = new Dictionary<int, LiberacaoAvaliacoesInfo>();
+
+        async Task<LiberacaoAvaliacoesInfo> ObterLiberacaoCacheadaAsync(int matriculaId)
+        {
+            if (!liberacaoPorMatriculaId.TryGetValue(matriculaId, out var liberacao))
+            {
+                liberacao = await _progressoAlunoService.ObterLiberacaoAvaliacoesAsync(matriculaId);
+                liberacaoPorMatriculaId[matriculaId] = liberacao;
+            }
+            return liberacao;
+        }
+
+        var resultado = new List<AvaliacaoAlunoResponseDto>();
+        foreach (var avaliacao in avaliacoes)
+        {
+            var matriculaId = matriculaPorCursoId[avaliacao.CursoId];
+            var liberacao = await ObterLiberacaoCacheadaAsync(matriculaId);
+            var progressoLiberado = AvaliacaoLiberadaPorProgresso(avaliacao, liberacao);
+
+            resultado.Add(MapAvaliacaoAluno(
                 avaliacao,
-                matriculaPorCursoId[avaliacao.CursoId],
+                matriculaId,
                 tentativasPorAvaliacao.TryGetValue(avaliacao.Id, out var tentativasAvaliacao)
                     ? tentativasAvaliacao
-                    : new List<TentativaAvaliacao>()));
+                    : new List<TentativaAvaliacao>(),
+                progressoLiberado));
+        }
+
+        return resultado;
     }
 
     public async Task<Avaliacao> ObterAvaliacaoPorProfessorAsync(int id, int professorId)
@@ -844,7 +868,43 @@ public class AvaliacaoService : IAvaliacaoService
             throw new InvalidOperationException("O pagamento deste curso ainda nao foi confirmado.");
         }
 
+        if (!await AvaliacaoLiberadaPorProgressoAsync(avaliacao, matricula.Id))
+        {
+            throw new InvalidOperationException(
+                avaliacao.ModuloId.HasValue
+                    ? "Conclua todos os conteudos deste modulo para liberar esta avaliacao."
+                    : "Conclua todos os conteudos e quizzes do curso para liberar a avaliacao final.");
+        }
+
         return (avaliacao, matricula);
+    }
+
+    /// <summary>
+    /// Quiz de modulo exige 100% dos conteudos DAQUELE modulo; avaliacao sem
+    /// modulo (prova/exercicio final) exige 100% dos conteudos do curso inteiro
+    /// mais todos os quizzes de modulo ja enviados. Qualquer outra combinacao
+    /// (ex.: avaliacao vinculada a ConteudoDidaticoId especifico) nao tem
+    /// restricao de progresso por enquanto.
+    /// </summary>
+    private async Task<bool> AvaliacaoLiberadaPorProgressoAsync(Avaliacao avaliacao, int matriculaId)
+    {
+        var liberacao = await _progressoAlunoService.ObterLiberacaoAvaliacoesAsync(matriculaId);
+        return AvaliacaoLiberadaPorProgresso(avaliacao, liberacao);
+    }
+
+    private static bool AvaliacaoLiberadaPorProgresso(Avaliacao avaliacao, LiberacaoAvaliacoesInfo liberacao)
+    {
+        if (avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz && avaliacao.ModuloId.HasValue)
+        {
+            return liberacao.ModulosComConteudoCompleto.Contains(avaliacao.ModuloId.Value);
+        }
+
+        if (avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz && !avaliacao.ModuloId.HasValue)
+        {
+            return liberacao.CursoCompleto;
+        }
+
+        return true;
     }
 
     private async Task ValidarProfessorAsync(int professorId)
@@ -1424,7 +1484,8 @@ public class AvaliacaoService : IAvaliacaoService
     private static AvaliacaoAlunoResponseDto MapAvaliacaoAluno(
         Avaliacao avaliacao,
         int matriculaId,
-        IReadOnlyList<TentativaAvaliacao> tentativas)
+        IReadOnlyList<TentativaAvaliacao> tentativas,
+        bool progressoLiberado)
     {
         var ultimaTentativa = tentativas.OrderByDescending(tentativa => tentativa.NumeroTentativa).FirstOrDefault();
         var tentativasRealizadas = tentativas.Count;
@@ -1456,7 +1517,8 @@ public class AvaliacaoService : IAvaliacaoService
             UltimaNota = ultimaTentativa?.NotaBruta,
             UltimoStatusTentativa = ultimaTentativa?.StatusTentativa,
             UltimaTentativaId = ultimaTentativa?.Id,
-            PublicadoEm = avaliacao.PublicadoEm
+            PublicadoEm = avaliacao.PublicadoEm,
+            ProgressoLiberado = progressoLiberado
         };
     }
 

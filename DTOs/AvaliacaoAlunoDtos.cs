@@ -31,6 +31,13 @@ public class AvaliacaoAlunoResponseDto
     public StatusTentativaAvaliacao? UltimoStatusTentativa { get; set; }
     public int? UltimaTentativaId { get; set; }
     public DateTime? PublicadoEm { get; set; }
+
+    /// <summary>
+    /// Quiz de modulo exige 100% dos conteudos daquele modulo; avaliacao sem
+    /// modulo (prova/exercicio final) exige 100% dos conteudos do curso inteiro
+    /// mais todos os quizzes ja enviados. Ver AvaliacaoService.AvaliacaoLiberadaPorProgressoAsync.
+    /// </summary>
+    public bool ProgressoLiberado { get; set; } = true;
 }
 
 public class AlternativaQuestaoAlunoResponseDto

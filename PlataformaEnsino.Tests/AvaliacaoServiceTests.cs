@@ -1286,6 +1286,205 @@ public class AvaliacaoServiceTests
         Assert.Contains(resultado.Avisos, aviso => aviso.Contains("lido diretamente pela IA", StringComparison.OrdinalIgnoreCase));
     }
 
+    // ---------- Liberacao por progresso (quiz de modulo / avaliacao final do curso) ----------
+
+    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int turmaId, int moduloId, int cursoId, string titulo)
+    {
+        var conteudo = new ConteudoDidatico
+        {
+            Titulo = titulo,
+            TurmaId = turmaId,
+            ModuloId = moduloId,
+            PesoProgresso = 1
+        };
+        conteudo.DefinirProfessorAutor(1);
+        conteudo.DefinirCurso(cursoId);
+        conteudo.DefinirStatusPublicacao(StatusPublicacao.Publicado);
+
+        context.ConteudosDidaticos.Add(conteudo);
+        context.SaveChanges();
+        return conteudo;
+    }
+
+    [Fact]
+    public async Task ListarQuestoesPorAlunoAsync_QuizDeModuloComConteudoPendente_LancaInvalidOperation()
+    {
+        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        CriarConteudoPublicado(context, turma.Id, modulo.Id, avaliacao.CursoId, "Aula 1");
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ListarQuestoesPorAlunoAsync(avaliacao.Id, aluno.Id));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_QuizDeModuloComConteudoPendente_LancaInvalidOperation()
+    {
+        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        CriarConteudoPublicado(context, turma.Id, modulo.Id, avaliacao.CursoId, "Aula 1");
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_QuizDeModuloComConteudoConcluido_PermiteEnvio()
+    {
+        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, avaliacao.CursoId, "Aula 1");
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
+    }
+
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_QuizDeModuloComConteudoPendente_MarcaProgressoLiberadoFalso()
+    {
+        var (service, context, _, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        CriarConteudoPublicado(context, turma.Id, modulo.Id, avaliacao.CursoId, "Aula 1");
+
+        var resultado = (await service.ListarAvaliacoesPorAlunoAsync(aluno.Id)).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.False(item.ProgressoLiberado);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_AvaliacaoFinalComConteudoDoCursoPendente_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
+        CriarConteudoPublicado(context, turma.Id, modulo.Id, curso.Id, "Aula 1");
+
+        var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
+        {
+            Titulo = "Avaliacao Final",
+            TurmaId = turma.Id,
+            ModuloId = null,
+            TipoAvaliacao = TipoAvaliacao.Prova,
+            StatusPublicacao = StatusPublicacao.Publicado,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        });
+        var questao = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.EnviarRespostasAlunoAsync(avaliacaoFinal.Id, aluno.Id, dto));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_AvaliacaoFinalComConteudoConcluidoMasQuizDeModuloPendente_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, curso.Id, "Aula 1");
+
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
+
+        // Quiz do modulo publicado, mas o aluno nunca enviou nenhuma tentativa.
+        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+
+        var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
+        {
+            Titulo = "Avaliacao Final",
+            TurmaId = turma.Id,
+            ModuloId = null,
+            TipoAvaliacao = TipoAvaliacao.Prova,
+            StatusPublicacao = StatusPublicacao.Publicado,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        });
+        var questaoFinal = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoFinal.Id, AlternativaId = questaoFinal.Alternativas.First().Id } }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.EnviarRespostasAlunoAsync(avaliacaoFinal.Id, aluno.Id, dto));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_AvaliacaoFinalComConteudoEQuizDeModuloConcluidos_PermiteEnvio()
+    {
+        var context = TestContextFactory.Criar();
+        var service = new AvaliacaoService(context, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, curso.Id, "Aula 1");
+
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
+
+        var quiz = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var questaoQuiz = await service.AdicionarQuestaoAsync(quiz.Id, professor.Id, NovaQuestaoObjetivaDto());
+        await service.EnviarRespostasAlunoAsync(quiz.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoQuiz.Id, AlternativaId = questaoQuiz.Alternativas.First().Id } }
+        });
+
+        var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
+        {
+            Titulo = "Avaliacao Final",
+            TurmaId = turma.Id,
+            ModuloId = null,
+            TipoAvaliacao = TipoAvaliacao.Prova,
+            StatusPublicacao = StatusPublicacao.Publicado,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        });
+        var questaoFinal = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoFinal.Id, AlternativaId = questaoFinal.Alternativas.First().Id } }
+        };
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacaoFinal.Id, aluno.Id, dto);
+
+        Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
+    }
+
     private class ArmazenamentoArquivoServiceFake : IArmazenamentoArquivoService
     {
         private readonly Func<string>? _urlRetornada;
