@@ -27,8 +27,17 @@ import { ROUTES } from "../../lib/routes.js";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
+import VisualizadorConteudo from "../../components/VisualizadorConteudo.jsx";
 
 const PAGAMENTO_PENDENTE = 1;
+// Tipos abertos dentro do app (modal) com conclusao automatica - ver
+// pendencia_auditoria_conteudos_conclusao_exclusao_visualizacao (item B) na
+// memoria do projeto. Texto (1) e Link externo (4) continuam com handoff
+// via Linking e conclusao manual, fora do escopo pedido.
+const TIPO_PDF = 2;
+const TIPO_VIDEO = 3;
+const TIPO_IMAGEM = 5;
+const TIPOS_COM_VISUALIZADOR_INTEGRADO = new Set([TIPO_PDF, TIPO_VIDEO, TIPO_IMAGEM]);
 
 // Monta uma lista plana de linhas (conteudo + quiz vinculado + quiz solto do
 // modulo) na ordem de exibicao, pra renderizar o modulo como uma lista unica
@@ -70,6 +79,8 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
   const [cursoParaComprar, setCursoParaComprar] = useState(null);
+  const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
+  const [urlVisualizando, setUrlVisualizando] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -119,6 +130,8 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
       setCursoSelecionadoId(null);
       setModulosAbertos(new Set());
       setCursoParaComprar(null);
+      setConteudoVisualizando(null);
+      setUrlVisualizando(null);
     });
   }, [navigation]);
 
@@ -225,9 +238,17 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     // vencendo. Ver shared/apiClient.js:obterTokenValido.
     const tokenValido = await obterTokenValido();
     const url = resolverUrlArquivo(conteudo.arquivoUrl || conteudo.linkUrl, tokenValido);
-    if (url) {
-      Linking.openURL(url).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
+    if (!url) {
+      return;
     }
+
+    if (TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo)) {
+      setConteudoVisualizando(conteudo);
+      setUrlVisualizando(url);
+      return;
+    }
+
+    Linking.openURL(url).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
   }
 
   if (grupos.length === 0) {
@@ -425,6 +446,18 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         onSessionExpired={onSessionExpired}
         visivel={Boolean(quizSelecionado)}
       />
+
+      <VisualizadorConteudo
+        conteudo={conteudoVisualizando}
+        jaConcluido={Boolean(conteudoVisualizando?.concluido)}
+        onConcluir={marcarConcluido}
+        onFechar={() => {
+          setConteudoVisualizando(null);
+          setUrlVisualizando(null);
+        }}
+        url={urlVisualizando}
+        visivel={Boolean(conteudoVisualizando)}
+      />
     </View>
   );
 }
@@ -483,7 +516,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
           </Animated.View>
         ) : processando ? (
           <ActivityIndicator color={cores.destaque} size="small" />
-        ) : (
+        ) : TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo) ? null : (
           <TouchableOpacity
             accessibilityLabel={`Marcar ${conteudo.titulo} como concluído`}
             accessibilityRole="button"

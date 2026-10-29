@@ -49,7 +49,8 @@ module.exports = {
         }
       ],
       "@sentry/react-native",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video"
     ],
     extra: {
       eas: {
