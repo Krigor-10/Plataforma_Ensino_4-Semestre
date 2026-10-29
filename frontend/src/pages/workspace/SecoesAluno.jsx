@@ -1686,6 +1686,25 @@ export function SecaoConteudosAluno({
     : null;
   const cursoNaoEncontrado = Boolean(cursoIdSelecionado) && gruposConteudosPorCurso.length > 0 && !cursoAtivo;
 
+  // So avaliacoes formais (Prova/Exercicio, tipoAvaliacao !== 1) contam aqui -
+  // quizzes (tipoAvaliacao === 1) sao atividade formativa e nao liberam nem
+  // contabilizam a avaliacao que vale nota/certificado (ver regra de negocio
+  // em AvaliacaoService.AvaliacaoLiberadaPorProgresso, backend).
+  const avaliacaoLiberadaCursoAtivo = useMemo(() => {
+    if (!cursoAtivo) {
+      return null;
+    }
+
+    return (
+      avaliacoes.find(
+        (avaliacao) =>
+          Number(avaliacao.tipoAvaliacao) !== 1 &&
+          Number(avaliacao.cursoId) === cursoAtivo.id &&
+          obterDisponibilidadeAvaliacao(avaliacao).podeRealizar
+      ) || null
+    );
+  }, [avaliacoes, cursoAtivo]);
+
   function abrirListaConteudos() {
     onNavigate?.("/app/conteudos");
   }
@@ -1732,6 +1751,7 @@ export function SecaoConteudosAluno({
         <EmptyState message="Este curso nao foi encontrado na sua trilha. Volte para Conteudos e escolha outro." />
       ) : cursoAtivo ? (
         <SlideConteudosCurso
+          avaliacaoLiberada={avaliacaoLiberadaCursoAtivo}
           conteudoProcessando={conteudoProcessando}
           conteudoSelecionadoId={conteudoSelecionadoId}
           curso={cursoAtivo}
@@ -1739,6 +1759,7 @@ export function SecaoConteudosAluno({
           onAbrirRevisao={abrirRevisaoTentativa}
           onConcluir={marcarConteudoConcluido}
           onIniciarQuiz={abrirConfirmacaoAvaliacao}
+          onIrParaAvaliacao={onNavigate ? () => onNavigate(`/app/avaliacoes/${cursoAtivo.id}`) : null}
           onSelecionar={selecionarConteudoAluno}
           onVoltarConteudos={onNavigate ? abrirListaConteudos : null}
           quizIndisponivel={carregandoQuestoes || enviandoRespostas}
@@ -1770,7 +1791,7 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   5: <TbPhoto aria-hidden="true" size="1.5rem" />
 };
 
-function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
+function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoSelecionadoId, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onIrParaAvaliacao, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
   const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
 
   const [modulosAbertos, setModulosAbertos] = useState(() => {
@@ -1827,6 +1848,10 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
           <BarraProgresso mostrarTexto={false} percentual={percentualCurso} />
         </div>
       </header>
+
+      {avaliacaoLiberada ? (
+        <AvisoAvaliacaoLiberada avaliacao={avaliacaoLiberada} onIrParaAvaliacao={onIrParaAvaliacao} />
+      ) : null}
 
       {modulosVisiveis.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
@@ -2067,6 +2092,7 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                         })}
                         {modulo.quizzes.map((quiz) => {
                           const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
+                          const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
 
                           return (
                             <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-${quiz.id}`}>
@@ -2079,12 +2105,32 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                   <p className="atividades-curso__meta">
                                     <span>Quiz - {quiz.totalQuestoes || 0} questao(oes)</span>
                                     <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                    <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
+                                    <StatusPill tone={quizConcluido ? "success" : disponibilidadeQuiz.tone}>
+                                      {quizConcluido ? "Concluido" : disponibilidadeQuiz.label}
+                                    </StatusPill>
                                   </p>
                                 </div>
                                 <div className="atividades-curso__acoes">
-                                  {disponibilidadeQuiz.podeRealizar ? (
-                                    <Botao disabled={quizIndisponivel} onClick={() => onIniciarQuiz(quiz)} tamanho="pequeno" variante="fantasma">
+                                  {quizConcluido ? (
+                                    <Botao
+                                      aria-label="Revisao detalhada"
+                                      data-tooltip="Revisao detalhada"
+                                      disabled={quizIndisponivel}
+                                      onClick={() => onAbrirRevisao(quiz)}
+                                      tamanho="pequeno"
+                                      variante="fantasma"
+                                    >
+                                      <TbEye aria-hidden="true" size="1.1rem" />
+                                    </Botao>
+                                  ) : disponibilidadeQuiz.podeRealizar ? (
+                                    <Botao
+                                      className="linha-icone-texto"
+                                      disabled={quizIndisponivel}
+                                      onClick={() => onIniciarQuiz(quiz)}
+                                      tamanho="pequeno"
+                                      variante="sucesso"
+                                    >
+                                      <TbPlayerPlay aria-hidden="true" size="1rem" />
                                       Iniciar quiz
                                     </Botao>
                                   ) : null}
@@ -2110,6 +2156,38 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
         <VisualizadorPdf onFechar={fecharVisualizador} titulo={visualizador.titulo} url={visualizador.url} />
       ) : null}
     </div>
+  );
+}
+
+// Avaliacao aqui e sempre a prova/exercicio formal (tipoAvaliacao !== 1) -
+// quiz nunca aparece neste aviso, ver AvisoAvaliacaoLiberada no caller.
+function AvisoAvaliacaoLiberada({ avaliacao, onIrParaAvaliacao }) {
+  return (
+    <motion.div
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      aria-label="Avaliacao liberada"
+      className="cartao-avaliacao-liberada"
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+      role="status"
+      transition={{ duration: 0.25, ease: "easeOut" }}
+    >
+      <span aria-hidden="true" className="cartao-avaliacao-liberada__icone">
+        <TbCircleCheck size={26} />
+      </span>
+      <div className="cartao-avaliacao-liberada__info">
+        <strong>🎉 Etapa concluida!</strong>
+        <p>
+          Voce concluiu todas as etapas de conteudo deste curso! A avaliacao &ldquo;{avaliacao.titulo}&rdquo; ja esta
+          disponivel para voce realizar.
+        </p>
+      </div>
+      {onIrParaAvaliacao ? (
+        <Botao className="linha-icone-texto" onClick={onIrParaAvaliacao} tamanho="pequeno" variante="sucesso">
+          <TbTrophy aria-hidden="true" size="1rem" />
+          Ir para a avaliacao
+        </Botao>
+      ) : null}
+    </motion.div>
   );
 }
 

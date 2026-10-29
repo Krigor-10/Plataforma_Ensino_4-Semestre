@@ -6705,6 +6705,62 @@
   }
 }
 
+/* Aviso "avaliacao liberada" na tela Conteudos — mesmo tratamento visual do
+   cartao de certificado desbloqueado, pra manter a linguagem de "conquista"
+   consistente entre as duas telas. */
+.cartao-avaliacao-liberada {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cor-sucesso) 10%, var(--cor-fundo-elevado)),
+    color-mix(in srgb, var(--cor-sucesso) 4%, var(--cor-fundo-elevado))
+  );
+  border: 1px solid var(--cor-sucesso);
+  border-radius: var(--raio-xl);
+  padding: var(--espaco-lg) var(--espaco-xl);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cor-sucesso) 25%, transparent);
+  margin-bottom: var(--espaco-lg);
+}
+
+.cartao-avaliacao-liberada__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cor-sucesso) 16%, transparent);
+  color: var(--cor-sucesso);
+  flex-shrink: 0;
+}
+
+.cartao-avaliacao-liberada__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cartao-avaliacao-liberada__info strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--cor-texto-forte);
+}
+
+.cartao-avaliacao-liberada__info p {
+  font-size: 0.82rem;
+  color: var(--cor-texto-mudo);
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 600px) {
+  .cartao-avaliacao-liberada {
+    flex-wrap: wrap;
+    padding: var(--espaco-md);
+    gap: var(--espaco-sm);
+  }
+}
+
 /* ------------------------------------------------------------
    CERTIFICADOS
    ------------------------------------------------------------ */
