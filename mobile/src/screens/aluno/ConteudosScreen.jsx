@@ -150,6 +150,26 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
 
   const cursoAtivo = grupos.find((curso) => curso.id === cursoSelecionadoId) || null;
 
+  // So avaliacao formal (Prova/Exercicio, tipoAvaliacao !== 1) conta aqui -
+  // quiz e atividade formativa e nunca libera nem substitui essa avaliacao
+  // (mesma regra de AvaliacaoService.AvaliacaoLiberadaPorProgresso, backend;
+  // nada duplicado aqui, so lendo avaliacao.progressoLiberado via
+  // obterDisponibilidadeAvaliacao, igual ja faz o LinhaConteudo pro quiz).
+  const avaliacaoLiberada = useMemo(() => {
+    if (!cursoAtivo) {
+      return null;
+    }
+
+    return (
+      snapshot.avaliacoes.find(
+        (avaliacao) =>
+          Number(avaliacao.tipoAvaliacao) !== 1 &&
+          Number(avaliacao.cursoId) === cursoAtivo.id &&
+          obterDisponibilidadeAvaliacao(avaliacao).podeRealizar
+      ) || null
+    );
+  }, [cursoAtivo, snapshot.avaliacoes]);
+
   // Matricula aprovada + pagamento ainda nao confirmado - mesmo criterio que
   // antes vivia em CursosScreen.jsx (removida nesta rodada do redesign, ver
   // GradeCursosConteudos.jsx), reaproveitado aqui pra colocar a pilula
@@ -331,6 +351,13 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
       </View>
 
       <ScrollView contentContainerStyle={estilos.corpo}>
+        {avaliacaoLiberada ? (
+          <AvisoAvaliacaoLiberada
+            avaliacao={avaliacaoLiberada}
+            onIrParaAvaliacao={() => navigation.navigate(ROUTES.AVALIACOES, { cursoId: cursoAtivo.id })}
+          />
+        ) : null}
+
         {cursoAtivo.proximoConteudo ? (
           <View style={estilos.continuar}>
             <View style={estilos.continuarIcone}>
@@ -479,6 +506,65 @@ function useAnimacaoConclusao(concluido) {
   }, [concluido, escala, reduzMovimento]);
 
   return useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
+}
+
+// Entrada suave (fade + leve deslocamento) na primeira montagem do card -
+// dispara de novo toda vez que o card passa de escondido pra visivel (o pai
+// so monta este componente quando ha avaliacao liberada, entao reaproveita o
+// ciclo de mount/unmount do React em vez de um estado extra pra "ja animei").
+function useEntradaSutil() {
+  const reduzMovimento = useReducedMotion();
+  const opacidade = useSharedValue(reduzMovimento ? 1 : 0);
+  const deslocamento = useSharedValue(reduzMovimento ? 0 : -8);
+
+  useEffect(() => {
+    if (reduzMovimento) {
+      return;
+    }
+    opacidade.value = withTiming(1, { duration: 220 });
+    deslocamento.value = withTiming(0, { duration: 220 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer animar uma vez, na montagem deste card.
+  }, []);
+
+  return useAnimatedStyle(() => ({ opacity: opacidade.value, transform: [{ translateY: deslocamento.value }] }));
+}
+
+// Avaliacao aqui e sempre a prova/exercicio formal (tipoAvaliacao !== 1) -
+// quiz nunca aparece neste aviso, ver filtro em avaliacaoLiberada no caller.
+function AvisoAvaliacaoLiberada({ avaliacao, onIrParaAvaliacao }) {
+  const estiloEntrada = useEntradaSutil();
+
+  return (
+    <Animated.View
+      accessibilityHint="Indica que a avaliacao final deste curso foi liberada apos a conclusao do conteudo"
+      accessibilityLabel="Avaliação liberada"
+      accessibilityRole="alert"
+      style={[estilos.avisoAvaliacao, estiloEntrada]}
+    >
+      <View style={estilos.avisoAvaliacaoCabecalho}>
+        <View style={estilos.avisoAvaliacaoIcone}>
+          <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
+        </View>
+        <View style={estilos.avisoAvaliacaoTextos}>
+          <Text style={estilos.avisoAvaliacaoTitulo}>🎉 Etapa concluída!</Text>
+          <Text style={estilos.avisoAvaliacaoTexto}>
+            Você concluiu todas as etapas de conteúdo deste curso! A avaliação &ldquo;{avaliacao.titulo}&rdquo; já
+            está disponível para você realizar.
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        accessibilityHint="Abre a avaliação liberada deste curso"
+        accessibilityLabel={`Ir para a avaliação ${avaliacao.titulo}`}
+        accessibilityRole="button"
+        onPress={onIrParaAvaliacao}
+        style={estilos.avisoAvaliacaoBotao}
+      >
+        <Ionicons color={cores.texto} name="trophy" size={15} />
+        <Text style={estilos.avisoAvaliacaoBotaoTexto}>Ir para a avaliação</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 }
 
 // Linha de lista (Material 3) pra um conteudo ou quiz dentro do modulo —
@@ -682,6 +768,41 @@ const estilos = StyleSheet.create({
     minHeight: 36
   },
   continuarBotaoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
+  // Aviso "avaliacao liberada" - mesma linguagem visual do card "continuar"
+  // (fundo elevado + borda lateral de destaque), em verde-sucesso em vez de
+  // roxo-destaque, pra marcar conquista sem repetir a cor da acao padrao.
+  // Botao embaixo (nao ao lado) pra caber confortavel em telas estreitas.
+  avisoAvaliacao: {
+    backgroundColor: cores.sucessoFundo,
+    borderRadius: raios.lg,
+    padding: 14,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: cores.sucesso,
+    gap: espacamentos.md
+  },
+  avisoAvaliacaoCabecalho: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.md },
+  avisoAvaliacaoIcone: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  avisoAvaliacaoTextos: { flex: 1 },
+  avisoAvaliacaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginBottom: 4 },
+  avisoAvaliacaoTexto: { color: cores.textoRotulo, fontSize: tipografia.rotulo, lineHeight: 18 },
+  avisoAvaliacaoBotao: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: cores.sucesso,
+    borderRadius: raios.sm,
+    minHeight: 40
+  },
+  avisoAvaliacaoBotaoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
   modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
   moduloCabecalho: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, padding: 14 },
   moduloIcone: {
