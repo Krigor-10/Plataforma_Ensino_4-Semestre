@@ -22,6 +22,16 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
   const matriculasAprovadas = matriculas.filter((matricula) => normalizeStatus(matricula.status) === "Aprovada");
   const progressoPorConteudoId = new Map((progressos.conteudos || []).map((progresso) => [progresso.conteudoDidaticoId, progresso]));
 
+  // Fonte de verdade do progresso de modulo/curso e o backend
+  // (ProgressoAlunoService.RecalcularModuloAsync/RecalcularCursoAsync), que
+  // pondera quiz junto com conteudo via PesoProgresso e so conta o quiz
+  // apos envio valido (todas as questoes respondidas) - nunca por abrir o
+  // modal ou navegar entre questoes. Mesmo padrao do web (SecoesAluno.jsx).
+  const progressoCursoPorMatriculaId = new Map((progressos.cursos || []).map((progresso) => [progresso.matriculaId, progresso]));
+  const progressoModuloPorChave = new Map(
+    (progressos.modulos || []).map((progresso) => [`${progresso.matriculaId}-${progresso.moduloId}`, progresso])
+  );
+
   const modulosPorCursoId = new Map();
   modulos.forEach((modulo) => {
     const cursoId = Number(modulo.cursoId);
@@ -39,6 +49,7 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
         id: cursoId,
         titulo: obterTituloCurso(cursoId, cursoPorId),
         imagemUrl: cursoPorId.get(cursoId)?.imagemUrl || null,
+        matriculaId: null,
         modulos: new Map(),
         totalConteudos: 0,
         concluidos: 0
@@ -64,6 +75,7 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
   matriculasAprovadas.forEach((matricula) => {
     const cursoId = Number(matricula.cursoId);
     const curso = garantirCurso(cursoId);
+    curso.matriculaId = matricula.id;
 
     (modulosPorCursoId.get(cursoId) || []).forEach((modulo) => {
       garantirModulo(curso, Number(modulo.id), modulo.titulo, modulo.dataCriacao);
@@ -118,6 +130,8 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
     });
 
   return [...cursosMapeados.values()].map((curso) => {
+    const progressoCurso = curso.matriculaId != null ? progressoCursoPorMatriculaId.get(curso.matriculaId) : null;
+
     const modulosOrdenados = [...curso.modulos.values()]
       .filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0)
       .sort((moduloA, moduloB) => new Date(moduloA.dataCriacao || 0) - new Date(moduloB.dataCriacao || 0));
@@ -134,7 +148,21 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
         return { ...conteudo, bloqueado: itemBloqueado };
       });
 
-      return { ...modulo, bloqueado, conteudos: conteudosComBloqueio };
+      const progressoModulo =
+        curso.matriculaId != null ? progressoModuloPorChave.get(`${curso.matriculaId}-${modulo.id}`) : null;
+
+      return {
+        ...modulo,
+        bloqueado,
+        conteudos: conteudosComBloqueio,
+        progresso:
+          progressoModulo?.percentualConclusao ??
+          (modulo.conteudos.length ? (modulo.concluidos / modulo.conteudos.length) * 100 : 0),
+        // Com progresso real do backend, "concluido" tambem considera o(s)
+        // quiz(zes) do modulo (PesoProgresso) - nao so os conteudos, que e o
+        // unico criterio quando ainda nao ha registro de progresso.
+        concluido: progressoModulo ? estaConcluido(progressoModulo) : modulo.concluidos === modulo.conteudos.length
+      };
     });
 
     const conteudosDoCurso = modulosComBloqueio.flatMap((modulo) => modulo.conteudos);
@@ -143,7 +171,8 @@ export function agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matric
       id: curso.id,
       titulo: curso.titulo,
       imagemUrl: curso.imagemUrl,
-      progresso: curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0,
+      progresso:
+        progressoCurso?.percentualConclusao ?? (curso.totalConteudos ? (curso.concluidos / curso.totalConteudos) * 100 : 0),
       modulos: modulosComBloqueio,
       proximoConteudo: conteudosDoCurso.find((conteudo) => !conteudo.concluido && !conteudo.bloqueado) || null
     };

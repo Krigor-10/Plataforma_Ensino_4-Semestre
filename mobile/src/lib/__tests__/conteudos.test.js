@@ -2,7 +2,7 @@ import { agruparConteudosPorCurso } from "../conteudos.js";
 
 function montarCenario() {
   const cursos = [{ id: 1, titulo: "Curso Teste", imagemUrl: "/uploads/cursos/curso-1.jpg" }];
-  const matriculas = [{ cursoId: 1, turmaId: 5, status: "Aprovada" }];
+  const matriculas = [{ id: 9, cursoId: 1, turmaId: 5, status: "Aprovada" }];
   const modulos = [
     { id: 100, cursoId: 1, titulo: "Modulo 1", dataCriacao: "2026-01-01" },
     { id: 200, cursoId: 1, titulo: "Modulo 2", dataCriacao: "2026-02-01" }
@@ -91,5 +91,38 @@ describe("agruparConteudosPorCurso", () => {
     const [curso] = agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos });
 
     expect(curso.imagemUrl).toBe("/uploads/cursos/curso-1.jpg");
+  });
+
+  // Reproduz o bug relatado: todos os conteudos do modulo concluidos (o que
+  // daria 100% num calculo so-de-conteudo), mas o quiz do modulo ainda nao
+  // foi enviado - o backend (ProgressoModuloAluno, ponderado por
+  // PesoProgresso) reflete isso como incompleto, e o agrupamento deve usar
+  // esse valor real em vez de recalcular so pelos conteudos.
+  it("usa o progresso real do backend (que pondera quiz) em vez de recalcular so pelos conteudos", () => {
+    const { avaliacoes, conteudos, cursos, matriculas, modulos } = montarCenario();
+    const progressos = {
+      conteudos: [
+        { conteudoDidaticoId: 1, percentualConclusao: 100 },
+        { conteudoDidaticoId: 2, percentualConclusao: 100 }
+      ],
+      modulos: [{ matriculaId: 9, moduloId: 100, percentualConclusao: 50, statusProgresso: 1 }],
+      cursos: [{ matriculaId: 9, percentualConclusao: 20, statusProgresso: 1 }]
+    };
+
+    const [curso] = agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos });
+    const [modulo1] = curso.modulos;
+
+    expect(modulo1.progresso).toBe(50);
+    expect(modulo1.concluido).toBe(false);
+    expect(curso.progresso).toBe(20);
+  });
+
+  it("cai no calculo so-de-conteudo quando ainda nao ha registro de progresso de modulo/curso no backend", () => {
+    const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenario();
+    const [curso] = agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos });
+    const [modulo1] = curso.modulos;
+
+    expect(modulo1.progresso).toBe(50);
+    expect(modulo1.concluido).toBe(false);
   });
 });

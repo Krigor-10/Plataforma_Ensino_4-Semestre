@@ -385,8 +385,11 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         {cursoAtivo.modulos.map((modulo) => {
           const aberto = !modulo.bloqueado && modulosAbertos.has(modulo.id);
           const totalConteudos = modulo.conteudos.length;
-          const moduloConcluido = totalConteudos > 0 && modulo.concluidos === totalConteudos;
-          const percentualModulo = totalConteudos > 0 ? (modulo.concluidos / totalConteudos) * 100 : 0;
+          // modulo.concluido/progresso ja vem do backend (ProgressoModuloAluno,
+          // ver agruparConteudosPorCurso) e pondera o(s) quiz(zes) do modulo
+          // junto com os conteudos - nao so os conteudos.
+          const moduloConcluido = totalConteudos > 0 && modulo.concluido;
+          const percentualModulo = totalConteudos > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
           const linhas = montarLinhasModulo(modulo);
 
           return (
