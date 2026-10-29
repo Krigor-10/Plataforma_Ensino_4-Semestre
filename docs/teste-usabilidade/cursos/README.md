@@ -33,6 +33,7 @@ Mapeamento da análise da UNIP para os campos da API:
 cursos.json      # os 3 cursos (campos com os nomes dos DTOs da API, em camelCase)
 aulas/*.pdf      # 12 aulas (ia-*, es-*, rd-*)
 figuras/*.png    # 6 figuras usadas como anexo de questão
+capas/*.jpg      # capas dos cursos (imagemCapa), copiadas de frontend/src/assets
 _gerador/        # scripts Python que geraram o pacote (PyMuPDF + reportlab)
 ```
 
@@ -48,8 +49,7 @@ O JSON usa o **nome** do enum. A API recebe o **número**, então o script conve
 | `tipoAvaliacao` | `Quiz`=1, `Prova`=2 |
 | status de publicação | `Rascunho`=1, `Publicado`=2 |
 
-`arquivo` (aulas e anexos) é um caminho relativo a esta pasta. O script faz o upload e usa a URL devolvida.
-
+`arquivo` (aulas e anexos) e `imagemCapa` são caminhos relativos a esta pasta. O script faz o upload e usa a URL devolvida (a capa vai por `POST /Cursos/{id}/imagem`, só Admin).
 ## Gerar de novo
 
 ```bash

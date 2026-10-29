@@ -9,6 +9,14 @@ import aulas as A
 DEST = sys.argv[1]
 os.makedirs(os.path.join(DEST, "aulas"), exist_ok=True)
 os.makedirs(os.path.join(DEST, "figuras"), exist_ok=True)
+os.makedirs(os.path.join(DEST, "capas"), exist_ok=True)
+ASSETS = "E:/Projetos/Projetos/Projetos/Edtech/ConsoleApp3/frontend/src/assets/"
+
+
+def capa(nome):
+    """Capa reaproveitada dos assets do projeto (decisao do usuario)."""
+    shutil.copy(ASSETS + nome, os.path.join(DEST, "capas", nome))
+    return f"capas/{nome}"
 
 
 def figura(chave, pagina, nome, indice=0):
@@ -535,17 +543,17 @@ def final(titulo, questoes):
 cursos = [
     {"chave": "gratis-ia", "titulo": "Introdução à Inteligência Artificial",
      "descricao": "Curso gratuito: conceitos fundamentais, história, ética, regulamentação e criação de bons prompts. Baseado na apostila de IA da Esesp.",
-     "preco": 0, "modeloCurso": "Gratuito", "turma": {"nomeTurma": "Turma de teste – IA"},
+     "preco": 0, "imagemCapa": capa("course-eng-ia.jpg"), "modeloCurso": "Gratuito", "turma": {"nomeTurma": "Turma de teste – IA"},
      "modulos": montar_modulos("ia", ["Fundamentos", "Uso responsável"], [ia_quiz1, ia_quiz2]),
      "avaliacaoFinal": final("Avaliação final – Introdução à IA", ia_final)},
     {"chave": "pago-eng-software", "titulo": "Engenharia de Software",
      "descricao": "Requisitos, engenharia de requisitos, arquitetura, gestão de configuração, métodos ágeis e gestão de projetos, com questões do ENADE comentadas.",
-     "preco": 29.90, "modeloCurso": "PagoPacote", "turma": {"nomeTurma": "Turma de teste – Engenharia de Software"},
+     "preco": 29.90, "imagemCapa": capa("course-arquitetura-soft.jpg"), "modeloCurso": "PagoPacote", "turma": {"nomeTurma": "Turma de teste – Engenharia de Software"},
      "modulos": montar_modulos("es", ["Requisitos", "Projeto e processo"], [es_quiz1, es_quiz2]),
      "avaliacaoFinal": final("Avaliação final – Engenharia de Software", es_final)},
     {"chave": "acompanhado-redes", "titulo": "Redes e Infraestrutura",
      "descricao": "Protocolos TCP/IP, FTP, servidores web, gerência de redes com SNMP e virtualização, com acompanhamento de professor e questões do ENADE comentadas.",
-     "preco": 59.90, "modeloCurso": "Acompanhado", "turma": {"nomeTurma": "Turma de teste – Redes e Infraestrutura"},
+     "preco": 59.90, "imagemCapa": capa("course-devops-cloud.jpg"), "modeloCurso": "Acompanhado", "turma": {"nomeTurma": "Turma de teste – Redes e Infraestrutura"},
      "modulos": montar_modulos("rd", ["Protocolos e serviços", "Gestão e infraestrutura"], [rd_quiz1, rd_quiz2]),
      "avaliacaoFinal": final("Avaliação final – Redes e Infraestrutura", rd_final)},
 ]

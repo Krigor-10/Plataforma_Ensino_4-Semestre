@@ -18,6 +18,7 @@ Esta tarefa **substitui a Parte B** de `docs/producao/PROMPT-agente-ia-anthropic
 - **`cursos.json`:** 3 cursos (`gratis-ia`, `pago-eng-software`, `acompanhado-redes`). Os campos usam os nomes dos DTOs da API em camelCase, e os enums vêm **por nome** (a tabela de conversão está no README).
 - **`aulas/*.pdf`:** 12 aulas, sendo 2 módulos × 2 aulas por curso.
 - **`figuras/*.png`:** 6 figuras, que são anexos das questões finais (2 por curso).
+- **`capas/*.jpg`:** capas dos cursos (campo `imagemCapa`). São cópias de `frontend/src/assets`, escolhidas pelo usuário: IA → `course-eng-ia.jpg`, Engenharia de Software → `course-arquitetura-soft.jpg`, Redes → `course-devops-cloud.jpg`.
 - **Questões:** cada uma está no formato do `CriarQuestaoAvaliacaoDto` (alternativas com `justificativa`, `afirmativas` quando o tipo é `AfirmativasCombinadas`), mais a chave extra `anexos: [{titulo, arquivo}]`.
 
 **O conteúdo não muda.** Se a API recusar algum campo (tamanho, validação), **não edite o JSON**: pare e reporte qual campo e qual regra.
@@ -28,7 +29,7 @@ Use Node ou C#, como for mais simples no repositório. Ele lê o pacote e cria t
 
 **Variáveis de ambiente:**
 - `CARGA_API_URL`
-- `CARGA_TOKEN_COORDENADOR`: token de Coordenador ou Admin
+- `CARGA_TOKEN_ADMIN`: precisa ser **Admin**, porque a capa (`POST /Cursos/{id}/imagem`) só aceita Admin
 - `CARGA_TOKEN_PROFESSOR`
 - `CARGA_PROFESSOR_ID`
 
@@ -41,8 +42,9 @@ O usuário obtém os tokens fazendo login.
 
 **Ordem por curso:**
 
-1. **Coordenador/Admin:**
+1. **Admin:**
    - `POST /Cursos` com `{titulo, descricao, preco, modeloCurso}`;
+   - `POST /Cursos/{id}/imagem` (multipart, campo `imagem`) com o arquivo de `imagemCapa`;
    - `POST /Modulos` com `{titulo, cursoId}` (2 módulos);
    - `POST /Cursos/{id}/professores/{CARGA_PROFESSOR_ID}`;
    - `POST /Turmas` com `{nomeTurma, cursoId, professorId}`.
@@ -71,6 +73,7 @@ O usuário obtém os tokens fazendo login.
 
 Com os cursos carregados no ambiente local, confira **no web e no mobile**, logado como aluno:
 
+0. **Capas:** os 3 cursos aparecem com a capa própria (não a genérica) na Home pública, no catálogo e em Cursos, no web e no mobile.
 1. **Aulas em PDF:** abrem no visualizador e marcam a aula como concluída. Os quizzes aparecem na trilha **depois** das 2 aulas do módulo.
 2. **Anexo da questão ao responder:** o mobile já mostra (commit `38eaddd`). **Confira o web.** Se o aluno não vir a figura ao responder no web, implemente igual ao mobile.
 3. **Quebras de parágrafo:** contexto, enunciado e explicação vêm com `\n\n` entre parágrafos (o contexto das questões ENADE tem texto-base, fonte e cenário). Hoje o web parece juntar tudo num bloco só, porque não há `white-space: pre-line`. Faça respeitar as quebras em contexto, enunciado, explicação e justificativas, nas telas de responder e de revisão.
@@ -89,12 +92,11 @@ Rode a suíte de testes do backend e do frontend/mobile que o repositório já t
 - Editar o conteúdo do pacote.
 - Criar contas em produção.
 - Rodar o script em produção.
-- Imagem de capa dos cursos: nenhuma foi definida. Os cursos ficam sem `ImagemUrl`.
 
 ## Pronto quando
 
 - `tools/carga-cursos-teste/` funciona em `--dry-run` e `--aplicar` no ambiente local, é idempotente e tem `README.md`.
-- Os itens 1 a 7 conferidos no web e no mobile, com o que faltava corrigido e testado.
+- Os itens 0 a 7 conferidos no web e no mobile, com o que faltava corrigido e testado.
 - Testes verdes.
 - Ao terminar, liste:
   - os arquivos alterados e criados;

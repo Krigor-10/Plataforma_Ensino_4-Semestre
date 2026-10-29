@@ -6,6 +6,7 @@
       "titulo": "Introdução à Inteligência Artificial",
       "descricao": "Curso gratuito: conceitos fundamentais, história, ética, regulamentação e criação de bons prompts. Baseado na apostila de IA da Esesp.",
       "preco": 0,
+      "imagemCapa": "capas/course-eng-ia.jpg",
       "modeloCurso": "Gratuito",
       "turma": {
         "nomeTurma": "Turma de teste – IA"
@@ -607,6 +608,7 @@
       "titulo": "Engenharia de Software",
       "descricao": "Requisitos, engenharia de requisitos, arquitetura, gestão de configuração, métodos ágeis e gestão de projetos, com questões do ENADE comentadas.",
       "preco": 29.9,
+      "imagemCapa": "capas/course-arquitetura-soft.jpg",
       "modeloCurso": "PagoPacote",
       "turma": {
         "nomeTurma": "Turma de teste – Engenharia de Software"
@@ -1183,6 +1185,7 @@
       "titulo": "Redes e Infraestrutura",
       "descricao": "Protocolos TCP/IP, FTP, servidores web, gerência de redes com SNMP e virtualização, com acompanhamento de professor e questões do ENADE comentadas.",
       "preco": 59.9,
+      "imagemCapa": "capas/course-devops-cloud.jpg",
       "modeloCurso": "Acompanhado",
       "turma": {
         "nomeTurma": "Turma de teste – Redes e Infraestrutura"
