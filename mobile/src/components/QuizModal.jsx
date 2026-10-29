@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
+import { ActivityIndicator, AppState, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Botao from "./Botao.jsx";
 import ModalConfirmarSaida from "./ModalConfirmarSaida.jsx";
 import Toast from "./Toast.jsx";
-import { apiRequest, ApiError } from "../lib/api.js";
+import { apiRequest, ApiError, obterTokenValido } from "../lib/api.js";
+import { resolverUrlArquivo } from "../lib/arquivos.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeEvaluationType, normalizeQuestionType } from "../lib/format.js";
 import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
@@ -43,8 +44,26 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   const [tempoRestante, setTempoRestante] = useState(null);
   const [tentativaOffset, setTentativaOffset] = useState(0);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [tokenArquivos, setTokenArquivos] = useState(null);
   const prazoFinalRef = useRef(null);
   const insets = useSafeAreaInsets();
+
+  // Token pro ?access_token= dos anexos de questao (Image nao manda header
+  // Authorization) - busca uma vez quando o modal abre, ver lib/arquivos.js.
+  useEffect(() => {
+    if (!visivel) {
+      return;
+    }
+    let cancelado = false;
+    obterTokenValido().then((token) => {
+      if (!cancelado) {
+        setTokenArquivos(token);
+      }
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [visivel]);
 
   useEffect(() => {
     if (visivel) {
@@ -447,6 +466,24 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
               <Text style={estilos.enunciadoTipo}>{normalizeQuestionType(questaoAtual.tipoQuestao)} - {formatScore(questaoAtual.pontos)} ponto(s)</Text>
               <Text style={estilos.enunciado}>{questaoAtual.enunciado}</Text>
 
+              {questaoAtual.anexos?.length > 0 ? (
+                <View style={estilos.anexosQuestao}>
+                  {questaoAtual.anexos.map((anexo) =>
+                    anexo.tipoAnexo === "Imagem" ? (
+                      <Image
+                        accessibilityIgnoresInvertColors
+                        key={anexo.id}
+                        resizeMode="contain"
+                        source={{ uri: resolverUrlArquivo(anexo.arquivoUrl, tokenArquivos) }}
+                        style={estilos.anexoImagem}
+                      />
+                    ) : (
+                      <Text key={anexo.id} style={estilos.anexoArquivoTexto}>{anexo.titulo}</Text>
+                    )
+                  )}
+                </View>
+              ) : null}
+
               {Number(questaoAtual.tipoQuestao) === 3 ? (
                 <TextInput
                   editable={!enviando}
@@ -722,6 +759,9 @@ const estilos = StyleSheet.create({
   apoioTexto: { color: cores.textoSuave, marginBottom: 16, lineHeight: 20 },
   enunciadoTipo: { color: cores.informativo, fontSize: tipografia.rotulo, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
   enunciado: { color: cores.texto, fontSize: tipografia.subtitulo, marginBottom: 16, lineHeight: 22 },
+  anexosQuestao: { gap: 8, marginBottom: 16 },
+  anexoImagem: { width: "100%", height: 200, borderRadius: 10, backgroundColor: cores.fundoCartao },
+  anexoArquivoTexto: { color: cores.informativo, textDecorationLine: "underline" },
   textoResposta: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, color: cores.texto, padding: 12, minHeight: 100, textAlignVertical: "top", marginBottom: 20 },
   afirmativas: { marginBottom: 16, gap: 8 },
   afirmativaItem: { backgroundColor: cores.fundoCartao, borderRadius: 10, borderWidth: 1, borderColor: cores.bordaCartao, padding: 12 },
