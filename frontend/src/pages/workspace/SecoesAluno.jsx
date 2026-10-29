@@ -2316,6 +2316,17 @@ function obterDisponibilidadeAvaliacao(avaliacao) {
     };
   }
 
+  if (avaliacao.progressoLiberado === false) {
+    return {
+      podeRealizar: false,
+      label: "Bloqueada",
+      mensagem: avaliacao.moduloId
+        ? "Conclua todos os conteudos deste modulo para liberar esta avaliacao."
+        : "Conclua todos os conteudos e quizzes do curso para liberar a avaliacao final.",
+      tone: "warning"
+    };
+  }
+
   if (Number(avaliacao.tentativasRestantes || 0) <= 0) {
     return {
       podeRealizar: false,
