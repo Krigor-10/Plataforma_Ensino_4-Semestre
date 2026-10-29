@@ -12,6 +12,7 @@ import {
   TbChevronUp,
   TbCircleCheck,
   TbClock,
+  TbEye,
   TbFile,
   TbFileText,
   TbHelpCircle,
@@ -33,6 +34,8 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
+import VisualizadorImagem from "../../components/VisualizadorImagem.jsx";
+import VisualizadorPdf from "../../components/VisualizadorPdf.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
@@ -1775,6 +1778,22 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
     const alvo = primeiroIncompleto || modulosVisiveis[0];
     return alvo ? new Set([alvo.id]) : new Set();
   });
+  const [visualizador, setVisualizador] = useState(null);
+
+  function marcarConcluidoAoAbrir(conteudo) {
+    if (!conteudo.concluido) {
+      onConcluir(conteudo.id);
+    }
+  }
+
+  function abrirVisualizador(conteudo, acao) {
+    marcarConcluidoAoAbrir(conteudo);
+    setVisualizador({ tipo: acao.visualizador, titulo: conteudo.titulo, url: acao.href });
+  }
+
+  function fecharVisualizador() {
+    setVisualizador(null);
+  }
 
   function alternarModulo(moduloId) {
     setModulosAbertos((atual) => {
@@ -1943,8 +1962,23 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                   </p>
                                 </div>
                                 <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
-                                  {acao ? (
-                                    <a className="atividades-curso__link" href={acao.href} rel="noreferrer" target="_blank">
+                                  {acao && acao.visualizador ? (
+                                    <button
+                                      className="atividades-curso__link atividades-curso__link--botao"
+                                      disabled={processando}
+                                      onClick={() => abrirVisualizador(conteudo, acao)}
+                                      type="button"
+                                    >
+                                      {acao.label}
+                                    </button>
+                                  ) : acao ? (
+                                    <a
+                                      className="atividades-curso__link"
+                                      href={acao.href}
+                                      onClick={() => marcarConcluidoAoAbrir(conteudo)}
+                                      rel="noreferrer"
+                                      target="_blank"
+                                    >
                                       {acao.label}
                                     </a>
                                   ) : null}
@@ -1952,11 +1986,6 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                     <span aria-label="Conteudo concluido" className="atividades-curso__check">
                                       <TbCheck aria-hidden="true" size="1.1rem" />
                                     </span>
-                                  ) : null}
-                                  {!conteudo.concluido && !itemBloqueado ? (
-                                    <Botao disabled={processando} onClick={() => onConcluir(conteudo.id)} tamanho="pequeno" variante="fantasma">
-                                      {processando ? "Salvando..." : "Concluir"}
-                                    </Botao>
                                   ) : null}
                                 </div>
                               </div>
@@ -2005,14 +2034,25 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
                                             </p>
                                           </div>
                                           <div className="atividades-curso__acoes">
-                                            {disponibilidadeQuiz.podeRealizar || quizConcluido ? (
+                                            {quizConcluido ? (
                                               <Botao
-                                                disabled={quizIndisponivel || (!disponibilidadeQuiz.podeRealizar && !quizConcluido)}
-                                                onClick={() => (quizConcluido ? onAbrirRevisao(quiz) : onIniciarQuiz(quiz))}
+                                                aria-label="Revisao detalhada"
+                                                data-tooltip="Revisao detalhada"
+                                                disabled={quizIndisponivel}
+                                                onClick={() => onAbrirRevisao(quiz)}
                                                 tamanho="pequeno"
-                                                variante={quizConcluido ? "fantasma" : "primario"}
+                                                variante="fantasma"
                                               >
-                                                {quizConcluido ? "Revisao detalhada" : "Fazer quiz"}
+                                                <TbEye aria-hidden="true" size="1.1rem" />
+                                              </Botao>
+                                            ) : disponibilidadeQuiz.podeRealizar ? (
+                                              <Botao
+                                                disabled={quizIndisponivel}
+                                                onClick={() => onIniciarQuiz(quiz)}
+                                                tamanho="pequeno"
+                                                variante="primario"
+                                              >
+                                                Fazer quiz
                                               </Botao>
                                             ) : null}
                                           </div>
@@ -2062,6 +2102,13 @@ function SlideConteudosCurso({ conteudoProcessando, conteudoSelecionadoId, curso
           })}
         </div>
       )}
+
+      {visualizador?.tipo === "imagem" ? (
+        <VisualizadorImagem onFechar={fecharVisualizador} titulo={visualizador.titulo} url={visualizador.url} />
+      ) : null}
+      {visualizador?.tipo === "pdf" ? (
+        <VisualizadorPdf onFechar={fecharVisualizador} titulo={visualizador.titulo} url={visualizador.url} />
+      ) : null}
     </div>
   );
 }
@@ -2420,7 +2467,7 @@ function obterAcaoConteudoAluno(conteudo) {
   const tipo = Number(conteudo.tipoConteudo);
 
   if (tipo === 2 && conteudo.arquivoUrl) {
-    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir PDF" };
+    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir PDF", visualizador: "pdf" };
   }
 
   if (tipo === 3 && conteudo.arquivoUrl) {
@@ -2432,7 +2479,7 @@ function obterAcaoConteudoAluno(conteudo) {
   }
 
   if (tipo === 5 && conteudo.arquivoUrl) {
-    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Ver imagem" };
+    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Ver imagem", visualizador: "imagem" };
   }
 
   return null;

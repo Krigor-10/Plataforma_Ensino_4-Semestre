@@ -4192,6 +4192,16 @@
   padding-top: 0.15rem;
 }
 
+/* Badge de status na linha de conteudo do Professor: fica dentro de
+   .atividades-curso__acoes (fim da linha, alinhado a direita porque
+   .atividades-curso__corpo tem flex:1), com tamanho reduzido pra nao
+   competir com o titulo do conteudo. */
+.atividades-curso__status-badge {
+  font-size: 0.68rem;
+  padding: 0.12rem 0.5rem;
+  flex-shrink: 0;
+}
+
 .atividades-curso__check {
   display: inline-flex;
   align-items: center;
@@ -4339,6 +4349,96 @@
 
 .atividades-curso__link:hover {
   text-decoration: underline;
+}
+
+.atividades-curso__link--botao {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.atividades-curso__link--botao:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------
+   VISUALIZADORES INTEGRADOS DE CONTEUDO — imagem (modal simples)
+   e PDF (react-pdf) abertos a partir de SecoesAluno.jsx, no lugar
+   de abrir o arquivo em nova aba.
+   ------------------------------------------------------------ */
+.visualizador-imagem {
+  display: flex;
+  justify-content: center;
+}
+
+.visualizador-imagem__img {
+  max-width: 100%;
+  max-height: 70dvh;
+  border-radius: var(--raio-md);
+  object-fit: contain;
+}
+
+.visualizador-pdf {
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  max-height: 70dvh;
+}
+
+.visualizador-pdf .react-pdf__Document {
+  display: flex;
+  justify-content: center;
+}
+
+.visualizador-pdf__rodape {
+  justify-content: space-between;
+}
+
+.visualizador-pdf__navegacao,
+.visualizador-pdf__zoom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+.visualizador-pdf__navegacao button,
+.visualizador-pdf__zoom button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  background: none;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida), color var(--transicao-rapida);
+}
+
+.visualizador-pdf__navegacao button:hover:not(:disabled),
+.visualizador-pdf__zoom button:hover:not(:disabled) {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.visualizador-pdf__navegacao button:disabled,
+.visualizador-pdf__zoom button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 30rem) {
+  .visualizador-pdf__rodape {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
 }
 
 .atividades-curso__previa {
