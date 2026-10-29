@@ -1,10 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Services;
 using Xunit;
 
 namespace PlataformaEnsino.Tests;
+
+// Fake minimo so pra CertificadoService.AprovacaoCertificadoSimuladaHabilitada
+// ler EnvironmentName via IsProduction()/IsDevelopment() - os outros membros
+// nunca sao acessados por esse caminho, ficam com valor qualquer.
+file sealed class AmbienteFalso : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = Environments.Development;
+    public string ApplicationName { get; set; } = "PlataformaEnsino.Tests";
+    public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+    public IFileProvider ContentRootFileProvider { get; set; } = null!;
+}
 
 // CertificadoService usa Attach()/Entry() esperando a entidade ainda nao rastreada
 // (padrao normal quando cada requisicao HTTP tem seu proprio DbContext). Por isso,
@@ -678,5 +692,169 @@ public class CertificadoServiceTests
         Assert.Equal(1, primeiroResultado.Emitidos);
         Assert.Equal(0, segundoResultado.Emitidos);
         Assert.Equal(primeiraData, segundaData);
+    }
+
+    private static IConfiguration CriarConfiguracaoAprovacaoSimulada(bool habilitada) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["RecursosTeste:AprovacaoCertificadoSimulada"] = habilitada ? "true" : "false"
+            })
+            .Build();
+
+    // Mesmo cenario de EmitirCertificadosDoCursoAsync_NotaAbaixoDoMinimo_NaoEmiteFicaBloqueado,
+    // so que com o modo de teste habilitado em ambiente Development - a
+    // avaliacao formal ja foi corrigida (nota real 6.99, abaixo do minimo),
+    // entao a aprovacao simulada deve liberar o certificado sem alterar a
+    // nota real registrada.
+    [Fact]
+    public async Task ModoDeTeste_NotaAbaixoDoMinimoMasAprovacaoSimuladaHabilitadaEmDevelopment_EmiteCertificadoSemAlterarNotaReal()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        const decimal notaRealBaixa = 6.99m;
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(notaRealBaixa, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(notaRealBaixa);
+        context.SaveChanges();
+
+        var ambienteDesenvolvimento = new AmbienteFalso { EnvironmentName = Environments.Development };
+        var configuracaoHabilitada = CriarConfiguracaoAprovacaoSimulada(habilitada: true);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), configuracaoHabilitada, ambienteDesenvolvimento);
+
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(1, resultado.Emitidos);
+        Assert.Equal(0, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+        // Nota real preservada - a aprovacao simulada nunca reescreve NotaFinal.
+        Assert.Equal(notaRealBaixa, matriculaAtualizada.NotaFinal);
+    }
+
+    // Mesma config/ambiente do teste acima, mas em Production - o hard-block
+    // via IHostEnvironment.IsProduction() tem que vencer mesmo com a flag
+    // true, exatamente como em produção de verdade (restrição de segurança).
+    [Fact]
+    public async Task ModoDeTeste_FlagHabilitadaMasAmbienteProduction_NaoEmiteContinuaBloqueado()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(6.99m, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(6.99m);
+        context.SaveChanges();
+
+        var ambienteProducao = new AmbienteFalso { EnvironmentName = Environments.Production };
+        var configuracaoHabilitada = CriarConfiguracaoAprovacaoSimulada(habilitada: true);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), configuracaoHabilitada, ambienteProducao);
+
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    // Aprovacao simulada nunca pode liberar quem nem fez a avaliacao ainda -
+    // sem LancamentoNotaAluno nenhum, "avaliacao pendente de correcao"
+    // bloqueia independente da flag de teste.
+    [Fact]
+    public async Task ModoDeTeste_AvaliacaoAindaNaoRealizada_NaoAprovaMesmoComFlagHabilitada()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        // Nenhum LancamentoNotaAluno criado - aluno ainda nao fez a prova.
+
+        var ambienteDesenvolvimento = new AmbienteFalso { EnvironmentName = Environments.Development };
+        var configuracaoHabilitada = CriarConfiguracaoAprovacaoSimulada(habilitada: true);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), configuracaoHabilitada, ambienteDesenvolvimento);
+
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    // Flag desabilitada (padrao) em Development - comportamento tem que ser
+    // identico ao de producao: nota abaixo do minimo continua bloqueando.
+    [Fact]
+    public async Task ModoDeTeste_FlagDesabilitada_ComportamentoIdenticoAoPadrao()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(6.99m, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(6.99m);
+        context.SaveChanges();
+
+        var ambienteDesenvolvimento = new AmbienteFalso { EnvironmentName = Environments.Development };
+        var configuracaoDesabilitada = CriarConfiguracaoAprovacaoSimulada(habilitada: false);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), configuracaoDesabilitada, ambienteDesenvolvimento);
+
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(0, resultado.Emitidos);
+        Assert.Equal(1, resultado.Bloqueados);
     }
 }

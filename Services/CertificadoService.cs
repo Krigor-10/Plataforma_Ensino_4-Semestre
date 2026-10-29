@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
@@ -9,11 +11,49 @@ public class CertificadoService : ICertificadoService
 {
     private readonly PlataformaContext _context;
     private readonly IAcessoAcademicoService _acessoAcademicoService;
+    private readonly IConfiguration? _configuration;
+    private readonly IHostEnvironment? _ambiente;
+    private readonly ILogger<CertificadoService>? _logger;
 
-    public CertificadoService(PlataformaContext context, IAcessoAcademicoService acessoAcademicoService)
+    // configuration/ambiente/logger sao opcionais so pra nao obrigar os ~30
+    // testes existentes (que instanciam CertificadoService direto, sem DI) a
+    // passar um fake de cada - em produção o ASP.NET Core sempre injeta os
+    // 3 de verdade via Program.cs. Quando nulos (testes antigos que nao
+    // passam esses argumentos), AprovacaoCertificadoSimuladaHabilitada()
+    // volta false - mesmo comportamento de sempre, sem modo de teste.
+    public CertificadoService(
+        PlataformaContext context,
+        IAcessoAcademicoService acessoAcademicoService,
+        IConfiguration? configuration = null,
+        IHostEnvironment? ambiente = null,
+        ILogger<CertificadoService>? logger = null)
     {
         _context = context;
         _acessoAcademicoService = acessoAcademicoService;
+        _configuration = configuration;
+        _ambiente = ambiente;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Modo de teste pra validar o fluxo de emissao de certificado sem
+    /// depender de uma nota real >= 7 - existe SO pra homologacao/dev.
+    /// Dupla trava, nenhuma delas vindo do cliente: (1) o ambiente nao pode
+    /// ser Production, hard-coded, mesmo que a config diga true por engano;
+    /// (2) a flag "RecursosTeste:AprovacaoCertificadoSimulada" precisa estar
+    /// true no appsettings/variavel de ambiente do SERVIDOR (nunca um valor
+    /// que o aluno manda na requisicao). So baseado nisso, a avaliacao ainda
+    /// precisa ter sido corrigida de verdade pra essa aprovacao simulada
+    /// valer - ver uso em ObterPendenciasAsync.
+    /// </summary>
+    private bool AprovacaoCertificadoSimuladaHabilitada()
+    {
+        if (_ambiente is null || _ambiente.IsProduction())
+        {
+            return false;
+        }
+
+        return _configuration?.GetValue("RecursosTeste:AprovacaoCertificadoSimulada", false) ?? false;
     }
 
     public async Task<Matricula> EmitirCertificadoAsync(int alunoId, int matriculaId)
@@ -174,8 +214,22 @@ public class CertificadoService : ICertificadoService
 
         if (possuiAvaliacaoFormalPublicada && matricula.NotaFinal < 7m)
         {
-            const string mensagem = "A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado.";
-            pendencias.Add(new Pendencia(mensagem, () => new ArgumentException(mensagem)));
+            // Aprovacao simulada (modo de teste, ver AprovacaoCertificadoSimuladaHabilitada)
+            // so vale depois que a avaliacao formal foi realmente corrigida
+            // (!existeAvaliacaoPendente, checado acima) - nunca aprova quem
+            // ainda nem fez a prova. A nota real (matricula.NotaFinal) nao e
+            // alterada, so essa pendencia especifica deixa de bloquear.
+            if (!existeAvaliacaoPendente && AprovacaoCertificadoSimuladaHabilitada())
+            {
+                _logger?.LogWarning(
+                    "[MODO DE TESTE] Aprovacao simulada aplicada na matricula {MatriculaId} (aluno {AlunoId}, curso {CursoId}): nota real {NotaFinal} fica abaixo do minimo 7,00, mas RecursosTeste:AprovacaoCertificadoSimulada esta habilitada em ambiente nao-producao - pendencia de nota minima ignorada so pra este fluxo de homologacao.",
+                    matricula.Id, matricula.AlunoId, matricula.CursoId, matricula.NotaFinal);
+            }
+            else
+            {
+                const string mensagem = "A nota final do curso precisa ser igual ou superior a 7,00 para emitir o certificado.";
+                pendencias.Add(new Pendencia(mensagem, () => new ArgumentException(mensagem)));
+            }
         }
 
         // Curso Acompanhado tem conteudo liberado aos poucos pelo professor —
