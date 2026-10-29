@@ -15,6 +15,17 @@ export function obterDisponibilidadeAvaliacao(avaliacao) {
     return { podeRealizar: false, label: "Sem questões", mensagem: "Esta avaliação ainda não possui questões publicadas.", tone: "aviso" };
   }
 
+  if (avaliacao.progressoLiberado === false) {
+    return {
+      podeRealizar: false,
+      label: "Bloqueada",
+      mensagem: avaliacao.moduloId
+        ? "Conclua todos os conteúdos deste módulo para liberar esta avaliação."
+        : "Conclua todos os conteúdos e quizzes do curso para liberar a avaliação final.",
+      tone: "aviso"
+    };
+  }
+
   if (Number(avaliacao.tentativasRestantes || 0) <= 0) {
     return { podeRealizar: false, label: "Concluída", mensagem: "Você já usou todas as tentativas desta avaliação.", tone: "neutro" };
   }
