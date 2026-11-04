@@ -50,7 +50,7 @@ para a connection string do SQL). Pra trocar só a chave de IA sem
 reprovisionar o resto:
 ```bash
 az webapp config appsettings set --resource-group <seu-resource-group> \
-  --name <webAppName> --settings IA__ApiKey='<chave-anthropic>'
+  --name <webAppName> --settings IA__Provedor=Anthropic IA__ApiKey='<chave-anthropic>' IA__Modelo=claude-opus-5
 ```
 
 Anote os outputs do comando (`webAppName`, `webAppDefaultHostName`,

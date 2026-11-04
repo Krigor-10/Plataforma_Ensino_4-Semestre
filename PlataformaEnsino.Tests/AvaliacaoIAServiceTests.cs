@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.DTOs;
@@ -221,10 +222,98 @@ public class AvaliacaoIAServiceTests
         Assert.Contains(Convert.ToBase64String(bytesFalsos), corpoRequisicaoCapturado);
     }
 
+    [Fact]
+    public async Task GerarQuestoesAsync_RequisicaoPadrao_UsaModeloEsforcoEFallbackCorretos()
+    {
+        string? corpoRequisicaoCapturado = null;
+        HttpRequestHeaders? cabecalhosCapturados = null;
+        var handler = new FakeHttpMessageHandler(request =>
+        {
+            corpoRequisicaoCapturado = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            cabecalhosCapturados = request.Headers;
+            return CriarRespostaAnthropic("""{ "questoes": [], "avisos": [], "limitacaoDetectada": true }""");
+        });
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        await service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None);
+
+        Assert.NotNull(corpoRequisicaoCapturado);
+        Assert.Contains("\"model\":\"claude-opus-5\"", corpoRequisicaoCapturado);
+        Assert.Contains("\"output_config\":{\"effort\":\"high\"}", corpoRequisicaoCapturado);
+        Assert.Contains("\"fallbacks\":\"default\"", corpoRequisicaoCapturado);
+        Assert.DoesNotContain("temperature", corpoRequisicaoCapturado);
+        Assert.DoesNotContain("thinking", corpoRequisicaoCapturado);
+
+        Assert.Equal("2023-06-01", cabecalhosCapturados!.GetValues("anthropic-version").Single());
+        Assert.Equal("server-side-fallback-2026-07-01", cabecalhosCapturados.GetValues("anthropic-beta").Single());
+    }
+
+    [Fact]
+    public async Task GerarQuestoesAsync_RespostaComBlocoThinkingAntesDoTexto_LeSoOTexto()
+    {
+        const string jsonModelo = """{ "questoes": [], "avisos": [], "limitacaoDetectada": true }""";
+        var jsonEscapado = System.Text.Json.JsonSerializer.Serialize(jsonModelo);
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                $$"""{"stop_reason":"end_turn","content":[{"type":"thinking","thinking":""},{"type":"text","text":{{jsonEscapado}}}]}""",
+                System.Text.Encoding.UTF8,
+                "application/json")
+        });
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        var resultado = await service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None);
+
+        Assert.Empty(resultado.Questoes);
+        Assert.True(resultado.LimitacaoDetectada);
+    }
+
+    [Fact]
+    public async Task GerarQuestoesAsync_StopReasonRefusal_LancaInvalidOperationException()
+    {
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"stop_reason":"refusal","content":[]}""", System.Text.Encoding.UTF8, "application/json")
+        });
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GerarQuestoesAsync_StopReasonMaxTokens_LancaInvalidOperationException()
+    {
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"stop_reason":"max_tokens","content":[{"type":"text","text":"{incompleto"}]}""", System.Text.Encoding.UTF8, "application/json")
+        });
+        var service = new AvaliacaoIAService(
+            new FakeHttpClientFactory(handler),
+            CriarConfiguracao(),
+            new ValidadorQuestaoIaService(),
+            NullLogger<AvaliacaoIAService>.Instance);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GerarQuestoesAsync(MaterialParaIaDto.DeTexto("texto qualquer"), ConfiguracaoPadrao(), CancellationToken.None));
+    }
+
     private static HttpResponseMessage CriarRespostaAnthropic(string textoDoModelo)
     {
         var jsonEscapado = System.Text.Json.JsonSerializer.Serialize(textoDoModelo);
-        var corpo = $"{{\"content\":[{{\"type\":\"text\",\"text\":{jsonEscapado}}}]}}";
+        var corpo = $"{{\"stop_reason\":\"end_turn\",\"content\":[{{\"type\":\"text\",\"text\":{jsonEscapado}}}]}}";
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(corpo, System.Text.Encoding.UTF8, "application/json")

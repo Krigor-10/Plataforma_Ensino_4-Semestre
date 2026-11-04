@@ -80,6 +80,16 @@ dotnet user-secrets set "Jwt:Key" "gere-uma-chave-aleatoria-de-32-ou-mais-caract
 
 Isso nunca vai para o Git — fica fora do repositório, em `%APPDATA%\Microsoft\UserSecrets\` (Windows) ou `~/.microsoft/usersecrets/` (Linux/macOS).
 
+### Chave da IA (`IA:ApiKey`) — geração de avaliações/quiz por IA
+
+Provedor padrão é `Anthropic` (`IA:Provedor`, trocável por `Gemini`). Sem `IA:ApiKey` preenchida, a feature fica indisponível de forma graciosa (a API sobe normalmente, só o endpoint de geração responde 422). Em desenvolvimento, pelo mesmo User Secrets acima:
+
+```bash
+dotnet user-secrets set "IA:ApiKey" "<sua-chave-anthropic>"
+```
+
+Modelo padrão é `claude-opus-5` (`IA:Modelo`, trocável) e esforço padrão `high` (`IA:Esforco`: `low`/`medium`/`high`/`xhigh`/`max`). Em produção (Azure), ver [`infra/README.md`](infra/README.md#geração-de-avaliações-por-ia-opcional).
+
 ### Origens CORS (`Cors:AllowedOrigins`)
 
 Mesmo guard-rail do `Jwt:Key`: fora de `Development`, a aplicação recusa subir se `Cors:AllowedOrigins` vier vazio. Sem isso, a API subiria "funcionando" e só falharia em uso real — toda chamada do navegador seria bloqueada por CORS silenciosamente. Configure via `Cors__AllowedOrigins__0` (e `__1`, `__2`... se precisar de mais de uma origem).

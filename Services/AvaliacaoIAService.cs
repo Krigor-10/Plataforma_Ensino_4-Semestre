@@ -10,7 +10,7 @@ public class AvaliacaoIAService : IAvaliacaoIAService
 {
     public const string NomeHttpClient = "Anthropic";
     private const string VersaoApiAnthropic = "2023-06-01";
-    private const int MaxTokensResposta = 8000;
+    private const int MaxTokensResposta = 16000;
     // Limite grosseiro de caracteres enviados por chamada - protege custo/tempo
     // contra um material muito grande (risco #3 da proposta aprovada).
     private const int TamanhoMaximoTextoFonte = 60_000;
@@ -78,11 +78,14 @@ public class AvaliacaoIAService : IAvaliacaoIAService
             conteudoMensagem = PromptGeracaoQuestoesIa.MontarComTexto(textoTruncado, configuracao);
         }
 
-        var modelo = _configuration["IA:Modelo"] ?? "claude-sonnet-5";
+        var modelo = _configuration["IA:Modelo"] ?? "claude-opus-5";
+        var esforco = _configuration["IA:Esforco"] ?? "high";
         var corpoRequisicao = new
         {
             model = modelo,
             max_tokens = MaxTokensResposta,
+            output_config = new { effort = esforco },
+            fallbacks = "default",
             messages = new[]
             {
                 new { role = "user", content = conteudoMensagem }
@@ -94,6 +97,11 @@ public class AvaliacaoIAService : IAvaliacaoIAService
         cliente.DefaultRequestHeaders.Add("x-api-key", apiKey);
         cliente.DefaultRequestHeaders.Remove("anthropic-version");
         cliente.DefaultRequestHeaders.Add("anthropic-version", VersaoApiAnthropic);
+        cliente.DefaultRequestHeaders.Remove("anthropic-beta");
+        // Habilita o fallback automatico server-side (fallbacks: "default" no corpo):
+        // se o Opus 5 recusar o pedido por politica (stop_reason "refusal"), a API
+        // reexecuta na mesma chamada em outro modelo, sem o professor precisar tentar de novo.
+        cliente.DefaultRequestHeaders.Add("anthropic-beta", "server-side-fallback-2026-07-01");
 
         using var conteudo = new StringContent(JsonSerializer.Serialize(corpoRequisicao), Encoding.UTF8);
         conteudo.Headers.ContentType = new MediaTypeHeaderValue("application/json");
@@ -121,21 +129,42 @@ public class AvaliacaoIAService : IAvaliacaoIAService
             throw new InvalidOperationException("O servico de geracao por IA esta indisponivel agora. Tente novamente em alguns minutos.");
         }
 
-        var textoResposta = await ExtrairTextoDaRespostaAsync(resposta, cancellationToken);
+        var json = await resposta.Content.ReadAsStringAsync(cancellationToken);
+        using var documento = JsonDocument.Parse(json);
+        var raiz = documento.RootElement;
+
+        var stopReason = raiz.TryGetProperty("stop_reason", out var stopReasonEl) ? stopReasonEl.GetString() : null;
+        _logger.LogInformation(
+            "Resposta do provedor de IA: modelo={Modelo} stopReason={StopReason} usage={Usage}",
+            raiz.TryGetProperty("model", out var modeloEl) ? modeloEl.GetString() : null,
+            stopReason,
+            raiz.TryGetProperty("usage", out var usageEl) ? usageEl.GetRawText() : null);
+
+        // Antes de ler o texto: "refusal" e o modelo recusando o pedido por politica
+        // (nao ha JSON pra interpretar), "max_tokens" e resposta cortada no meio -
+        // em nenhum dos dois faz sentido tentar desserializar o que veio em "content".
+        if (stopReason == "refusal")
+        {
+            throw new InvalidOperationException("A IA nao pode gerar questoes para este material. Tente outro texto.");
+        }
+
+        if (stopReason == "max_tokens")
+        {
+            throw new InvalidOperationException("Resposta da IA incompleta. Tente gerar menos questoes.");
+        }
+
+        var textoResposta = ExtrairTextoDaResposta(raiz);
         var bruto = RespostaIaUtil.Desserializar(textoResposta, _logger);
 
         return RespostaIaUtil.ValidarEFiltrar(bruto, _validador);
     }
 
     // Formato de resposta especifico da Anthropic: content e um array de blocos
-    // tipados, so os do tipo "text" interessam aqui (o modelo nao usa tool-use nem
-    // outros tipos de bloco nessa chamada).
-    private static async Task<string> ExtrairTextoDaRespostaAsync(HttpResponseMessage resposta, CancellationToken cancellationToken)
+    // tipados. So os do tipo "text" interessam aqui - "thinking" (raciocinio, texto
+    // vazio por padrao) e "fallback" (marcador de troca de modelo) sao ignorados.
+    private static string ExtrairTextoDaResposta(JsonElement raiz)
     {
-        var json = await resposta.Content.ReadAsStringAsync(cancellationToken);
-
-        using var documento = JsonDocument.Parse(json);
-        var blocos = documento.RootElement.GetProperty("content");
+        var blocos = raiz.GetProperty("content");
 
         var construtor = new StringBuilder();
         foreach (var bloco in blocos.EnumerateArray())

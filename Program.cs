@@ -98,7 +98,9 @@ else
 builder.Services.AddHttpClient(AvaliacaoIAService.NomeHttpClient, cliente =>
 {
     cliente.BaseAddress = new Uri("https://api.anthropic.com/");
-    cliente.Timeout = TimeSpan.FromSeconds(90);
+    // Esforco "high" (IA:Esforco) demora mais que o padrao anterior - 90s nao sobrava
+    // margem o suficiente pra geracoes maiores.
+    cliente.Timeout = TimeSpan.FromSeconds(180);
 });
 builder.Services.AddHttpClient(GeminiAvaliacaoIAService.NomeHttpClient, cliente =>
 {
