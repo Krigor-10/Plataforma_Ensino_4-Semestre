@@ -66,6 +66,12 @@ export function AssistenteGeracaoIA({
   const [etapa, setEtapa] = useState("selecao");
   const [arquivo, setArquivo] = useState(null);
   const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState("");
+  // So importa no modo quiz: Avaliacao (nao-quiz) sempre usa arquivo avulso.
+  // Quiz pode usar um material ja cadastrado no modulo (padrao) ou, assim como
+  // Avaliacao, um PDF/DOCX enviado na hora, sem vincular a nenhum conteudo
+  // especifico (Avaliacao.ConteudoDidaticoId fica null - ja suportado pelo
+  // backend, so faltava expor essa opcao aqui).
+  const [origemMaterialQuiz, setOrigemMaterialQuiz] = useState("existente");
   const [titulo, setTitulo] = useState("");
   const [quantidadeQuestoes, setQuantidadeQuestoes] = useState("5");
   const [dificuldade, setDificuldade] = useState("3");
@@ -122,6 +128,13 @@ export function AssistenteGeracaoIA({
     [materiaisValidosParaIA, conteudoSelecionadoId]
   );
 
+  const usaUploadDeArquivo = !modoExclusivoQuiz || origemMaterialQuiz === "upload";
+
+  function selecionarOrigemMaterialQuiz(origem) {
+    setOrigemMaterialQuiz(origem);
+    setMensagem({ tone: "", message: "" });
+  }
+
   function selecionarConteudoExistente(event) {
     const id = event.target.value;
     setConteudoSelecionadoId(id);
@@ -133,13 +146,13 @@ export function AssistenteGeracaoIA({
   }
 
   function avancarParaConfiguracao() {
-    if (modoExclusivoQuiz) {
-      if (!conteudoSelecionadoId) {
-        setMensagem({ tone: "error", message: "Selecione um material de texto ou PDF antes de continuar." });
+    if (usaUploadDeArquivo) {
+      if (!arquivo) {
+        setMensagem({ tone: "error", message: "Selecione um arquivo PDF ou DOCX antes de continuar." });
         return;
       }
-    } else if (!arquivo) {
-      setMensagem({ tone: "error", message: "Selecione um arquivo PDF ou DOCX antes de continuar." });
+    } else if (!conteudoSelecionadoId) {
+      setMensagem({ tone: "error", message: "Selecione um material de texto ou PDF antes de continuar." });
       return;
     }
 
@@ -177,7 +190,7 @@ export function AssistenteGeracaoIA({
             descricao: "",
             turmaId: Number(cursoAtivo.turma.id),
             moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
-            conteudoDidaticoId: modoExclusivoQuiz ? Number(conteudoSelecionadoId) : null,
+            conteudoDidaticoId: modoExclusivoQuiz && !usaUploadDeArquivo ? Number(conteudoSelecionadoId) : null,
             tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,
             statusPublicacao: 1,
             dataAbertura: null,
@@ -195,7 +208,16 @@ export function AssistenteGeracaoIA({
       }
 
       let resultado;
-      if (modoExclusivoQuiz) {
+      if (usaUploadDeArquivo) {
+        const formData = new FormData();
+        formData.append("arquivo", arquivo);
+        formData.append("quantidadeQuestoes", quantidadeQuestoes);
+        formData.append("dificuldade", dificuldade);
+        formData.append("tiposPermitidos", tiposSelecionados.join(","));
+        formData.append("assunto", assunto.trim());
+
+        resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes`, { method: "POST", body: formData });
+      } else {
         resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes-de-conteudo`, {
           method: "POST",
           body: JSON.stringify({
@@ -206,15 +228,6 @@ export function AssistenteGeracaoIA({
             assunto: assunto.trim()
           })
         });
-      } else {
-        const formData = new FormData();
-        formData.append("arquivo", arquivo);
-        formData.append("quantidadeQuestoes", quantidadeQuestoes);
-        formData.append("dificuldade", dificuldade);
-        formData.append("tiposPermitidos", tiposSelecionados.join(","));
-        formData.append("assunto", assunto.trim());
-
-        resultado = await apiRequest(`/Avaliacoes/${idAvaliacao}/ia/gerar-questoes`, { method: "POST", body: formData });
       }
 
       setQuestoesGeradas((resultado.questoes || []).map(mapearQuestaoGerada));
@@ -236,7 +249,7 @@ export function AssistenteGeracaoIA({
 
   async function regenerarQuestao(indice) {
     const questaoAtual = questoesGeradas[indice];
-    const temFonte = modoExclusivoQuiz ? Boolean(conteudoSelecionadoId) : Boolean(arquivo);
+    const temFonte = usaUploadDeArquivo ? Boolean(arquivo) : Boolean(conteudoSelecionadoId);
     if (!questaoAtual || !avaliacaoGeradaId || !temFonte || indiceRegenerando !== null) {
       return;
     }
@@ -246,7 +259,16 @@ export function AssistenteGeracaoIA({
 
     try {
       let resultado;
-      if (modoExclusivoQuiz) {
+      if (usaUploadDeArquivo) {
+        const formData = new FormData();
+        formData.append("arquivo", arquivo);
+        formData.append("quantidadeQuestoes", "1");
+        formData.append("dificuldade", String(questaoAtual.dificuldade || dificuldade));
+        formData.append("tiposPermitidos", String(questaoAtual.tipoQuestao));
+        formData.append("assunto", assunto.trim());
+
+        resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes`, { method: "POST", body: formData });
+      } else {
         resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes-de-conteudo`, {
           method: "POST",
           body: JSON.stringify({
@@ -257,15 +279,6 @@ export function AssistenteGeracaoIA({
             assunto: assunto.trim()
           })
         });
-      } else {
-        const formData = new FormData();
-        formData.append("arquivo", arquivo);
-        formData.append("quantidadeQuestoes", "1");
-        formData.append("dificuldade", String(questaoAtual.dificuldade || dificuldade));
-        formData.append("tiposPermitidos", String(questaoAtual.tipoQuestao));
-        formData.append("assunto", assunto.trim());
-
-        resultado = await apiRequest(`/Avaliacoes/${avaliacaoGeradaId}/ia/gerar-questoes`, { method: "POST", body: formData });
       }
       const [questaoNova] = (resultado.questoes || []).map(mapearQuestaoGerada);
 
@@ -474,7 +487,7 @@ export function AssistenteGeracaoIA({
           descricao: "",
           turmaId: Number(cursoAtivo.turma.id),
           moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
-          conteudoDidaticoId: modoExclusivoQuiz ? Number(conteudoSelecionadoId) : null,
+          conteudoDidaticoId: modoExclusivoQuiz && !usaUploadDeArquivo ? Number(conteudoSelecionadoId) : null,
           tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,
           statusPublicacao: 1,
           dataAbertura: null,
@@ -541,12 +554,12 @@ export function AssistenteGeracaoIA({
         <aside className="criar-avaliacao__steps">
           <button className={`criar-avaliacao__step${etapa === "selecao" ? " criar-avaliacao__step--ativo" : ""}`} onClick={() => setEtapa("selecao")} type="button">
             <span aria-hidden="true" className="criar-avaliacao__step-icone">{etapa === "selecao" ? "●" : "○"}</span>
-            {modoExclusivoQuiz ? "Selecionar material" : "Enviar material"}
+            {usaUploadDeArquivo ? "Enviar material" : "Selecionar material"}
           </button>
           <button
             className={`criar-avaliacao__step${etapa === "configuracao" ? " criar-avaliacao__step--ativo" : ""}`}
-            disabled={modoExclusivoQuiz ? !conteudoSelecionadoId : !arquivo}
-            onClick={() => (modoExclusivoQuiz ? conteudoSelecionadoId : arquivo) && setEtapa("configuracao")}
+            disabled={usaUploadDeArquivo ? !arquivo : !conteudoSelecionadoId}
+            onClick={() => (usaUploadDeArquivo ? arquivo : conteudoSelecionadoId) && setEtapa("configuracao")}
             type="button"
           >
             <span aria-hidden="true" className="criar-avaliacao__step-icone">{etapa === "configuracao" ? "●" : "○"}</span>
@@ -569,6 +582,52 @@ export function AssistenteGeracaoIA({
               <h3 className="criar-avaliacao__secao-titulo">Material de origem</h3>
               <div className="criar-avaliacao__secao-corpo">
                 {modoExclusivoQuiz ? (
+                  <fieldset className="campo">
+                    <legend className="campo__rotulo">Origem do material</legend>
+                    <div className="gerar-ia__tipos-grid">
+                      <label className="gerar-ia__tipo-opcao">
+                        <input
+                          checked={origemMaterialQuiz === "existente"}
+                          name="gerar-ia-origem-quiz"
+                          onChange={() => selecionarOrigemMaterialQuiz("existente")}
+                          type="radio"
+                        />
+                        Material ja cadastrado no modulo
+                      </label>
+                      <label className="gerar-ia__tipo-opcao">
+                        <input
+                          checked={origemMaterialQuiz === "upload"}
+                          name="gerar-ia-origem-quiz"
+                          onChange={() => selecionarOrigemMaterialQuiz("upload")}
+                          type="radio"
+                        />
+                        Enviar um PDF/DOCX agora
+                      </label>
+                    </div>
+                  </fieldset>
+                ) : null}
+
+                {usaUploadDeArquivo ? (
+                  <>
+                    <p className="campo__ajuda" style={{ marginTop: 0 }}>
+                      {modoExclusivoQuiz
+                        ? "Envie um PDF ou DOCX com o conteudo que a IA vai usar como base para gerar as perguntas do quiz. O quiz nao fica vinculado a nenhum material cadastrado - o arquivo fica so nesta sessao, nada e salvo antes da revisao final."
+                        : "Envie um PDF ou DOCX com o conteudo que a IA vai usar como base para gerar as questoes. O arquivo fica so nesta sessao - nada e salvo antes da revisao final."}
+                    </p>
+                    <div className="campo">
+                      <label className="campo__rotulo" htmlFor="gerar-ia-arquivo">Arquivo (PDF ou DOCX) *</label>
+                      <input accept=".pdf,.docx" className="campo__entrada" id="gerar-ia-arquivo" onChange={selecionarArquivo} type="file" />
+                      {arquivo ? (
+                        <p className="campo__ajuda">
+                          Selecionado: <strong>{arquivo.name}</strong>{" "}
+                          <button className="link-botao" onClick={removerArquivoSelecionado} type="button">
+                            Remover
+                          </button>
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
                   <>
                     <p className="campo__ajuda" style={{ marginTop: 0 }}>
                       Escolha um material de texto ou PDF ja cadastrado neste modulo. A IA vai usar o conteudo dele
@@ -593,28 +652,9 @@ export function AssistenteGeracaoIA({
                       ) : (
                         <InlineMessage tone="info">
                           Nenhum material de texto ou PDF cadastrado neste modulo ainda. Cadastre um conteudo desse
-                          tipo antes de gerar o quiz por IA.
+                          tipo ou envie um PDF/DOCX avulso acima para gerar o quiz por IA.
                         </InlineMessage>
                       )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p className="campo__ajuda" style={{ marginTop: 0 }}>
-                      Envie um PDF ou DOCX com o conteudo que a IA vai usar como base para gerar as questoes. O arquivo fica
-                      so nesta sessao - nada e salvo antes da revisao final.
-                    </p>
-                    <div className="campo">
-                      <label className="campo__rotulo" htmlFor="gerar-ia-arquivo">Arquivo (PDF ou DOCX) *</label>
-                      <input accept=".pdf,.docx" className="campo__entrada" id="gerar-ia-arquivo" onChange={selecionarArquivo} type="file" />
-                      {arquivo ? (
-                        <p className="campo__ajuda">
-                          Selecionado: <strong>{arquivo.name}</strong>{" "}
-                          <button className="link-botao" onClick={removerArquivoSelecionado} type="button">
-                            Remover
-                          </button>
-                        </p>
-                      ) : null}
                     </div>
                   </>
                 )}
@@ -646,10 +686,10 @@ export function AssistenteGeracaoIA({
                 }}
               >
                 <p className="campo__ajuda" style={{ marginTop: 0 }}>
-                  {modoExclusivoQuiz ? (
-                    <>Material selecionado: <strong>{conteudoSelecionado?.titulo}</strong></>
-                  ) : (
+                  {usaUploadDeArquivo ? (
                     <>Material enviado: <strong>{arquivo?.name}</strong></>
+                  ) : (
+                    <>Material selecionado: <strong>{conteudoSelecionado?.titulo}</strong></>
                   )}
                 </p>
 
@@ -741,7 +781,7 @@ export function AssistenteGeracaoIA({
               <div className="criar-avaliacao__secao-corpo">
                 <p className="campo__ajuda" style={{ marginTop: 0 }}>
                   {questoesGeradas.length} questao(oes) geradas a partir de{" "}
-                  {modoExclusivoQuiz ? (
+                  {!usaUploadDeArquivo ? (
                     <strong>{conteudoSelecionado?.titulo}</strong>
                   ) : urlArquivoEnviado ? (
                     <a href={urlArquivoEnviado} rel="noreferrer" target="_blank">
