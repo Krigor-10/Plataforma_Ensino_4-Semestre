@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
 import Botao from "../components/Botao.jsx";
+import CampoSenha from "../components/CampoSenha.jsx";
 import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
@@ -100,12 +101,10 @@ export default function LoginScreen({
 
             <div className="campo">
               <label className="campo__rotulo" htmlFor="login-senha">Senha</label>
-              <input
+              <CampoSenha
                 autoComplete="current-password"
-                className="campo__entrada"
                 id="login-senha"
                 name="senha"
-                type="password"
                 value={form.senha}
                 onChange={(event) => setForm((current) => ({ ...current, senha: event.target.value }))}
                 required

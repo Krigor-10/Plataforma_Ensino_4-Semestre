@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
 import Botao from "../components/Botao.jsx";
+import CampoSenha from "../components/CampoSenha.jsx";
 import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
@@ -97,12 +98,10 @@ export default function RedefinirSenhaScreen({ token, onNavigate }) {
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "var(--espaco-lg)" }}>
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="redefinir-nova-senha">Nova senha</label>
-                <input
+                <CampoSenha
                   autoComplete="new-password"
-                  className="campo__entrada"
                   id="redefinir-nova-senha"
                   name="novaSenha"
-                  type="password"
                   value={form.novaSenha}
                   onChange={(event) => setForm((current) => ({ ...current, novaSenha: event.target.value }))}
                   required
@@ -111,12 +110,10 @@ export default function RedefinirSenhaScreen({ token, onNavigate }) {
 
               <div className="campo">
                 <label className="campo__rotulo" htmlFor="redefinir-confirmar-senha">Confirmar nova senha</label>
-                <input
+                <CampoSenha
                   autoComplete="new-password"
-                  className="campo__entrada"
                   id="redefinir-confirmar-senha"
                   name="confirmarSenha"
-                  type="password"
                   value={form.confirmarSenha}
                   onChange={(event) => setForm((current) => ({ ...current, confirmarSenha: event.target.value }))}
                   required

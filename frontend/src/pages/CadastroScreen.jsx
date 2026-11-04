@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { TbX } from "react-icons/tb";
 import Botao from "../components/Botao.jsx";
+import CampoSenha from "../components/CampoSenha.jsx";
 import { SIGNUP_INITIAL_STATE, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
 import { formatCep, onlyDigits } from "../lib/format.js";
 import { apiRequest } from "../lib/api.js";
@@ -374,13 +375,11 @@ export default function CadastroScreen({ isDemoMode, onNavigate, cursoId }) {
 
                 <div className={classeCampo("senha")}>
                   <label className="campo__rotulo" htmlFor="cad-senha">Senha</label>
-                  <input
+                  <CampoSenha
                     autoComplete="new-password"
-                    className="campo__entrada"
                     id="cad-senha"
                     minLength={6}
                     name="senha"
-                    type="password"
                     value={form.senha}
                     onChange={(event) => updateField("senha", event.target.value)}
                     required
@@ -391,13 +390,11 @@ export default function CadastroScreen({ isDemoMode, onNavigate, cursoId }) {
 
                 <div className={classeCampo("confirmarSenha")}>
                   <label className="campo__rotulo" htmlFor="cad-confirmar-senha">Confirmar senha</label>
-                  <input
+                  <CampoSenha
                     autoComplete="new-password"
-                    className="campo__entrada"
                     id="cad-confirmar-senha"
                     minLength={6}
                     name="confirmarSenha"
-                    type="password"
                     value={form.confirmarSenha}
                     onChange={(event) => updateField("confirmarSenha", event.target.value)}
                     required

@@ -326,6 +326,49 @@
   border-color: var(--cor-erro);
 }
 
+/* Campo de senha com botao de "olho" para mostrar/ocultar - usado nas
+   telas publicas de Login, Cadastro e Redefinir senha (CampoSenha.jsx). */
+.campo-senha {
+  position: relative;
+  width: 100%;
+}
+
+.campo-senha__entrada {
+  padding-right: 2.75rem;
+  width: 100%;
+}
+
+.campo-senha__botao-olho {
+  align-items: center;
+  background: none;
+  border: none;
+  border-radius: var(--raio-md);
+  color: var(--cor-texto-mudo);
+  cursor: pointer;
+  display: flex;
+  height: 2.5rem;
+  justify-content: center;
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.5rem;
+}
+
+.campo-senha__botao-olho:hover {
+  color: var(--cor-texto-forte);
+}
+
+.campo-senha__botao-olho:focus-visible {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 2px;
+}
+
+/* Esconde o olho nativo do Edge/IE para nao duplicar com o nosso botao. */
+.campo-senha__entrada::-ms-reveal {
+  display: none;
+}
+
 /* Campo de busca com icone — reaproveitado nas telas de gestao
    (Alunos, Professores, Coordenadores, Cursos, Turmas, Matriculas)
    em vez de repetir o mesmo style inline em cada arquivo. */
