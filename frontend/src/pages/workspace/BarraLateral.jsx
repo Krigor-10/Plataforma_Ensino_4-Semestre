@@ -6,6 +6,7 @@
    conjunto fixo de seções do protótipo.
    ============================================================ */
 import { useState, useEffect } from "react";
+import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
 import { TbBook, TbUserFilled } from "react-icons/tb";
 import {
   MdDashboard,
@@ -103,20 +104,9 @@ export default function BarraLateral({
     localStorage.setItem("coderyse-sidebar-grupos", JSON.stringify([...expandidos]));
   }, [expandidos]);
 
-  // Mesmo padrao de scroll-lock ja usado em Modal.jsx: sem isso, com o menu
-  // mobile aberto (drawer sobre overlay) a pagina de fundo ainda rola junto,
-  // quebrando a sensacao de overlay.
-  useEffect(() => {
-    if (!aberta) {
-      return;
-    }
-
-    const overflowOriginal = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflowOriginal;
-    };
-  }, [aberta]);
+  // Sem isso, com o menu mobile aberto (drawer sobre overlay) a pagina de
+  // fundo ainda rola junto, quebrando a sensacao de overlay.
+  useBloqueioScroll(aberta);
 
   function alternarGrupo(chave) {
     setExpandidos((prev) => {

@@ -5,6 +5,7 @@ import Botao from "../components/Botao.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { InlineMessage, PanelCard } from "../components/Primitives.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
+import { useBloqueioScroll } from "../hooks/useBloqueioScroll.js";
 import LayoutWorkspace from "./workspace/LayoutWorkspace.jsx";
 import { SecaoAlunos } from "./workspace/SecaoAlunos.jsx";
 import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.jsx";
@@ -113,12 +114,12 @@ export default function WorkspaceScreen({
     }
   }, [activeSection, onNavigate, route.param]);
 
+  useBloqueioScroll(Boolean(confirmacaoSessao));
+
   useEffect(() => {
     if (!confirmacaoSessao) {
       return undefined;
     }
-
-    const previousOverflow = document.body.style.overflow;
 
     function handleKeyDown(event) {
       if (event.key === "Escape") {
@@ -126,13 +127,8 @@ export default function WorkspaceScreen({
       }
     }
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [confirmacaoSessao]);
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import PublicHome from "./pages/PublicHome.jsx";
 import VerificarCertificadoScreen from "./pages/VerificarCertificadoScreen.jsx";
 import WorkspaceScreen from "./pages/WorkspaceScreen.jsx";
 import { disableDemoMode, isDemoModeLocked, readDemoMode } from "./lib/demoMode.js";
+import { limparBloqueiosScroll } from "./hooks/useBloqueioScroll.js";
 import { apiRequest } from "./lib/api.js";
 import { applyPageMetadata } from "./lib/pageMetadata.js";
 import { navigate, readRoute } from "./lib/router.js";
@@ -71,6 +72,7 @@ export default function App() {
   }
 
   function handleDemoModeExit(nextPath = "/login") {
+    limparBloqueiosScroll();
     clearSession();
     setSession({ token: "", user: null });
     setIsDemoMode(disableDemoMode());
@@ -99,6 +101,7 @@ export default function App() {
         }).catch(() => {});
       }
 
+      limparBloqueiosScroll();
       clearSession();
       setSession({ token: "", user: null });
       navigate(nextPath, setRoute, { replace: true });

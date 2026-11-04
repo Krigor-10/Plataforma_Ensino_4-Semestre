@@ -6,6 +6,7 @@
 import { useEffect } from "react";
 import { TbArrowLeft, TbX } from "react-icons/tb";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
+import { useBloqueioScroll } from "../hooks/useBloqueioScroll.js";
 
 export default function Modal({ titulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false }) {
   const refModal = useFocusTrap();
@@ -18,13 +19,7 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
     return () => document.removeEventListener("keydown", fecharComEsc);
   }, [onFechar]);
 
-  useEffect(() => {
-    const overflowOriginal = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflowOriginal;
-    };
-  }, []);
+  useBloqueioScroll(true);
 
   return (
     <div

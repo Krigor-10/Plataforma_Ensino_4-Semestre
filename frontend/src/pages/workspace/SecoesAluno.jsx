@@ -36,6 +36,7 @@ import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
 import VisualizadorImagem from "../../components/VisualizadorImagem.jsx";
 import VisualizadorPdf from "../../components/VisualizadorPdf.jsx";
+import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
@@ -607,12 +608,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avaliacaoEmExecucao, resultadoTentativa, carregandoQuestoes, questoes, indiceAtual, respostas]);
 
+  useBloqueioScroll(Boolean(avaliacaoEmExecucao));
+
   useEffect(() => {
     if (!avaliacaoEmExecucao) {
       return undefined;
     }
-
-    const previousOverflow = document.body.style.overflow;
 
     function handleKeyDown(event) {
       if (event.key === "Escape" && !enviandoRespostas) {
@@ -620,13 +621,8 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
       }
     }
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [avaliacaoEmExecucao, enviandoRespostas]);
 
   useEffect(() => {
