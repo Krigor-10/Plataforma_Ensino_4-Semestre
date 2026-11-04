@@ -32,7 +32,7 @@ export const PUBLIC_PILLARS = [
 ];
 
 export const PUBLIC_NAV_LINKS = [
-  { href: "#catalogo", label: "Cursos" }
+  { href: "#cursos", label: "Cursos" }
 ];
 
 const HIDDEN_PUBLIC_COURSE_TITLES = new Set(["product analytics para edtech"]);
