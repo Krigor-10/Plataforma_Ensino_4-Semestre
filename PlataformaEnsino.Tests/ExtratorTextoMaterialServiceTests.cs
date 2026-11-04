@@ -100,6 +100,23 @@ public class ExtratorTextoMaterialServiceTests
     }
 
     [Fact]
+    public async Task ExtrairTextoAsync_TagDeFonteSubconjuntadaComecandoComAA_NaoBloqueia()
+    {
+        // PDFs exportados por Word/LibreOffice/Canva nomeiam fontes subconjuntadas
+        // como "/AAAAAA+ArialMT" (tag de 6 letras + "+" + nome original). Isso bate
+        // com o prefixo do token "/AA" sem ser a chave real de acao automatica -
+        // falso-positivo relatado pelo usuario em 2026-11-04.
+        using var pdf = CriarPdfComTexto(
+            "Conteudo normal da prova sobre fotossintese e respiracao celular, nada suspeito aqui.",
+            extraCatalogo: "/FontesUsadas (/AAAAAA+ArialMT)");
+
+        var resultado = await _service.ExtrairTextoAsync(pdf, ".pdf", CancellationToken.None);
+
+        Assert.True(resultado.TemTextoExtraivel);
+        Assert.Equal(MotivoFalhaExtracao.Nenhum, resultado.MotivoFalha);
+    }
+
+    [Fact]
     public async Task ExtrairTextoAsync_ZipRenomeadoParaDocx_Rejeita()
     {
         // Zip valido, mas sem a estrutura de um documento Word (sem word/document.xml)

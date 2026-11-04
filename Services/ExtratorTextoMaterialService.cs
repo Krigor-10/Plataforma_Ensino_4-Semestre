@@ -97,7 +97,34 @@ public class ExtratorTextoMaterialService : IExtratorTextoMaterialService
         // dentro do PDF sem se preocupar com encoding de verdade do arquivo.
         var textoCru = Encoding.Latin1.GetString(bytes);
         var textoForaDosStreams = RemoverConteudoDeStreams(textoCru);
-        return AssinaturasConteudoAtivoPdf.Any(assinatura => textoForaDosStreams.Contains(assinatura, StringComparison.Ordinal));
+        return AssinaturasConteudoAtivoPdf.Any(assinatura => ContemChaveDeDicionario(textoForaDosStreams, assinatura));
+    }
+
+    // Um nome de dicionario PDF (sempre comeca com "/") so termina em um
+    // delimitador (espaco, "(", "<", "/", ">", "[", "]", "%", quebra de linha)
+    // ou no fim do texto - uma letra/numero/"+"/"-" logo depois do token
+    // procurado significa que ele e so o prefixo de um nome mais longo, por
+    // exemplo a tag de uma fonte subconjuntada "/AAAAAA+ArialMT" (gerada por
+    // Word/LibreOffice/Canva ao exportar PDF) bate com o prefixo "/AA" sem
+    // ser, de fato, a chave de acao automatica "/AA" - falso-positivo real
+    // relatado pelo usuario em 2026-11-04.
+    private static bool ContemChaveDeDicionario(string texto, string assinatura)
+    {
+        var indice = 0;
+        while ((indice = texto.IndexOf(assinatura, indice, StringComparison.Ordinal)) >= 0)
+        {
+            var proximaPosicao = indice + assinatura.Length;
+            var proximoCaractere = proximaPosicao < texto.Length ? texto[proximaPosicao] : '\0';
+
+            if (!char.IsLetterOrDigit(proximoCaractere) && proximoCaractere != '+' && proximoCaractere != '-')
+            {
+                return true;
+            }
+
+            indice = proximaPosicao;
+        }
+
+        return false;
     }
 
     // Uma acao PDF de verdade (JavaScript/OpenAction/AA) só e executavel pelo leitor
