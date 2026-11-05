@@ -79,7 +79,7 @@ describe("normalizeContentType", () => {
   test.each([
     [1, "Texto"],
     [2, "PDF"],
-    [3, "Video"],
+    [3, "Vídeo"],
     [4, "Link"],
     [5, "Imagem"]
   ])("codigo %i vira %s", (codigo, esperado) => {

@@ -602,7 +602,7 @@ export function SecaoConteudosProfessor({
         <GradeCursosProfessor
           cursos={cursosDoProfessor.map(({ curso, totalConteudos, totalItensNaoArquivados, totalModulos, totalPublicados }) => ({
             curso,
-            resumo: `${totalModulos} modulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteudo${totalConteudos === 1 ? "" : "s"}`,
+            resumo: `${totalModulos} módulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"}`,
             rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`,
             badge:
               totalPublicados === 0
@@ -611,7 +611,7 @@ export function SecaoConteudosProfessor({
                 ? "Publicado"
                 : "Parcialmente publicado"
           }))}
-          mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
+          mensagemVazia="Você ainda não tem turmas atribuídas a nenhum curso."
           onSelecionar={abrirCurso}
         />
       ) : (
@@ -678,7 +678,7 @@ export function SecaoConteudosProfessor({
           }
         >
           <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
-            Deseja excluir o conteudo <strong>{conteudoParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
+            Deseja excluir o conteúdo <strong>{conteudoParaExcluir.titulo}</strong>? Esta ação não pode ser desfeita.
           </p>
           {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
@@ -694,7 +694,7 @@ export function SecaoConteudosProfessor({
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
               <Botao disabled={salvando || enviandoArquivo} form="form-conteudo" type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alteracoes" : "Criar conteudo"}
+                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : conteudoEmEdicaoId ? "Salvar alterações" : "Criar conteúdo"}
               </Botao>
             </footer>
           }
@@ -743,8 +743,8 @@ export function SecaoConteudosProfessor({
             </div>
 
             <div className="campo">
-              <span className="campo__rotulo">Tipo de conteudo *</span>
-              <div aria-label="Tipo de conteudo" className="anexo-selector" role="group">
+              <span className="campo__rotulo">Tipo de conteúdo *</span>
+              <div aria-label="Tipo de conteúdo" className="anexo-selector" role="group">
                 {OPCOES_TIPO_CONTEUDO.map((opcao) => {
                   const ativo = dadosFormulario.tipoConteudo === opcao.value;
                   return (
@@ -785,7 +785,7 @@ export function SecaoConteudosProfessor({
                 maxLength={180}
                 name="titulo"
                 onChange={atualizarCampoFormulario}
-                placeholder="Ex.: Aula 01 - Panorama do modulo"
+                placeholder="Ex.: Aula 01 - Panorama do módulo"
                 type="text"
                 value={dadosFormulario.titulo}
               />
@@ -1040,10 +1040,10 @@ function TrilhaConteudosProfessor({
   return (
     <div className="conteudos-aluno">
       {onVoltar ? (
-        <nav aria-label="Navegacao da trilha de conteudos" className="atividades-curso__navegacao">
+        <nav aria-label="Navegação da trilha de conteúdos" className="atividades-curso__navegacao">
           <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
             <TbArrowLeft aria-hidden="true" size={22} />
-            Voltar para Conteudos
+            Voltar para Conteúdos
           </button>
         </nav>
       ) : null}
@@ -1066,7 +1066,7 @@ function TrilhaConteudosProfessor({
       {mensagemLista.message ? <InlineMessage tone={mensagemLista.tone}>{mensagemLista.message}</InlineMessage> : null}
 
       {modulosDoCurso.length === 0 ? (
-        <p className="texto-vazio" role="status">Este curso ainda nao tem modulos cadastrados.</p>
+        <p className="texto-vazio" role="status">Este curso ainda não tem módulos cadastrados.</p>
       ) : (
         <div className="atividades-curso__lista-modulos">
           {modulosDoCurso.map((modulo, indiceModulo) => {
@@ -1117,7 +1117,7 @@ function TrilhaConteudosProfessor({
                         <span className="conteudos-modulo__eyebrow">Módulo {String(indiceModulo + 1).padStart(2, "0")}</span>
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         <span className="conteudos-modulo__contagem">
-                          {itensDoModuloTodos.length} conteudo{itensDoModuloTodos.length === 1 ? "" : "s"} ·{" "}
+                          {itensDoModuloTodos.length} conteúdo{itensDoModuloTodos.length === 1 ? "" : "s"} ·{" "}
                           {quizzesDoModuloTodos.length} quiz{quizzesDoModuloTodos.length === 1 ? "" : "zes"} · {totalPublicadosModulo} publicado
                           {totalPublicadosModulo === 1 ? "" : "s"}
                           {totalRascunhosModulo > 0 ? (
@@ -1213,6 +1213,9 @@ function TrilhaConteudosProfessor({
                                   className={`atividades-curso__linha${conteudoAtivo ? " atividades-curso__linha--ativa" : ""}`}
                                   onClick={() => alternarConteudo(conteudo.id)}
                                   onKeyDown={(event) => {
+                                    if (event.target !== event.currentTarget) {
+                                      return;
+                                    }
                                     if (event.key !== "Enter" && event.key !== " ") {
                                       return;
                                     }
@@ -1252,7 +1255,7 @@ function TrilhaConteudosProfessor({
                                     >
                                       <TbPencil aria-hidden="true" size={15} /> <span className="atividades-curso__editar-texto">Editar</span>
                                     </Botao>
-                                    <MenuAcoes itens={itensMenuMaterial} rotulo={`Opcoes de ${conteudo.titulo}`} />
+                                    <MenuAcoes itens={itensMenuMaterial} rotulo={`Opções de ${conteudo.titulo}`} />
                                     <button
                                       aria-label={`Mover ${conteudo.titulo} para cima`}
                                       className="atividades-curso__reordenar"
@@ -1328,7 +1331,7 @@ function TrilhaConteudosProfessor({
                                               >
                                                 <TbPencil aria-hidden="true" size={15} /> <span className="atividades-curso__editar-texto">Editar</span>
                                               </Botao>
-                                              <MenuAcoes itens={itensMenuQuizDoMaterial(quiz)} rotulo={`Opcoes do quiz ${quiz.titulo}`} />
+                                              <MenuAcoes itens={itensMenuQuizDoMaterial(quiz)} rotulo={`Opções do quiz ${quiz.titulo}`} />
                                             </div>
                                           </div>
                                         </li>
@@ -1391,7 +1394,7 @@ function TrilhaConteudosProfessor({
                                     >
                                       <TbPencil aria-hidden="true" size={15} /> <span className="atividades-curso__editar-texto">Editar</span>
                                     </Botao>
-                                    <MenuAcoes itens={itensMenuQuiz} rotulo={`Opcoes do quiz ${quiz.titulo}`} />
+                                    <MenuAcoes itens={itensMenuQuiz} rotulo={`Opções do quiz ${quiz.titulo}`} />
                                   </div>
                                 </div>
                               </li>
@@ -1415,7 +1418,7 @@ function TrilhaConteudosProfessor({
                           <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
                             <TbPlus aria-hidden="true" size={13} />
                           </motion.span>{" "}
-                          Novo conteudo
+                          Novo conteúdo
                         </Botao>
                         <Botao className="atividades-curso__adicionar" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno" variante="fantasma">
                           <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
@@ -1485,7 +1488,7 @@ function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, 
     >
       <div className="conteudos-aluno">
         <InlineMessage tone="info">
-          Pre-visualizacao estrutural: mostra so o conteudo publicado, sem dados de progresso de nenhum aluno.
+          Pré-visualização estrutural: mostra só o conteúdo publicado, sem dados de progresso de nenhum aluno.
         </InlineMessage>
 
         <header className="atividades-curso__cabecalho">

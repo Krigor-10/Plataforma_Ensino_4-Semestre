@@ -51,7 +51,7 @@ export function normalizeContentType(type) {
   const labels = {
     1: "Texto",
     2: "PDF",
-    3: "Video",
+    3: "Vídeo",
     4: "Link",
     5: "Imagem"
   };

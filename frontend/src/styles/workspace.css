@@ -3921,6 +3921,13 @@
   border-bottom: none;
 }
 
+/* Item arquivado (material ou quiz): fica visivel so quando o professor
+   clica em "Mostrar arquivados", com opacidade reduzida pra marcar que nao
+   participa mais da contagem/percentual do modulo (item 5 do prompt). */
+.atividades-curso__item--arquivado {
+  opacity: 0.55;
+}
+
 /* Mesmo padrao de cartao com borda das Avaliacoes, reaplicado em CADA
    CONTEUDO editavel da tela Conteudos do PROFESSOR (o item com role="button"
    que expande pra mostrar Editar/Quiz/Publicar/Excluir). Modificador
@@ -4215,6 +4222,16 @@
   flex-shrink: 0;
 }
 
+/* Texto do botao "Editar" ao lado do icone de lapis: some em tela estreita
+   pra sobrar espaco pro selo de status + menu "..." + setas, o botao vira
+   so icone (aria-label do Botao continua anunciando "Editar X" no leitor
+   de tela). */
+@media (max-width: 48rem) {
+  .atividades-curso__editar-texto {
+    display: none;
+  }
+}
+
 .atividades-curso__check {
   display: inline-flex;
   align-items: center;
@@ -4461,6 +4478,32 @@
   color: var(--cor-texto-suave);
   font-size: 0.85rem;
   padding-left: calc(2.75rem + var(--espaco-md));
+}
+
+/* Botao "Mostrar arquivados (n)" / "Ocultar arquivados" no fim do modulo:
+   estilo de link, discreto, pra nao competir com "Novo conteudo"/"Adicionar
+   Quiz" (botoes de verdade) logo abaixo. */
+.atividades-curso__mostrar-arquivados {
+  align-self: flex-start;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-marca-clara);
+  cursor: pointer;
+}
+
+.atividades-curso__mostrar-arquivados:hover {
+  text-decoration: underline;
+}
+
+.atividades-curso__mostrar-arquivados:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
+  border-radius: var(--raio-sm);
 }
 
 @media (max-width: 30rem) {
