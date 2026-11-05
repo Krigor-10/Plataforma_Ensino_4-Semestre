@@ -8,7 +8,7 @@ public class AvaliacaoResponseDto
     public string Titulo { get; set; } = string.Empty;
     public string Descricao { get; set; } = string.Empty;
     public int ProfessorAutorId { get; set; }
-    public int TurmaId { get; set; }
+    public int? TurmaId { get; set; }
     public string TurmaNome { get; set; } = string.Empty;
     public int CursoId { get; set; }
     public string CursoTitulo { get; set; } = string.Empty;

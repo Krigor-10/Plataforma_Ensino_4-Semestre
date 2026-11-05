@@ -16,7 +16,7 @@ public class Avaliacao
     public string Descricao { get; set; } = string.Empty;
 
     public int ProfessorAutorId { get; private set; }
-    public int TurmaId { get; set; }
+    public int? TurmaId { get; set; }
     public int CursoId { get; private set; }
     public int? ModuloId { get; set; }
     public int? ConteudoDidaticoId { get; set; }

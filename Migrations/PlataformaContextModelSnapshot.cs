@@ -279,7 +279,7 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasMaxLength(180)
                         .HasColumnType("nvarchar(180)");
 
-                    b.Property<int>("TurmaId")
+                    b.Property<int?>("TurmaId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -363,7 +363,7 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasMaxLength(180)
                         .HasColumnType("nvarchar(180)");
 
-                    b.Property<int>("TurmaId")
+                    b.Property<int?>("TurmaId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -1368,8 +1368,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasOne("PlataformaEnsino.API.Models.Turma", "Turma")
                         .WithMany("Avaliacoes")
                         .HasForeignKey("TurmaId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("ConteudoDidatico");
 
@@ -1403,8 +1402,7 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasOne("PlataformaEnsino.API.Models.Turma", "Turma")
                         .WithMany("ConteudosDidaticos")
                         .HasForeignKey("TurmaId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Modulo");
 

@@ -15,7 +15,6 @@ public class ConteudoDidaticoServiceTests
         new ConteudoDidaticoRepository(context),
         new GenericRepository<Aluno>(context),
         new GenericRepository<Professor>(context),
-        new GenericRepository<Turma>(context),
         new GenericRepository<Modulo>(context),
         new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
         new CursoService(
@@ -89,14 +88,6 @@ public class ConteudoDidaticoServiceTests
         return modulo;
     }
 
-    private static Turma CriarTurma(PlataformaContext context, int cursoId, int professorId)
-    {
-        var turma = new Turma { NomeTurma = "Turma Teste", CodigoRegistro = $"TUR-{Guid.NewGuid():N}"[..9], CursoId = cursoId, ProfessorId = professorId };
-        context.Turmas.Add(turma);
-        context.SaveChanges();
-        return turma;
-    }
-
     private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
     {
         context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
@@ -114,13 +105,12 @@ public class ConteudoDidaticoServiceTests
         return matricula;
     }
 
-    private static CriarConteudoDidaticoDto NovoConteudoDto(int turmaId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado) => new()
+    private static CriarConteudoDidaticoDto NovoConteudoDto(int moduloId, StatusPublicacao status = StatusPublicacao.Publicado) => new()
     {
         Titulo = "Conteudo Teste",
         Descricao = "Descricao",
         TipoConteudo = TipoConteudoDidatico.Texto,
         CorpoTexto = "Corpo do conteudo",
-        TurmaId = turmaId,
         ModuloId = moduloId,
         StatusPublicacao = status,
         OrdemExibicao = 1,
@@ -135,10 +125,9 @@ public class ConteudoDidaticoServiceTests
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
 
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
 
         Assert.Equal(curso.Id, conteudo.CursoId);
     }
@@ -153,10 +142,9 @@ public class ConteudoDidaticoServiceTests
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id)));
+            () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id)));
     }
 
     [Fact]
@@ -170,11 +158,10 @@ public class ConteudoDidaticoServiceTests
         curso.Encerrar(coordenadorId: 1);
         context.SaveChanges();
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id)));
+            () => service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id)));
     }
 
     [Fact]
@@ -188,11 +175,10 @@ public class ConteudoDidaticoServiceTests
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
         CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
-        await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
 
         var resultado = await service.ListarConteudosPorAlunoAsync(aluno.Id);
 
@@ -208,18 +194,16 @@ public class ConteudoDidaticoServiceTests
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
         CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id, StatusPublicacao.Rascunho));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id, StatusPublicacao.Rascunho));
         await service.AtualizarConteudoAsync(conteudo.Id, professor.Id, new AtualizarConteudoDidaticoDto
         {
             Titulo = conteudo.Titulo,
             Descricao = conteudo.Descricao,
             TipoConteudo = conteudo.TipoConteudo,
             CorpoTexto = conteudo.CorpoTexto,
-            TurmaId = turma.Id,
             ModuloId = modulo.Id,
             StatusPublicacao = StatusPublicacao.Publicado,
             OrdemExibicao = conteudo.OrdemExibicao,
@@ -238,9 +222,8 @@ public class ConteudoDidaticoServiceTests
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
 
         await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
 
@@ -256,9 +239,8 @@ public class ConteudoDidaticoServiceTests
         var outroProfessor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ExcluirConteudoAsync(conteudo.Id, outroProfessor.Id));
@@ -272,11 +254,10 @@ public class ConteudoDidaticoServiceTests
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
 
-        var quiz = new Avaliacao { Titulo = "Quiz do material", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Quiz };
+        var quiz = new Avaliacao { Titulo = "Quiz do material", TipoAvaliacao = TipoAvaliacao.Quiz };
         quiz.DefinirCurso(curso.Id);
         quiz.ConteudoDidaticoId = conteudo.Id;
         context.Avaliacoes.Add(quiz);
@@ -300,9 +281,8 @@ public class ConteudoDidaticoServiceTests
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
         var matricula = CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
         context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
@@ -336,9 +316,8 @@ public class ConteudoDidaticoServiceTests
         var aluno = CriarAluno(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
-        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(turma.Id, modulo.Id));
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
         var matricula = CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
         context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
         {

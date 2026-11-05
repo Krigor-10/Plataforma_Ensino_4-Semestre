@@ -12,7 +12,7 @@ public class ConteudoDidaticoResponseDto
     public string ArquivoUrl { get; set; } = string.Empty;
     public string LinkUrl { get; set; } = string.Empty;
     public int ProfessorAutorId { get; set; }
-    public int TurmaId { get; set; }
+    public int? TurmaId { get; set; }
     public string TurmaNome { get; set; } = string.Empty;
     public int CursoId { get; set; }
     public string CursoTitulo { get; set; } = string.Empty;

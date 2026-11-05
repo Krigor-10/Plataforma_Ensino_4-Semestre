@@ -191,13 +191,19 @@ public class TurmaService : ITurmaService
             .Where(progresso => matriculaIds.Contains(progresso.MatriculaId))
             .ToDictionaryAsync(progresso => progresso.MatriculaId);
 
+        // Agrupado por CursoId, nao TurmaId: desde que a criacao de avaliacao parou
+        // de exigir Turma, avaliacoes novas nascem com TurmaId null (ver [[pendencia_fase_b_remocao_turma]]/
+        // Rodada 4) - filtrar por TurmaId faria esse dashboard nunca mostrar avaliacao
+        // nova nenhuma. Seguro porque hoje so existe 1 turma por curso por professor
+        // (TurmaService.CriarTurmaAsync bloqueia uma segunda).
+        var cursoIds = turmas.Select(turma => turma.CursoId).Distinct().ToList();
         var avaliacoes = await _context.Avaliacoes
             .AsNoTracking()
-            .Where(avaliacao => turmaIds.Contains(avaliacao.TurmaId))
+            .Where(avaliacao => cursoIds.Contains(avaliacao.CursoId))
             .ToListAsync();
         var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
-        var avaliacoesPorTurmaId = avaliacoes
-            .GroupBy(avaliacao => avaliacao.TurmaId)
+        var avaliacoesPorCursoId = avaliacoes
+            .GroupBy(avaliacao => avaliacao.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
 
         var tentativasCorrigidas = await _context.TentativasAvaliacao
@@ -240,7 +246,7 @@ public class TurmaService : ITurmaService
             var alunosComNota = alunosDto.Where(aluno => aluno.NotaFinal > 0).ToList();
             var concluidos = alunosDto.Count(aluno => aluno.PercentualConclusao >= 100);
 
-            var avaliacoesDaTurma = avaliacoesPorTurmaId.TryGetValue(turma.Id, out var listaAvaliacoes)
+            var avaliacoesDaTurma = avaliacoesPorCursoId.TryGetValue(turma.CursoId, out var listaAvaliacoes)
                 ? listaAvaliacoes
                 : new List<Avaliacao>();
 

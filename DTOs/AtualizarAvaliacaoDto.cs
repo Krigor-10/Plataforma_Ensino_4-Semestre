@@ -13,7 +13,7 @@ public class AtualizarAvaliacaoDto
     public string Descricao { get; set; } = string.Empty;
 
     [Range(1, int.MaxValue)]
-    public int TurmaId { get; set; }
+    public int CursoId { get; set; }
 
     [Range(1, int.MaxValue)]
     public int? ModuloId { get; set; }

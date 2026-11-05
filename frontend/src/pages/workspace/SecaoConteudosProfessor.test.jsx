@@ -58,7 +58,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
   test("quiz vinculado a um material renderiza dentro do item desse material", () => {
     renderTrilha({
-      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID }],
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
         {
           id: 200,
@@ -67,7 +67,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
           statusPublicacao: 2,
           tipoAvaliacao: 1,
           titulo: "Quiz da Aula 1",
-          turmaId: TURMA_ID
+          turmaId: TURMA_ID, cursoId: CURSO_ID
         }
       ]
     });
@@ -80,7 +80,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
   test("dois quizzes vinculados ao mesmo material aparecem os dois", () => {
     renderTrilha({
-      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID }],
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
         {
           id: 200,
@@ -89,7 +89,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
           statusPublicacao: 2,
           tipoAvaliacao: 1,
           titulo: "Quiz A da Aula 1",
-          turmaId: TURMA_ID
+          turmaId: TURMA_ID, cursoId: CURSO_ID
         },
         {
           id: 201,
@@ -98,7 +98,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
           statusPublicacao: 1,
           tipoAvaliacao: 1,
           titulo: "Quiz B da Aula 1",
-          turmaId: TURMA_ID
+          turmaId: TURMA_ID, cursoId: CURSO_ID
         }
       ]
     });
@@ -110,7 +110,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
   test("quiz do modulo em rascunho aparece na contagem e impede o topo de mostrar 100%", () => {
     const { container } = renderTrilha({
-      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID }],
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
         {
           id: 200,
@@ -119,7 +119,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
           statusPublicacao: 1,
           tipoAvaliacao: 1,
           titulo: "Quiz do Módulo",
-          turmaId: TURMA_ID
+          turmaId: TURMA_ID, cursoId: CURSO_ID
         }
       ]
     });
@@ -136,8 +136,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     const usuario = userEvent.setup();
     renderTrilha({
       conteudos: [
-        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula Publicada", turmaId: TURMA_ID },
-        { id: 2, moduloId: MODULO_ID, statusPublicacao: 3, tipoConteudo: 1, titulo: "Aula Arquivada", turmaId: TURMA_ID }
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula Publicada", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 3, tipoConteudo: 1, titulo: "Aula Arquivada", turmaId: TURMA_ID, cursoId: CURSO_ID }
       ]
     });
 
@@ -154,7 +154,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
   test("menu de acoes do material abre e fecha pelo teclado, e Excluir abre a confirmacao", async () => {
     const usuario = userEvent.setup();
     renderTrilha({
-      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID }]
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
     const botaoMenu = screen.getByRole("button", { name: "Opções de Aula 1" });

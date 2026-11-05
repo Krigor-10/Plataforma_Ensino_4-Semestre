@@ -173,17 +173,13 @@ public class AvaliacaoService : IAvaliacaoService
         ArgumentNullException.ThrowIfNull(dto);
 
         await ValidarProfessorAsync(professorId);
-        var turma = await ValidarTurmaDoProfessorAsync(professorId, dto.TurmaId);
         var modulo = await ValidarModuloAsync(dto.ModuloId, dto.TipoAvaliacao);
-
-        ValidarCompatibilidadeTurmaModulo(turma, modulo);
-        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
-        var cursoId = modulo?.CursoId ?? turma.CursoId;
+        var cursoId = await ValidarCursoDaAvaliacaoAsync(professorId, dto.CursoId, modulo);
+        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
         await _cursoService.GarantirCursoAbertoAsync(cursoId);
 
         var avaliacao = new Avaliacao
         {
-            TurmaId = turma.Id,
             ModuloId = modulo?.Id,
             ConteudoDidaticoId = material?.Id
         };
@@ -203,15 +199,11 @@ public class AvaliacaoService : IAvaliacaoService
         ArgumentNullException.ThrowIfNull(dto);
 
         var avaliacao = await ObterAvaliacaoPorProfessorAsync(id, professorId);
-        var turma = await ValidarTurmaDoProfessorAsync(professorId, dto.TurmaId);
         var modulo = await ValidarModuloAsync(dto.ModuloId, dto.TipoAvaliacao);
-
-        ValidarCompatibilidadeTurmaModulo(turma, modulo);
-        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, turma, modulo);
-        var cursoId = modulo?.CursoId ?? turma.CursoId;
+        var cursoId = await ValidarCursoDaAvaliacaoAsync(professorId, dto.CursoId, modulo);
+        var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
         await _cursoService.GarantirCursoAbertoAsync(cursoId);
 
-        avaliacao.TurmaId = turma.Id;
         avaliacao.ModuloId = modulo?.Id;
         avaliacao.ConteudoDidaticoId = material?.Id;
         avaliacao.DefinirCurso(cursoId);
@@ -925,19 +917,25 @@ public class AvaliacaoService : IAvaliacaoService
         }
     }
 
-    private async Task<Turma> ValidarTurmaDoProfessorAsync(int professorId, int turmaId)
+    /// <summary>
+    /// CursoId vem direto do DTO (o professor sempre sabe em qual curso esta
+    /// trabalhando) — Quiz tem modulo obrigatorio, entao o curso do modulo tem
+    /// que bater com o informado; Prova/Exercicio podem nao ter modulo, e nesse
+    /// caso o CursoId do DTO e a unica fonte.
+    /// </summary>
+    private async Task<int> ValidarCursoDaAvaliacaoAsync(int professorId, int cursoId, Modulo? modulo)
     {
-        var turma = await _context.Turmas
-            .AsNoTracking()
-            .FirstOrDefaultAsync(item => item.Id == turmaId)
-            ?? throw new KeyNotFoundException("Turma nao encontrada.");
-
-        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, turma.CursoId))
+        if (modulo is not null && modulo.CursoId != cursoId)
         {
-            throw new InvalidOperationException("O curso da turma informada nao esta vinculado ao professor autenticado.");
+            throw new InvalidOperationException("O modulo selecionado nao pertence ao curso informado.");
         }
 
-        return turma;
+        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, cursoId))
+        {
+            throw new InvalidOperationException("O curso informado nao esta vinculado ao professor autenticado.");
+        }
+
+        return cursoId;
     }
 
     public async Task<ResultadoGeracaoIA> GerarQuestoesComIaAsync(int avaliacaoId, int professorId, IFormFile arquivo, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken)
@@ -1190,21 +1188,13 @@ public class AvaliacaoService : IAvaliacaoService
             ?? throw new KeyNotFoundException("Modulo nao encontrado.");
     }
 
-    private static void ValidarCompatibilidadeTurmaModulo(Turma turma, Modulo? modulo)
-    {
-        if (modulo is not null && turma.CursoId != modulo.CursoId)
-        {
-            throw new InvalidOperationException("O modulo selecionado nao pertence ao mesmo curso da turma informada.");
-        }
-    }
-
     /// <summary>
     /// Vinculo opcional do quiz a um material especifico do modulo. Prova/Exercicio
     /// costumam ficar soltos no curso (sem modulo, sem material); Quiz pode ser preso
-    /// a um material, mas o material precisa pertencer ao mesmo modulo/turma da
-    /// avaliacao — nao confiamos so no que o frontend manda.
+    /// a um material, mas o material precisa pertencer ao mesmo modulo da avaliacao —
+    /// nao confiamos so no que o frontend manda.
     /// </summary>
-    private async Task<ConteudoDidatico?> ValidarMaterialAsync(int? conteudoDidaticoId, Turma turma, Modulo? modulo)
+    private async Task<ConteudoDidatico?> ValidarMaterialAsync(int? conteudoDidaticoId, Modulo? modulo)
     {
         if (!conteudoDidaticoId.HasValue)
         {
@@ -1221,9 +1211,9 @@ public class AvaliacaoService : IAvaliacaoService
             .FirstOrDefaultAsync(item => item.Id == conteudoDidaticoId.Value)
             ?? throw new KeyNotFoundException("Material nao encontrado.");
 
-        if (material.ModuloId != modulo.Id || material.TurmaId != turma.Id)
+        if (material.ModuloId != modulo.Id)
         {
-            throw new InvalidOperationException("O material informado nao pertence ao modulo/turma da avaliacao.");
+            throw new InvalidOperationException("O material informado nao pertence ao modulo da avaliacao.");
         }
 
         return material;

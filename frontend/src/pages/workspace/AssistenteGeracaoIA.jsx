@@ -188,7 +188,7 @@ export function AssistenteGeracaoIA({
           body: JSON.stringify({
             titulo: tituloTratado,
             descricao: "",
-            turmaId: Number(cursoAtivo.turma.id),
+            cursoId: Number(cursoAtivo.curso.id),
             moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
             conteudoDidaticoId: modoExclusivoQuiz && !usaUploadDeArquivo ? Number(conteudoSelecionadoId) : null,
             tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,
@@ -485,7 +485,7 @@ export function AssistenteGeracaoIA({
         body: JSON.stringify({
           titulo: titulo.trim(),
           descricao: "",
-          turmaId: Number(cursoAtivo.turma.id),
+          cursoId: Number(cursoAtivo.curso.id),
           moduloId: modoExclusivoQuiz ? Number(moduloContexto.id) : null,
           conteudoDidaticoId: modoExclusivoQuiz && !usaUploadDeArquivo ? Number(conteudoSelecionadoId) : null,
           tipoAvaliacao: modoExclusivoQuiz ? 1 : 2,

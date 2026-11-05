@@ -11,7 +11,6 @@ import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { mapById } from "../../lib/dashboard.js";
 import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
@@ -20,7 +19,7 @@ function formatDecimal(value) {
   return Number(value || 0).toFixed(2).replace(".", ",");
 }
 
-export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onRefresh, onSessionExpired, turmas, usuario }) {
+export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onRefresh, onSessionExpired }) {
   const { mostrarToast } = useToast();
   // Assistente de criacao/edicao de avaliacao/quiz — componente compartilhado
   // (AssistenteQuizAvaliacao.jsx), tambem montado direto por
@@ -92,28 +91,9 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     };
   }, [menuAbertoId]);
 
-  const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
-
-  const turmasDoProfessor = useMemo(
-    () =>
-      [...turmas]
-        .filter((turma) => turma.professorId === usuario.id)
-        .sort((left, right) => {
-          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
-          return courseComparison !== 0 ? courseComparison : left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
-        }),
-    [cursoPorId, turmas, usuario.id]
-  );
-
   const modulosDoProfessor = useMemo(
-    () =>
-      [...modulos]
-        .filter((modulo) => turmasDoProfessor.some((turma) => turma.cursoId === modulo.cursoId))
-        .sort((left, right) => {
-          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
-          return courseComparison !== 0 ? courseComparison : left.titulo.localeCompare(right.titulo, "pt-BR");
-        }),
-    [cursoPorId, modulos, turmasDoProfessor]
+    () => [...modulos].sort((left, right) => left.titulo.localeCompare(right.titulo, "pt-BR")),
+    [modulos]
   );
 
   const modulosPorCursoId = useMemo(() => {
@@ -126,37 +106,26 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     return agrupados;
   }, [modulosDoProfessor]);
 
-  /* Um professor tem no maximo 1 turma por curso — mesma premissa usada na
-     Trilha de Conteudos (ver SecaoConteudosProfessor.jsx). */
+  /* "Meus cursos" vem direto do prop cursos (GET /Cursos/meus, escopado pelo
+     vinculo ProfessorCurso) — mesma correcao aplicada na Trilha de Conteudos
+     (ver SecaoConteudosProfessor.jsx e pendencia_fase_b_remocao_turma). */
   const cursosDoProfessor = useMemo(() => {
-    const porCursoId = new Map();
+    return [...cursos]
+      .map((curso) => {
+        // Quiz (tipoAvaliacao === 1) nao e avaliacao formal — fica exclusivo da
+        // trilha de Conteudos (ver SecaoConteudosProfessor.jsx), nao entra aqui.
+        const avaliacoesDoCurso = avaliacoes.filter(
+          (avaliacao) => avaliacao.cursoId === curso.id && Number(avaliacao.tipoAvaliacao) !== 1
+        );
 
-    turmasDoProfessor.forEach((turma) => {
-      if (porCursoId.has(turma.cursoId)) {
-        return;
-      }
-
-      const curso = cursoPorId.get(turma.cursoId);
-      if (!curso) {
-        return;
-      }
-
-      // Quiz (tipoAvaliacao === 1) nao e avaliacao formal — fica exclusivo da
-      // trilha de Conteudos (ver SecaoConteudosProfessor.jsx), nao entra aqui.
-      const avaliacoesDaTurma = avaliacoes.filter(
-        (avaliacao) => avaliacao.turmaId === turma.id && Number(avaliacao.tipoAvaliacao) !== 1
-      );
-
-      porCursoId.set(turma.cursoId, {
-        curso,
-        turma,
-        totalAvaliacoes: avaliacoesDaTurma.length,
-        totalPublicadas: avaliacoesDaTurma.filter((avaliacao) => Number(avaliacao.statusPublicacao) === 2).length
-      });
-    });
-
-    return [...porCursoId.values()].sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
-  }, [avaliacoes, cursoPorId, turmasDoProfessor]);
+        return {
+          curso,
+          totalAvaliacoes: avaliacoesDoCurso.length,
+          totalPublicadas: avaliacoesDoCurso.filter((avaliacao) => Number(avaliacao.statusPublicacao) === 2).length
+        };
+      })
+      .sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
+  }, [avaliacoes, cursos]);
 
   const cursoAtivo = useMemo(
     () => (cursoIdSelecionado ? cursosDoProfessor.find((entrada) => entrada.curso.id === cursoIdSelecionado) || null : null),
@@ -168,7 +137,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
       cursoAtivo
         ? [...avaliacoes]
             .filter(
-              (avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id && Number(avaliacao.tipoAvaliacao) !== 1
+              (avaliacao) => avaliacao.cursoId === cursoAtivo.curso.id && Number(avaliacao.tipoAvaliacao) !== 1
             )
             .sort((left, right) => (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
         : [],
@@ -273,7 +242,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     return {
       titulo: avaliacao.titulo,
       descricao: avaliacao.descricao || "",
-      turmaId: avaliacao.turmaId,
+      cursoId: avaliacao.cursoId,
       moduloId: avaliacao.moduloId,
       tipoAvaliacao: avaliacao.tipoAvaliacao,
       statusPublicacao: avaliacao.statusPublicacao,
@@ -363,7 +332,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
                 ? "Publicado"
                 : "Parcialmente publicado"
           }))}
-          mensagemVazia="Voce ainda nao tem turmas atribuidas a nenhum curso."
+          mensagemVazia="Voce ainda nao esta vinculado a nenhum curso."
           onSelecionar={abrirCurso}
         />
       ) : (
@@ -451,11 +420,6 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
                   <TbPencil aria-hidden="true" size={18} />
                 </motion.span>
               </button>
-            </div>
-
-            <div className="lista-detalhes__item">
-              <dt>Turma</dt>
-              <dd>{avaliacaoDetalhe.turmaNome}</dd>
             </div>
 
             <div className="lista-detalhes__item">
@@ -677,8 +641,8 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   );
 }
 
-/* Avaliacoes pertencem diretamente ao curso (via TurmaId) - avaliacoesDoCursoAtivo
-   ja filtra por turma, sem passar por modulos/conteudos. O card do curso
+/* Avaliacoes pertencem diretamente ao curso (via CursoId) - avaliacoesDoCursoAtivo
+   ja filtra por curso, sem passar por modulos/conteudos. O card do curso
    (GradeCursosProfessor) continua sendo a porta de entrada; isto so desenha o
    conteudo depois que um curso ja foi acessado. Cada avaliacao vira seu proprio
    accordion (mesmo padrao visual/interacao do cabecalho de modulo em

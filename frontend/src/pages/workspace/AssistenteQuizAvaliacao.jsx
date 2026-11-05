@@ -74,7 +74,6 @@ function toIsoOrNull(value) {
 
 function criarEstadoInicialFormulario(overrides = {}) {
   return {
-    turmaId: "",
     moduloId: "",
     conteudoDidaticoId: "",
     titulo: "",
@@ -183,7 +182,7 @@ function mapearQuestaoParaFormulario(questao) {
 function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoNovoQuiz, modoExclusivoQuiz) {
   if (avaliacaoParaEditar) {
     return {
-      turmaId: String(avaliacaoParaEditar.turmaId),
+      cursoId: String(avaliacaoParaEditar.cursoId),
       moduloId: avaliacaoParaEditar.moduloId ? String(avaliacaoParaEditar.moduloId) : "",
       conteudoDidaticoId: avaliacaoParaEditar.conteudoDidaticoId ? String(avaliacaoParaEditar.conteudoDidaticoId) : "",
       titulo: avaliacaoParaEditar.titulo || "",
@@ -201,7 +200,7 @@ function estadoInicialDadosFormulario(cursoAtivo, avaliacaoParaEditar, contextoN
   }
 
   return criarEstadoInicialFormulario({
-    turmaId: String(cursoAtivo.turma.id),
+    cursoId: String(cursoAtivo.curso.id),
     moduloId: contextoNovoQuiz?.moduloId ? String(contextoNovoQuiz.moduloId) : "",
     conteudoDidaticoId: contextoNovoQuiz?.conteudoDidaticoId ? String(contextoNovoQuiz.conteudoDidaticoId) : "",
     tipoAvaliacao: modoExclusivoQuiz ? TIPO_QUIZ : OPCOES_TIPO_AVALIACAO_SEM_QUIZ[0].value
@@ -379,7 +378,7 @@ export function AssistenteQuizAvaliacao({
     return {
       titulo: dadosFormulario.titulo.trim(),
       descricao: dadosFormulario.descricao.trim(),
-      turmaId: Number(dadosFormulario.turmaId),
+      cursoId: Number(dadosFormulario.cursoId),
       moduloId: ehQuiz && dadosFormulario.moduloId ? Number(dadosFormulario.moduloId) : null,
       conteudoDidaticoId: ehQuiz && dadosFormulario.conteudoDidaticoId ? Number(dadosFormulario.conteudoDidaticoId) : null,
       tipoAvaliacao: modoExclusivoQuiz ? 1 : Number(dadosFormulario.tipoAvaliacao),
@@ -399,8 +398,8 @@ export function AssistenteQuizAvaliacao({
       return "Informe o titulo da avaliacao antes de salvar.";
     }
 
-    if (!dadosEnvio.turmaId) {
-      return "Nao foi possivel identificar a turma deste curso.";
+    if (!dadosEnvio.cursoId) {
+      return "Nao foi possivel identificar o curso desta avaliacao.";
     }
 
     if (ehQuiz && !modulosDisponiveis.length) {

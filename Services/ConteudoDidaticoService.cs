@@ -11,7 +11,6 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     private readonly IConteudoDidaticoRepository _conteudoRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
     private readonly IGenericRepository<Professor> _professorRepository;
-    private readonly IGenericRepository<Turma> _turmaRepository;
     private readonly IGenericRepository<Modulo> _moduloRepository;
     private readonly INotificacaoService _notificacaoService;
     private readonly ICursoService _cursoService;
@@ -21,7 +20,6 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         IConteudoDidaticoRepository conteudoRepository,
         IGenericRepository<Aluno> alunoRepository,
         IGenericRepository<Professor> professorRepository,
-        IGenericRepository<Turma> turmaRepository,
         IGenericRepository<Modulo> moduloRepository,
         INotificacaoService notificacaoService,
         ICursoService cursoService,
@@ -30,7 +28,6 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         _conteudoRepository = conteudoRepository;
         _alunoRepository = alunoRepository;
         _professorRepository = professorRepository;
-        _turmaRepository = turmaRepository;
         _moduloRepository = moduloRepository;
         _notificacaoService = notificacaoService;
         _cursoService = cursoService;
@@ -70,15 +67,12 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         await ValidarProfessorAsync(professorId);
 
-        var turma = await ValidarTurmaDoProfessorAsync(professorId, dto.TurmaId);
         var modulo = await ValidarModuloAsync(dto.ModuloId);
-
-        ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        await ValidarProfessorNoCursoAsync(professorId, modulo.CursoId);
         await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
 
         var conteudo = new ConteudoDidatico
         {
-            TurmaId = turma.Id,
             ModuloId = modulo.Id
         };
         conteudo.DefinirProfessorAutor(professorId);
@@ -114,13 +108,10 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
         var statusAnterior = conteudo.StatusPublicacao;
-        var turma = await ValidarTurmaDoProfessorAsync(professorId, dto.TurmaId);
         var modulo = await ValidarModuloAsync(dto.ModuloId);
-
-        ValidarCompatibilidadeTurmaModulo(turma, modulo);
+        await ValidarProfessorNoCursoAsync(professorId, modulo.CursoId);
         await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
 
-        conteudo.TurmaId = turma.Id;
         conteudo.ModuloId = modulo.Id;
         conteudo.DefinirCurso(modulo.CursoId);
         conteudo.MarcarAtualizacao(DateTime.UtcNow);
@@ -209,31 +200,18 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
             ?? throw new KeyNotFoundException("Aluno nao encontrado.");
     }
 
-    private async Task<Turma> ValidarTurmaDoProfessorAsync(int professorId, int turmaId)
+    private async Task ValidarProfessorNoCursoAsync(int professorId, int cursoId)
     {
-        var turma = await _turmaRepository.ObterPorIdAsync(turmaId)
-            ?? throw new KeyNotFoundException("Turma nao encontrada.");
-
-        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, turma.CursoId))
+        if (!await _cursoService.ProfessorPertenceAoCursoAsync(professorId, cursoId))
         {
-            throw new InvalidOperationException("O curso da turma informada nao esta vinculado ao professor autenticado.");
+            throw new InvalidOperationException("O curso do modulo informado nao esta vinculado ao professor autenticado.");
         }
-
-        return turma;
     }
 
     private async Task<Modulo> ValidarModuloAsync(int moduloId)
     {
         return await _moduloRepository.ObterPorIdAsync(moduloId)
             ?? throw new KeyNotFoundException("Modulo nao encontrado.");
-    }
-
-    private static void ValidarCompatibilidadeTurmaModulo(Turma turma, Modulo modulo)
-    {
-        if (turma.CursoId != modulo.CursoId)
-        {
-            throw new InvalidOperationException("O modulo selecionado nao pertence ao mesmo curso da turma informada.");
-        }
     }
 
     private static void AplicarDados(

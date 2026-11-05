@@ -26,7 +26,7 @@ public class ConteudoDidatico
     public string LinkUrl { get; set; } = string.Empty;
 
     public int ProfessorAutorId { get; private set; }
-    public int TurmaId { get; set; }
+    public int? TurmaId { get; set; }
     public int CursoId { get; private set; }
     public int ModuloId { get; set; }
 

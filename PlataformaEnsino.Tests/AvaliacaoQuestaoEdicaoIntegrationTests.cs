@@ -131,11 +131,11 @@ public class AvaliacaoQuestaoEdicaoIntegrationTests : IAsyncLifetime
         return turma;
     }
 
-    private static CriarAvaliacaoDto NovaAvaliacaoDto(int turmaId, int moduloId) => new()
+    private static CriarAvaliacaoDto NovaAvaliacaoDto(int cursoId, int moduloId) => new()
     {
         Titulo = "Avaliacao Teste",
         Descricao = "Descricao",
-        TurmaId = turmaId,
+        CursoId = cursoId,
         ModuloId = moduloId,
         TipoAvaliacao = TipoAvaliacao.Quiz,
         StatusPublicacao = StatusPublicacao.Publicado,
@@ -154,7 +154,7 @@ public class AvaliacaoQuestaoEdicaoIntegrationTests : IAsyncLifetime
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.CursoId, modulo.Id));
 
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {
@@ -208,7 +208,7 @@ public class AvaliacaoQuestaoEdicaoIntegrationTests : IAsyncLifetime
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.CursoId, modulo.Id));
 
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
         {

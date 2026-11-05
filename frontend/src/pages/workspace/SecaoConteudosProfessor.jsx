@@ -27,7 +27,6 @@ import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
-import { mapById } from "../../lib/dashboard.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
@@ -92,9 +91,7 @@ export function SecaoConteudosProfessor({
   modulos,
   onNavigate,
   onRefresh,
-  onSessionExpired,
-  turmas,
-  usuario
+  onSessionExpired
 }) {
   const { mostrarToast } = useToast();
   const [dadosFormulario, setDadosFormulario] = useState(() => criarEstadoInicialFormulario());
@@ -113,25 +110,9 @@ export function SecaoConteudosProfessor({
   const [contextoNovoQuiz, setContextoNovoQuiz] = useState(null);
   const [moduloParaQuizComIa, setModuloParaQuizComIa] = useState(null);
 
-  const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
-
-  const turmasDoProfessor = useMemo(
-    () =>
-      [...turmas]
-        .filter((turma) => turma.professorId === usuario.id)
-        .sort((left, right) => {
-          const courseComparison = (cursoPorId.get(left.cursoId)?.titulo || "").localeCompare(cursoPorId.get(right.cursoId)?.titulo || "", "pt-BR");
-          return courseComparison !== 0 ? courseComparison : left.nomeTurma.localeCompare(right.nomeTurma, "pt-BR");
-        }),
-    [cursoPorId, turmas, usuario.id]
-  );
-
   const modulosDoProfessor = useMemo(
-    () =>
-      [...modulos]
-        .filter((modulo) => turmasDoProfessor.some((turma) => turma.cursoId === modulo.cursoId))
-        .sort((left, right) => new Date(left.dataCriacao || 0).getTime() - new Date(right.dataCriacao || 0).getTime()),
-    [modulos, turmasDoProfessor]
+    () => [...modulos].sort((left, right) => new Date(left.dataCriacao || 0).getTime() - new Date(right.dataCriacao || 0).getTime()),
+    [modulos]
   );
 
   const modulosPorCursoId = useMemo(() => {
@@ -144,45 +125,35 @@ export function SecaoConteudosProfessor({
     return agrupados;
   }, [modulosDoProfessor]);
 
-  /* Um professor tem no maximo 1 turma por curso - a turma resolvida aqui e a fonte
-     unica usada pra montar o card do curso e pra pre-preencher turmaId no formulario.
-     A contagem de "publicado" soma materiais + quizzes (nao so materiais) e ignora
-     arquivados no denominador - mesma regra usada no topo/cabecalho da trilha
+  /* "Meus cursos" vem direto do prop cursos (GET /Cursos/meus, escopado pelo
+     vinculo ProfessorCurso) - nao depende mais de Turma, que podia deixar o
+     professor sem ver o curso aqui quando vinculado so pela tela "Professores
+     por curso" (ver pendencia_fase_b_remocao_turma na memoria). A contagem de
+     "publicado" soma materiais + quizzes (nao so materiais) e ignora arquivados
+     no denominador - mesma regra usada no topo/cabecalho da trilha
      (TrilhaConteudosProfessor), pra nao mostrar numero diferente em cada tela. */
   const cursosDoProfessor = useMemo(() => {
-    const porCursoId = new Map();
+    return [...cursos]
+      .map((curso) => {
+        const conteudosDoCurso = conteudos.filter((conteudo) => conteudo.cursoId === curso.id);
+        const quizzesDoCurso = avaliacoes.filter(
+          (avaliacao) => avaliacao.cursoId === curso.id && Number(avaliacao.tipoAvaliacao) === 1
+        );
+        const itensNaoArquivados = [...conteudosDoCurso, ...quizzesDoCurso].filter(
+          (item) => Number(item.statusPublicacao) !== STATUS_ARQUIVADO
+        );
+        const totalPublicados = itensNaoArquivados.filter((item) => Number(item.statusPublicacao) === STATUS_PUBLICADO).length;
 
-    turmasDoProfessor.forEach((turma) => {
-      if (porCursoId.has(turma.cursoId)) {
-        return;
-      }
-
-      const curso = cursoPorId.get(turma.cursoId);
-      if (!curso) {
-        return;
-      }
-
-      const conteudosDaTurma = conteudos.filter((conteudo) => conteudo.turmaId === turma.id);
-      const quizzesDaTurma = avaliacoes.filter(
-        (avaliacao) => avaliacao.turmaId === turma.id && Number(avaliacao.tipoAvaliacao) === 1
-      );
-      const itensNaoArquivados = [...conteudosDaTurma, ...quizzesDaTurma].filter(
-        (item) => Number(item.statusPublicacao) !== STATUS_ARQUIVADO
-      );
-      const totalPublicados = itensNaoArquivados.filter((item) => Number(item.statusPublicacao) === STATUS_PUBLICADO).length;
-
-      porCursoId.set(turma.cursoId, {
-        curso,
-        turma,
-        totalModulos: (modulosPorCursoId.get(turma.cursoId) || []).length,
-        totalConteudos: conteudosDaTurma.length,
-        totalItensNaoArquivados: itensNaoArquivados.length,
-        totalPublicados
-      });
-    });
-
-    return [...porCursoId.values()].sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
-  }, [avaliacoes, conteudos, cursoPorId, modulosPorCursoId, turmasDoProfessor]);
+        return {
+          curso,
+          totalModulos: (modulosPorCursoId.get(curso.id) || []).length,
+          totalConteudos: conteudosDoCurso.length,
+          totalItensNaoArquivados: itensNaoArquivados.length,
+          totalPublicados
+        };
+      })
+      .sort((left, right) => left.curso.titulo.localeCompare(right.curso.titulo, "pt-BR"));
+  }, [avaliacoes, conteudos, cursos, modulosPorCursoId]);
 
   const cursoAtivo = useMemo(
     () => (cursoIdSelecionado ? cursosDoProfessor.find((entrada) => entrada.curso.id === cursoIdSelecionado) || null : null),
@@ -228,7 +199,6 @@ export function SecaoConteudosProfessor({
     setConteudoEmEdicaoId(null);
     setDadosFormulario({
       ...criarEstadoInicialFormulario(),
-      turmaId: String(cursoAtivo.turma.id),
       moduloId: String(moduloIdAlvo),
       ordemExibicao: String(conteudosDoModuloAlvo.length)
     });
@@ -259,7 +229,6 @@ export function SecaoConteudosProfessor({
   function abrirEdicaoConteudo(conteudo) {
     setConteudoEmEdicaoId(conteudo.id);
     setDadosFormulario({
-      turmaId: String(conteudo.turmaId),
       moduloId: String(conteudo.moduloId),
       titulo: conteudo.titulo || "",
       descricao: conteudo.descricao || "",
@@ -317,7 +286,6 @@ export function SecaoConteudosProfessor({
       corpoTexto: exigeTexto ? dadosFormulario.corpoTexto.trim() : "",
       arquivoUrl: exigeUpload ? dadosFormulario.arquivoUrl.trim() : "",
       linkUrl: exigeUrlRecurso ? dadosFormulario.linkUrl.trim() : "",
-      turmaId: Number(dadosFormulario.turmaId),
       moduloId: Number(dadosFormulario.moduloId),
       statusPublicacao: Number(dadosFormulario.statusPublicacao),
       ordemExibicao: Number(dadosFormulario.ordemExibicao),
@@ -329,8 +297,8 @@ export function SecaoConteudosProfessor({
       return;
     }
 
-    if (!dadosEnvio.turmaId || !dadosEnvio.moduloId) {
-      setMensagemFormulario({ tone: "error", message: "Não foi possível identificar a turma ou o módulo deste conteúdo." });
+    if (!dadosEnvio.moduloId) {
+      setMensagemFormulario({ tone: "error", message: "Não foi possível identificar o módulo deste conteúdo." });
       return;
     }
 
@@ -611,7 +579,7 @@ export function SecaoConteudosProfessor({
                 ? "Publicado"
                 : "Parcialmente publicado"
           }))}
-          mensagemVazia="Você ainda não tem turmas atribuídas a nenhum curso."
+          mensagemVazia="Você ainda não está vinculado a nenhum curso."
           onSelecionar={abrirCurso}
         />
       ) : (
@@ -935,13 +903,13 @@ function TrilhaConteudosProfessor({
   }
 
   const conteudosDoCurso = useMemo(
-    () => conteudos.filter((conteudo) => conteudo.turmaId === cursoAtivo.turma.id),
-    [conteudos, cursoAtivo.turma.id]
+    () => conteudos.filter((conteudo) => conteudo.cursoId === cursoAtivo.curso.id),
+    [conteudos, cursoAtivo.curso.id]
   );
 
   const quizzesDoCurso = useMemo(
-    () => avaliacoes.filter((avaliacao) => avaliacao.turmaId === cursoAtivo.turma.id && Number(avaliacao.tipoAvaliacao) === 1),
-    [avaliacoes, cursoAtivo.turma.id]
+    () => avaliacoes.filter((avaliacao) => avaliacao.cursoId === cursoAtivo.curso.id && Number(avaliacao.tipoAvaliacao) === 1),
+    [avaliacoes, cursoAtivo.curso.id]
   );
 
   // Usado so pela previa do aluno (PreviaTrilhaAluno) - guarda so 1 quiz por
@@ -1590,7 +1558,6 @@ function montarPayloadConteudo(conteudo, overrides = {}) {
     corpoTexto: conteudo.corpoTexto || "",
     arquivoUrl: conteudo.arquivoUrl || "",
     linkUrl: conteudo.linkUrl || "",
-    turmaId: conteudo.turmaId,
     moduloId: conteudo.moduloId,
     statusPublicacao: Number(conteudo.statusPublicacao),
     ordemExibicao: conteudo.ordemExibicao ?? 0,
@@ -1607,7 +1574,7 @@ function montarPayloadAvaliacao(quiz, overrides = {}) {
   return {
     titulo: quiz.titulo,
     descricao: quiz.descricao || "",
-    turmaId: quiz.turmaId,
+    cursoId: quiz.cursoId,
     moduloId: quiz.moduloId ?? null,
     conteudoDidaticoId: quiz.conteudoDidaticoId ?? null,
     tipoAvaliacao: Number(quiz.tipoAvaliacao),
@@ -1625,7 +1592,6 @@ function montarPayloadAvaliacao(quiz, overrides = {}) {
 
 function criarEstadoInicialFormulario(overrides = {}) {
   return {
-    turmaId: "",
     moduloId: "",
     titulo: "",
     descricao: "",

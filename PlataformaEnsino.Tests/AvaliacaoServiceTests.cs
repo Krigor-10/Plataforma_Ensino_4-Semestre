@@ -127,13 +127,13 @@ public class AvaliacaoServiceTests
         return matricula;
     }
 
-    private static CriarAvaliacaoDto NovaAvaliacaoDto(int turmaId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
+    private static CriarAvaliacaoDto NovaAvaliacaoDto(int cursoId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         return new CriarAvaliacaoDto
         {
             Titulo = "Avaliacao Teste",
             Descricao = "Descricao",
-            TurmaId = turmaId,
+            CursoId = cursoId,
             ModuloId = moduloId,
             TipoAvaliacao = tipoAvaliacao,
             StatusPublicacao = status,
@@ -174,7 +174,7 @@ public class AvaliacaoServiceTests
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         Assert.Equal("Avaliacao Teste", avaliacao.Titulo);
         Assert.Equal(StatusPublicacao.Publicado, avaliacao.StatusPublicacao);
@@ -195,7 +195,7 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id)));
+            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id)));
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, outroProfessor.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id)));
+            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id)));
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, moduloDeOutroCurso.Id)));
+            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, moduloDeOutroCurso.Id)));
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var dto = NovaAvaliacaoDto(turma.Id, modulo.Id);
+        var dto = NovaAvaliacaoDto(curso.Id, modulo.Id);
         dto.NotaMaxima = 0;
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CriarAvaliacaoAsync(professor.Id, dto));
@@ -253,7 +253,7 @@ public class AvaliacaoServiceTests
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var agora = DateTime.UtcNow;
-        var dto = NovaAvaliacaoDto(turma.Id, modulo.Id, dataAbertura: agora, dataFechamento: agora.AddDays(-1));
+        var dto = NovaAvaliacaoDto(curso.Id, modulo.Id, dataAbertura: agora, dataFechamento: agora.AddDays(-1));
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CriarAvaliacaoAsync(professor.Id, dto));
     }
@@ -270,12 +270,12 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dtoAtualizacao = new AtualizarAvaliacaoDto
         {
             Titulo = "Tentativa de editar",
-            TurmaId = turma.Id,
+            CursoId = curso.Id,
             ModuloId = modulo.Id,
             TipoAvaliacao = TipoAvaliacao.Quiz,
             StatusPublicacao = StatusPublicacao.Publicado,
@@ -299,7 +299,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ExcluirAvaliacaoAsync(avaliacao.Id, outroProfessor.Id));
@@ -316,7 +316,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
@@ -333,7 +333,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
         var segunda = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
@@ -350,7 +350,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dto = NovaQuestaoObjetivaDto(letraCorreta: "nenhuma");
 
@@ -367,7 +367,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dto = NovaQuestaoObjetivaDto();
         dto.Alternativas[1].EhCorreta = true;
@@ -385,7 +385,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dto = NovaQuestaoObjetivaDto();
         dto.Alternativas.RemoveAt(1);
@@ -403,7 +403,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dto = new CriarQuestaoAvaliacaoDto
         {
@@ -429,7 +429,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var dto = new CriarQuestoesEmLoteDto
         {
@@ -451,7 +451,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var questaoInvalida = NovaQuestaoObjetivaDto(letraCorreta: "nenhuma");
         var dto = new CriarQuestoesEmLoteDto
@@ -477,7 +477,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
         var dto = new AtualizarQuestaoAvaliacaoDto
@@ -510,7 +510,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
         context.TentativasAvaliacao.Add(new TentativaAvaliacao { AvaliacaoId = avaliacao.Id, MatriculaId = 1 });
@@ -544,7 +544,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var primeira = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
         var segunda = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
@@ -573,7 +573,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var primeira = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
         await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
@@ -602,7 +602,7 @@ public class AvaliacaoServiceTests
 
         var avaliacao = await service.CriarAvaliacaoAsync(
             professor.Id,
-            NovaAvaliacaoDto(turma.Id, modulo.Id, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento, tipoAvaliacao: tipoAvaliacao));
+            NovaAvaliacaoDto(curso.Id, modulo.Id, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento, tipoAvaliacao: tipoAvaliacao));
 
         return (service, context, professor, aluno, turma, modulo, avaliacao);
     }
@@ -763,7 +763,7 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 10));
         var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
 
@@ -789,7 +789,7 @@ public class AvaliacaoServiceTests
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
         var turma = CriarTurma(context, curso.Id, professor.Id);
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
 
         var alunoSemMatricula = CriarAluno(context);
@@ -908,7 +908,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_DuasAvaliacoesNoCurso_SoLancaNotaFinalQuandoAmbasForemCorrigidas()
     {
         var (service, context, professor, aluno, turma, modulo, avaliacao1) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
-        var avaliacao2 = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, tipoAvaliacao: TipoAvaliacao.Prova));
+        var avaliacao2 = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(avaliacao1.CursoId, modulo.Id, tipoAvaliacao: TipoAvaliacao.Prova));
         var matricula = context.Matriculas.Single();
 
         var questao1 = await service.AdicionarQuestaoAsync(avaliacao1.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
@@ -1066,7 +1066,7 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
-        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
 
@@ -1125,7 +1125,7 @@ public class AvaliacaoServiceTests
             iaFake,
             CriarCursoService(context));
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 
         var bytesFalsos = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nconteudo escaneado de teste");
         var arquivo = new FormFile(new MemoryStream(bytesFalsos), 0, bytesFalsos.Length, "arquivo", "prova-escaneada.pdf")
@@ -1169,7 +1169,7 @@ public class AvaliacaoServiceTests
             iaFake,
             CriarCursoService(context));
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 
         await service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudo.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None);
 
@@ -1204,7 +1204,7 @@ public class AvaliacaoServiceTests
             new AvaliacaoIAServiceFake(),
             CriarCursoService(context));
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoDeOutroCurso.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None));
@@ -1235,7 +1235,7 @@ public class AvaliacaoServiceTests
             new AvaliacaoIAServiceFake(),
             CriarCursoService(context));
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoVideo.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None));
@@ -1277,7 +1277,7 @@ public class AvaliacaoServiceTests
             iaFake,
             CriarCursoService(context));
 
-        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
 
         var resultado = await service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudoPdf.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None);
 
@@ -1379,7 +1379,7 @@ public class AvaliacaoServiceTests
         var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
         {
             Titulo = "Avaliacao Final",
-            TurmaId = turma.Id,
+            CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
             StatusPublicacao = StatusPublicacao.Publicado,
@@ -1415,12 +1415,12 @@ public class AvaliacaoServiceTests
         await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
 
         // Quiz do modulo publicado, mas o aluno nunca enviou nenhuma tentativa.
-        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
         {
             Titulo = "Avaliacao Final",
-            TurmaId = turma.Id,
+            CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
             StatusPublicacao = StatusPublicacao.Publicado,
@@ -1455,7 +1455,7 @@ public class AvaliacaoServiceTests
         var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
         await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
 
-        var quiz = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(turma.Id, modulo.Id));
+        var quiz = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questaoQuiz = await service.AdicionarQuestaoAsync(quiz.Id, professor.Id, NovaQuestaoObjetivaDto());
         await service.EnviarRespostasAlunoAsync(quiz.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
         {
@@ -1465,7 +1465,7 @@ public class AvaliacaoServiceTests
         var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
         {
             Titulo = "Avaliacao Final",
-            TurmaId = turma.Id,
+            CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
             StatusPublicacao = StatusPublicacao.Publicado,
