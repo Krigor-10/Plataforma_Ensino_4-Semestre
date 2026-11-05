@@ -190,34 +190,7 @@ async function garantirProfessorNoCurso(ctx, cursoId) {
   ctx.log(`  professor: vinculado`);
 }
 
-// TurmaService.CriarTurmaAsync ignora o NomeTurma enviado (sempre gera um nome
-// padrao a partir do titulo do curso) e so permite UMA turma por curso ("turma
-// padrao") - por isso a idempotencia aqui e so por cursoId, o nomeTurma do
-// cursos.json e so documentacao, nao e de fato enviado/usado pra casar.
-async function garantirTurma(ctx, cursoId, nomeTurmaDesejado) {
-  const existentes = await api(ctx.baseUrl, ctx.tokenProfessor, "GET", "/Turmas/minhas");
-  const existente = existentes.find((t) => t.cursoId === cursoId);
-
-  if (existente) {
-    ctx.log(`  turma: reaproveitada (id=${existente.id}, nome="${existente.nomeTurma}")`);
-    return existente.id;
-  }
-
-  ctx.log(`  turma: ${ctx.aplicar ? "criando..." : "seria criada"}`);
-  if (!ctx.aplicar) {
-    return null;
-  }
-
-  const criada = await api(ctx.baseUrl, ctx.tokenAdmin, "POST", "/Turmas", {
-    nomeTurma: nomeTurmaDesejado,
-    cursoId,
-    professorId: Number(ctx.professorId)
-  });
-  ctx.log(`  turma: criada (id=${criada.id}, nome="${criada.nomeTurma}")`);
-  return criada.id;
-}
-
-async function garantirAula(ctx, turmaId, moduloId, aulaJson, ordemExibicao) {
+async function garantirAula(ctx, moduloId, aulaJson, ordemExibicao) {
   const existentes = await api(ctx.baseUrl, ctx.tokenProfessor, "GET", "/ConteudosDidaticos");
   const existente = existentes.find((c) => c.moduloId === moduloId && c.titulo === aulaJson.titulo);
 
@@ -242,7 +215,6 @@ async function garantirAula(ctx, turmaId, moduloId, aulaJson, ordemExibicao) {
     descricao: aulaJson.descricao || "",
     tipoConteudo: TIPO_CONTEUDO.Pdf,
     arquivoUrl: upload.arquivoUrl,
-    turmaId,
     moduloId,
     statusPublicacao: STATUS_PUBLICACAO.Publicado,
     ordemExibicao
@@ -251,16 +223,16 @@ async function garantirAula(ctx, turmaId, moduloId, aulaJson, ordemExibicao) {
   return criado.id;
 }
 
-async function garantirAvaliacao(ctx, { turmaId, moduloId, avaliacaoJson, tipoAvaliacao, tentativasPermitidas, tempoLimiteMinutos, notaMaxima }) {
+async function garantirAvaliacao(ctx, { cursoId, moduloId, avaliacaoJson, tipoAvaliacao, tentativasPermitidas, tempoLimiteMinutos, notaMaxima }) {
   const existentes = await api(ctx.baseUrl, ctx.tokenProfessor, "GET", "/Avaliacoes");
   const existente = existentes.find(
-    (a) => a.titulo === avaliacaoJson.titulo && a.turmaId === turmaId && (a.moduloId || null) === (moduloId || null)
+    (a) => a.titulo === avaliacaoJson.titulo && a.cursoId === cursoId && (a.moduloId || null) === (moduloId || null)
   );
 
   const payloadBase = {
     titulo: avaliacaoJson.titulo,
     descricao: avaliacaoJson.descricao || "",
-    turmaId,
+    cursoId,
     moduloId: moduloId || null,
     tipoAvaliacao: TIPO_AVALIACAO[tipoAvaliacao],
     tentativasPermitidas,
@@ -344,7 +316,6 @@ async function carregarCurso(ctx, curso) {
   }
 
   await garantirProfessorNoCurso(ctx, cursoId);
-  const turmaId = await garantirTurma(ctx, cursoId, curso.turma.nomeTurma);
 
   for (const moduloJson of curso.modulos) {
     const moduloId = await garantirModulo(ctx, cursoId, moduloJson);
@@ -354,12 +325,12 @@ async function carregarCurso(ctx, curso) {
 
     let ordem = 1;
     for (const aulaJson of moduloJson.aulas) {
-      await garantirAula(ctx, turmaId, moduloId, aulaJson, ordem);
+      await garantirAula(ctx, moduloId, aulaJson, ordem);
       ordem++;
     }
 
     await garantirAvaliacao(ctx, {
-      turmaId,
+      cursoId,
       moduloId,
       avaliacaoJson: moduloJson.quiz,
       tipoAvaliacao: "Quiz",
@@ -370,7 +341,7 @@ async function carregarCurso(ctx, curso) {
   }
 
   await garantirAvaliacao(ctx, {
-    turmaId,
+    cursoId,
     moduloId: null,
     avaliacaoJson: curso.avaliacaoFinal,
     tipoAvaliacao: curso.avaliacaoFinal.tipoAvaliacao,

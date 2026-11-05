@@ -1,6 +1,6 @@
 # Carga dos cursos de teste
 
-Script que lê `docs/teste-usabilidade/cursos/cursos.json` e cria os 3 cursos de teste pela API pública (`/api/v1/...`), como Admin (curso/capa/turma) e Professor (aulas/quizzes/avaliação final). Veja `docs/teste-usabilidade/PROMPT-agente-carga-cursos-teste.md` para o contexto completo.
+Script que lê `docs/teste-usabilidade/cursos/cursos.json` e cria os 3 cursos de teste pela API pública (`/api/v1/...`), como Admin (curso/capa/vínculo de professor) e Professor (aulas/quizzes/avaliação final). Veja `docs/teste-usabilidade/PROMPT-agente-carga-cursos-teste.md` para o contexto completo.
 
 Node puro, sem dependência nova (usa `fetch`/`FormData` nativos do Node 20+).
 
@@ -59,4 +59,4 @@ node carregar.js --aplicar --curso gratis-ia
 
 ## Observação sobre turma
 
-O backend (`TurmaService.CriarTurmaAsync`) só permite **uma turma por curso** ("turma padrão") e **sempre gera o próprio nome da turma** a partir do título do curso — o campo `turma.nomeTurma` do `cursos.json` é só documentação, não é o nome que a turma efetivamente recebe.
+Desde a Fase B do projeto (remoção de Turma do fluxo acadêmico, Rodada 4), o script não cria mais Turma nenhuma — conteúdo/quiz/avaliação são criados direto por curso (`cursoId`), sem passar por `TurmaId`. O campo `turma` que existia no `cursos.json` foi removido por já ser puramente decorativo (o backend nunca usava o nome enviado).

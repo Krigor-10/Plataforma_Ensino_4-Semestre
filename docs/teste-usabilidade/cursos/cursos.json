@@ -8,9 +8,6 @@
       "preco": 0,
       "imagemCapa": "capas/course-eng-ia.jpg",
       "modeloCurso": "Gratuito",
-      "turma": {
-        "nomeTurma": "Turma de teste – IA"
-      },
       "modulos": [
         {
           "titulo": "Fundamentos",
@@ -610,9 +607,6 @@
       "preco": 29.9,
       "imagemCapa": "capas/course-arquitetura-soft.jpg",
       "modeloCurso": "PagoPacote",
-      "turma": {
-        "nomeTurma": "Turma de teste – Engenharia de Software"
-      },
       "modulos": [
         {
           "titulo": "Requisitos",
@@ -1187,9 +1181,6 @@
       "preco": 59.9,
       "imagemCapa": "capas/course-devops-cloud.jpg",
       "modeloCurso": "Acompanhado",
-      "turma": {
-        "nomeTurma": "Turma de teste – Redes e Infraestrutura"
-      },
       "modulos": [
         {
           "titulo": "Protocolos e serviços",
