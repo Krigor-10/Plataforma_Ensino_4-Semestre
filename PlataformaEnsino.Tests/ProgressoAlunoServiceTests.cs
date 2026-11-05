@@ -78,6 +78,33 @@ public class ProgressoAlunoServiceTests
         return conteudo;
     }
 
+    // Achado da auditoria de lixeira de conteudos (05/11): RecalcularModuloAsync/
+    // RecalcularCursoAsync nao filtravam ExcluidoEm - um material excluido (soft-
+    // delete, usado quando ja ha progresso de ALGUM aluno) continuava contando no
+    // denominador do progresso de OUTROS alunos, que nunca conseguiriam completar
+    // 100% porque o material "excluido" e invisivel. Corrigido adicionando o
+    // filtro nas duas queries.
+    [Fact]
+    public async Task MarcarConteudoConcluidoAsync_ComOutroConteudoExcluidoNoModulo_IgnoraOExcluidoNoCalculo()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        var conteudo2 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2 (excluida)");
+        conteudo2.MarcarComoExcluido();
+        context.SaveChanges();
+
+        var snapshot = await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
+
+        var moduloProgresso = Assert.Single(snapshot.Modulos);
+        Assert.Equal(100m, moduloProgresso.PercentualConclusao);
+        Assert.Equal(StatusProgressoAprendizagem.Concluido, moduloProgresso.StatusProgresso);
+        Assert.Equal(1, moduloProgresso.TotalConteudos);
+
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(100m, cursoProgresso.PercentualConclusao);
+    }
+
     [Fact]
     public async Task MarcarConteudoConcluidoAsync_UmDeDoisConteudos_DeixaModuloEmAndamentoNaMetade()
     {

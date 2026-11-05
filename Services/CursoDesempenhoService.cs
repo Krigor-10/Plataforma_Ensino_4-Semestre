@@ -120,7 +120,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var materiais = await _context.ConteudosDidaticos
             .AsNoTracking()
-            .Where(material => moduloIds.Contains(material.ModuloId))
+            .Where(material => moduloIds.Contains(material.ModuloId) && material.ExcluidoEm == null)
             .ToListAsync();
         var materialIds = materiais.Select(material => material.Id).ToList();
         var materiaisPorModuloId = materiais

@@ -277,6 +277,28 @@ public class CursoDesempenhoServiceTests
         Assert.Equal(1, materialDto.AlunosConcluiram);
     }
 
+    // Achado da auditoria de lixeira de conteudos (05/11): a query de materiais
+    // nao filtrava ExcluidoEm - material excluido (soft-delete) aparecia no
+    // dashboard de desempenho como se ainda existisse.
+    [Fact]
+    public async Task ObterDesempenhoPorProfessorAsync_ComMaterialExcluido_NaoAparece()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var conteudoExcluido = CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id, curso.Id);
+        conteudoExcluido.MarcarComoExcluido();
+        context.SaveChanges();
+
+        var resultado = (await CriarService(context).ObterDesempenhoPorProfessorAsync(professor.Id)).ToList();
+
+        var cursoDto = Assert.Single(resultado);
+        var moduloDto = Assert.Single(cursoDto.Modulos);
+        Assert.Empty(moduloDto.Materiais);
+    }
+
     [Fact]
     public async Task ObterDesempenhoPorProfessorAsync_SemProgressoRegistrado_RetornaZeroEmVezDeErro()
     {

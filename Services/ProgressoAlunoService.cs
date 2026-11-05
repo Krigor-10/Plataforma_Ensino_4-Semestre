@@ -236,7 +236,8 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .AsNoTracking()
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
-                conteudo.CursoId == matricula.CursoId)
+                conteudo.CursoId == matricula.CursoId &&
+                conteudo.ExcluidoEm == null)
             .Select(conteudo => new { conteudo.Id, conteudo.ModuloId })
             .ToListAsync();
 
@@ -410,7 +411,8 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
                 conteudo.CursoId == matricula.CursoId &&
-                conteudo.ModuloId == moduloId)
+                conteudo.ModuloId == moduloId &&
+                conteudo.ExcluidoEm == null)
             .Select(conteudo => new
             {
                 conteudo.Id,
@@ -471,7 +473,8 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .AsNoTracking()
             .Where(conteudo =>
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
-                conteudo.CursoId == matricula.CursoId)
+                conteudo.CursoId == matricula.CursoId &&
+                conteudo.ExcluidoEm == null)
             .Select(conteudo => new
             {
                 conteudo.Id,
