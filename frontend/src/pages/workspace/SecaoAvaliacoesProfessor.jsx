@@ -39,8 +39,12 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   const [valorEditando, setValorEditando] = useState("");
 
   /* Media de nota por avaliacao e informacao secundaria (nao existe no DTO de
-     /Avaliacoes) - reaproveita o endpoint de desempenho por turma ja usado em
-     SecaoTurmasProfessor.jsx em vez de criar uma nova agregacao no backend. */
+     /Avaliacoes) - reaproveita o endpoint de desempenho por curso ja usado em
+     SecaoTurmasProfessor.jsx (GET /Cursos/desempenho, escopado por
+     ProfessorCurso) em vez de criar uma nova agregacao no backend. Antes usava
+     /Turmas/desempenho (escopado por Turma.ProfessorId) - professor vinculado
+     so via "Professores por curso" (sem Turma) sempre via essa coluna em
+     branco, ver pendencia_fase_b_remocao_turma na memoria. */
   const [desempenhoAvaliacoes, setDesempenhoAvaliacoes] = useState([]);
 
   useEffect(() => {
@@ -48,9 +52,14 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
     async function carregarDesempenho() {
       try {
-        const turmasComDesempenho = await apiRequest("/Turmas/desempenho");
+        const cursosComDesempenho = await apiRequest("/Cursos/desempenho");
         if (ativo) {
-          setDesempenhoAvaliacoes(turmasComDesempenho.flatMap((turma) => turma.avaliacoes));
+          setDesempenhoAvaliacoes(
+            cursosComDesempenho.flatMap((curso) => [
+              ...curso.modulos.flatMap((modulo) => modulo.avaliacoes),
+              ...curso.avaliacoesSemModulo
+            ])
+          );
         }
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
