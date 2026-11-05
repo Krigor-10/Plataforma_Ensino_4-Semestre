@@ -83,7 +83,7 @@ public class CertificadosController : ControllerBase
             CodigoVerificacao = matricula.CodigoRegistro,
             AlunoNome = matricula.Aluno?.Nome ?? string.Empty,
             CursoTitulo = matricula.Curso?.Titulo ?? string.Empty,
-            TurmaNome = matricula.Turma?.NomeTurma,
+            TurmaNome = matricula.NomeTurmaSnapshot,
             NotaFinal = matricula.NotaFinal,
             EmitidoEm = matricula.CertificadoEmitidoEm ?? default
         };

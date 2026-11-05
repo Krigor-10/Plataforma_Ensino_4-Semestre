@@ -23,7 +23,6 @@ public class AlunoService : IAlunoService
         var query = _context.Alunos
             .AsNoTracking()
             .Include(aluno => aluno.Matriculas)
-                .ThenInclude(matricula => matricula.Turma)
             .OrderBy(aluno => aluno.Nome);
 
         var totalItens = await query.CountAsync();
@@ -44,8 +43,8 @@ public class AlunoService : IAlunoService
     private static AlunoResponseDto MapResponse(Aluno aluno)
     {
         var turmasAtivas = aluno.Matriculas
-            .Where(matricula => matricula.Status == StatusMatricula.Aprovada && matricula.Turma is not null)
-            .Select(matricula => matricula.Turma!.NomeTurma)
+            .Where(matricula => matricula.Status == StatusMatricula.Aprovada && matricula.NomeTurmaSnapshot is not null)
+            .Select(matricula => matricula.NomeTurmaSnapshot!)
             .Distinct()
             .ToList();
 

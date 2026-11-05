@@ -535,6 +535,10 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime>("DataSolicitacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("NomeTurmaSnapshot")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<decimal>("NotaFinal")
                         .HasPrecision(4, 2)
                         .HasColumnType("decimal(4,2)");

@@ -788,6 +788,7 @@ public static class DevelopmentDataSeeder
                 CursoId = course.Id
             };
             enrollment.VincularTurma(turma.Id);
+            enrollment.NomeTurmaSnapshot = turma.NomeTurma;
             enrollment.Aprovar();
             enrollment.RegistrarSolicitacao(DateTime.UtcNow.AddDays(-5));
             enrollment.LancarNotaFinal(8.75m);

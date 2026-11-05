@@ -92,7 +92,6 @@ public class CertificadoService : ICertificadoService
         var matriculas = await _context.Matriculas
             .Include(m => m.Aluno)
             .Include(m => m.Curso)
-            .Include(m => m.Turma)
             .Include(m => m.ProgressosCurso)
             .Where(m => m.CursoId == cursoId && m.Status == StatusMatricula.Aprovada)
             .ToListAsync();
@@ -135,7 +134,6 @@ public class CertificadoService : ICertificadoService
             .AsNoTracking()
             .Include(m => m.Aluno)
             .Include(m => m.Curso)
-            .Include(m => m.Turma)
             .Include(m => m.ProgressosCurso)
             .Where(m => m.AlunoId == alunoId && m.Status == StatusMatricula.Aprovada)
             .ToListAsync();
@@ -251,7 +249,6 @@ public class CertificadoService : ICertificadoService
             .AsNoTracking()
             .Include(m => m.Aluno)
             .Include(m => m.Curso)
-            .Include(m => m.Turma)
             .Where(m => m.AlunoId == alunoId && m.CertificadoEmitidoEm != null)
             .OrderByDescending(m => m.CertificadoEmitidoEm)
             .ToListAsync();
@@ -277,7 +274,6 @@ public class CertificadoService : ICertificadoService
             .AsNoTracking()
             .Include(m => m.Aluno)
             .Include(m => m.Curso)
-            .Include(m => m.Turma)
             .Include(m => m.ProgressosCurso)
             .FirstOrDefaultAsync(filtro);
     }

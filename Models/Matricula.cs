@@ -30,6 +30,16 @@ public class Matricula
     public int? TurmaId { get; private set; }
     public Turma? Turma { get; set; }
 
+    /// <summary>
+    /// Copia congelada de Turma.NomeTurma, preenchida so por migration (backfill
+    /// das matriculas que ja tinham TurmaId antes da Fase B remover Turma do
+    /// fluxo ativo) - garante que certificados antigos (pagina publica de
+    /// verificacao) e o "Turma atual" do Aluno continuem mostrando o nome mesmo
+    /// depois que a tabela Turmas for removida de vez.
+    /// </summary>
+    [StringLength(120)]
+    public string? NomeTurmaSnapshot { get; set; }
+
     [JsonIgnore]
     [ValidateNever]
     public List<TentativaAvaliacao> TentativasAvaliacao { get; set; } = new();
