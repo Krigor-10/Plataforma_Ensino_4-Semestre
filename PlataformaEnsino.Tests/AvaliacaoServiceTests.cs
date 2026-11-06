@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -303,6 +304,48 @@ public class AvaliacaoServiceTests
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ExcluirAvaliacaoAsync(avaliacao.Id, outroProfessor.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirAvaliacaoAsync_SemTentativas_ExcluiFisicamente()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        var foiArquivada = await service.ExcluirAvaliacaoAsync(avaliacao.Id, professor.Id);
+
+        Assert.False(foiArquivada);
+        Assert.Null(context.Avaliacoes.Find(avaliacao.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirAvaliacaoAsync_ComTentativaRegistrada_Arquiva()
+    {
+        // Pendencia "Painel de arquivados" (05/11): antes isso so lancava InvalidOperationException
+        // e deixava o professor sem nenhuma saida pra "limpar" a avaliacao da listagem. Agora
+        // arquiva (mesmo mecanismo ja usado por ConteudoDidaticoService.ExcluirConteudoAsync).
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        context.TentativasAvaliacao.Add(new TentativaAvaliacao { AvaliacaoId = avaliacao.Id, MatriculaId = 1 });
+        await context.SaveChangesAsync();
+
+        var foiArquivada = await service.ExcluirAvaliacaoAsync(avaliacao.Id, professor.Id);
+
+        Assert.True(foiArquivada);
+        var avaliacaoNoBanco = context.Avaliacoes.AsNoTracking().Single(a => a.Id == avaliacao.Id);
+        Assert.Equal(StatusPublicacao.Arquivado, avaliacaoNoBanco.StatusPublicacao);
+        Assert.Single(context.TentativasAvaliacao.Where(t => t.AvaliacaoId == avaliacao.Id));
     }
 
     // ---------- AdicionarQuestaoAsync ----------

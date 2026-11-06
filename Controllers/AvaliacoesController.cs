@@ -109,7 +109,16 @@ public class AvaliacoesController : ControllerBase
             return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
         }
 
-        await _avaliacaoService.ExcluirAvaliacaoAsync(id, professorId.Value);
+        var foiArquivada = await _avaliacaoService.ExcluirAvaliacaoAsync(id, professorId.Value);
+        if (foiArquivada)
+        {
+            return Ok(new
+            {
+                arquivado = true,
+                mensagem = "Esta avaliacao ja tem tentativa de aluno registrada, por isso foi arquivada em vez de excluida definitivamente."
+            });
+        }
+
         return NoContent();
     }
 

@@ -10,5 +10,6 @@ public interface IConteudoDidaticoService
     Task<ConteudoDidatico> ObterConteudoPorProfessorAsync(int id, int professorId);
     Task<ConteudoDidatico> CriarConteudoAsync(int professorId, CriarConteudoDidaticoDto dto);
     Task<ConteudoDidatico> AtualizarConteudoAsync(int id, int professorId, AtualizarConteudoDidaticoDto dto);
-    Task ExcluirConteudoAsync(int id, int professorId);
+    /// <summary>Retorna true quando o conteudo foi arquivado (ja havia progresso de aluno) em vez de excluido fisicamente.</summary>
+    Task<bool> ExcluirConteudoAsync(int id, int professorId);
 }

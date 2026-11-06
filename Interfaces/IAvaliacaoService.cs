@@ -11,7 +11,8 @@ public interface IAvaliacaoService
     Task<Avaliacao> ObterAvaliacaoPorProfessorAsync(int id, int professorId);
     Task<Avaliacao> CriarAvaliacaoAsync(int professorId, CriarAvaliacaoDto dto);
     Task<Avaliacao> AtualizarAvaliacaoAsync(int id, int professorId, AtualizarAvaliacaoDto dto);
-    Task ExcluirAvaliacaoAsync(int id, int professorId);
+    /// <summary>Retorna true quando a avaliacao foi arquivada (ja havia tentativa de aluno) em vez de excluida fisicamente.</summary>
+    Task<bool> ExcluirAvaliacaoAsync(int id, int professorId);
     Task<IEnumerable<QuestaoPublicada>> ListarQuestoesAsync(int avaliacaoId, int professorId);
     Task<IEnumerable<QuestaoAvaliacaoAlunoResponseDto>> ListarQuestoesPorAlunoAsync(int avaliacaoId, int alunoId);
     Task<QuestaoPublicada> AdicionarQuestaoAsync(int avaliacaoId, int professorId, CriarQuestaoAvaliacaoDto dto);

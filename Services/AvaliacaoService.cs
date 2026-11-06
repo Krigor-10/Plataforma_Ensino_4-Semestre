@@ -215,19 +215,25 @@ public class AvaliacaoService : IAvaliacaoService
         return await ObterDetalheAsync(id) ?? avaliacao;
     }
 
-    public async Task ExcluirAvaliacaoAsync(int id, int professorId)
+    public async Task<bool> ExcluirAvaliacaoAsync(int id, int professorId)
     {
         var avaliacao = await ObterAvaliacaoPorProfessorAsync(id, professorId);
 
+        // Arquivar em vez de bloquear quando ja ha tentativa de aluno registrada: antes isso
+        // so lancava excecao e deixava o professor sem nenhuma saida pra "limpar" a avaliacao
+        // da listagem. Arquivado ja e o mecanismo existente de "lixeira" (visivel/restauravel).
         var possuiTentativas = await _context.TentativasAvaliacao.AnyAsync(tentativa => tentativa.AvaliacaoId == id);
         if (possuiTentativas)
         {
-            throw new InvalidOperationException(
-                "Esta avaliacao ja possui tentativas de alunos registradas e nao pode ser excluida.");
+            avaliacao.Arquivar();
+            _context.Avaliacoes.Update(avaliacao);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         _context.Avaliacoes.Remove(avaliacao);
         await _context.SaveChangesAsync();
+        return false;
     }
 
     public async Task<IEnumerable<QuestaoPublicada>> ListarQuestoesAsync(int avaliacaoId, int professorId)

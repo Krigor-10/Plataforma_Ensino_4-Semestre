@@ -52,17 +52,17 @@ public class ModuloServiceTests
     }
 
     // Investigado na auditoria de lixeira de conteudos (05/11), mas NAO corrigido
-    // de proposito: um conteudo so vira soft-delete (ExcluidoEm preenchido, linha
-    // continua existindo) quando ja tem ProgressoConteudoAluno vinculado (ver
-    // ConteudoDidaticoService.ExcluirConteudoAsync) - ou seja, todo conteudo
-    // soft-deletado de verdade SEMPRE tem progresso de aluno. A condicao
-    // "ProgressosConteudosAlunos.Any(ModuloId == moduloId)" ja bloqueia a exclusao
-    // do modulo nesse caso, com mensagem amigavel - e correto, porque excluir o
-    // modulo exigiria tambem apagar essa linha de conteudo (FK Restrict), o que
-    // cascataria e apagaria o progresso do aluno que o soft-delete existe pra
-    // preservar. Tentei "corrigir" filtrando ExcluidoEm em PossuiDependenciasAsync
-    // e isso so troca o erro amigavel por uma excecao feia do EF Core (FK Restrict
-    // nao satisfeita) - nao revertido.
+    // de proposito: este teste simula dado legado (ExcluidoEm preenchido direto no
+    // banco, sem passar pelo service - desde a pendencia "Painel de arquivados" o
+    // caminho de ExcluirConteudoAsync arquiva em vez de soft-deletar, mas linhas
+    // antigas com ExcluidoEm ainda existem e precisam continuar bloqueando a
+    // exclusao do modulo). A condicao "ProgressosConteudosAlunos.Any(ModuloId ==
+    // moduloId)" ja bloqueia a exclusao do modulo nesse caso, com mensagem amigavel
+    // - e correto, porque excluir o modulo exigiria tambem apagar essa linha de
+    // conteudo (FK Restrict), o que cascataria e apagaria o progresso do aluno que
+    // o soft-delete existe pra preservar. Tentei "corrigir" filtrando ExcluidoEm em
+    // PossuiDependenciasAsync e isso so troca o erro amigavel por uma excecao feia
+    // do EF Core (FK Restrict nao satisfeita) - nao revertido.
     [Fact]
     public async Task ExcluirModuloAsync_ComConteudoSoftDeletadoQueTemProgresso_ContinuaBloqueado()
     {

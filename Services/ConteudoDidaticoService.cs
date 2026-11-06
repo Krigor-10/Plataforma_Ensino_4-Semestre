@@ -154,7 +154,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
             "/app/conteudos");
     }
 
-    public async Task ExcluirConteudoAsync(int id, int professorId)
+    public async Task<bool> ExcluirConteudoAsync(int id, int professorId)
     {
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
 
@@ -169,23 +169,25 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
             throw new InvalidOperationException("Este conteudo possui uma avaliacao vinculada e nao pode ser excluido.");
         }
 
-        // ProgressoConteudoAluno->ConteudoDidatico e Cascade (ver ProgressoConfiguration) -
-        // apagar a linha de um conteudo ja concluido por algum aluno apagaria o registro de
-        // progresso dele junto, sem recalcular ProgressoModulo/ProgressoCurso, deixando o
-        // percentual do aluno desatualizado. Por isso vira soft-delete nesse caso: a linha
-        // continua existindo (progresso intacto), so some das listagens.
+        // Arquivar em vez de excluir (fisico ou soft-delete invisivel via ExcluidoEm) quando ja
+        // ha progresso de aluno: o Arquivado ja e o mecanismo "lixeira" da tela de Conteudos (visivel
+        // via "Ver arquivados", com restaurar), ao contrario do ExcluidoEm que nao tem UI nenhuma.
+        // Preserva o motivo original de nao apagar a linha: ProgressoConteudoAluno->ConteudoDidatico
+        // e Cascade (ver ProgressoConfiguration), entao apagar a linha apagaria o progresso do aluno
+        // junto, sem recalcular ProgressoModulo/ProgressoCurso.
         var possuiProgressoDeAluno = await _context.ProgressosConteudosAlunos
             .AnyAsync(progresso => progresso.ConteudoDidaticoId == id);
         if (possuiProgressoDeAluno)
         {
-            conteudo.MarcarComoExcluido(DateTime.UtcNow);
+            conteudo.DefinirStatusPublicacao(StatusPublicacao.Arquivado);
             _conteudoRepository.Atualizar(conteudo);
             await _conteudoRepository.SalvarAlteracoesAsync();
-            return;
+            return true;
         }
 
         _conteudoRepository.Deletar(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
+        return false;
     }
 
     private async Task ValidarProfessorAsync(int professorId)

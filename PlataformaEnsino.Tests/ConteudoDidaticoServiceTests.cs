@@ -268,13 +268,13 @@ public class ConteudoDidaticoServiceTests
     }
 
     [Fact]
-    public async Task ExcluirConteudoAsync_ComProgressoDeAluno_FazSoftDeleteSemApagarProgresso()
+    public async Task ExcluirConteudoAsync_ComProgressoDeAluno_Arquiva()
     {
-        // Achado da auditoria de conteudos (28/10): ProgressoConteudoAluno->ConteudoDidatico
-        // e Cascade (ver ProgressoConfiguration) - apagar a linha de um conteudo ja concluido
-        // apagaria o progresso do aluno junto, sem recalcular o agregado. Em vez de bloquear
-        // a exclusao, o conteudo agora e marcado como excluido (soft-delete) e some das
-        // listagens, preservando o historico de progresso intacto.
+        // Pendencia "Painel de arquivados" (05/11): ProgressoConteudoAluno->ConteudoDidatico e
+        // Cascade (ver ProgressoConfiguration) - apagar a linha de um conteudo ja concluido
+        // apagaria o progresso do aluno junto, sem recalcular o agregado. Em vez de soft-delete
+        // invisivel (ExcluidoEm, sem UI nenhuma), o conteudo agora e arquivado - reaproveita o
+        // StatusPublicacao.Arquivado ja visivel/restauravel na tela de Conteudos.
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var professor = CriarProfessor(context);
@@ -294,21 +294,25 @@ public class ConteudoDidaticoServiceTests
         });
         context.SaveChanges();
 
-        await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+        var foiArquivado = await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
 
+        Assert.True(foiArquivado);
         var conteudoNoBanco = context.ConteudosDidaticos.AsNoTracking().Single(c => c.Id == conteudo.Id);
-        Assert.NotNull(conteudoNoBanco.ExcluidoEm);
+        Assert.Null(conteudoNoBanco.ExcluidoEm);
+        Assert.Equal(StatusPublicacao.Arquivado, conteudoNoBanco.StatusPublicacao);
         Assert.Single(context.ProgressosConteudosAlunos.Where(p => p.ConteudoDidaticoId == conteudo.Id));
 
+        // Listagem do professor continua mostrando o item (ja arquivado) - quem decide
+        // esconder arquivados da visao padrao e o frontend (toggle/modal "Ver arquivados").
         var listaProfessor = await service.ListarConteudosPorProfessorAsync(professor.Id);
-        Assert.Empty(listaProfessor);
+        Assert.Single(listaProfessor);
 
         var listaAluno = await service.ListarConteudosPorAlunoAsync(aluno.Id);
         Assert.Empty(listaAluno);
     }
 
     [Fact]
-    public async Task ExcluirConteudoAsync_JaExcluido_LancaKeyNotFound()
+    public async Task ExcluirConteudoAsync_ChamadoDeNovoAposArquivar_ContinuaArquivado()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -328,6 +332,31 @@ public class ConteudoDidaticoServiceTests
         });
         context.SaveChanges();
         await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+
+        var foiArquivadoDeNovo = await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
+
+        Assert.True(foiArquivadoDeNovo);
+        var conteudoNoBanco = context.ConteudosDidaticos.AsNoTracking().Single(c => c.Id == conteudo.Id);
+        Assert.Equal(StatusPublicacao.Arquivado, conteudoNoBanco.StatusPublicacao);
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_JaExcluidoFisicamente_LancaKeyNotFound()
+    {
+        // Guarda de compatibilidade com dados antigos: conteudo que ja tinha o soft-delete
+        // via ExcluidoEm (mecanismo anterior a esta pendencia) continua bloqueado - nao ha
+        // mais nenhum caminho de codigo que defina ExcluidoEm hoje, so dados legados.
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
+
+        var entidade = context.ConteudosDidaticos.Single(c => c.Id == conteudo.Id);
+        entidade.MarcarComoExcluido();
+        context.SaveChanges();
 
         await Assert.ThrowsAsync<KeyNotFoundException>(
             () => service.ExcluirConteudoAsync(conteudo.Id, professor.Id));

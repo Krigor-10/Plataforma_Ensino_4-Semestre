@@ -128,7 +128,16 @@ public class ConteudosDidaticosController : ControllerBase
             return Unauthorized(new { mensagem = "Nao foi possivel identificar o professor autenticado." });
         }
 
-        await _conteudoService.ExcluirConteudoAsync(id, professorId.Value);
+        var foiArquivado = await _conteudoService.ExcluirConteudoAsync(id, professorId.Value);
+        if (foiArquivado)
+        {
+            return Ok(new
+            {
+                arquivado = true,
+                mensagem = "Este conteudo ja tem progresso registrado por aluno, por isso foi arquivado em vez de excluido definitivamente."
+            });
+        }
+
         return NoContent();
     }
 
