@@ -34,6 +34,11 @@
   --cor-conteudo: #86efac;
   --cor-conteudo-fundo: rgba(134, 239, 172, 0.10);
   --cor-conteudo-borda: rgba(134, 239, 172, 0.22);
+  /* Botao "Gerar quiz com IA" na trilha do Professor - distinto do roxo de
+     quiz comum pra sinalizar a origem por IA. */
+  --cor-ia: #a5b4fc;
+  --cor-ia-fundo: rgba(99, 102, 241, 0.16);
+  --cor-ia-borda: rgba(165, 180, 252, 0.32);
   --cor-aviso: #f59e0b;
   --cor-aviso-fundo: rgba(245, 158, 11, 0.12);
   --cor-erro: #ef4444;
@@ -144,6 +149,9 @@
   --cor-conteudo: #15803d;
   --cor-conteudo-fundo: rgba(21, 128, 61, 0.08);
   --cor-conteudo-borda: rgba(21, 128, 61, 0.22);
+  --cor-ia: #4338ca;
+  --cor-ia-fundo: rgba(67, 56, 202, 0.10);
+  --cor-ia-borda: rgba(67, 56, 202, 0.28);
 
   --cor-texto-forte: #0d0f18;
   --cor-texto-suave: #4a5068;

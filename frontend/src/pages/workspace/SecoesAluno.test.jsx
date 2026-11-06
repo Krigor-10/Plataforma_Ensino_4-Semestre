@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { SecaoCursosAluno } from "./SecoesAluno.jsx";
+import { SecaoConteudosAluno, SecaoCursosAluno } from "./SecoesAluno.jsx";
+import { ToastProvider } from "../../hooks/useToast.jsx";
 import { apiRequest } from "../../lib/api.js";
 
 vi.mock("../../lib/api.js", async () => {
@@ -156,5 +157,221 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
     await usuario.click(screen.getByRole("button", { name: /Curso Sem Turma na Matricula/i }));
 
     expect(await screen.findByText(/Parabens! Certificado disponivel/i)).toBeInTheDocument();
+  });
+});
+
+describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos do aluno)", () => {
+  const CURSO_ID = 10;
+  const TURMA_ID = 77;
+  const MATRICULA_ID = 5;
+  const MODULO_ID = 100;
+
+  beforeEach(() => {
+    apiRequest.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function renderConteudosAluno({ avaliacoes = [], conteudos = [], modulos, progressos } = {}) {
+    return render(
+      <ToastProvider>
+        <SecaoConteudosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={CURSO_ID}
+          cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
+          matriculas={[{ id: MATRICULA_ID, cursoId: CURSO_ID, turmaId: TURMA_ID, status: "Aprovada" }]}
+          modulos={modulos || [{ id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" }]}
+          onNavigate={vi.fn()}
+          onRefresh={vi.fn()}
+          onSessionExpired={vi.fn()}
+          progressos={progressos || { conteudos: [], modulos: [], cursos: [] }}
+          turmas={[{ id: TURMA_ID, cursoId: CURSO_ID, nomeTurma: "Turma A" }]}
+        />
+      </ToastProvider>
+    );
+  }
+
+  test('contagem inclui quizzes, com singular em "1/1 concluído"', () => {
+    const { container } = renderConteudosAluno({
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: null,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          totalQuestoes: 1,
+          tentativasRealizadas: 1,
+          tentativasPermitidas: 1
+        }
+      ]
+    });
+
+    const contagem = container.querySelector(".conteudos-modulo__contagem");
+    expect(contagem.textContent).toMatch(/1\/1 concluído$/);
+  });
+
+  test("módulo concluído mostra check e seta, e abre e fecha", async () => {
+    const usuario = userEvent.setup();
+    renderConteudosAluno({
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
+      ],
+      progressos: { conteudos: [{ conteudoDidaticoId: 1, percentualConclusao: 100 }], modulos: [], cursos: [] }
+    });
+
+    expect(screen.getByLabelText("Módulo concluído")).toBeInTheDocument();
+    const botaoModulo = screen.getByRole("button", { expanded: true });
+    expect(botaoModulo.querySelector(".conteudos-modulo__chevron")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Atividades de Módulo 1" })).toBeInTheDocument();
+
+    await usuario.click(botaoModulo);
+    expect(botaoModulo).toHaveAttribute("aria-expanded", "false");
+
+    await usuario.click(botaoModulo);
+    expect(botaoModulo).toHaveAttribute("aria-expanded", "true");
+  });
+
+  test('"Ver revisão" aparece com texto e abre a revisão', async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockResolvedValue({ questoes: [], notaBruta: 0, notaMaxima: 10 });
+    renderConteudosAluno({
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: null,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          totalQuestoes: 1,
+          tentativasRealizadas: 1,
+          ultimaTentativaId: 900,
+          ultimoStatusTentativa: 3
+        }
+      ]
+    });
+
+    const botaoVerRevisao = screen.getByRole("button", { name: "Ver revisão" });
+    expect(botaoVerRevisao).toBeInTheDocument();
+
+    await usuario.click(botaoVerRevisao);
+
+    expect(await screen.findByRole("dialog", { name: "Revisao detalhada" })).toBeInTheDocument();
+  });
+
+  test('"Iniciar quiz" aparece nos dois tipos de quiz e abre a confirmação', async () => {
+    const usuario = userEvent.setup();
+    renderConteudosAluno({
+      conteudos: [
+        {
+          id: 1,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          turmaId: TURMA_ID,
+          titulo: "Aula 1",
+          tipoConteudo: 1,
+          ordemExibicao: 1
+        }
+      ],
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: 1,
+          tipoAvaliacao: 1,
+          titulo: "Quiz vinculado",
+          totalQuestoes: 1,
+          tentativasRestantes: 1,
+          tentativasPermitidas: 1
+        },
+        {
+          id: 201,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: null,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do módulo",
+          totalQuestoes: 1,
+          tentativasRestantes: 1,
+          tentativasPermitidas: 1
+        }
+      ]
+    });
+
+    const botoesIniciar = screen.getAllByRole("button", { name: "Iniciar quiz" });
+    expect(botoesIniciar).toHaveLength(2);
+
+    await usuario.click(botoesIniciar[0]);
+
+    expect(screen.getByRole("dialog", { name: "Antes de comecar" })).toBeInTheDocument();
+  });
+
+  test("item bloqueado mantém cadeado, sem ação e sem quizzes", () => {
+    renderConteudosAluno({
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 2, arquivoUrl: "a.pdf", ordemExibicao: 1 },
+        { id: 2, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 2", tipoConteudo: 2, arquivoUrl: "b.pdf", ordemExibicao: 2 }
+      ],
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz da Aula 2",
+          totalQuestoes: 1,
+          tentativasRestantes: 1,
+          tentativasPermitidas: 1
+        }
+      ]
+    });
+
+    const itemBloqueado = screen.getByText("Aula 2").closest(".atividades-curso__item");
+    expect(within(itemBloqueado).getByLabelText("Conteúdo bloqueado")).toBeInTheDocument();
+    expect(within(itemBloqueado).queryByRole("button", { name: /Abrir PDF/ })).not.toBeInTheDocument();
+    expect(within(itemBloqueado).queryByText("Quiz da Aula 2")).not.toBeInTheDocument();
+  });
+
+  test('quiz com titulo generico exibe "Quiz do conteúdo", e o titulo proprio e mantido', () => {
+    renderConteudosAluno({
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
+      ],
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: 1,
+          tipoAvaliacao: 1,
+          titulo: "Quiz - Aula 1",
+          totalQuestoes: 1,
+          tentativasRestantes: 1,
+          tentativasPermitidas: 1
+        }
+      ]
+    });
+
+    const tituloQuiz = screen.getByText("Quiz do conteúdo");
+    expect(tituloQuiz).toBeInTheDocument();
+    expect(tituloQuiz).toHaveAttribute("title", "Quiz - Aula 1");
+    expect(screen.queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
+  });
+
+  test("módulo sem quizzes não mostra a faixa", () => {
+    renderConteudosAluno({
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
+      ]
+    });
+
+    expect(screen.queryByText("Quizzes do módulo")).not.toBeInTheDocument();
   });
 });

@@ -281,7 +281,9 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(within(listaQuizzesDoMaterial).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
   });
 
-  test("aria-label de selecao e Editar do quiz vinculado mantem o titulo real mesmo com nome generico exibido", () => {
+  test("aria-label de selecao do quiz vinculado mantem o titulo real mesmo com nome generico exibido, e Editar e a 1a opcao do menu", async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((url) => Promise.resolve(url.endsWith("/questoes") ? [] : {}));
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -298,7 +300,76 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     });
 
     expect(screen.getByLabelText("Selecionar Quiz - Aula 1")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Editar quiz Quiz - Aula 1" })).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz - Aula 1" }));
+    const opcoes = screen.getAllByRole("menuitem");
+    expect(opcoes[0]).toHaveTextContent("Editar");
+
+    await usuario.click(opcoes[0]);
+    expect(screen.getByRole("dialog", { name: "Editar Quiz" })).toBeInTheDocument();
+  });
+
+  test('linhas de conteudo e quiz nao tem mais botao "Editar" solto', () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz vinculado", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 201, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do modulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    expect(screen.queryByRole("button", { name: /^Editar/ })).not.toBeInTheDocument();
+  });
+
+  test('"Editar" e a 1a opcao do menu do conteudo e abre a edicao do conteudo', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    const opcoes = screen.getAllByRole("menuitem");
+    expect(opcoes[0]).toHaveTextContent("Editar");
+
+    await usuario.click(opcoes[0]);
+    expect(screen.getByRole("dialog", { name: "Editar conteúdo" })).toBeInTheDocument();
+  });
+
+  test('"Editar" e a 1a opcao do menu do quiz do modulo e abre o assistente de quiz', async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((url) => Promise.resolve(url.endsWith("/questoes") ? [] : {}));
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        { id: 201, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    const opcoes = screen.getAllByRole("menuitem");
+    expect(opcoes[0]).toHaveTextContent("Editar");
+
+    await usuario.click(opcoes[0]);
+    expect(screen.getByRole("dialog", { name: "Editar Quiz" })).toBeInTheDocument();
+  });
+
+  test('"Editar" fica desabilitado enquanto o conteudo esta processando', async () => {
+    const usuario = userEvent.setup();
+    let resolverRequisicao;
+    apiRequest.mockImplementation(() => new Promise((resolve) => { resolverRequisicao = resolve; }));
+
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 1, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    expect(screen.getByRole("menuitem", { name: "Editar" })).toBeDisabled();
+
+    resolverRequisicao({});
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Editar" })).not.toBeDisabled());
   });
 
   test('quizzes (vinculado e do modulo) nao exibem mais o texto "Quiz" abaixo do titulo', () => {
@@ -441,6 +512,45 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(await screen.findByText(/foi arquivado em vez de excluído definitivamente/)).toBeInTheDocument();
   });
 
+  test('"Arquivar" no menu do quiz chama PUT com status arquivado', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Arquivar" }));
+
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith(
+        "/Avaliacoes/200",
+        expect.objectContaining({ method: "PUT", body: expect.stringContaining('"statusPublicacao":3') })
+      )
+    );
+  });
+
+  test('"Excluir" no menu do quiz abre confirmacao e mostra toast de arquivamento quando o backend arquiva', async () => {
+    apiRequest.mockResolvedValueOnce({ arquivado: true });
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir" }));
+
+    expect(screen.getByRole("dialog", { name: "Excluir quiz" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
+
+    expect(await screen.findByText(/foi arquivado em vez de excluído definitivamente/)).toBeInTheDocument();
+  });
+
   test('botoes "Novo conteudo" e "Adicionar Quiz" acionam os dois fluxos', async () => {
     const usuario = userEvent.setup();
     renderTrilha({
@@ -482,6 +592,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
     await usuario.keyboard("{ArrowDown}");
+    await usuario.keyboard("{ArrowDown}");
     const itemExcluir = screen.getByRole("menuitem", { name: "Excluir" });
     expect(itemExcluir).toHaveFocus();
 
@@ -513,7 +624,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(within(screen.getByRole("menu")).queryByText("Excluir")).toBeInTheDocument();
   });
 
-  test("clicar em Editar do mesmo item fecha o menu de acoes aberto", async () => {
+  test("clicar em outro lugar da linha fecha o menu de acoes aberto", async () => {
     const usuario = userEvent.setup();
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
@@ -522,7 +633,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
-    await usuario.click(screen.getByRole("button", { name: "Editar Aula 1" }));
+    await usuario.click(screen.getByText("Aula 1"));
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
