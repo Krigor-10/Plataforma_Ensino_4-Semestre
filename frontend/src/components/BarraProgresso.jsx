@@ -1,4 +1,4 @@
-export default function BarraProgresso({ percentual, mostrarTexto = true }) {
+export default function BarraProgresso({ percentual, mostrarTexto = true, rotuloAria }) {
   const valor = Math.min(100, Math.max(0, percentual));
 
   return (
@@ -9,7 +9,7 @@ export default function BarraProgresso({ percentual, mostrarTexto = true }) {
         aria-valuenow={valor}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Progresso: ${valor}%`}
+        aria-label={rotuloAria || `Progresso: ${valor}%`}
       >
         <div
           className="barra-progresso__preenchimento"

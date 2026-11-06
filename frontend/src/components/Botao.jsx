@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { motion } from "framer-motion";
 
 const MOLA = { type: "spring", stiffness: 420, damping: 18 };
@@ -5,16 +6,13 @@ const MOLA = { type: "spring", stiffness: 420, damping: 18 };
 /**
  * Drop-in para <button className="botao ..."> com física de mola.
  * Uso: <Botao variante="primario" tamanho="pequeno" onClick={...}>Texto</Botao>
+ * Encaminha ref pro <button> real (ex.: MenuAcoes usa o botao com texto como
+ * gatilho do menu e precisa do DOM node pra focar/detectar clique fora).
  */
-export default function Botao({
-  variante,
-  tamanho,
-  className = "",
-  children,
-  disabled,
-  type = "button",
-  ...rest
-}) {
+const Botao = forwardRef(function Botao(
+  { variante, tamanho, className = "", children, disabled, type = "button", ...rest },
+  ref
+) {
   const classes = [
     "botao",
     variante && `botao--${variante}`,
@@ -24,6 +22,7 @@ export default function Botao({
 
   return (
     <motion.button
+      ref={ref}
       className={classes}
       type={type}
       disabled={disabled}
@@ -35,4 +34,6 @@ export default function Botao({
       {children}
     </motion.button>
   );
-}
+});
+
+export default Botao;

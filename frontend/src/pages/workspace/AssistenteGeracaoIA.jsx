@@ -24,7 +24,18 @@ function formatDecimal(value) {
 
 function nomeArquivoSemExtensao(nomeArquivo) {
   const indice = nomeArquivo.lastIndexOf(".");
-  return indice > 0 ? nomeArquivo.slice(0, indice) : nomeArquivo;
+  const semExtensao = indice > 0 ? nomeArquivo.slice(0, indice) : nomeArquivo;
+  const comEspacos = semExtensao.replace(/[_-]+/g, " ").trim();
+
+  // So converte pra formato de frase quando o nome (ignorando digitos/espacos)
+  // estiver todo em maiusculas - ex. "ANALISE_SIST_01" -> "Analise sist 01".
+  // Nomes ja mistos (ex. "Aula-1-Introducao") ficam como estao.
+  const temLetra = /[a-zà-ÿ]/i.test(comEspacos);
+  if (temLetra && comEspacos === comEspacos.toUpperCase()) {
+    return comEspacos.charAt(0).toUpperCase() + comEspacos.slice(1).toLowerCase();
+  }
+
+  return comEspacos;
 }
 
 function gerarChaveLocal() {

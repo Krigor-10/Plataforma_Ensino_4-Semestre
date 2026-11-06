@@ -8,8 +8,17 @@
    ============================================================ */
 import { useEffect, useRef, useState } from "react";
 import { TbDotsVertical } from "react-icons/tb";
+import Botao from "./Botao.jsx";
 
-export default function MenuAcoes({ itens, rotulo }) {
+/**
+ * Por padrao, botao so com o icone "..." (aria-label via `rotulo`). Passando
+ * `textoBotao`, o gatilho vira um Botao com texto (reaproveita variante/tamanho
+ * de Botao.jsx) em vez do icone - usado por "Adicionar" em
+ * SecaoConteudosProfessor.jsx. `rotulo` continua opcional nesse caso (o texto
+ * visivel ja serve de nome acessivel). Navegacao por teclado e o resto do
+ * comportamento do menu nao mudam em nenhum dos dois casos.
+ */
+export default function MenuAcoes({ itens, rotulo, textoBotao, iconeBotao, classNameBotao, varianteBotao = "primario", tamanhoBotao = "pequeno" }) {
   const [aberto, setAberto] = useState(false);
   const refBotao = useRef(null);
   const refLista = useRef(null);
@@ -81,20 +90,37 @@ export default function MenuAcoes({ itens, rotulo }) {
 
   return (
     <div className="menu-contexto">
-      <button
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        aria-label={rotulo}
-        className="menu-contexto__botao"
-        onClick={(event) => {
-          event.stopPropagation();
-          setAberto((atual) => !atual);
-        }}
-        ref={refBotao}
-        type="button"
-      >
-        <TbDotsVertical aria-hidden="true" size={18} />
-      </button>
+      {textoBotao ? (
+        <Botao
+          aria-expanded={aberto}
+          aria-haspopup="menu"
+          className={classNameBotao}
+          onClick={(event) => {
+            event.stopPropagation();
+            setAberto((atual) => !atual);
+          }}
+          ref={refBotao}
+          tamanho={tamanhoBotao}
+          variante={varianteBotao}
+        >
+          {iconeBotao} {textoBotao}
+        </Botao>
+      ) : (
+        <button
+          aria-expanded={aberto}
+          aria-haspopup="menu"
+          aria-label={rotulo}
+          className="menu-contexto__botao"
+          onClick={(event) => {
+            event.stopPropagation();
+            setAberto((atual) => !atual);
+          }}
+          ref={refBotao}
+          type="button"
+        >
+          <TbDotsVertical aria-hidden="true" size={18} />
+        </button>
+      )}
       {aberto ? (
         <ul className="menu-contexto__lista" onKeyDown={navegarComSeta} ref={refLista} role="menu">
           {itensVisiveis.map((item) => (

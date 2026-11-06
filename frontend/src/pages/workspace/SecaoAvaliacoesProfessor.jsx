@@ -210,14 +210,22 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     setMensagemExclusaoAvaliacao("");
 
     try {
-      await apiRequest(`/Avaliacoes/${avaliacaoParaExcluir.id}`, { method: "DELETE" });
+      const resultado = await apiRequest(`/Avaliacoes/${avaliacaoParaExcluir.id}`, { method: "DELETE" });
 
       if (avaliacaoParaEditar?.id === avaliacaoParaExcluir.id) {
         fecharAssistente();
       }
 
       setAvaliacaoParaExcluir(null);
-      mostrarToast("Avaliacao excluida com sucesso.", "sucesso");
+      if (resultado?.arquivado) {
+        mostrarToast(
+          "Esta avaliacao ja tem tentativa de aluno registrada, por isso foi arquivada em vez de excluida definitivamente.",
+          "sucesso",
+          7000
+        );
+      } else {
+        mostrarToast("Avaliacao excluida com sucesso.", "sucesso");
+      }
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
