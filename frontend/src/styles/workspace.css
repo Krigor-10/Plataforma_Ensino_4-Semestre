@@ -3565,6 +3565,17 @@
   color: var(--cor-texto-forte);
 }
 
+/* Seta a direita do texto no gatilho com `textoBotao` (ex.: "Mais acoes" em
+   SecaoConteudosProfessor.jsx) - gira quando o menu abre, mesmo padrao do
+   chevron de modulo/conteudo. */
+.menu-contexto__seta {
+  transition: transform var(--transicao-rapida);
+}
+
+.menu-contexto__seta--aberta {
+  transform: rotate(180deg);
+}
+
 .menu-contexto__lista {
   position: absolute;
   right: 0;
@@ -3885,30 +3896,59 @@
    (Aluno, Modulos, Avaliacoes), por isso vive so sob .tela-conteudos. */
 .tela-conteudos {
   --coluna-icone-conteudo: 2.25rem;
+  /* Coluna onde o TITULO do conteudo comeca (prompt "quiz vinculado e
+     harmonia"): padding-left da linha + largura da caixa de selecao (16px,
+     .tabela-checkbox) + gap + icone + gap. Usada pra alinhar a descricao
+     aberta (item 3) e pra recuar so o icone do quiz vinculado ate essa
+     mesma coluna (item 1), sem indentar a caixa de selecao dele junto. */
+  --recuo-titulo-conteudo: calc(3 * var(--espaco-md) + 16px + var(--coluna-icone-conteudo));
+
+  /* Quiz vinculado mais compacto (item 1) + guia/curva da linha de ligacao
+     (item 2): icone menor, linha com padding vertical reduzido, e os
+     pontos que a curva de cada quiz precisa pra sair da guia vertical
+     (--quiz-vinculado-centro-x, no centro do icone do CONTEUDO pai) e
+     chegar perto do icone do quiz (--quiz-vinculado-curva-largura), parando
+     --quiz-vinculado-curva-altura abaixo do topo da linha (onde fica o
+     centro do icone do quiz). */
+  --quiz-vinculado-icone: 1.75rem;
+  --quiz-vinculado-padding-v: 0.45rem;
+  --quiz-vinculado-curva-altura: calc(var(--quiz-vinculado-padding-v) + var(--quiz-vinculado-icone) / 2);
+  --quiz-vinculado-centro-x: calc(var(--espaco-md) + 16px + var(--espaco-md) + var(--coluna-icone-conteudo) / 2);
+  --quiz-vinculado-curva-largura: calc(var(--coluna-icone-conteudo) / 2 + var(--espaco-md) - 0.3rem);
 }
 
-/* Trilha do Professor (pendencia 05/11, rodada 2): a barra de progresso vira
-   uma linha propria, abaixo do cabecalho (titulo + "Visualizar como aluno"),
-   em vez de ficar espremida ao lado do titulo como no restante das telas que
-   reaproveitam .atividades-curso__progresso (Aluno, Turmas, Modulos,
-   Avaliacoes). Escopado em .tela-conteudos pra nao alterar essas telas.
-   `flex: none` corrige um bug visual da rodada 1: herdado de
-   .atividades-curso__progresso, o `flex: 1 1 12rem` original foi pensado pra
-   largura (lado do titulo); aqui, como filho de .conteudos-aluno
-   (flex-direction: column), o mesmo valor passava a valer como ALTURA minima
-   - o bloco ficava com ~192px e o conteudo centralizado no meio, abrindo um
-   buraco acima/abaixo da barra. */
-.tela-conteudos .atividades-curso__progresso {
-  flex: none;
-  flex-direction: row;
+@media (max-width: 30rem) {
+  .tela-conteudos {
+    --coluna-icone-conteudo: 2rem;
+    --quiz-vinculado-icone: 1.5rem;
+  }
+}
+
+/* Topo do curso (prompt consolidado, item 6): sem barra de progresso -
+   titulo a esquerda, resumo (%publicado + pendentes/arquivados) e
+   "Visualizar como aluno" a direita, no mesmo cabecalho (antes ficavam numa
+   segunda linha, com a barra). Escopado em .tela-conteudos pra nao alterar
+   as telas que reaproveitam .atividades-curso__cabecalho (Aluno, Turmas,
+   Modulos, Avaliacoes). */
+.tela-conteudos .atividades-curso__resumo-grupo {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  max-width: none;
-  width: 100%;
-  gap: var(--espaco-sm);
+  gap: var(--espaco-md);
 }
 
-/* Espacamento vertical entre titulo/progresso/primeiro modulo (rodada 2):
+.tela-conteudos .atividades-curso__resumo-texto {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.tela-conteudos .atividades-curso__resumo-publicado {
+  color: var(--cor-sucesso);
+  font-weight: 700;
+}
+
+/* Espacamento vertical entre titulo/cabecalho e o primeiro modulo (rodada 2,
+   ajustado no prompt consolidado apos a barra de progresso sair da tela):
    zera o gap uniforme herdado de .conteudos-aluno (--espaco-md em todo
    filho direto) so pra esse wrapper especifico da Trilha do Professor -
    `.tela-conteudos > .conteudos-aluno` (combinador de filho direto) exclui
@@ -3920,22 +3960,7 @@
 }
 
 .tela-conteudos .atividades-curso__cabecalho {
-  margin-bottom: var(--espaco-sm);
-}
-
-.tela-conteudos .atividades-curso__progresso {
   margin-bottom: var(--espaco-lg);
-}
-
-/* Barra cresce e ocupa o espaco livre da linha (antes tinha max-width:16rem,
-   ficando pequena e deslocada pra esquerda numa linha que agora e larga). */
-.tela-conteudos .atividades-curso__progresso .barra-progresso-wrapper {
-  flex: 1 1 10rem;
-}
-
-.tela-conteudos .atividades-curso__progresso-texto {
-  color: var(--cor-texto-suave);
-  white-space: nowrap;
 }
 
 /* "Voltar para Conteudos": menor e mais colado no titulo, so nesta tela (nas
@@ -4067,44 +4092,109 @@
   border-radius: 0;
 }
 
-/* Tres niveis de fundo opacos (rodada 2 item 6, ajustado na rodada 3): antes
-   o cartao usava rgba(255,255,255,0.015), quase transparente, deixando o
-   gradiente da pagina aparecer por tras das linhas. A rodada 2 pos o fundo
-   --cor-fundo NA LINHA, o que deixava frestas (o gradiente aparecia nos
-   espacos entre linhas e nos cantos arredondados de cada uma) - a rodada 3
-   moveu esse fundo pro CARTAO inteiro (.conteudos-modulo--editavel abaixo) e
-   zerou o border-radius da linha, que agora so herda o fundo solido por
-   tras (sem pintar o proprio, nem ter canto arredondado proprio) e vira uma
-   faixa continua dentro do cartao. Hover usa --cor-fundo-alt em vez do
-   --cor-fundo-elevado generico da base .atividades-curso__linha:hover, que
-   outras telas continuam usando. */
-.tela-conteudos .atividades-curso__linha[role="button"]:hover {
-  background-color: var(--cor-fundo-alt);
+/* Caixa de selecao (prompt consolidado, item 2): reaproveita .tabela-checkbox
+   (16px, ja usada em outras telas) - alinhada com o icone ao lado
+   (align-self:center, a linha e flex-start por padrao). Em telas de toque,
+   a area de clique cresce pra 44px sem aumentar o desenho da caixa nem
+   empurrar o titulo (so o wrapper ganha min-width/height, nao o input). */
+.atividades-curso__checkbox-alvo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex-shrink: 0;
 }
 
-/* Item 7: o fundo de "aberto" sai da linha (.atividades-curso__linha--ativa)
-   e passa pro conjunto linha+descricao (.atividades-curso__item-aberto),
-   pros dois ficarem na mesma faixa continua - o quiz vinculado, irmao fora
-   desse wrapper, fica de fora dela (como "item seguinte", nao faz parte do
+@media (hover: none) and (pointer: coarse) {
+  .atividades-curso__checkbox-alvo {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+/* Barra de selecao (prompt consolidado, item 3): "Selecionar tudo" + divisoria
+   + contador + "Mais acoes", logo abaixo da faixa do modulo aberto. Fundo
+   --cor-fundo (item 5), separador fino abaixo pra distinguir da lista de
+   conteudos logo em seguida. */
+.atividades-curso__barra-selecao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-sm) var(--espaco-md);
+  background: var(--cor-fundo);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.atividades-curso__selecionar-tudo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.atividades-curso__barra-divisoria {
+  width: 1px;
+  height: 1rem;
+  background: var(--cor-borda);
+  flex-shrink: 0;
+}
+
+.atividades-curso__contagem-selecao {
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+  flex: 1;
+}
+
+.atividades-curso__lote-falhas-lista {
+  margin: 0.3rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+}
+
+/* Tres niveis de fundo opacos (prompt consolidado, item 5): cartao do modulo
+   e linhas usam --cor-fundo-alt (uma unica mancha continua - a linha nao
+   pinta o proprio fundo, so herda o do cartao por tras, com
+   border-radius:0, pra nao abrir frestas nos cantos de cada linha);
+   faixa do modulo + hover + item aberto usam --cor-fundo-elevado (um
+   degrau acima, o nivel mais claro); barra de selecao e faixa "Quizzes do
+   modulo" usam --cor-fundo (um degrau abaixo, mais perto do fundo da
+   pagina). */
+.tela-conteudos .atividades-curso__linha[role="button"]:hover {
+  background-color: var(--cor-fundo-elevado);
+}
+
+/* O fundo de "aberto" sai da linha (.atividades-curso__linha--ativa) e passa
+   pro conjunto linha+descricao (.atividades-curso__item-aberto), pros dois
+   ficarem na mesma faixa continua - o quiz vinculado, irmao fora desse
+   wrapper, fica de fora dela (como "item seguinte", nao faz parte do
    destaque de aberto). */
 .tela-conteudos .atividades-curso__item-aberto:has(.atividades-curso__linha--ativa) {
-  background-color: var(--cor-fundo-alt);
+  background-color: var(--cor-fundo-elevado);
 }
 
-/* A linha em si tem fundo opaco proprio (--cor-fundo, acima) que cobriria o
-   fundo --cor-fundo-alt do wrapper logo atras dela - repete o mesmo tom
-   explicitamente aqui pra linha e descricao ficarem iguais, nao so a
-   descricao (que nao tem fundo proprio e deixa o wrapper aparecer). */
+/* A linha em si tem fundo opaco proprio (--cor-fundo-alt, herdado do
+   cartao) que cobriria o fundo do wrapper logo atras dela - repete o mesmo
+   tom explicitamente aqui pra linha e descricao ficarem iguais, nao so a
+   descricao (que nao tem fundo proprio e deixa o wrapper aparecer). A
+   divisoria tambem sai daqui quando a linha esta ativa (prompt "quiz
+   vinculado e harmonia", item 3) - ver mais abaixo onde ela e reposta. */
 .tela-conteudos .atividades-curso__linha--ativa {
-  background-color: var(--cor-fundo-alt);
+  background-color: var(--cor-fundo-elevado);
+  border-bottom: none;
 }
 
 /* Separador do fim do conjunto "conteudo + quizzes vinculados" (rodada 3,
-   corrige linha partida/dupla): quiz vinculado nunca tem separador proprio -
-   a indentacao/guia dele faria esse separador ficar mais estreito que os
-   outros (ou dobrado, se o item fosse tambem ultimo). Um unico separador de
-   ponta a ponta fecha o <li> inteiro (material + quizzes dele), nao cada
-   quiz individualmente. */
+   corrige linha partida/dupla; prompt "quiz vinculado e harmonia" remove
+   tambem a divisoria ENTRE a linha do conteudo e o 1o quiz - item 1, "sem
+   divisoria entre o conteudo e seus quizzes"). Nenhuma linha dentro do
+   conjunto (nem a do conteudo, nem as dos quizzes) tem separador proprio -
+   um unico separador de ponta a ponta fecha o <li> inteiro, nao cada linha
+   individualmente. */
+.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes) .atividades-curso__item-aberto .atividades-curso__linha,
 .tela-conteudos .atividades-curso__quizzes .atividades-curso__linha {
   border-bottom: none;
 }
@@ -4121,39 +4211,101 @@
   border-bottom: none;
 }
 
-/* Hierarquia da trilha do Professor (pendencia 05/11, substitui o antigo
-   cartao com borda por CONTEUDO): quiz vinculado a um material fica recuado,
-   com guia vertical a esquerda, "logo abaixo do conteudo" - alinhado sob o
-   icone do material (2.75rem = largura do icone + gap, mesmo valor ja usado
-   no padding-left responsivo de .atividades-curso__acoes abaixo). Escopado
-   em .tela-conteudos pra nao alterar a trilha do aluno (SecoesAluno.jsx),
-   que reaproveita a mesma classe base .atividades-curso__quizzes. */
-/* Guia vertical no centro do icone do conteudo pai (item 8 na rodada 2,
-   corrigido na rodada 3): o icone do pai fica DENTRO da linha, que tem
-   padding-left: var(--espaco-md) (item 5) - o calculo da rodada 2 ignorava
-   esse padding e posicionava a guia deslocada pra esquerda. O margin-left
-   soma os dois: o padding da linha + a metade da coluna do icone, pra cair
-   exatamente no centro do icone de verdade. padding-left desconta 2px (a
-   largura da propria guia) do icone do quiz, que comeca na coluna de texto
-   do pai. */
+/* Descricao aberta, conteudo SEM quiz vinculado (item 3): a divisoria que
+   saiu da linha (regra acima) fica colada na descricao, que nao tem
+   fundo/borda propria - volta a fechar o item no fim do bloco
+   linha+descricao. Pra conteudo COM quiz, quem fecha o grupo inteiro ja e a
+   regra mais acima, depois do ultimo quiz. */
+.tela-conteudos .atividades-curso__item:not(:has(.atividades-curso__quizzes)) .atividades-curso__item-aberto:has(.atividades-curso__linha--ativa) {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+/* Quiz vinculado a um material (prompt "quiz vinculado e harmonia", item 1):
+   caixa de selecao na MESMA coluna da linha do conteudo (sem indentacao - o
+   antigo recuo de toda a lista saiu daqui); so o icone recua ate a coluna do
+   titulo do conteudo (--recuo-titulo-conteudo), e fica menor/mais compacto.
+   Escopado em .tela-conteudos pra nao alterar a trilha do aluno
+   (SecoesAluno.jsx), que reaproveita a mesma classe base
+   .atividades-curso__quizzes. */
 .tela-conteudos .atividades-curso__quizzes {
-  margin: 0 0 0 calc(var(--espaco-md) + var(--coluna-icone-conteudo) / 2);
-  padding-left: calc(var(--coluna-icone-conteudo) / 2 - 2px);
-  border-left: 2px solid var(--cor-borda);
+  margin: 0;
+  padding: 0;
+}
+
+.tela-conteudos .atividades-curso__quizzes .atividades-curso__linha {
+  align-items: center;
+  padding-top: var(--quiz-vinculado-padding-v);
+  padding-bottom: var(--quiz-vinculado-padding-v);
+}
+
+.tela-conteudos .atividades-curso__quizzes .atividades-curso__icone--quiz {
+  width: var(--quiz-vinculado-icone);
+  height: var(--quiz-vinculado-icone);
+  margin-left: calc(var(--coluna-icone-conteudo) + var(--espaco-md));
+}
+
+/* Linha de ligacao (item 2, substitui a guia/border-left antiga acima): sai
+   de baixo do icone do conteudo e desce uma guia continua (pseudo-elemento
+   no <li> do conteudo, position:absolute com top/bottom fixos - estica
+   sozinha quando a descricao abre, sem precisar recalcular nada em JS) ate
+   a altura do ultimo quiz; cada quiz ganha sua propria curva (pseudo no
+   <li> do quiz) saindo da guia ate perto do icone dele, sem encostar.
+   aria-hidden implicito (::before nao entra na arvore de acessibilidade). */
+.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes) {
+  position: relative;
+}
+
+.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes)::before {
+  content: "";
+  position: absolute;
+  top: calc(0.625rem + var(--coluna-icone-conteudo));
+  bottom: var(--quiz-vinculado-curva-altura);
+  left: var(--quiz-vinculado-centro-x);
+  width: 2px;
+  background: var(--cor-borda-forte);
+  pointer-events: none;
+}
+
+.tela-conteudos .atividades-curso__quizzes .atividades-curso__item--quiz {
+  position: relative;
+}
+
+.tela-conteudos .atividades-curso__quizzes .atividades-curso__item--quiz::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--quiz-vinculado-centro-x);
+  width: var(--quiz-vinculado-curva-largura);
+  height: var(--quiz-vinculado-curva-altura);
+  border-left: 2px solid var(--cor-borda-forte);
+  border-bottom: 2px solid var(--cor-borda-forte);
+  border-bottom-left-radius: 0.6rem;
+  pointer-events: none;
 }
 
 /* Bloco "Quizzes do modulo" (quiz solto, nao vinculado a nenhum material):
    vira faixa de ponta a ponta (item 9, rodada 2) - fundo opaco + separador
    acima, com padding horizontal proprio (o cartao perdeu o padding lateral
-   no item 3). As linhas de dentro ficam sem fundo proprio (sobrepoe o
-   --cor-fundo-alt da faixa em vez do --cor-fundo padrao de toda linha). */
+   no item 3). --cor-fundo (prompt consolidado, item 5) - mesmo tom da barra
+   de selecao, o nivel mais escuro da hierarquia. */
 .atividades-curso__quizzes-modulo {
   padding-bottom: var(--espaco-sm);
-  background: var(--cor-fundo-alt);
+  background: var(--cor-fundo);
   border-top: 1px solid var(--cor-borda);
 }
 
+/* Sem o texto "Quiz" abaixo do titulo (item 5), a linha de quiz do modulo
+   vira uma linha so - centraliza com o icone em vez de ficar no topo
+   (align-items:flex-start, padrao de .atividades-curso__linha, que existe
+   pra acomodar titulo+descricao de varias linhas no conteudo). */
+.tela-conteudos .atividades-curso__quizzes-modulo .atividades-curso__linha {
+  align-items: center;
+}
+
 .atividades-curso__quizzes-modulo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -4296,11 +4448,7 @@
 .tela-conteudos .conteudos-modulo--editavel {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
-  background: var(--cor-fundo);
-}
-
-.tela-conteudos .conteudos-modulo--editavel.conteudos-modulo--vazio {
-  background: none;
+  background: var(--cor-fundo-alt);
 }
 
 .tela-conteudos .conteudos-modulo--editavel:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
@@ -4326,39 +4474,13 @@
   border-bottom-color: var(--cor-borda-forte);
 }
 
-.tela-conteudos .atividades-curso__lista-modulos > .conteudos-modulo--editavel.conteudos-modulo--vazio:last-child {
-  border-bottom: 1px dashed var(--cor-borda);
-}
-
 /* Evita que o menu "..." dos itens perto do fim do modulo seja cortado pelo
    overflow:hidden do motion.div de abertura/fechamento do corpo do modulo -
    abrem pra cima em vez de pra baixo (mesma tecnica ja usada em .tela-modulos
    acima). Cobre o ultimo material (e eventual quiz vinculado a ele) e o
-   ultimo quiz do bloco "Quizzes do modulo". O menu do botao "Adicionar" tem
-   regra propria logo abaixo (rodada 3: o overflow do corpo do modulo virou
-   visible depois da animacao de abertura, entao ele nao precisa mais fugir
-   pra cima - exceto no ultimo modulo da lista, que nao tem espaco abaixo na
-   pagina). */
+   ultimo quiz do bloco "Quizzes do modulo". */
 .tela-conteudos .conteudos-modulo__lista > .atividades-curso__item:last-child .menu-contexto__lista,
 .tela-conteudos .atividades-curso__quizzes-modulo .conteudos-modulo__lista > .atividades-curso__item:last-child .menu-contexto__lista {
-  top: auto;
-  bottom: calc(100% + 6px);
-}
-
-/* Bug da rodada 3: o botao "Adicionar" fica perto da borda ESQUERDA do
-   cartao, mas o menu-contexto__lista base alinha por "right:0" - o menu
-   crescia pra esquerda e saia do cartao, cortado pelo overflow:hidden do
-   corpo do modulo (so aparecia o final de "Conteudo"). Alinhar pela
-   esquerda, que e onde o botao realmente fica. */
-.tela-conteudos .atividades-curso__adicionar-grupo .menu-contexto__lista {
-  left: 0;
-  right: auto;
-}
-
-/* Abre pra baixo normalmente (o overflow:visible pos-animacao do corpo do
-   modulo resolve o corte); so o ultimo modulo da lista continua abrindo pra
-   cima, porque nao ha mais pagina abaixo dele pro menu caber. */
-.tela-conteudos .atividades-curso__lista-modulos > .conteudos-modulo--editavel:last-child .atividades-curso__adicionar-grupo .menu-contexto__lista {
   top: auto;
   bottom: calc(100% + 6px);
 }
@@ -4421,6 +4543,24 @@
   color: var(--cor-marca-clara);
   background: rgba(123, 47, 247, 0.08);
   border-color: rgba(123, 47, 247, 0.28);
+}
+
+/* Verde suave nos icones de CONTEUDO da trilha do Professor (prompt
+   consolidado, item 4) - todos os tipos (texto/pdf/video/link/imagem) usam
+   o mesmo verde, o tipo continua identificado pelo desenho do icone + texto
+   abaixo do titulo. Sobrescreve so em hover/aberto (regras genericas acima,
+   compartilhadas com a trilha do aluno) pra nao virar roxo como os outros
+   icones - reforca so a borda, mantendo a cor. */
+.atividades-curso__icone--conteudo {
+  color: var(--cor-conteudo);
+  background: var(--cor-conteudo-fundo);
+  border-color: var(--cor-conteudo-borda);
+}
+
+.atividades-curso__linha[role="button"]:hover .atividades-curso__icone--conteudo,
+.atividades-curso__linha--ativa .atividades-curso__icone--conteudo {
+  color: var(--cor-conteudo);
+  border-color: var(--cor-conteudo);
 }
 
 /* Grade unica de colunas (rodada 2, item 4): mesma largura de coluna do
@@ -4504,13 +4644,6 @@
   flex-shrink: 0;
 }
 
-/* Hierarquia da trilha do Professor (pendencia 05/11): Publicado e o estado
-   padrao, so Rascunho precisa de acao - o selo fica invisivel (mas presente,
-   pra reservar a mesma largura de coluna e continuar anunciado ao leitor de
-   tela) quando o item ja esta Publicado. */
-.atividades-curso__status-badge--oculto {
-  opacity: 0;
-}
 
 /* Texto do botao "Editar" ao lado do icone de lapis: some em tela estreita
    pra sobrar espaco pro selo de status + menu "..." + setas, o botao vira
@@ -4558,53 +4691,15 @@
 }
 
 /* ------------------------------------------------------------
-   TRILHA DO PROFESSOR — reordenar e painel de acoes do conteudo
+   TRILHA DO PROFESSOR — painel de acoes do conteudo
    (SecaoConteudosProfessor.jsx). Reaproveita as mesmas classes
    atividades-curso__ e conteudos-modulo__ da trilha do aluno.
+   As setas de reordenar ↑↓ saem da linha (prompt consolidado, item 1) -
+   "Mover para cima"/"Mover para baixo" continuam no menu ⋮
+   (itensMenuMaterial), so que sem as duas regras de CSS que existiam so
+   pra elas (.atividades-curso__reordenar e o espacador
+   .atividades-curso__reordenar-espaco que alinhava quiz com material).
    ------------------------------------------------------------ */
-/* Sem caixa, menores e discretas (item 9, rodada 2) - antes tinham borda
-   propria competindo com o titulo do conteudo ao lado. */
-.atividades-curso__reordenar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  border-radius: var(--raio-sm);
-  color: var(--cor-texto-suave);
-  cursor: pointer;
-  transition: background var(--transicao-rapida), color var(--transicao-rapida), opacity var(--transicao-rapida);
-}
-
-.atividades-curso__reordenar:hover:not(:disabled) {
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-marca-clara);
-}
-
-.atividades-curso__reordenar:focus-visible {
-  outline: 2px solid var(--cor-marca-clara);
-  outline-offset: 1px;
-}
-
-/* Quiz nao tem setas de reordenar (so material reordena) - esse espaco vazio
-   reserva a largura das duas setas + o gap entre elas, pra selo/Editar/menu
-   ficarem na mesma coluna em linhas de material e de quiz (item 6). */
-.atividades-curso__reordenar-espaco {
-  display: inline-block;
-  width: calc(1.5rem * 2 + 0.4rem);
-  flex-shrink: 0;
-}
-
-/* Desabilitada continua ocupando o espaco (layout estavel), so com contraste
-   bem baixo - nao e mais so uma opacidade media de caixa com borda. */
-.atividades-curso__reordenar:disabled {
-  opacity: 0.2;
-  cursor: not-allowed;
-}
-
 .atividades-curso__painel-acoes {
   display: flex;
   flex-wrap: wrap;
@@ -4824,8 +4919,29 @@
   padding-left: calc(2.75rem + var(--espaco-md));
 }
 
+/* Painel da descricao aberta (prompt "quiz vinculado e harmonia", item 3):
+   alinhada na mesma coluna onde o TITULO do conteudo comeca
+   (--recuo-titulo-conteudo ja soma o padding da linha + caixa de selecao +
+   icone, nao so o icone como a regra generica acima) - mesmo tamanho/peso
+   do titulo da linha (.atividades-curso__item-titulo e 0.92rem), largura
+   maxima de leitura (~70ch) sem invadir a coluna de selo/acoes a direita
+   (max-width ja limita isso, nao precisa de regra extra). */
 .tela-conteudos .atividades-curso__previa {
-  padding-left: calc(var(--coluna-icone-conteudo) + var(--espaco-md));
+  padding: 0.25rem var(--espaco-md) var(--espaco-md) var(--recuo-titulo-conteudo);
+}
+
+.tela-conteudos .atividades-curso__previa p {
+  margin: 0;
+  max-width: 70ch;
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+@media (max-width: 30rem) {
+  .tela-conteudos .atividades-curso__previa {
+    padding-left: var(--recuo-titulo-conteudo);
+  }
 }
 
 /* Painel central "Ver arquivados" (modal no topo da tela de Conteudos do
@@ -5469,15 +5585,13 @@
   border-radius: var(--raio-md) var(--raio-md) 0 0;
 }
 
-/* Modulo sem nenhum conteudo/quiz nao arquivado (item 8): borda tracejada no
-   cartao inteiro (nao so no cabecalho, que agora nao tem borda propria) no
-   lugar da faixa solida, reforcando que nao ha nada publicavel ali ainda. */
-.tela-conteudos .conteudos-modulo--editavel.conteudos-modulo--vazio {
-  border-style: dashed;
-}
-
-.conteudos-modulo--editavel.conteudos-modulo--vazio > .conteudos-modulo__cabecalho {
-  background: none;
+/* "Nenhum conteudo neste modulo ainda." ficava colado na borda esquerda do
+   cartao - o cartao perdeu o padding lateral na rodada 2 (item 3) e
+   .texto-vazio (classe base, compartilhada com outras telas) nunca teve
+   padding proprio. So aqui, pra alinhar com o botao "Adicionar" do rodape
+   logo abaixo. */
+.tela-conteudos .conteudos-modulo--editavel .texto-vazio {
+  padding: var(--espaco-sm) var(--espaco-md);
 }
 
 .conteudos-modulo__cabecalho-wrapper {

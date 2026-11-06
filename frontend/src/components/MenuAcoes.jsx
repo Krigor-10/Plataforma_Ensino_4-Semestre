@@ -7,7 +7,7 @@
    fecha ao clicar fora.
    ============================================================ */
 import { useEffect, useRef, useState } from "react";
-import { TbDotsVertical } from "react-icons/tb";
+import { TbChevronDown, TbDotsVertical } from "react-icons/tb";
 import Botao from "./Botao.jsx";
 
 /**
@@ -46,16 +46,27 @@ export default function MenuAcoes({ itens, rotulo, textoBotao, iconeBotao, class
     }
 
     document.addEventListener("keydown", fecharComEsc);
-    document.addEventListener("click", fecharAoClicarFora);
+    // Fase de captura (terceiro argumento true): o clique no botao de OUTRO
+    // menu (ou nas acoes da linha) chama event.stopPropagation() na fase de
+    // bolha, o que impede esse listener de rodar se ele tambem estiver na
+    // bolha - o menu ja aberto nunca saberia que um clique aconteceu fora
+    // dele. Na fase de captura, este listener roda ANTES do stopPropagation
+    // do alvo, entao sempre recebe o clique.
+    document.addEventListener("click", fecharAoClicarFora, true);
     return () => {
       document.removeEventListener("keydown", fecharComEsc);
-      document.removeEventListener("click", fecharAoClicarFora);
+      document.removeEventListener("click", fecharAoClicarFora, true);
     };
   }, [aberto]);
 
   useEffect(() => {
     if (aberto) {
-      refLista.current?.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+      // preventScroll: sem isso, focar um item fora da area visivel de um
+      // ancestral com overflow:hidden (ex.: o corpo do modulo ainda recortado
+      // durante/logo apos a animacao de abertura) faz o navegador rolar esse
+      // ancestral pra trazer o item focado a vista - o conteudo "pula"
+      // visualmente, cortando o proprio menu.
+      refLista.current?.querySelector('[role="menuitem"]:not(:disabled)')?.focus({ preventScroll: true });
     }
   }, [aberto]);
 
@@ -103,7 +114,7 @@ export default function MenuAcoes({ itens, rotulo, textoBotao, iconeBotao, class
           tamanho={tamanhoBotao}
           variante={varianteBotao}
         >
-          {iconeBotao} {textoBotao}
+          {iconeBotao} {textoBotao} <TbChevronDown aria-hidden="true" className={`menu-contexto__seta${aberto ? " menu-contexto__seta--aberta" : ""}`} size={15} />
         </Botao>
       ) : (
         <button

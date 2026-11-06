@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SecaoConteudosProfessor } from "./SecaoConteudosProfessor.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
-import { apiRequest } from "../../lib/api.js";
+import { apiRequest, ApiError } from "../../lib/api.js";
 
 vi.mock("../../lib/api.js", async () => {
   const real = await vi.importActual("../../lib/api.js");
@@ -26,10 +26,10 @@ function montarCenario({ conteudos = [], avaliacoes = [], modulos } = {}) {
   };
 }
 
-function renderTrilha({ conteudos = [], avaliacoes = [], modulos } = {}) {
+function renderTrilha({ conteudos = [], avaliacoes = [], modulos, onSessionExpired = vi.fn(), onRefresh = vi.fn() } = {}) {
   const cenario = montarCenario({ avaliacoes, conteudos, modulos });
 
-  return render(
+  const resultado = render(
     <ToastProvider>
       <SecaoConteudosProfessor
         avaliacoes={cenario.avaliacoes}
@@ -38,13 +38,15 @@ function renderTrilha({ conteudos = [], avaliacoes = [], modulos } = {}) {
         cursos={cenario.cursos}
         modulos={cenario.modulos}
         onNavigate={vi.fn()}
-        onRefresh={vi.fn()}
-        onSessionExpired={vi.fn()}
+        onRefresh={onRefresh}
+        onSessionExpired={onSessionExpired}
         turmas={cenario.turmas}
         usuario={cenario.usuario}
       />
     </ToastProvider>
   );
+
+  return { ...resultado, onSessionExpired, onRefresh };
 }
 
 describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
@@ -108,7 +110,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(within(listaQuizzesDoMaterial).getByText("Quiz B da Aula 1")).toBeInTheDocument();
   });
 
-  test("quiz do modulo em rascunho aparece na contagem e no texto de progresso do topo", () => {
+  test("quiz do modulo em rascunho aparece na contagem e no resumo do topo", () => {
     const { container } = renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -127,8 +129,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     const contagemDoModulo = container.querySelector(".conteudos-modulo__contagem");
     expect(contagemDoModulo.textContent).toMatch(/1 rascunho/);
 
-    const progressoDoTopo = container.querySelector(".atividades-curso__progresso-texto");
-    expect(progressoDoTopo.textContent).toMatch(/1 de 2 publicados/);
+    const resumoPublicado = container.querySelector(".atividades-curso__resumo-publicado");
+    expect(resumoPublicado.textContent).toMatch(/50% publicado/);
 
     expect(screen.getByRole("button", { name: "Falta publicar: 1" })).toBeInTheDocument();
   });
@@ -150,7 +152,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(contagemDoModulo.textContent).not.toMatch(/3 quiz/);
   });
 
-  test("Publicado fica sem selo visivel mas acessivel ao leitor de tela; Rascunho mantem o selo", () => {
+  test("selo de status fica sempre visivel, tanto em Publicado quanto em Rascunho", () => {
     renderTrilha({
       conteudos: [
         { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula Publicada", turmaId: TURMA_ID, cursoId: CURSO_ID },
@@ -159,10 +161,12 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     });
 
     const selosPublicado = screen.getAllByText("Publicado");
-    expect(selosPublicado[0]).toHaveClass("atividades-curso__status-badge--oculto");
+    expect(selosPublicado[0]).not.toHaveClass("atividades-curso__status-badge--oculto");
+    expect(selosPublicado[0]).toBeVisible();
 
     const selosRascunho = screen.getAllByText("Rascunho");
     expect(selosRascunho[0]).not.toHaveClass("atividades-curso__status-badge--oculto");
+    expect(selosRascunho[0]).toBeVisible();
   });
 
   test("modulo vazio mostra o aviso no lugar da contagem", () => {
@@ -182,6 +186,147 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     expect(screen.getByRole("button", { name: /Ver detalhes.*Com descricao/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ver detalhes.*Sem descricao/ })).not.toBeInTheDocument();
+  });
+
+  test("descricao igual ao titulo (maiusculas/acentos diferentes) conta como sem descricao", () => {
+    renderTrilha({
+      conteudos: [
+        {
+          id: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoConteudo: 1,
+          titulo: "Visão Geral",
+          descricao: "  visao geral  ",
+          turmaId: TURMA_ID,
+          cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    expect(screen.queryByRole("button", { name: /Ver detalhes.*Visão Geral/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("visao geral")).not.toBeInTheDocument();
+  });
+
+  test("quiz vinculado com titulo generico (igual ou \"Quiz - {conteudo}\") exibe \"Quiz do conteúdo\"", () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz - Aula 1",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
+    expect(within(listaQuizzesDoMaterial).getByText("Quiz do conteúdo")).toBeInTheDocument();
+    expect(within(listaQuizzesDoMaterial).queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
+  });
+
+  test("quiz vinculado com titulo proprio exibe o titulo real", () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Revisão de Variáveis",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
+    expect(within(listaQuizzesDoMaterial).getByText("Revisão de Variáveis")).toBeInTheDocument();
+    expect(within(listaQuizzesDoMaterial).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
+  });
+
+  test("dois quizzes do mesmo conteudo que cairiam na regra generica exibem os titulos reais", () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Aula 1",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        },
+        {
+          id: 201,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 1,
+          tipoAvaliacao: 1,
+          titulo: "Quiz: Aula 1",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
+    expect(within(listaQuizzesDoMaterial).getAllByText("Aula 1")).toHaveLength(1);
+    expect(within(listaQuizzesDoMaterial).getByText("Quiz: Aula 1")).toBeInTheDocument();
+    expect(within(listaQuizzesDoMaterial).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
+  });
+
+  test("aria-label de selecao e Editar do quiz vinculado mantem o titulo real mesmo com nome generico exibido", () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz - Aula 1",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    expect(screen.getByLabelText("Selecionar Quiz - Aula 1")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editar quiz Quiz - Aula 1" })).toBeInTheDocument();
+  });
+
+  test('quizzes (vinculado e do modulo) nao exibem mais o texto "Quiz" abaixo do titulo', () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz da Aula 1",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        },
+        {
+          id: 201,
+          conteudoDidaticoId: null,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    expect(screen.queryByText("Quiz", { selector: "p span" })).not.toBeInTheDocument();
   });
 
   test("abre o modulo com rascunho ao entrar; sem rascunho, abre o primeiro", () => {
@@ -296,26 +441,31 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(await screen.findByText(/foi arquivado em vez de excluído definitivamente/)).toBeInTheDocument();
   });
 
-  test('menu "Adicionar" funciona por teclado e aciona os dois fluxos (Conteudo e Quiz)', async () => {
+  test('botoes "Novo conteudo" e "Adicionar Quiz" acionam os dois fluxos', async () => {
     const usuario = userEvent.setup();
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    const botaoAdicionar = screen.getByRole("button", { name: "Adicionar" });
-    botaoAdicionar.focus();
-    await usuario.keyboard("{Enter}");
-
-    expect(screen.getByRole("menu")).toBeInTheDocument();
-    await usuario.keyboard("{Enter}");
+    await usuario.click(screen.getByRole("button", { name: "Novo conteúdo" }));
     expect(await screen.findByRole("dialog", { name: "Novo conteúdo" })).toBeInTheDocument();
-
     await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
 
-    await usuario.click(screen.getByRole("button", { name: "Adicionar" }));
-    await usuario.keyboard("{ArrowDown}");
-    await usuario.keyboard("{Enter}");
+    await usuario.click(screen.getByRole("button", { name: "Adicionar Quiz" }));
+    expect(await screen.findByRole("dialog", { name: "Adicionar Quiz" })).toBeInTheDocument();
+  });
 
+  test('em modulo vazio, "Novo conteudo" e "Adicionar Quiz" continuam disponiveis e acionam o fluxo certo', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({ conteudos: [] });
+
+    expect(screen.getByText("Vazio · não aparece para o aluno")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Novo conteúdo" }));
+    expect(await screen.findByRole("dialog", { name: "Novo conteúdo" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    await usuario.click(screen.getByRole("button", { name: "Adicionar Quiz" }));
     expect(await screen.findByRole("dialog", { name: "Adicionar Quiz" })).toBeInTheDocument();
   });
 
@@ -343,5 +493,352 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir" }));
 
     expect(screen.getByRole("dialog", { name: "Excluir conteúdo" })).toBeInTheDocument();
+  });
+
+  test("abrir o menu de um item fecha o menu de outro item ja aberto", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 2" }));
+
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
+    expect(within(screen.getByRole("menu")).queryByText("Excluir")).toBeInTheDocument();
+  });
+
+  test("clicar em Editar do mesmo item fecha o menu de acoes aberto", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Editar Aula 1" }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  test("clicar de novo no mesmo botao de opcoes fecha o menu (alternar)", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    const botaoMenu = screen.getByRole("button", { name: "Opções de Aula 1" });
+    await usuario.click(botaoMenu);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await usuario.click(botaoMenu);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  test("clicar numa opcao do menu continua executando a acao", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Voltar para rascunho" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/ConteudosDidaticos/1", expect.objectContaining({ method: "PUT" })));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  test("clicar fora (na linha do conteudo) fecha o menu aberto", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        {
+          id: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoConteudo: 1,
+          titulo: "Aula 1",
+          descricao: "Texto",
+          turmaId: TURMA_ID,
+          cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: /Ver detalhes.*Aula 1/ }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  test("clicar no botao de opcoes nao abre nem fecha a previa da linha", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        {
+          id: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoConteudo: 1,
+          titulo: "Aula 1",
+          descricao: "Texto da previa",
+          turmaId: TURMA_ID,
+          cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    expect(screen.queryByText("Texto da previa")).not.toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+
+    expect(screen.queryByText("Texto da previa")).not.toBeInTheDocument();
+
+    await usuario.keyboard("{Escape}");
+    await usuario.click(screen.getByRole("button", { name: /Ver detalhes.*Aula 1/ }));
+    expect(screen.getByText("Texto da previa")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+
+    expect(screen.getByText("Texto da previa")).toBeInTheDocument();
+  });
+
+  test('"Selecionar tudo" marca, desmarca e fica indeterminado', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 1, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    const selecionarTudo = screen.getByLabelText("Selecionar tudo");
+    expect(selecionarTudo.checked).toBe(false);
+    expect(selecionarTudo.indeterminate).toBe(false);
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    expect(selecionarTudo.indeterminate).toBe(true);
+
+    await usuario.click(selecionarTudo);
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
+    expect(screen.getByLabelText("Selecionar Aula 2").checked).toBe(true);
+    expect(selecionarTudo.indeterminate).toBe(false);
+
+    await usuario.click(selecionarTudo);
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(false);
+    expect(screen.getByLabelText("Selecionar Aula 2").checked).toBe(false);
+  });
+
+  test("selecao e limpa ao trocar de modulo aberto", async () => {
+    const MODULO_2 = 101;
+    const usuario = userEvent.setup();
+    renderTrilha({
+      modulos: [
+        { id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" },
+        { id: MODULO_2, cursoId: CURSO_ID, titulo: "Módulo 2", dataCriacao: "2026-01-02" }
+      ],
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_2, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
+
+    await usuario.click(screen.getByRole("button", { name: /Módulo 02/ }));
+    await usuario.click(screen.getByRole("button", { name: /Módulo 01/ }));
+
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(false);
+  });
+
+  test('opcoes de "Mais ações" ficam desabilitadas sem selecao', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    const menu = screen.getByRole("menu");
+
+    expect(within(menu).getByRole("menuitem", { name: "Publicar selecionados" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Voltar para rascunho" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Arquivar selecionados" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir selecionados" })).toBeDisabled();
+  });
+
+  test("clicar na caixa de selecao nao expande a linha do conteudo", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        {
+          id: 1,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoConteudo: 1,
+          titulo: "Aula 1",
+          descricao: "Texto da previa",
+          turmaId: TURMA_ID,
+          cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
+    expect(screen.queryByText("Texto da previa")).not.toBeInTheDocument();
+  });
+
+  test('linha de "Quizzes do modulo" tem uma unica caixa de selecao', () => {
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: null,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    const linhaDoQuiz = screen.getByText("Quiz do Módulo").closest(".atividades-curso__linha");
+    expect(within(linhaDoQuiz).getAllByRole("checkbox")).toHaveLength(1);
+  });
+
+  test("mover pelo menu de opcoes (sem mais a seta na linha) continua funcionando", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Mover para baixo" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalled());
+  });
+
+  test("exclusao em lote chama os quizzes antes dos conteudos", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        {
+          id: 200,
+          conteudoDidaticoId: null,
+          moduloId: MODULO_ID,
+          statusPublicacao: 2,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          turmaId: TURMA_ID, cursoId: CURSO_ID
+        }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    await usuario.click(screen.getByLabelText("Selecionar Quiz do Módulo"));
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir selecionados" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/Avaliacoes/200", expect.objectContaining({ method: "DELETE" })));
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/ConteudosDidaticos/1", expect.objectContaining({ method: "DELETE" })));
+
+    const ordemChamadas = apiRequest.mock.calls.map((chamada) => chamada[0]);
+    expect(ordemChamadas.indexOf("/Avaliacoes/200")).toBeLessThan(ordemChamadas.indexOf("/ConteudosDidaticos/1"));
+  });
+
+  test("resposta com arquivado:true entra no resumo da acao em lote como arquivado", async () => {
+    apiRequest.mockResolvedValueOnce({ arquivado: true, mensagem: "arquivado" });
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir selecionados" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar" }));
+
+    expect(await screen.findByText(/1 arquivado/)).toBeInTheDocument();
+  });
+
+  test("falha em um item do lote nao interrompe os demais e o item continua selecionado", async () => {
+    apiRequest.mockRejectedValueOnce(new Error("Falhou")).mockResolvedValueOnce({});
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    await usuario.click(screen.getByLabelText("Selecionar Aula 2"));
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir selecionados" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/1 item não foi processado/)).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
+    expect(screen.getByLabelText("Selecionar Aula 2").checked).toBe(false);
+  });
+
+  test("401 em uma acao de lote aborta o lote e notifica sessao expirada", async () => {
+    apiRequest.mockRejectedValueOnce(new ApiError("Sessão expirada", 401));
+    const usuario = userEvent.setup();
+    const { onSessionExpired } = renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
+    await usuario.click(screen.getByLabelText("Selecionar Aula 2"));
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir selecionados" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar" }));
+
+    await waitFor(() => expect(onSessionExpired).toHaveBeenCalled());
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test("acao de status em lote ignora itens que ja estao no status pedido", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula Publicada", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 1, tipoConteudo: 1, titulo: "Aula Rascunho", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByLabelText("Selecionar Aula Publicada"));
+    await usuario.click(screen.getByLabelText("Selecionar Aula Rascunho"));
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Publicar selecionados" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/ConteudosDidaticos/2", expect.objectContaining({ method: "PUT" })));
+    expect(apiRequest).not.toHaveBeenCalledWith("/ConteudosDidaticos/1", expect.anything());
+    expect(await screen.findByText(/já estava nesse status/)).toBeInTheDocument();
   });
 });
