@@ -3896,25 +3896,37 @@
    (Aluno, Modulos, Avaliacoes), por isso vive so sob .tela-conteudos. */
 .tela-conteudos {
   --coluna-icone-conteudo: 2.25rem;
-  /* Coluna onde o TITULO do conteudo comeca (prompt "quiz vinculado e
-     harmonia"): padding-left da linha + largura da caixa de selecao (16px,
-     .tabela-checkbox) + gap + icone + gap. Usada pra alinhar a descricao
-     aberta (item 3) e pra recuar so o icone do quiz vinculado ate essa
-     mesma coluna (item 1), sem indentar a caixa de selecao dele junto. */
-  --recuo-titulo-conteudo: calc(3 * var(--espaco-md) + 16px + var(--coluna-icone-conteudo));
+  /* Largura da coluna da caixa de selecao (prompt "linha de ligacao do
+     quiz"): 16px e so o tamanho de .tabela-checkbox - em telas de toque, o
+     alvo de clique de .atividades-curso__checkbox-alvo cresce pra 2.75rem
+     (ver @media hover:none acima), que e o que realmente empurra a coluna
+     seguinte. Uma unica variavel, usada tanto no recuo do titulo quanto no
+     centro-x da linha de ligacao, pra nao haver dois numeros pra manter
+     sincronizados. */
+  --coluna-checkbox-conteudo: 16px;
+  /* Coluna onde o TITULO do conteudo comeca: padding-left da linha +
+     --coluna-checkbox-conteudo + gap + icone + gap. Usada pra alinhar a
+     descricao aberta (item 3 do prompt "quiz vinculado e harmonia") e pra
+     recuar so o icone do quiz vinculado ate essa mesma coluna (item 1 do
+     mesmo prompt), sem indentar a caixa de selecao dele junto. */
+  --recuo-titulo-conteudo: calc(3 * var(--espaco-md) + var(--coluna-checkbox-conteudo) + var(--coluna-icone-conteudo));
 
-  /* Quiz vinculado mais compacto (item 1) + guia/curva da linha de ligacao
-     (item 2): icone menor, linha com padding vertical reduzido, e os
-     pontos que a curva de cada quiz precisa pra sair da guia vertical
-     (--quiz-vinculado-centro-x, no centro do icone do CONTEUDO pai) e
-     chegar perto do icone do quiz (--quiz-vinculado-curva-largura), parando
-     --quiz-vinculado-curva-altura abaixo do topo da linha (onde fica o
-     centro do icone do quiz). */
+  /* Quiz vinculado mais compacto (prompt "quiz vinculado e harmonia", item
+     1): icone menor, linha com padding vertical reduzido. */
   --quiz-vinculado-icone: 1.75rem;
   --quiz-vinculado-padding-v: 0.45rem;
-  --quiz-vinculado-curva-altura: calc(var(--quiz-vinculado-padding-v) + var(--quiz-vinculado-icone) / 2);
-  --quiz-vinculado-centro-x: calc(var(--espaco-md) + 16px + var(--espaco-md) + var(--coluna-icone-conteudo) / 2);
+  /* Centro horizontal do icone do CONTEUDO pai (prompt "linha de ligacao do
+     quiz"): e onde a guia vertical e a curva de cada quiz nascem. O -1px no
+     fim desconta metade da espessura do proprio traco (2px), pra ele ficar
+     centralizado no icone em vez de deslocado meio pixel pra direita. */
+  --quiz-vinculado-centro-x: calc(var(--espaco-md) + var(--coluna-checkbox-conteudo) + var(--espaco-md) + var(--coluna-icone-conteudo) / 2 - 1px);
   --quiz-vinculado-curva-largura: calc(var(--coluna-icone-conteudo) / 2 + var(--espaco-md) - 0.3rem);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .tela-conteudos {
+    --coluna-checkbox-conteudo: 2.75rem;
+  }
 }
 
 @media (max-width: 30rem) {
@@ -4244,22 +4256,38 @@
   margin-left: calc(var(--coluna-icone-conteudo) + var(--espaco-md));
 }
 
-/* Linha de ligacao (item 2, substitui a guia/border-left antiga acima): sai
-   de baixo do icone do conteudo e desce uma guia continua (pseudo-elemento
-   no <li> do conteudo, position:absolute com top/bottom fixos - estica
-   sozinha quando a descricao abre, sem precisar recalcular nada em JS) ate
-   a altura do ultimo quiz; cada quiz ganha sua propria curva (pseudo no
-   <li> do quiz) saindo da guia ate perto do icone dele, sem encostar.
-   aria-hidden implicito (::before nao entra na arvore de acessibilidade). */
+/* Linha de ligacao (prompt "linha de ligacao do quiz", corrige a versao
+   anterior): cada trecho fica preso ao proprio elemento, sem supor uma
+   altura fixa de linha (a antiga --quiz-vinculado-curva-altura assumia
+   icone + 2 * padding, mas a linha real e mais alta por causa do botao do
+   menu de 44px em .menu-contexto__botao - por isso a curva terminava acima
+   do centro do icone, e a guia vertical passava dele).
+   1) do icone do conteudo ate o fim do bloco (linha + descricao aberta):
+      ::after em .item-aberto, que estica sozinho quando a descricao abre.
+   2) curva de cada quiz: ::before no <li> do quiz, top:0 + height:50% - com
+      align-items:center na linha, 50% da altura do <li> cai exatamente no
+      centro do icone, seja qual for a altura real da linha.
+   3) entre um quiz e o seguinte: ::after so com a borda esquerda (sem
+      curva), em todo quiz que nao for o ultimo - e a ausencia desse trecho
+      no ultimo quiz que corta a guia ali, sem sobra pra baixo.
+   aria-hidden implicito (pseudo-elementos nao entram na arvore de
+   acessibilidade). */
 .tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes) {
+  /* Sem gap aqui, o espaco de 0.4rem entre .item-aberto e a lista de
+     quizzes (herdado do .atividades-curso__item generico, compartilhado
+     com a trilha do aluno) deixaria a guia interrompida entre os dois. */
+  gap: 0;
+}
+
+.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes) .atividades-curso__item-aberto {
   position: relative;
 }
 
-.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes)::before {
+.tela-conteudos .atividades-curso__item:has(.atividades-curso__quizzes) .atividades-curso__item-aberto::after {
   content: "";
   position: absolute;
   top: calc(0.625rem + var(--coluna-icone-conteudo));
-  bottom: var(--quiz-vinculado-curva-altura);
+  bottom: 0;
   left: var(--quiz-vinculado-centro-x);
   width: 2px;
   background: var(--cor-borda-forte);
@@ -4274,13 +4302,35 @@
   content: "";
   position: absolute;
   top: 0;
+  height: 50%;
   left: var(--quiz-vinculado-centro-x);
   width: var(--quiz-vinculado-curva-largura);
-  height: var(--quiz-vinculado-curva-altura);
   border-left: 2px solid var(--cor-borda-forte);
   border-bottom: 2px solid var(--cor-borda-forte);
   border-bottom-left-radius: 0.6rem;
   pointer-events: none;
+}
+
+.tela-conteudos .atividades-curso__quizzes .atividades-curso__item--quiz:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--quiz-vinculado-centro-x);
+  border-left: 2px solid var(--cor-borda-forte);
+  pointer-events: none;
+}
+
+/* Em telas estreitas a linha pode quebrar (flex-wrap:wrap, @media abaixo) e
+   .atividades-curso__acoes (com o botao de 44px) cai pra uma 2a linha -
+   50% da altura do <li> deixaria de ser o centro do icone, que fica so na
+   1a linha. Volta a formula fixa aqui porque, sem o botao de 44px na mesma
+   linha do icone, ela passa a ser exata de novo (o problema original era so
+   quando os dois dividiam a mesma linha). */
+@media (max-width: 30rem) {
+  .tela-conteudos .atividades-curso__quizzes .atividades-curso__item--quiz::before {
+    height: calc(var(--quiz-vinculado-padding-v) + var(--quiz-vinculado-icone) / 2);
+  }
 }
 
 /* Bloco "Quizzes do modulo" (quiz solto, nao vinculado a nenhum material):
