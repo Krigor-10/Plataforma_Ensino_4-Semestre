@@ -541,6 +541,72 @@
 }
 
 /* ------------------------------------------------------------
+   PROGRESSO XP — nivel/XP do aluno, derivado do progresso que ja
+   existe (lib/xp.js, nada persistido). Variante completa no
+   Panorama (cabecalho-pagina), compacta na barra de abas do
+   Academico (NavGrupo). Sem cartao/borda propria, pra nao competir
+   com o card "Em andamento"/"Pronto para comecar" logo abaixo.
+   ------------------------------------------------------------ */
+.progresso-xp {
+  display: flex;
+  min-width: 0;
+}
+
+.progresso-xp--completa {
+  flex: 0 1 20rem;
+  min-width: 14rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.progresso-xp__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.progresso-xp__nivel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--texto-sm);
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+  white-space: nowrap;
+}
+
+.progresso-xp--completa .progresso-xp__nivel svg {
+  color: var(--cor-marca);
+}
+
+.progresso-xp__contagem {
+  font-size: var(--texto-xs);
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.progresso-xp--compacta {
+  align-items: center;
+  gap: var(--espaco-sm);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.progresso-xp--compacta .progresso-xp__nivel {
+  font-size: var(--texto-xs);
+}
+
+.progresso-xp--compacta .barra-progresso-wrapper {
+  width: 5rem;
+}
+
+.progresso-xp--compacta .barra-progresso {
+  height: 4px;
+}
+
+/* ------------------------------------------------------------
    GRADE DE LAYOUT
    ------------------------------------------------------------ */
 .grade-2 {
@@ -618,6 +684,15 @@
 
   .cabecalho-pagina {
     flex-direction: column;
+  }
+
+  .progresso-xp--completa {
+    align-self: stretch;
+    flex-basis: auto;
+  }
+
+  .progresso-xp--compacta {
+    display: none;
   }
 
   .layout-principal {

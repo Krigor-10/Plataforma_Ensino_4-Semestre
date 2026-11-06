@@ -51,6 +51,7 @@ export default function BarraTopo({
   onAbrirSidebar,
   onAbrirPerfil,
   onLogoutClick,
+  xpAluno = null,
 }) {
   const [popupAberto, setPopupAberto] = useState(false);
   const refWrapper = useRef(null);
@@ -524,7 +525,7 @@ export default function BarraTopo({
         </div>
       </div>
 
-      {comTabs && <NavGrupo sections={sections} secaoAtual={secaoAtual} onNavigate={onNavigate} />}
+      {comTabs && <NavGrupo sections={sections} secaoAtual={secaoAtual} onNavigate={onNavigate} xpAluno={xpAluno} />}
     </header>
   );
 }

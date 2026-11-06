@@ -12,6 +12,7 @@ import {
   TbFileText,
   TbCertificate,
 } from "react-icons/tb";
+import ProgressoXp from "../../components/ProgressoXp.jsx";
 import { GRUPOS_DEF, FILHO_PARA_GRUPO } from "./BarraLateral.jsx";
 
 export const ALTURA_NAV_GRUPO = 44;
@@ -54,7 +55,7 @@ export function obterGrupoAtivo(sections, secaoAtual) {
   return obterFilhosVisiveis(sections, secaoAtual)?.grupo ?? null;
 }
 
-export default function NavGrupo({ sections, secaoAtual, onNavigate }) {
+export default function NavGrupo({ sections, secaoAtual, onNavigate, xpAluno = null }) {
   const resultado = obterFilhosVisiveis(sections, secaoAtual);
 
   if (!resultado) return null;
@@ -94,6 +95,8 @@ export default function NavGrupo({ sections, secaoAtual, onNavigate }) {
           );
         })}
       </div>
+
+      {xpAluno ? <ProgressoXp variante="compacta" xp={xpAluno} /> : null}
     </nav>
   );
 }

@@ -12,8 +12,10 @@ import { TbPlayerPlay, TbBooks, TbCheck, TbStack, TbChartBar, TbRocket } from "r
 import Botao from "../../components/Botao.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
+import ProgressoXp from "../../components/ProgressoXp.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
 import { normalizeProgressStatus } from "../../lib/format.js";
+import { calcularXp } from "../../lib/xp.js";
 
 const PAGAMENTO_PENDENTE = 1;
 
@@ -97,6 +99,7 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
           <h1 className="cabecalho-pagina__titulo">Ola, {(usuario.nome ?? "").split(" ")[0]}</h1>
           <p className="cabecalho-pagina__subtitulo">Continue de onde parou e acompanhe sua trilha academica.</p>
         </div>
+        {matriculasAprovadas.length > 0 ? <ProgressoXp variante="completa" xp={calcularXp(progressos)} /> : null}
       </header>
 
       {moduloEmAndamento ? (

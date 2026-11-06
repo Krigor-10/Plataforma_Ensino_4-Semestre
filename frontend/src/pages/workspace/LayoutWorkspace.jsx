@@ -18,6 +18,7 @@ export default function LayoutWorkspace({
   onNavigate,
   onAbrirPerfil,
   onLogoutClick,
+  xpAluno = null,
   children,
 }) {
   const [sidebarAberta, setSidebarAberta] = useState(false);
@@ -50,6 +51,7 @@ export default function LayoutWorkspace({
           onAbrirSidebar={() => setSidebarAberta(true)}
           onAbrirPerfil={onAbrirPerfil}
           onLogoutClick={onLogoutClick}
+          xpAluno={xpAluno}
         />
 
         <main

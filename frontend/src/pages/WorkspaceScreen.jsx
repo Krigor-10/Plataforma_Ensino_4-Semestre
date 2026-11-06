@@ -30,6 +30,7 @@ import { hasSnapshotData, loadWorkspaceSnapshot, mapById } from "../lib/dashboar
 import { ApiError } from "../lib/api.js";
 import { formatDate, formatGrade, maskCpf, normalizeStatus, timestampFromApiDate } from "../lib/format.js";
 import { normalizePath } from "../lib/router.js";
+import { calcularXp } from "../lib/xp.js";
 
 export default function WorkspaceScreen({
   canDisableDemoMode,
@@ -349,6 +350,13 @@ export default function WorkspaceScreen({
   const sectionMeta = getSectionMeta(activeSection, role);
   const hasData = hasSnapshotData(snapshot);
 
+  // So Aluno ve XP, e so depois que o snapshot carregou de verdade - sem
+  // hasData, a carga inicial mostraria "Nivel 1" (xp vazio) por um instante.
+  const xpAluno = useMemo(
+    () => (isStudent && hasData ? calcularXp(snapshot.progressos) : null),
+    [isStudent, hasData, snapshot.progressos]
+  );
+
   // Evita flash do card de carregamento inicial quando a API responde rapido
   // (<150ms). So aparece se a espera for perceptivel de verdade.
   const [exibirCargaInicial, setExibirCargaInicial] = useState(false);
@@ -554,6 +562,7 @@ export default function WorkspaceScreen({
         onNavigate={onNavigate}
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
+        xpAluno={xpAluno}
       >
         {!isDashboard && !ocultarHeroGenerico ? (
           <header className="workspace-hero">
