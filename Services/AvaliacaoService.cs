@@ -204,6 +204,15 @@ public class AvaliacaoService : IAvaliacaoService
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
         await _cursoService.GarantirCursoAbertoAsync(cursoId);
 
+        // So bloqueia aqui (update), nao na criacao: o fluxo real sempre cria o quiz
+        // como Rascunho e so publica depois, pelo "Publicar" do menu ou do lote, que
+        // passam por aqui - checar na criacao tambem quebraria os testes que criam a
+        // avaliacao ja como Publicado so pra testar outra coisa (NovaAvaliacaoDto).
+        if (dto.StatusPublicacao == StatusPublicacao.Publicado && avaliacao.Questoes.Count == 0)
+        {
+            throw new InvalidOperationException("Adicione ao menos uma questao antes de publicar o quiz.");
+        }
+
         avaliacao.ModuloId = modulo?.Id;
         avaliacao.ConteudoDidaticoId = material?.Id;
         avaliacao.DefinirCurso(cursoId);

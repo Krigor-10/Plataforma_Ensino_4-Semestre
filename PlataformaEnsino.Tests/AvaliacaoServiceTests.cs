@@ -291,6 +291,67 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
+    public async Task AtualizarAvaliacaoAsync_PublicarSemQuestoes_LancaInvalidOperationException()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        var dtoAtualizacao = new AtualizarAvaliacaoDto
+        {
+            Titulo = avaliacao.Titulo,
+            CursoId = curso.Id,
+            ModuloId = modulo.Id,
+            TipoAvaliacao = TipoAvaliacao.Quiz,
+            StatusPublicacao = StatusPublicacao.Publicado,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarAvaliacaoAsync(avaliacao.Id, professor.Id, dtoAtualizacao));
+
+        var avaliacaoNoBanco = context.Avaliacoes.AsNoTracking().Single(a => a.Id == avaliacao.Id);
+        Assert.Equal(StatusPublicacao.Rascunho, avaliacaoNoBanco.StatusPublicacao);
+    }
+
+    [Fact]
+    public async Task AtualizarAvaliacaoAsync_PublicarComQuestao_Publica()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dtoAtualizacao = new AtualizarAvaliacaoDto
+        {
+            Titulo = avaliacao.Titulo,
+            CursoId = curso.Id,
+            ModuloId = modulo.Id,
+            TipoAvaliacao = TipoAvaliacao.Quiz,
+            StatusPublicacao = StatusPublicacao.Publicado,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        };
+
+        var avaliacaoAtualizada = await service.AtualizarAvaliacaoAsync(avaliacao.Id, professor.Id, dtoAtualizacao);
+
+        Assert.Equal(StatusPublicacao.Publicado, avaliacaoAtualizada.StatusPublicacao);
+    }
+
+    [Fact]
     public async Task ExcluirAvaliacaoAsync_DeOutroProfessor_LancaKeyNotFound()
     {
         var context = TestContextFactory.Criar();
