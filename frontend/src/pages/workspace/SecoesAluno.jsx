@@ -82,12 +82,12 @@ const ICONE_TIPO_CONTEUDO_PROGRESSO = {
   5: <TbPhoto aria-hidden="true" size="1.75rem" />
 };
 
-/* PROGRESSO DO ALUNO — mesmo layout/componentes da tela Progresso do
-   Coordenador (SecaoDesempenhoCoordenador.jsx): grade de cards pra escolher
-   o curso, depois atividades-curso__cabecalho + grade-estatisticas +
-   accordion de modulos (conteudos-modulo), so que com KPIs e status na
-   perspectiva do proprio aluno (progresso/nota) em vez de metricas
-   agregadas de turma. Substitui o carrossel anterior. */
+/* PROGRESSO DO ALUNO — mesmo layout/componentes do Progresso do Professor
+   (PainelModulosDesempenho.jsx): grade de cards pra escolher o curso, depois
+   atividades-curso__cabecalho + grade-estatisticas + accordion de modulos
+   (conteudos-modulo), so que com KPIs e status na perspectiva do proprio
+   aluno (progresso/nota) em vez de metricas agregadas de turma. Substitui o
+   carrossel anterior. */
 export function SecaoCursosAluno({
   avaliacoes = [],
   conteudos,

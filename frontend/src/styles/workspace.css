@@ -2943,6 +2943,29 @@
   color: var(--cor-texto-suave);
 }
 
+/* "Cursos acompanhados" do Dashboard do Coordenador: o item inteiro abre o
+   curso (/app/cursos/:id) - o botao reaproveita o layout flex de .item-turma
+   (mesmo gap/alinhamento), so resetando a aparencia nativa de <button>,
+   pra nao duplicar a regra de borda do :last-child (que fica no <li>). */
+.item-turma__botao {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  width: 100%;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.item-turma__botao:hover {
+  color: var(--cor-marca-clara);
+}
+
 .item-turma__meta {
   display: flex;
   align-items: center;

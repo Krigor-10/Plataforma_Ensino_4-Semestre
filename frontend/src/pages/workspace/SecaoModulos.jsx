@@ -1,19 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUsers, TbX } from "react-icons/tb";
-import { MdSave } from "react-icons/md";
-import Botao from "../../components/Botao.jsx";
+import { TbArrowLeft, TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUsers } from "react-icons/tb";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
-import Modal from "../../components/Modal.jsx";
-import SelectSimples from "../../components/SelectSimples.jsx";
-import { InlineMessage } from "../../components/Primitives.jsx";
+import ModaisModulo from "../../components/ModaisModulo.jsx";
+import Botao from "../../components/Botao.jsx";
+import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
-import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { formatDate, normalizeStatus } from "../../lib/format.js";
-
-const ESTADO_INICIAL_FORMULARIO = { cursoId: "", titulo: "" };
+import { normalizeStatus, formatDate } from "../../lib/format.js";
 
 export function SecaoModulos({
   alunos = [],
@@ -32,14 +27,8 @@ export function SecaoModulos({
   const { mostrarToast } = useToast();
   const podeGerenciar = ehAdmin || ehCoordenador;
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
-  const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
-  const [moduloEmEdicaoId, setModuloEmEdicaoId] = useState(null);
-  const [formularioAberto, setFormularioAberto] = useState(false);
-  const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
-  const [salvando, setSalvando] = useState(false);
-  const [moduloParaExcluir, setModuloParaExcluir] = useState(null);
-  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [menuAbertoId, setMenuAbertoId] = useState(null);
+  const modais = useModaisModulo({ mostrarToast, onSalvo: onRefresh, onSessionExpired });
 
   useEffect(() => {
     if (menuAbertoId === null) {
@@ -182,105 +171,12 @@ export function SecaoModulos({
   }
 
   function abrirFormularioNovoModulo() {
-    setModuloEmEdicaoId(null);
-    setDadosFormulario({ cursoId: String(grupoSelecionado?.curso.id || cursosOrdenados[0]?.id || ""), titulo: "" });
-    setMensagemFormulario({ tone: "", message: "" });
-    setFormularioAberto(true);
-  }
-
-  function abrirEdicaoModulo(modulo) {
-    setModuloEmEdicaoId(modulo.id);
-    setDadosFormulario({ cursoId: String(modulo.cursoId), titulo: modulo.titulo });
-    setMensagemFormulario({ tone: "", message: "" });
-    setFormularioAberto(true);
-  }
-
-  function fecharFormulario() {
-    if (salvando) {
-      return;
-    }
-
-    setFormularioAberto(false);
-    setModuloEmEdicaoId(null);
-    setDadosFormulario(ESTADO_INICIAL_FORMULARIO);
-    setMensagemFormulario({ tone: "", message: "" });
-  }
-
-  async function salvarModulo(event) {
-    event.preventDefault();
-
-    const tituloNormalizado = dadosFormulario.titulo.trim();
-
-    if (!tituloNormalizado) {
-      setMensagemFormulario({ tone: "error", message: "Informe o titulo do modulo antes de salvar." });
-      return;
-    }
-
-    if (!dadosFormulario.cursoId) {
-      setMensagemFormulario({ tone: "error", message: "Selecione um curso para vincular o modulo." });
-      return;
-    }
-
-    setSalvando(true);
-    setMensagemFormulario({ tone: "", message: "" });
-
-    try {
-      if (moduloEmEdicaoId) {
-        await apiRequest(`/Modulos/${moduloEmEdicaoId}`, {
-          method: "PUT",
-          body: JSON.stringify({ titulo: tituloNormalizado })
-        });
-      } else {
-        await apiRequest("/Modulos", {
-          method: "POST",
-          body: JSON.stringify({ titulo: tituloNormalizado, cursoId: Number(dadosFormulario.cursoId) })
-        });
-      }
-
-      mostrarToast(moduloEmEdicaoId ? "Modulo atualizado com sucesso." : "Modulo criado com sucesso.", "sucesso");
-      fecharFormulario();
-      onRefresh();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired();
-        return;
-      }
-
-      setMensagemFormulario({ tone: "error", message: err.message || "Nao foi possivel salvar o modulo agora." });
-    } finally {
-      setSalvando(false);
-    }
+    modais.abrirFormularioNovoModulo(grupoSelecionado?.curso.id || cursosOrdenados[0]?.id);
   }
 
   function abrirExclusaoModulo(modulo) {
-    setModuloParaExcluir(modulo);
-    setMensagemExclusao("");
+    modais.abrirExclusaoModulo(modulo);
     setMenuAbertoId(null);
-  }
-
-  async function confirmarExclusao() {
-    if (!moduloParaExcluir) {
-      return;
-    }
-
-    setSalvando(true);
-    setMensagemExclusao("");
-
-    try {
-      await apiRequest(`/Modulos/${moduloParaExcluir.id}`, { method: "DELETE" });
-      setModuloParaExcluir(null);
-      mostrarToast("Modulo excluido com sucesso.", "sucesso");
-      onRefresh();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        onSessionExpired();
-        return;
-      }
-
-      setMensagemExclusao(err.message || "Nao foi possivel excluir o modulo agora.");
-    } finally {
-      setSalvando(false);
-    }
   }
 
   return (
@@ -319,7 +215,7 @@ export function SecaoModulos({
           curso={grupoSelecionado.curso}
           itens={grupoSelecionado.itens}
           menuAbertoId={menuAbertoId}
-          onEditar={podeGerenciar ? abrirEdicaoModulo : null}
+          onEditar={podeGerenciar ? modais.abrirEdicaoModulo : null}
           onExcluir={podeGerenciar ? abrirExclusaoModulo : null}
           onNovoModulo={podeGerenciar ? abrirFormularioNovoModulo : null}
           onToggleMenu={(id) => setMenuAbertoId((atual) => (atual === id ? null : id))}
@@ -328,85 +224,30 @@ export function SecaoModulos({
         />
       )}
 
-      {moduloParaExcluir ? (
-        <Modal
-          onFechar={() => setModuloParaExcluir(null)}
-          titulo="Excluir modulo"
-          rodape={
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={() => setModuloParaExcluir(null)} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusao} variante="sucesso">
-                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
-              </Botao>
-            </footer>
-          }
-        >
-          <p className="texto-confirmacao-exclusao">
-            Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
-          </p>
-          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
-        </Modal>
-      ) : null}
-
-      {formularioAberto ? (
-        <Modal
-          onFechar={fecharFormulario}
-          titulo={moduloEmEdicaoId ? "Editar modulo" : "Novo modulo"}
-          rodape={
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={fecharFormulario} type="button" variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} form="form-modulo" type="submit" variante="primario">
-                <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Salvar"}
-              </Botao>
-            </footer>
-          }
-        >
-          <form className="formulario-modal" id="form-modulo" onSubmit={salvarModulo}>
-            <div className="campo">
-              <label className="campo__rotulo" htmlFor="modulo-curso">Curso *</label>
-              <SelectSimples
-                id="modulo-curso"
-                onChange={(valor) => setDadosFormulario((atual) => ({ ...atual, cursoId: valor }))}
-                opcoes={cursosOrdenados.map((curso) => ({ valor: String(curso.id), rotulo: curso.titulo }))}
-                placeholder="Selecione um curso"
-                value={dadosFormulario.cursoId}
-              />
-            </div>
-            <div className="campo">
-              <label className="campo__rotulo" htmlFor="modulo-titulo">Titulo *</label>
-              <input
-                autoComplete="off"
-                className="campo__entrada"
-                id="modulo-titulo"
-                maxLength={150}
-                onChange={(event) => setDadosFormulario((atual) => ({ ...atual, titulo: event.target.value }))}
-                placeholder="Ex: Fundamentos de Programacao"
-                type="text"
-                value={dadosFormulario.titulo}
-              />
-            </div>
-            {moduloEmEdicaoId ? (
-              <p className="texto-mudo" style={{ fontSize: "0.8rem" }}>
-                O curso fica travado durante a edicao porque a API atual permite atualizar apenas o titulo do modulo.
-              </p>
-            ) : null}
-            {mensagemFormulario.message ? <InlineMessage tone={mensagemFormulario.tone}>{mensagemFormulario.message}</InlineMessage> : null}
-          </form>
-        </Modal>
-      ) : null}
+      <ModaisModulo
+        cursosOrdenados={cursosOrdenados}
+        dadosFormulario={modais.dadosFormulario}
+        formularioAberto={modais.formularioAberto}
+        mensagemExclusao={modais.mensagemExclusao}
+        mensagemFormulario={modais.mensagemFormulario}
+        moduloEmEdicaoId={modais.moduloEmEdicaoId}
+        moduloParaExcluir={modais.moduloParaExcluir}
+        onConfirmarExclusao={modais.confirmarExclusao}
+        onFecharExclusao={modais.fecharExclusaoModulo}
+        onFecharFormulario={modais.fecharFormulario}
+        onSalvarModulo={modais.salvarModulo}
+        salvando={modais.salvando}
+        setDadosFormulario={modais.setDadosFormulario}
+      />
     </div>
   );
 }
 
-/* Cabecalho + accordion de modulos no mesmo padrao de Curso->Modulos usado em
-   Progresso (SecaoDesempenhoCoordenador) e na Trilha de Conteudos do Professor
-   (SecaoConteudosProfessor): nav com "Voltar" no topo, cabecalho simples
-   (atividades-curso__cabecalho) e cartoes de estatistica pro contexto do
-   curso, evitando repetir professor/alunos dentro de cada modulo. */
+/* Cabecalho + accordion de modulos no mesmo padrao de Curso->Modulos usado na
+   Trilha de Conteudos do Professor (SecaoConteudosProfessor): nav com
+   "Voltar" no topo, cabecalho simples (atividades-curso__cabecalho) e
+   cartoes de estatistica pro contexto do curso, evitando repetir
+   professor/alunos dentro de cada modulo. */
 function SlideCurso({
   alunosAtivos,
   curso,

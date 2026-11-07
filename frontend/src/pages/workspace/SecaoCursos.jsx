@@ -13,6 +13,7 @@ import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { formatGrade, formatMoney, normalizeStatus } from "../../lib/format.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
+import PainelCursoCoordenador from "./PainelCursoCoordenador.jsx";
 
 function normalizarBusca(valor) {
   return String(valor ?? "")
@@ -28,6 +29,7 @@ function normalizarBusca(valor) {
    em vez de um menu de contexto solto no card. */
 export function SecaoCursos({
   coordenadores = [],
+  cursoIdSelecionado = null,
   cursos,
   ehAdmin,
   ehCoordenador,
@@ -35,8 +37,10 @@ export function SecaoCursos({
   matriculas = [],
   modulos = [],
   onAbrirSecaoCurso,
+  onNavigate,
   onRefresh,
-  onSessionExpired
+  onSessionExpired,
+  professores = []
 }) {
   const { mostrarToast } = useToast();
   const [cursosSelecionados, setCursosSelecionados] = useState(() => new Set());
@@ -44,7 +48,8 @@ export function SecaoCursos({
   const [filtroCoordenador, setFiltroCoordenador] = useState("todos");
   const [buscaCurso, setBuscaCurso] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+  const [cursoSelecionadoIdLocal, setCursoSelecionadoIdLocal] = useState(null);
+  const cursoSelecionadoId = ehCoordenador ? cursoIdSelecionado : cursoSelecionadoIdLocal;
   const [cursoParaImagem, setCursoParaImagem] = useState(null);
   const [arquivoImagemSelecionado, setArquivoImagemSelecionado] = useState(null);
   const [previewImagem, setPreviewImagem] = useState("");
@@ -159,8 +164,10 @@ export function SecaoCursos({
 
   const [professoresDoCursoSelecionado, setProfessoresDoCursoSelecionado] = useState([]);
 
+  // So pro Admin/default: a tela unica do Coordenador (PainelCursoCoordenador)
+  // busca os professores do curso por conta propria (useProfessoresCurso).
   useEffect(() => {
-    if (!cursoSelecionadoId) {
+    if (!cursoSelecionadoId || ehCoordenador) {
       setProfessoresDoCursoSelecionado([]);
       return undefined;
     }
@@ -189,14 +196,39 @@ export function SecaoCursos({
     return () => {
       ativo = false;
     };
-  }, [cursoSelecionadoId, onSessionExpired]);
+  }, [cursoSelecionadoId, ehCoordenador, onSessionExpired]);
+
+  // Pra Coordenador, o curso aberto e controlado pela rota (/app/cursos/:id)
+  // - se o id nao bate com nenhum curso dele depois dos dados carregarem,
+  // volta pra lista. Admin continua com estado local (nao muda de URL).
+  useEffect(() => {
+    if (!ehCoordenador || !cursoIdSelecionado) {
+      return;
+    }
+
+    if (cursos.some((curso) => curso.id === cursoIdSelecionado)) {
+      return;
+    }
+
+    onNavigate?.("/app/cursos", { replace: true });
+  }, [cursoIdSelecionado, cursos, ehCoordenador, onNavigate]);
 
   function abrirDetalheCurso(curso) {
-    setCursoSelecionadoId(curso.id);
+    if (ehCoordenador) {
+      onNavigate?.(`/app/cursos/${curso.id}`);
+      return;
+    }
+
+    setCursoSelecionadoIdLocal(curso.id);
   }
 
   function voltarParaListaCursos() {
-    setCursoSelecionadoId(null);
+    if (ehCoordenador) {
+      onNavigate?.("/app/cursos");
+      return;
+    }
+
+    setCursoSelecionadoIdLocal(null);
   }
 
   function alternarCurso(curso) {
@@ -634,6 +666,26 @@ export function SecaoCursos({
       ) : null}
     </>
   );
+
+  if (cursoSelecionado && ehCoordenador) {
+    return (
+      <div className="tela-cursos">
+        <PainelCursoCoordenador
+          curso={cursoSelecionado}
+          modulos={modulos}
+          onEditarCurso={() => abrirModalEdicao(cursoSelecionado)}
+          onEncerrarCurso={() => encerrarCurso(cursoSelecionado)}
+          onReabrirCurso={() => reabrirCurso(cursoSelecionado)}
+          onRefresh={onRefresh}
+          onSessionExpired={onSessionExpired}
+          onVoltar={voltarParaListaCursos}
+          professores={professores}
+          salvandoCurso={salvando}
+        />
+        {modaisComuns}
+      </div>
+    );
+  }
 
   if (cursoSelecionado) {
     const resumo = resumoPorCursoId.get(cursoSelecionado.id) || { modulos: 0, alunosMatriculados: 0, notasContadas: 0 };

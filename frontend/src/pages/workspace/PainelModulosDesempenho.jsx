@@ -1,46 +1,19 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  TbChevronDown,
-  TbExternalLink,
-  TbFile,
-  TbFileText,
-  TbLayoutGrid,
-  TbPhoto,
-  TbPlayerPlay,
-  TbTrophy
-} from "react-icons/tb";
+import { TbChevronDown, TbLayoutGrid, TbTrophy } from "react-icons/tb";
+import DetalheModuloDesempenho from "../../components/DetalheModuloDesempenho.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
-import { formatGrade, formatPercent, normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
+import { formatGrade, normalizePublicationStatus, normalizeTipoAvaliacao } from "../../lib/format.js";
 
-const ROTULO_TIPO_AVALIACAO = { 1: "Quiz", 2: "Prova", 3: "Exercicio" };
-
-function normalizeTipoAvaliacao(tipo) {
-  return ROTULO_TIPO_AVALIACAO[tipo] || "Avaliacao";
-}
-
-const ICONE_TIPO_MATERIAL = {
-  1: <TbFileText aria-hidden="true" size="1.75rem" />,
-  2: <TbFile aria-hidden="true" size="1.75rem" />,
-  3: <TbPlayerPlay aria-hidden="true" size="1.75rem" />,
-  4: <TbExternalLink aria-hidden="true" size="1.75rem" />,
-  5: <TbPhoto aria-hidden="true" size="1.75rem" />
-};
-
-/* Bloco de Modulos (accordion) + Avaliacoes sem modulo, compartilhado entre
-   Progresso do Coordenador (SecaoDesempenhoCoordenador.jsx) e Progresso do
-   Professor (SecaoTurmasProfessor.jsx) - os dois consomem o mesmo formato de
-   dado (CursoDesempenhoResponseDto), so a fonte/escopo dos cursos difere por
-   papel. So visualizacao/analise, sem nenhuma acao administrativa.
-   `contextoCoordenador` (auditoria UX 2026-09): o Coordenador acompanha
-   progresso PEDAGOGICO, nao operacional — oculta tipo de conteudo/status de
-   publicacao dos materiais (info de gestao de conteudo, mais relevante pro
-   Professor que edita) e troca "X% concluido" por "N alunos concluiram · X%",
-   usando `alunosConcluiram` que ja vem no DTO mas nao era exibido. Tipo de
-   AVALIACAO (Quiz/Prova/Exercicio) continua aparecendo pros dois papeis, pois
-   e contexto pedagogico (explica a metrica de nota ao lado), diferente de
-   tipo de ARQUIVO (PDF/TEXTO/etc), que e puramente operacional. */
+/* Bloco de Modulos (accordion) + Avaliacoes sem modulo do Progresso do
+   Professor (SecaoTurmasProfessor.jsx), consumindo CursoDesempenhoResponseDto
+   (GET /Cursos/desempenho). So visualizacao/analise, sem nenhuma acao
+   administrativa. O Coordenador tem sua propria tela unica do curso
+   (PainelCursoCoordenador.jsx), que reaproveita so o detalhe do modulo
+   (DetalheModuloDesempenho.jsx) com `contextoCoordenador` - ver aquele
+   componente pro que essa prop muda (oculta tipo de conteudo/status de
+   publicacao, troca "X% concluido" por "N alunos concluiram · X%"). */
 export default function PainelModulosDesempenho({ contextoCoordenador = false, curso }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
 
@@ -59,7 +32,7 @@ export default function PainelModulosDesempenho({ contextoCoordenador = false, c
               </span>
               <span className="conteudos-modulo__titulo">Avaliacoes do curso</span>
               <span className="conteudos-modulo__contagem">
-                {curso.avaliacoesSemModulo.length} avaliacao{curso.avaliacoesSemModulo.length === 1 ? "" : "oes"}
+                {curso.avaliacoesSemModulo.length} avaliacao{curso.avaliacoesSemModulo.length === 1 ? "" : "es"}
               </span>
             </div>
           </header>
@@ -100,7 +73,6 @@ export default function PainelModulosDesempenho({ contextoCoordenador = false, c
           {curso.modulos.map((modulo, indice) => {
             const aberto = moduloAbertoId === modulo.moduloId;
             const idDetalhe = `modulo-progresso-detalhe-${modulo.moduloId}`;
-            const semItens = modulo.materiais.length === 0 && modulo.avaliacoes.length === 0;
 
             return (
               <section className="conteudos-modulo" key={modulo.moduloId}>
@@ -143,75 +115,7 @@ export default function PainelModulosDesempenho({ contextoCoordenador = false, c
                       style={{ overflow: "hidden" }}
                       transition={{ duration: 0.24, ease: "easeInOut" }}
                     >
-                      <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
-                        <div className="lista-detalhes__item">
-                          <dt>Progresso</dt>
-                          <dd>{formatPercent(modulo.progressoMedio)}</dd>
-                        </div>
-                        <div className="lista-detalhes__item">
-                          <dt>Conclusao</dt>
-                          <dd>{formatPercent(modulo.percentualConclusao)}</dd>
-                        </div>
-                        <div className="lista-detalhes__item">
-                          <dt>Desempenho medio</dt>
-                          <dd>{formatGrade(modulo.desempenhoMedio)}</dd>
-                        </div>
-                      </dl>
-
-                      {semItens ? (
-                        <p className="texto-vazio" role="status">Nenhum material ou avaliacao cadastrado neste modulo ainda.</p>
-                      ) : (
-                        <ul aria-label={`Materiais e avaliacoes de ${modulo.titulo}`} className="atividades-curso__lista" role="list">
-                          {modulo.materiais.map((material) => (
-                            <li className="atividades-curso__item" key={`material-${material.conteudoDidaticoId}`}>
-                              <div className="atividades-curso__linha">
-                                <span aria-hidden="true" className="atividades-curso__icone">
-                                  {ICONE_TIPO_MATERIAL[Number(material.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
-                                </span>
-                                <div className="atividades-curso__corpo">
-                                  <strong className="atividades-curso__item-titulo">{material.titulo}</strong>
-                                  {contextoCoordenador ? null : (
-                                    <p className="atividades-curso__meta">
-                                      <span>{normalizeContentType(material.tipoConteudo)}</span>
-                                      <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                      <Insignia texto={normalizePublicationStatus(material.statusPublicacao)} />
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="atividades-curso__metrica">
-                                  {contextoCoordenador
-                                    ? `${material.alunosConcluiram || 0} aluno${material.alunosConcluiram === 1 ? "" : "s"} concluiram · ${formatPercent(material.percentualConclusao)}`
-                                    : `${formatPercent(material.percentualConclusao)} concluido`}
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                          {modulo.avaliacoes.map((avaliacao) => (
-                            <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-${avaliacao.avaliacaoId}`}>
-                              <div className="atividades-curso__linha">
-                                <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                  <TbTrophy aria-hidden="true" size="1.75rem" />
-                                </span>
-                                <div className="atividades-curso__corpo">
-                                  <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
-                                  <p className="atividades-curso__meta">
-                                    <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
-                                    {contextoCoordenador ? null : (
-                                      <>
-                                        <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                        <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
-                                      </>
-                                    )}
-                                  </p>
-                                </div>
-                                <div className="atividades-curso__metrica">
-                                  {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"} · Media {formatGrade(avaliacao.mediaNota)}
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      <DetalheModuloDesempenho contextoCoordenador={contextoCoordenador} modulo={modulo} />
                     </motion.div>
                   ) : null}
                 </AnimatePresence>

@@ -179,6 +179,27 @@ describe("Progresso do Coordenador (regressao dos achados A1/A2)", () => {
   });
 });
 
+describe("Tela unica do curso do Coordenador (PainelCursoCoordenador)", () => {
+  test("GET /Cursos/{id}/desempenho retorna o mesmo curso da listagem", async () => {
+    await loginComo("coordenacao@demo.edtech");
+
+    const [cursoDaListagem] = await demoRequest("/Cursos/desempenho");
+    expect(cursoDaListagem).toBeTruthy();
+
+    const curso = await demoRequest(`/Cursos/${cursoDaListagem.cursoId}/desempenho`);
+    expect(curso.cursoId).toBe(cursoDaListagem.cursoId);
+    expect(curso.cursoTitulo).toBe(cursoDaListagem.cursoTitulo);
+    expect(Array.isArray(curso.modulos)).toBe(true);
+    expect(Array.isArray(curso.avaliacoesSemModulo)).toBe(true);
+  });
+
+  test("GET /Cursos/{id}/desempenho de curso de outro coordenador rejeita com 404", async () => {
+    await loginComo("coordenacao@demo.edtech");
+
+    await expect(demoRequest("/Cursos/999999/desempenho")).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe("Certificados - regra de nota minima no modo demo (espelha CertificadoService)", () => {
   test("GET /Certificados/status devolve certificadoDisponivel/pendenciasCertificado consistentes com a emissao", async () => {
     await loginComo("aluno@demo.edtech");

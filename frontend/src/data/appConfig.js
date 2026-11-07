@@ -6,11 +6,11 @@ export const APP_SECTIONS = [
   { key: "professores", label: "Professores", roles: ["Admin", "Coordenador"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
-  { key: "modulos", label: "Modulos", roles: ["Admin", "Coordenador"] },
+  { key: "modulos", label: "Modulos", roles: ["Admin"] },
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Aluno"] },
-  { key: "turmas", label: "Turmas", roles: ["Admin", "Coordenador", "Professor"] },
+  { key: "turmas", label: "Turmas", roles: ["Admin", "Professor"] },
   { key: "meus-cursos", label: "Progresso", roles: ["Aluno"] },
   { key: "cursos-matriculados", label: "Meus Cursos", roles: ["Aluno"], showInSidebar: false },
   { key: "certificados", label: "Certificados", roles: ["Aluno"], showInSidebar: false }

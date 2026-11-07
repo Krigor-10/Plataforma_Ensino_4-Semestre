@@ -42,6 +42,8 @@ export async function demoRequest(endpoint, options = {}) {
       return listCourses();
     case path === "/Cursos/desempenho" && method === "GET":
       return listCoordinatorCourseDesempenho();
+    case /^\/Cursos\/\d+\/desempenho$/.test(path) && method === "GET":
+      return getCoordinatorCourseDesempenho(getCourseDesempenhoActionId(path));
     case /^\/Cursos\/taxa-adesao(\?.*)?$/.test(path) && method === "GET":
       return getTaxaAdesaoDemo(path);
     case path === "/Cursos/meus" && method === "GET":
@@ -1580,6 +1582,53 @@ function listCoordinatorCourseDesempenho() {
       })
     )
     .sort((left, right) => left.cursoTitulo.localeCompare(right.cursoTitulo, "pt-BR"));
+}
+
+/* GET /Cursos/{id}/desempenho (tela unica do Coordenador,
+   PainelCursoCoordenador.jsx) - mesmo contexto/builder de
+   listCoordinatorCourseDesempenho, so filtrado pro curso pedido. Curso
+   inexistente ou de outro coordenador: 404, igual ao backend real
+   (CursoDesempenhoService.ObterDesempenhoPorCursoAsync). */
+function getCoordinatorCourseDesempenho(cursoId) {
+  const user = requireRole("Coordenador");
+  const db = readDemoDb();
+  ensureEvaluationCollections(db);
+  ensureAttemptCollections(db);
+  ensureProgressCollections(db);
+
+  const curso = db.cursos.find((item) => item.id === cursoId && item.coordenadorId === user.id);
+  if (!curso) {
+    throw new DemoApiError("Curso nao encontrado.", 404);
+  }
+
+  const turmasDosCursos = db.turmas.filter((turma) => turma.cursoId === curso.id);
+  const turmaIds = new Set(turmasDosCursos.map((turma) => turma.id));
+  const professorNome = db.professores.find((professor) => professor.id === turmasDosCursos[0]?.professorId)?.nome || null;
+
+  const avaliacoesRelevantes = db.avaliacoes.filter((avaliacao) => turmaIds.has(avaliacao.turmaId));
+  const estatisticasPorAvaliacaoId = computeEstatisticasPorAvaliacaoDemo(
+    db,
+    avaliacoesRelevantes.map((avaliacao) => avaliacao.id)
+  );
+
+  const progressoCursoPorMatriculaId = new Map(
+    db.progressos.cursos.map((progresso) => [progresso.matriculaId, progresso])
+  );
+  const progressoModuloPorChave = new Map(
+    db.progressos.modulos.map((progresso) => [`${progresso.matriculaId}:${progresso.moduloId}`, progresso])
+  );
+  const progressoConteudoPorChave = new Map(
+    db.progressos.conteudos.map((progresso) => [`${progresso.matriculaId}:${progresso.conteudoDidaticoId}`, progresso])
+  );
+
+  return montarCursoDesempenhoDemo(db, curso, {
+    turmaIdsDoCurso: turmaIds,
+    professorNome,
+    estatisticasPorAvaliacaoId,
+    progressoCursoPorMatriculaId,
+    progressoModuloPorChave,
+    progressoConteudoPorChave
+  });
 }
 
 function montarCursoDesempenhoDemo(db, curso, contexto) {
@@ -3589,6 +3638,17 @@ function getCertificadoVerificarCodigo(path) {
 
 function getPagamentoConfirmActionId(path) {
   const match = String(path).match(/^\/Pagamentos\/(\d+)\/confirmar$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getCourseDesempenhoActionId(path) {
+  const match = String(path).match(/^\/Cursos\/(\d+)\/desempenho$/);
   const id = Number(match?.[1]);
 
   if (!Number.isInteger(id)) {

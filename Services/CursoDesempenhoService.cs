@@ -90,7 +90,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var matriculas = await _context.Matriculas
             .AsNoTracking()
-            .Where(matricula => cursoIds.Contains(matricula.CursoId))
+            .Where(matricula => cursoIds.Contains(matricula.CursoId) && matricula.Status == StatusMatricula.Aprovada)
             .ToListAsync();
         var matriculaIds = matriculas.Select(matricula => matricula.Id).ToList();
         var matriculasPorCursoId = matriculas
@@ -152,7 +152,9 @@ public class CursoDesempenhoService : ICursoDesempenhoService
 
         var tentativasCorrigidas = await _context.TentativasAvaliacao
             .AsNoTracking()
-            .Where(tentativa => avaliacaoIds.Contains(tentativa.AvaliacaoId) && tentativa.StatusTentativa == StatusTentativaAvaliacao.Corrigida)
+            .Where(tentativa => avaliacaoIds.Contains(tentativa.AvaliacaoId)
+                && tentativa.StatusTentativa == StatusTentativaAvaliacao.Corrigida
+                && matriculaIds.Contains(tentativa.MatriculaId))
             .ToListAsync();
 
         var estatisticasPorAvaliacaoId = tentativasCorrigidas

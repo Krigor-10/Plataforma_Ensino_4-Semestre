@@ -24,7 +24,7 @@ function ChartTooltipStyle() {
   };
 }
 
-export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSecao, onSessionExpired, professores = [], turmas = [], usuario }) {
+export function DashboardCoordenador({ cursos = [], matriculas = [], onAbrirCurso, onMudarSecao, onSessionExpired, professores = [], turmas = [], usuario }) {
   const professorPorId = new Map(professores.map((professor) => [Number(professor.id), professor]));
   const meusCursos = cursos.filter((curso) => Number(curso.coordenadorId) === Number(usuario.id));
   const idsMeusCursos = new Set(meusCursos.map((curso) => Number(curso.id)));
@@ -117,7 +117,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
       <section aria-labelledby="titulo-turmas-coord" className="painel-secao" style={{ marginTop: "var(--espaco-xl)" }}>
         <header className="painel-secao__cabecalho">
           <h2 className="painel-secao__titulo" id="titulo-turmas-coord">Cursos acompanhados</h2>
-          <Botao onClick={() => onMudarSecao("turmas")} tamanho="pequeno" variante="fantasma">
+          <Botao onClick={() => onMudarSecao("cursos")} tamanho="pequeno" variante="fantasma">
             Ver todos <MdChevronRight aria-hidden="true" size={14} />
           </Botao>
         </header>
@@ -126,13 +126,15 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onMudarSeca
             <ul className="lista-turmas" role="list">
               {cursosAcompanhados.map((curso) => (
                 <li className="item-turma" key={curso.id}>
-                  <div className="item-turma__info">
-                    <strong className="item-turma__nome">{curso.titulo}</strong>
-                    <span className="item-turma__curso">{curso.professorNome}</span>
-                  </div>
-                  <div className="item-turma__meta">
-                    <span>{curso.turmaNome || "Sem turma"}</span>
-                  </div>
+                  <button className="item-turma__botao" onClick={() => onAbrirCurso?.(curso.id)} type="button">
+                    <div className="item-turma__info">
+                      <strong className="item-turma__nome">{curso.titulo}</strong>
+                      <span className="item-turma__curso">{curso.professorNome}</span>
+                    </div>
+                    <div className="item-turma__meta">
+                      <span>{curso.turmaNome || "Sem turma"}</span>
+                    </div>
+                  </button>
                 </li>
               ))}
             </ul>

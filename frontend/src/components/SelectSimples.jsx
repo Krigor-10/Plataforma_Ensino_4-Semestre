@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { TbChevronDown } from "react-icons/tb";
 
-export default function SelectSimples({ id, value, opcoes, onChange, placeholder = "Selecione", required, erro }) {
+export default function SelectSimples({ id, value, opcoes, onChange, placeholder = "Selecione", required, erro, disabled = false }) {
   const [aberto, setAberto] = useState(false);
   const [pos, setPos] = useState({});
   const btnRef = useRef(null);
@@ -21,6 +21,10 @@ export default function SelectSimples({ id, value, opcoes, onChange, placeholder
   }
 
   function abrir() {
+    if (disabled) {
+      return;
+    }
+
     calcularPos();
     setAberto((v) => !v);
   }
@@ -76,6 +80,7 @@ export default function SelectSimples({ id, value, opcoes, onChange, placeholder
         aria-expanded={aberto}
         aria-required={required}
         aria-invalid={!!erro}
+        disabled={disabled}
       >
         <span className="sel-simples__texto">
           {selecionada ? selecionada.rotulo : placeholder}

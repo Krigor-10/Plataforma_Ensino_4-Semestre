@@ -70,7 +70,9 @@ export default function BarraTopo({
   const meta = getSectionMeta(secaoAtual, role);
   const IconeSecao = iconesPorSecao[secaoAtual] || TbLayoutDashboard;
   const temSecaoCursos = sections.some((s) => s.key === "cursos");
-  const temSecaoModulos = sections.some((s) => s.key === "modulos");
+  // Coordenador nao tem mais a secao "modulos" (virou parte da tela unica do
+  // curso), mas modulos continuam aparecendo na busca - so a navegacao muda.
+  const temSecaoModulos = sections.some((s) => s.key === "modulos") || role === "Coordenador";
 
   useEffect(() => {
     function fecharAoClicarFora(e) {
@@ -180,6 +182,8 @@ export default function BarraTopo({
       }));
     if (secoesFiltradas.length) grupos.push({ categoria: "Seções", itens: secoesFiltradas });
 
+    const ehCoordenador = role === "Coordenador";
+
     if (temSecaoCursos) {
       const cursosFiltrados = cursos
         .filter((c) => c.titulo?.toLowerCase().includes(t) || c.descricao?.toLowerCase().includes(t))
@@ -189,7 +193,7 @@ export default function BarraTopo({
           titulo: c.titulo,
           descricao: "Curso",
           Icone: TbBooks,
-          navegar: () => onNavigate("/app/cursos"),
+          navegar: () => onNavigate(ehCoordenador ? `/app/cursos/${c.id}` : "/app/cursos"),
         }));
       if (cursosFiltrados.length) grupos.push({ categoria: "Cursos", itens: cursosFiltrados });
     }
@@ -203,7 +207,7 @@ export default function BarraTopo({
           titulo: m.titulo,
           descricao: "Módulo",
           Icone: TbStack,
-          navegar: () => onNavigate("/app/modulos"),
+          navegar: () => onNavigate(ehCoordenador ? `/app/cursos/${m.cursoId}` : "/app/modulos"),
         }));
       if (modulosFiltrados.length) grupos.push({ categoria: "Módulos", itens: modulosFiltrados });
     }

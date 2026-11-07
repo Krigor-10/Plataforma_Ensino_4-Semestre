@@ -325,6 +325,91 @@ public class CursoDesempenhoServiceTests
     }
 
     [Fact]
+    public async Task ObterDesempenhoPorProfessorAsync_SoContaMatriculasAprovadas()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, professor.Id, curso.Id);
+        var avaliacao = CriarAvaliacaoSemModulo(context, turma.Id, curso.Id, professor.Id);
+
+        var alunoAprovado = CriarAluno(context);
+        var matriculaAprovada = CriarMatriculaAprovada(context, alunoAprovado.Id, curso.Id, turma.Id);
+
+        var alunoPendente = CriarAluno(context);
+        var matriculaPendente = new Matricula { AlunoId = alunoPendente.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaPendente.VincularTurma(turma.Id);
+        context.Matriculas.Add(matriculaPendente);
+        context.SaveChanges();
+
+        var alunoRejeitado = CriarAluno(context);
+        var matriculaRejeitada = new Matricula { AlunoId = alunoRejeitado.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaRejeitada.VincularTurma(turma.Id);
+        context.Matriculas.Add(matriculaRejeitada);
+        context.SaveChanges();
+        context.Entry(matriculaRejeitada).Property(nameof(Matricula.Status)).CurrentValue = StatusMatricula.Rejeitada;
+        context.SaveChanges();
+
+        var alunoCancelado = CriarAluno(context);
+        var matriculaCancelada = new Matricula { AlunoId = alunoCancelado.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaCancelada.VincularTurma(turma.Id);
+        matriculaCancelada.Cancelar();
+        context.Matriculas.Add(matriculaCancelada);
+        context.SaveChanges();
+
+        // Progresso/tentativa registrados pras 4 matriculas - se o filtro nao
+        // funcionar, os agregados abaixo ficariam diferentes dos esperados.
+        foreach (var matriculaId in new[] { matriculaAprovada.Id, matriculaPendente.Id, matriculaRejeitada.Id, matriculaCancelada.Id })
+        {
+            context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
+            {
+                MatriculaId = matriculaId,
+                ConteudoDidaticoId = conteudo.Id,
+                ModuloId = modulo.Id,
+                StatusProgresso = StatusProgressoAprendizagem.Concluido,
+                PercentualConclusao = 100m
+            });
+            context.ProgressosModulosAlunos.Add(new ProgressoModuloAluno
+            {
+                MatriculaId = matriculaId,
+                ModuloId = modulo.Id,
+                StatusProgresso = StatusProgressoAprendizagem.Concluido,
+                PercentualConclusao = 100m
+            });
+            context.ProgressosCursosAlunos.Add(new ProgressoCursoAluno
+            {
+                MatriculaId = matriculaId,
+                CursoId = curso.Id,
+                StatusProgresso = StatusProgressoAprendizagem.Concluido,
+                PercentualConclusao = 100m
+            });
+
+            var tentativa = new TentativaAvaliacao { AvaliacaoId = avaliacao.Id, MatriculaId = matriculaId };
+            tentativa.MarcarCorrecao(8m);
+            context.TentativasAvaliacao.Add(tentativa);
+        }
+        context.SaveChanges();
+
+        var resultado = (await CriarService(context).ObterDesempenhoPorProfessorAsync(professor.Id)).ToList();
+
+        var cursoDto = Assert.Single(resultado);
+        Assert.Equal(1, cursoDto.TotalAlunos);
+        Assert.Equal(1, cursoDto.AlunosAtivos);
+        Assert.Equal(100m, cursoDto.ProgressoMedio);
+        Assert.Equal(100m, cursoDto.PercentualConclusao);
+
+        var moduloDto = Assert.Single(cursoDto.Modulos);
+        var materialDto = Assert.Single(moduloDto.Materiais);
+        Assert.Equal(1, materialDto.AlunosConcluiram);
+        Assert.Equal(100m, materialDto.PercentualConclusao);
+
+        var avaliacaoDto = Assert.Single(cursoDto.AvaliacoesSemModulo);
+        Assert.Equal(1, avaliacaoDto.TotalParticipantes);
+    }
+
+    [Fact]
     public async Task ObterDesempenhoPorProfessorAsync_AvaliacaoSemModulo_ApareceViaCursoId()
     {
         // Prova/Exercicio podem ficar soltos direto no curso (sem modulo) — a

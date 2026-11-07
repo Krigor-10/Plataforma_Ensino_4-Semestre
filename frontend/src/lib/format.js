@@ -47,6 +47,11 @@ export function normalizePublicationStatus(status) {
   return status || "Desconhecido";
 }
 
+export function normalizeTipoAvaliacao(tipo) {
+  const labels = { 1: "Quiz", 2: "Prova", 3: "Exercicio" };
+  return labels[tipo] || "Avaliacao";
+}
+
 export function normalizeContentType(type) {
   const labels = {
     1: "Texto",

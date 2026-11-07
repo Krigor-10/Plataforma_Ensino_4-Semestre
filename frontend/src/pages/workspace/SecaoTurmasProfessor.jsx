@@ -9,15 +9,13 @@ import { ApiError, apiRequest, baixarArquivo } from "../../lib/api.js";
 import { formatGrade } from "../../lib/format.js";
 import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
 
-/* PROGRESSO DO PROFESSOR — mesma linguagem visual/estrutural do Progresso do
-   Coordenador (SecaoDesempenhoCoordenador.jsx): Curso -> Modulos -> Materiais/
-   Avaliacoes, via o mesmo endpoint (GET /Cursos/desempenho, escopado por
-   professor autenticado) e o mesmo bloco compartilhado
-   (PainelModulosDesempenho). Diferenca de contexto por papel: sem "Professor
-   responsavel" (e o proprio professor), com o botao "Exportar desempenho"
-   (acao operacional que so faz sentido pra quem leciona a turma). Sem nenhuma
-   acao de vinculo professor-curso — isso e exclusivo do Admin em
-   SecaoProfessoresCurso.jsx. */
+/* PROGRESSO DO PROFESSOR — Curso -> Modulos -> Materiais/Avaliacoes, via
+   GET /Cursos/desempenho (escopado por professor autenticado) e o bloco
+   compartilhado PainelModulosDesempenho/DetalheModuloDesempenho, tambem
+   reaproveitado pela tela unica do Coordenador (PainelCursoCoordenador.jsx).
+   So nesta tela: "Exportar desempenho" (acao operacional que so faz sentido
+   pra quem leciona a turma). Sem nenhuma acao de vinculo professor-curso —
+   isso e exclusivo do Admin em SecaoProfessoresCurso.jsx. */
 export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
   const { mostrarToast } = useToast();
   const [carregando, setCarregando] = useState(true);
@@ -158,7 +156,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
 
           {erroExportacao ? <InlineMessage tone="error">{erroExportacao}</InlineMessage> : null}
 
-          <IndicadoresDesempenhoCurso curso={cursoSelecionado} ocultarAlunosAprovados />
+          <IndicadoresDesempenhoCurso curso={cursoSelecionado} />
 
           <PainelModulosDesempenho curso={cursoSelecionado} />
         </>
