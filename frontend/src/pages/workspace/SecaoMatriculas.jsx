@@ -55,7 +55,7 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
 export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onComecarGratis, onComprar, onConcluirCompra, onEntrarNoCurso, onReabrir, processando }) {
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
   const progresso = clampPercent(matricula?.progresso);
-  const rotuloEntrada = progresso >= 100 ? "Revisar curso" : progresso > 0 ? "Continuar curso" : "Iniciar curso";
+  const rotuloEntrada = progresso > 0 ? "Continuar curso" : "Iniciar curso";
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
 
   return (
@@ -115,7 +115,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                 </Botao>
               ) : null}
               {matricula.status === "Aprovada" && !temPagamentoPendente && onEntrarNoCurso ? (
-                <Botao onClick={onEntrarNoCurso} tamanho="pequeno" variante={progresso >= 100 ? "fantasma" : "primario"}>
+                <Botao onClick={onEntrarNoCurso} tamanho="pequeno" variante="primario">
                   {rotuloEntrada} <TbArrowRight aria-hidden="true" size={14} />
                 </Botao>
               ) : null}

@@ -62,8 +62,8 @@ export function RevisaoTentativaAvaliacao({ avaliacaoId, tentativaId, onFechar, 
       titulo="Revisao detalhada"
       rodape={
         <footer className="modal-rodape">
-          <Botao onClick={onFechar} type="button" variante="fantasma">
-            Fechar
+          <Botao onClick={onFechar} type="button" variante="secundario">
+            <TbX aria-hidden="true" size={15} /> Fechar
           </Botao>
         </footer>
       }

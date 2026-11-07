@@ -12,6 +12,7 @@ import {
   TbChevronUp,
   TbCircleCheck,
   TbClock,
+  TbEye,
   TbFile,
   TbFileText,
   TbHelpCircle,
@@ -1060,8 +1061,8 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
                   </dl>
 
                   {corrigida ? (
-                    <Botao onClick={() => setRevisaoAberta(true)} type="button" variante="secundario">
-                      Ver revisao detalhada
+                    <Botao onClick={() => setRevisaoAberta(true)} type="button" variante="primario">
+                      <TbEye aria-hidden="true" size={16} /> Ver revisao detalhada
                     </Botao>
                   ) : null}
                 </section>

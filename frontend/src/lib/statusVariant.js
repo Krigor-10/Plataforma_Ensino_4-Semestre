@@ -16,7 +16,9 @@ const VARIANTE_POR_TEXTO = {
   Cancelada: "erro",
   Inativo: "erro",
   "Não iniciado": "neutro",
-  "Concluída": "neutro"
+  "Concluída": "neutro",
+  Disponivel: "sucesso",
+  "Sem pendencias": "neutro"
 };
 
 const TOM_POR_VARIANTE = {
