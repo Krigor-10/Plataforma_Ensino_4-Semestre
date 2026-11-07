@@ -50,6 +50,12 @@ public class CursoAutorizacaoServiceTests
         return turma;
     }
 
+    private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
+    {
+        context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
+        context.SaveChanges();
+    }
+
     // ---------- PodeGerenciarCursoAsync ----------
 
     [Fact]
@@ -157,6 +163,53 @@ public class CursoAutorizacaoServiceTests
         var podeGerenciar = await CriarService(context).PodeGerenciarModuloAsync(CriarPrincipal(10, "Coordenador"), 99999);
 
         Assert.True(podeGerenciar);
+    }
+
+    // ---------- PodeCriarModuloAsync ----------
+
+    [Fact]
+    public async Task PodeCriarModuloAsync_Admin_SempreRetornaTrue()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context);
+
+        var podeCriar = await CriarService(context).PodeCriarModuloAsync(CriarPrincipal(1, "Admin"), curso.Id);
+
+        Assert.True(podeCriar);
+    }
+
+    [Fact]
+    public async Task PodeCriarModuloAsync_ProfessorVinculadoAoCurso_RetornaTrue()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context);
+        VincularProfessorCurso(context, professorId: 4, cursoId: curso.Id);
+
+        var podeCriar = await CriarService(context).PodeCriarModuloAsync(CriarPrincipal(4, "Professor"), curso.Id);
+
+        Assert.True(podeCriar);
+    }
+
+    [Fact]
+    public async Task PodeCriarModuloAsync_ProfessorSemVinculoAoCurso_RetornaFalse()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context);
+
+        var podeCriar = await CriarService(context).PodeCriarModuloAsync(CriarPrincipal(4, "Professor"), curso.Id);
+
+        Assert.False(podeCriar);
+    }
+
+    [Fact]
+    public async Task PodeCriarModuloAsync_Coordenador_RetornaFalseMesmoSendoDonoDoCurso()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context, coordenadorId: 10);
+
+        var podeCriar = await CriarService(context).PodeCriarModuloAsync(CriarPrincipal(10, "Coordenador"), curso.Id);
+
+        Assert.False(podeCriar);
     }
 
     // ---------- PodeGerenciarTurmaAsync ----------

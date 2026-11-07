@@ -22,7 +22,9 @@ import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
+import ModaisModulo from "../../components/ModaisModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
@@ -1002,6 +1004,15 @@ function TrilhaConteudosProfessor({
   const { mostrarToast } = useToast();
   const [previaAberta, setPreviaAberta] = useState(false);
   const [modalArquivadosAberto, setModalArquivadosAberto] = useState(false);
+  // "Novo modulo" (rodada 2 "tela do curso do Coordenador", item 6): criar
+  // modulo passou do Coordenador pro Professor - mesmo hook/modal
+  // compartilhado com SecaoModulos.jsx (Admin) e PainelCursoCoordenador.jsx.
+  const modaisModulo = useModaisModulo({
+    cursoFixoId: cursoAtivo.curso.id,
+    mostrarToast,
+    onSalvo: onRefresh,
+    onSessionExpired
+  });
 
   const conteudosDoCurso = useMemo(
     () => conteudos.filter((conteudo) => conteudo.cursoId === cursoAtivo.curso.id),
@@ -1409,6 +1420,9 @@ function TrilhaConteudosProfessor({
               <TbArchive aria-hidden="true" size={15} /> Ver arquivados ({totalArquivadosCurso})
             </Botao>
           ) : null}
+          <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="secundario">
+            <TbPlus aria-hidden="true" size={15} /> Novo modulo
+          </Botao>
           <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">
             <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
           </Botao>
@@ -1946,6 +1960,22 @@ function TrilhaConteudosProfessor({
           quizzesPorModuloId={quizzesPorModuloId}
         />
       ) : null}
+
+      <ModaisModulo
+        cursoFixo={{ titulo: cursoAtivo.curso.titulo }}
+        dadosFormulario={modaisModulo.dadosFormulario}
+        formularioAberto={modaisModulo.formularioAberto}
+        mensagemExclusao={modaisModulo.mensagemExclusao}
+        mensagemFormulario={modaisModulo.mensagemFormulario}
+        moduloEmEdicaoId={modaisModulo.moduloEmEdicaoId}
+        moduloParaExcluir={modaisModulo.moduloParaExcluir}
+        onConfirmarExclusao={modaisModulo.confirmarExclusao}
+        onFecharExclusao={modaisModulo.fecharExclusaoModulo}
+        onFecharFormulario={modaisModulo.fecharFormulario}
+        onSalvarModulo={modaisModulo.salvarModulo}
+        salvando={modaisModulo.salvando}
+        setDadosFormulario={modaisModulo.setDadosFormulario}
+      />
     </div>
   );
 }

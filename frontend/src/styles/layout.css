@@ -804,6 +804,26 @@
   font-weight: 700;
 }
 
+/* Com curso aberto (Coordenador, rodada 2 "breadcrumb com acao real"), o
+   nivel do meio ("Cursos") vira link de verdade de volta pra grade -
+   reseta a aparencia nativa de <button>, mantendo o mesmo texto/tamanho
+   do nivel estatico ao lado. */
+.topbar__breadcrumb-secao--link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.topbar__breadcrumb-secao--link:hover {
+  color: var(--cor-marca-clara);
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .topbar__eyebrow {
   color: var(--cor-marca-clara);
   font-size: 0.72rem;

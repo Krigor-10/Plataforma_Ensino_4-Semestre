@@ -4,6 +4,7 @@ import { TbArrowLeft, TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUse
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
+import NumeroModulo from "../../components/NumeroModulo.jsx";
 import Botao from "../../components/Botao.jsx";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -320,10 +321,7 @@ function SlideCurso({
                       type="button"
                     >
                       <div className="conteudos-modulo__info">
-                        <span aria-hidden="true" className="conteudos-modulo__icone">
-                          <TbLayoutGrid size="1.4rem" />
-                        </span>
-                        <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                        <NumeroModulo indice={indice} />
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         <span className="conteudos-modulo__contagem">
                           {totalConteudos} conteudo{totalConteudos === 1 ? "" : "s"} · {totalAvaliacoes} avaliacao{totalAvaliacoes === 1 ? "" : "es"}

@@ -47,6 +47,7 @@ export default function BarraTopo({
   sections,
   cursos = [],
   modulos = [],
+  cursoAbertoTitulo = null,
   onNavigate,
   onAbrirSidebar,
   onAbrirPerfil,
@@ -264,19 +265,34 @@ export default function BarraTopo({
             <nav className="topbar__breadcrumb" aria-label="Localização atual">
               <span className="topbar__breadcrumb-raiz" style={{ color: "var(--cor-marca-clara)" }}>CodeRyse Academy</span>
               <span className="topbar__breadcrumb-sep" aria-hidden="true" style={{ color: "var(--cor-marca-clara)", fontSize: "1rem" }}>›</span>
-              <span className="topbar__breadcrumb-secao">
-                {grupoAtivo ? (
-                  <>
-                    <grupoAtivo.Icone size={16} aria-hidden="true" />
-                    {grupoAtivo.rotulo}
-                  </>
-                ) : (
-                  <>
+              {cursoAbertoTitulo ? (
+                <>
+                  <button
+                    className="topbar__breadcrumb-secao topbar__breadcrumb-secao--link"
+                    onClick={() => onNavigate("/app/cursos")}
+                    type="button"
+                  >
                     <IconeSecao size={16} aria-hidden="true" />
                     {meta.title}
-                  </>
-                )}
-              </span>
+                  </button>
+                  <span className="topbar__breadcrumb-sep" aria-hidden="true" style={{ color: "var(--cor-marca-clara)", fontSize: "1rem" }}>›</span>
+                  <span className="topbar__breadcrumb-secao">{cursoAbertoTitulo}</span>
+                </>
+              ) : (
+                <span className="topbar__breadcrumb-secao">
+                  {grupoAtivo ? (
+                    <>
+                      <grupoAtivo.Icone size={16} aria-hidden="true" />
+                      {grupoAtivo.rotulo}
+                    </>
+                  ) : (
+                    <>
+                      <IconeSecao size={16} aria-hidden="true" />
+                      {meta.title}
+                    </>
+                  )}
+                </span>
+              )}
             </nav>
           </div>
         </div>

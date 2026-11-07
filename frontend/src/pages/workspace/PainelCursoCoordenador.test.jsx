@@ -21,6 +21,9 @@ const MODULOS_SNAPSHOT = [
   { id: 2, cursoId: 10, titulo: "Modulo B", dataCriacao: "2026-01-01", totalConteudos: 1, totalAvaliacoes: 0 }
 ];
 
+// Modulo A tem 1 quiz publicado (conta), 1 quiz arquivado (nunca aparece em
+// lugar nenhum) e 1 prova vinculada ao modulo (nao pode sumir - vai pra aba
+// "Avaliacoes do curso"). Modulo B fica vazio.
 const DESEMPENHO = {
   cursoId: 10,
   cursoTitulo: "Curso Teste",
@@ -40,11 +43,17 @@ const DESEMPENHO = {
       materiais: [
         { conteudoDidaticoId: 1, titulo: "Conteudo 1", tipoConteudo: 1, statusPublicacao: 2, alunosConcluiram: 2, percentualConclusao: 50 }
       ],
-      avaliacoes: []
+      avaliacoes: [
+        { avaliacaoId: 101, titulo: "Quiz publicado", tipoAvaliacao: 1, statusPublicacao: 2, totalParticipantes: 1, mediaNota: 0, notaMaxima: 10 },
+        { avaliacaoId: 102, titulo: "Quiz arquivado", tipoAvaliacao: 1, statusPublicacao: 3, totalParticipantes: 0, mediaNota: 0, notaMaxima: 10 },
+        { avaliacaoId: 103, titulo: "Prova do modulo A", tipoAvaliacao: 2, statusPublicacao: 2, totalParticipantes: 1, mediaNota: 5, notaMaxima: 10 }
+      ]
     },
     { moduloId: 2, titulo: "Modulo B", totalMateriais: 0, progressoMedio: 10, percentualConclusao: 0, desempenhoMedio: 0, materiais: [], avaliacoes: [] }
   ],
-  avaliacoesSemModulo: []
+  avaliacoesSemModulo: [
+    { avaliacaoId: 200, titulo: "Prova solta do curso", tipoAvaliacao: 2, statusPublicacao: 2, totalParticipantes: 2, mediaNota: 6, notaMaxima: 10 }
+  ]
 };
 
 function renderPainel(props = {}) {
@@ -67,17 +76,21 @@ function renderPainel(props = {}) {
   );
 }
 
+function mockApi(desempenho, professoresDoCurso = []) {
+  apiRequest.mockImplementation((url) => {
+    if (url === "/Cursos/10/desempenho") return Promise.resolve(desempenho);
+    if (url === "/Cursos/10/professores") return Promise.resolve(professoresDoCurso);
+    return Promise.resolve([]);
+  });
+}
+
 describe("PainelCursoCoordenador", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   test("junta o desempenho por moduloId mantendo a ordem de criacao do snapshot", async () => {
-    apiRequest.mockImplementation((url) => {
-      if (url === "/Cursos/10/desempenho") return Promise.resolve(DESEMPENHO);
-      if (url === "/Cursos/10/professores") return Promise.resolve([]);
-      return Promise.resolve([]);
-    });
+    mockApi(DESEMPENHO);
 
     renderPainel();
 
@@ -87,24 +100,29 @@ describe("PainelCursoCoordenador", () => {
     expect(titulosModulos).toEqual(["Modulo B", "Modulo A"]);
   });
 
-  test("abrir um modulo usa a contagem do desempenho carregado (materiais/avaliacoes), nao os totais do snapshot", async () => {
-    apiRequest.mockImplementation((url) => {
-      if (url === "/Cursos/10/desempenho") return Promise.resolve(DESEMPENHO);
-      if (url === "/Cursos/10/professores") return Promise.resolve([]);
-      return Promise.resolve([]);
-    });
-
+  test("modulo conta e lista so quiz nao arquivado - prova vinculada vai pra aba Avaliacoes do curso", async () => {
+    mockApi(DESEMPENHO);
     const { container } = renderPainel();
 
-    await waitFor(() => expect(container.textContent).toContain("1 conteudo · 0 avaliacaoes"));
+    await waitFor(() => expect(container.textContent).toContain("1 conteudo · 1 quiz"));
+
+    expect(screen.queryByText("Quiz arquivado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prova do modulo A")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Modulo A"));
 
-    expect(await screen.findByText("Progresso")).toBeInTheDocument();
-    expect(screen.getByText("Conteudo 1")).toBeInTheDocument();
+    await waitFor(() => expect(container.textContent).toContain("Quiz publicado"));
+    expect(screen.getByText("Desempenho medio")).toBeInTheDocument();
+    expect(screen.queryByText("Quiz arquivado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Prova do modulo A")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: /Avaliacoes do curso/ }));
+
+    expect(screen.getByText("Prova do modulo A")).toBeInTheDocument();
+    expect(screen.getByText("Prova solta do curso")).toBeInTheDocument();
   });
 
-  test("enquanto carrega professores, mostra 'Carregando professores...' antes da lista", async () => {
+  test("botao Professores abre modal com carregamento antes da lista", async () => {
     let resolverProfessores;
     apiRequest.mockImplementation((url) => {
       if (url === "/Cursos/10/desempenho") return Promise.resolve(DESEMPENHO);
@@ -118,6 +136,10 @@ describe("PainelCursoCoordenador", () => {
 
     renderPainel({ professores: [{ id: 1, nome: "Professor Teste" }] });
 
+    expect(screen.queryByText("Carregando professores...")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Professores/ }));
+
     expect(await screen.findByText("Carregando professores...")).toBeInTheDocument();
     expect(screen.queryByText("Nenhum professor vinculado a este curso ainda.")).not.toBeInTheDocument();
 
@@ -126,7 +148,7 @@ describe("PainelCursoCoordenador", () => {
     await waitFor(() => expect(screen.getByText("Nenhum professor vinculado a este curso ainda.")).toBeInTheDocument());
   });
 
-  test("desempenho com erro: mostra mensagem, mantem modulos e acoes com — nos percentuais", async () => {
+  test("desempenho com erro: mostra mensagem, mantem modulos e acoes do menu com — nos percentuais", async () => {
     apiRequest.mockImplementation((url) => {
       if (url === "/Cursos/10/desempenho") return Promise.reject(new Error("Falha de rede"));
       if (url === "/Cursos/10/professores") return Promise.resolve([]);
@@ -139,8 +161,21 @@ describe("PainelCursoCoordenador", () => {
 
     expect(screen.getByText("Modulo A")).toBeInTheDocument();
     expect(screen.getByText("Modulo B")).toBeInTheDocument();
-    expect(screen.getByText("2 conteudos · 1 avaliacao")).toBeInTheDocument();
+    expect(screen.getByText("2 conteudos · 1 quiz")).toBeInTheDocument();
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3);
-    expect(screen.getByText("Novo modulo")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText("Opcoes para Modulo A"));
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Excluir" })).toBeInTheDocument();
+  });
+
+  test("sem avaliacao de curso (toda avaliacao e quiz), a aba Avaliacoes do curso nao aparece", async () => {
+    mockApi({ ...DESEMPENHO, avaliacoesSemModulo: [], modulos: [{ ...DESEMPENHO.modulos[0], avaliacoes: DESEMPENHO.modulos[0].avaliacoes.filter((a) => a.tipoAvaliacao === 1) }, DESEMPENHO.modulos[1]] });
+
+    renderPainel();
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.queryByRole("tab", { name: /Avaliacoes do curso/ })).not.toBeInTheDocument();
   });
 });

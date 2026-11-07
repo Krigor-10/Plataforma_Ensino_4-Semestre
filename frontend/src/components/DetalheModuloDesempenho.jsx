@@ -24,15 +24,16 @@ const ICONE_TIPO_MATERIAL = {
    renderiza o CONTEUDO de dentro. `contextoCoordenador` oculta tipo de
    arquivo/status de publicacao (info de gestao, ver PainelModulosDesempenho).
    `separarGrupos` (so a tela do Coordenador usa) quebra a lista unica em duas,
-   com os titulos "Conteudos"/"Avaliacoes" - a tela do Professor continua com
-   a lista combinada de sempre. */
+   com os titulos "Conteudos"/"Quiz" (rodada 2, item 5 - so quiz nao arquivado
+   chega aqui, filtrado pelo chamador antes de passar `modulo.avaliacoes`) -
+   a tela do Professor continua com a lista combinada de sempre. */
 export default function DetalheModuloDesempenho({ contextoCoordenador = false, modulo, separarGrupos = false }) {
   const semItens = modulo.materiais.length === 0 && modulo.avaliacoes.length === 0;
 
   const itensMateriais = modulo.materiais.map((material) => (
     <li className="atividades-curso__item" key={`material-${material.conteudoDidaticoId}`}>
       <div className="atividades-curso__linha">
-        <span aria-hidden="true" className="atividades-curso__icone">
+        <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
           {ICONE_TIPO_MATERIAL[Number(material.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
         </span>
         <div className="atividades-curso__corpo">
@@ -110,8 +111,8 @@ export default function DetalheModuloDesempenho({ contextoCoordenador = false, m
           ) : null}
           {itensAvaliacoes.length > 0 ? (
             <>
-              <p className="atividades-curso__meta conteudos-modulo__descricao">Avaliacoes</p>
-              <ul aria-label={`Avaliacoes de ${modulo.titulo}`} className="atividades-curso__lista" role="list">
+              <p className="atividades-curso__meta conteudos-modulo__descricao">Quiz</p>
+              <ul aria-label={`Quiz de ${modulo.titulo}`} className="atividades-curso__lista" role="list">
                 {itensAvaliacoes}
               </ul>
             </>

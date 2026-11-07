@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbChevronDown, TbLayoutGrid, TbTrophy } from "react-icons/tb";
+import { TbChevronDown, TbTrophy } from "react-icons/tb";
 import DetalheModuloDesempenho from "../../components/DetalheModuloDesempenho.jsx";
+import NumeroModulo from "../../components/NumeroModulo.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
 import { formatGrade, normalizePublicationStatus, normalizeTipoAvaliacao } from "../../lib/format.js";
@@ -86,10 +87,7 @@ export default function PainelModulosDesempenho({ contextoCoordenador = false, c
                       type="button"
                     >
                       <div className="conteudos-modulo__info">
-                        <span aria-hidden="true" className="conteudos-modulo__icone">
-                          <TbLayoutGrid size="1.4rem" />
-                        </span>
-                        <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                        <NumeroModulo indice={indice} />
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         <span className="conteudos-modulo__contagem">
                           {modulo.totalMateriais} {modulo.totalMateriais === 1 ? "material" : "materiais"}

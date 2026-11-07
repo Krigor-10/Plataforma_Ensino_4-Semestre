@@ -779,8 +779,12 @@ function listStudentModules(studentId) {
     });
 }
 
+// Rodada 2 "tela do curso do Coordenador": criar modulo passou do
+// Coordenador pro Professor (backend: ModulosController.CriarModulo agora
+// e Admin,Professor; CursoAutorizacaoService.PodeCriarModuloAsync exige
+// vinculo em ProfessoresCursos). Espelha a mesma regra aqui.
 function createModule(payload) {
-  requireManager();
+  const user = requireAuthenticatedUser();
 
   const titulo = String(payload.titulo || "").trim();
   const cursoId = Number(payload.cursoId);
@@ -797,6 +801,13 @@ function createModule(payload) {
   const courseExists = db.cursos.some((curso) => curso.id === cursoId);
   if (!courseExists) {
     throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  const professorVinculado = (db.professoresCursos || []).some(
+    (vinculo) => vinculo.cursoId === cursoId && vinculo.professorId === user.id
+  );
+  if (user.tipoUsuario !== "Admin" && !(user.tipoUsuario === "Professor" && professorVinculado)) {
+    throw new DemoApiError("Voce nao tem permissao para gerenciar este modulo.", 403);
   }
 
   const modulo = {

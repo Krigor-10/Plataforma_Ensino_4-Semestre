@@ -76,7 +76,7 @@ public class ModulosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin,Professor")]
     public async Task<IActionResult> CriarModulo([FromBody] CriarModuloDto dto)
     {
         if (!ModelState.IsValid)
@@ -84,7 +84,7 @@ public class ModulosController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, dto.CursoId))
+        if (!await _cursoAutorizacaoService.PodeCriarModuloAsync(User, dto.CursoId))
         {
             return MensagemAcessoNegado();
         }

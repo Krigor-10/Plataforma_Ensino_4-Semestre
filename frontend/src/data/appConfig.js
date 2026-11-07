@@ -140,8 +140,11 @@ export function getSectionMeta(section, role) {
       description: "Consulta dos coordenadores responsaveis pela supervisao academica dos cursos."
     },
     cursos: {
-      title: "Catalogo academico",
-      description: "A mesma base de cursos alimenta a home, o cadastro e o painel."
+      title: role === "Coordenador" ? "Cursos" : "Catalogo academico",
+      description:
+        role === "Coordenador"
+          ? "Cursos ativos sob sua coordenacao - escolha um pra ver modulos, avaliacoes e professores."
+          : "A mesma base de cursos alimenta a home, o cadastro e o painel."
     },
     modulos: {
       title: "Módulos por curso",

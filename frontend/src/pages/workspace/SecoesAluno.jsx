@@ -34,6 +34,7 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
+import NumeroModulo from "../../components/NumeroModulo.jsx";
 import VisualizadorImagem from "../../components/VisualizadorImagem.jsx";
 import VisualizadorPdf from "../../components/VisualizadorPdf.jsx";
 import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
@@ -433,10 +434,7 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
                       type="button"
                     >
                       <div className="conteudos-modulo__info">
-                        <span aria-hidden="true" className="conteudos-modulo__icone">
-                          <TbLayoutGrid size="1.4rem" />
-                        </span>
-                        <span className="conteudos-modulo__eyebrow">Modulo {String(indice + 1).padStart(2, "0")}</span>
+                        <NumeroModulo indice={indice} />
                         <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
                         <span className="conteudos-modulo__contagem">
                           {totalItensModulo} item{totalItensModulo === 1 ? "" : "s"} · {statusModulo}
@@ -489,7 +487,7 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
                           {modulo.conteudos.map((conteudo) => (
                             <li className="atividades-curso__item" key={`conteudo-${conteudo.id}`}>
                               <div className="atividades-curso__linha">
-                                <span aria-hidden="true" className="atividades-curso__icone">
+                                <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
                                   {ICONE_TIPO_CONTEUDO_PROGRESSO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
                                 </span>
                                 <div className="atividades-curso__corpo">

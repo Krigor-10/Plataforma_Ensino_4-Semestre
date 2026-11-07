@@ -566,6 +566,11 @@ export default function WorkspaceScreen({
         sections={navSections}
         cursos={role === "Coordenador" ? cursosDaSecaoCursos : snapshot.cursos}
         modulos={role === "Coordenador" ? modulosDaSecaoModulos : snapshot.modulos}
+        cursoAbertoTitulo={
+          role === "Coordenador" && activeSection === "cursos" && route.param
+            ? coordenadorCursos.find((curso) => curso.id === Number(route.param))?.titulo || null
+            : null
+        }
         onNavigate={onNavigate}
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}

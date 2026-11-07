@@ -61,6 +61,29 @@ public class CursoAutorizacaoService : ICursoAutorizacaoService
         return await PodeGerenciarCursoAsync(usuario, modulo.CursoId);
     }
 
+    public async Task<bool> PodeCriarModuloAsync(ClaimsPrincipal usuario, int cursoId)
+    {
+        if (usuario.IsInRole("Admin"))
+        {
+            return true;
+        }
+
+        if (!usuario.IsInRole("Professor"))
+        {
+            return false;
+        }
+
+        var professorId = usuario.ObterUsuarioId();
+        if (!professorId.HasValue)
+        {
+            return false;
+        }
+
+        return await _context.ProfessoresCursos
+            .AsNoTracking()
+            .AnyAsync(vinculo => vinculo.ProfessorId == professorId.Value && vinculo.CursoId == cursoId);
+    }
+
     public async Task<bool> PodeGerenciarTurmaAsync(ClaimsPrincipal usuario, int turmaId)
     {
         if (usuario.IsInRole("Admin"))

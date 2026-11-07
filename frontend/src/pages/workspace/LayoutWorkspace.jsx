@@ -15,6 +15,7 @@ export default function LayoutWorkspace({
   sections,
   cursos,
   modulos,
+  cursoAbertoTitulo = null,
   onNavigate,
   onAbrirPerfil,
   onLogoutClick,
@@ -47,6 +48,7 @@ export default function LayoutWorkspace({
           sections={sections}
           cursos={cursos}
           modulos={modulos}
+          cursoAbertoTitulo={cursoAbertoTitulo}
           onNavigate={onNavigate}
           onAbrirSidebar={() => setSidebarAberta(true)}
           onAbrirPerfil={onAbrirPerfil}
