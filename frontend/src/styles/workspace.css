@@ -4475,46 +4475,6 @@
   }
 }
 
-/* Cartao UNICO por MODULO das trilhas de Conteudos (Professor, Aluno e a
-   previa "Visualizar como aluno" - prompt "padronizar conteudos do aluno",
-   item 1): so a borda/raio do cartao aqui - sem padding lateral (as linhas
-   de dentro ganham o proprio espacamento) e sem fundo proprio (quem tem
-   fundo e o cabecalho e as linhas, ver os 3 niveis em
-   .conteudos-modulo__cabecalho/.atividades-curso__linha). Border-bottom
-   extra em :last-child nao e mais necessario: todo cartao sempre tem borda
-   completa (nao e mais so border-bottom como a base .conteudos-modulo
-   generica, ainda usada pelas telas Modulos/Avaliacoes/Progresso). Modificador
-   ".conteudos-modulo--cartao" evita pegar essas outras telas, que reaproveitam
-   a mesma classe base .conteudos-modulo sem o visual de cartao. */
-.conteudos-modulo--cartao {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  background: var(--cor-fundo-alt);
-}
-
-.conteudos-modulo--cartao:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
-  border-color: var(--cor-borda-forte);
-}
-
-/* Bug da rodada 3: a regra generica e compartilhada
-   ".atividades-curso__lista-modulos > .conteudos-modulo:last-child" zera o
-   border-bottom (fica "none") so no ultimo modulo da lista - ela tem mais
-   especificidade (3 classes) que o "border: 1px solid" do cartao acima (2
-   classes), entao vence so pro lado de baixo. Depois, a regra do modulo
-   vazio aplicava "border-style: dashed" (so o estilo, 4 especificidades,
-   ainda vence a de cima) sem nunca ter redefinido largura/cor do
-   border-bottom - o navegador usava os valores iniciais do CSS (~3px,
-   currentColor), virando a linha grossa e branca do print. Aqui a borda
-   inferior do ultimo modulo e redefinida explicitamente, igual aos outros 3
-   lados do cartao. */
-.atividades-curso__lista-modulos > .conteudos-modulo--cartao:last-child {
-  border-bottom: 1px solid var(--cor-borda);
-}
-
-.atividades-curso__lista-modulos > .conteudos-modulo--cartao:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
-  border-bottom-color: var(--cor-borda-forte);
-}
-
 /* Evita que o menu "..." dos itens perto do fim do modulo seja cortado pelo
    overflow:hidden do motion.div de abertura/fechamento do corpo do modulo -
    abrem pra cima em vez de pra baixo (mesma tecnica ja usada em .tela-modulos
@@ -4794,8 +4754,12 @@
    [data-tema="claro"] .botao--fantasma em base.css) e apagava a cor. */
 .atividades-curso__adicionar--quiz {
   background: rgba(123, 47, 247, 0.16);
-  color: var(--cor-marca-clara);
+  color: var(--cor-texto-forte);
   border-color: var(--cor-borda-forte);
+}
+
+.atividades-curso__adicionar--quiz svg {
+  color: var(--cor-marca-clara);
 }
 
 .atividades-curso__adicionar--quiz:hover:not(:disabled) {
@@ -4810,8 +4774,12 @@
 
 .atividades-curso__adicionar--ia {
   background: var(--cor-ia-fundo);
-  color: var(--cor-ia);
+  color: var(--cor-texto-forte);
   border-color: var(--cor-ia-borda);
+}
+
+.atividades-curso__adicionar--ia svg {
+  color: var(--cor-ia);
 }
 
 .atividades-curso__adicionar--ia:hover:not(:disabled) {
@@ -5633,6 +5601,10 @@
   border-color: var(--cor-borda-forte);
 }
 
+.conteudos-modulo.conteudos-modulo--cartao {
+  border-bottom: none;
+}
+
 .conteudos-modulo__cabecalho {
   display: flex;
   align-items: center;
@@ -5642,9 +5614,10 @@
 /* Hierarquia das trilhas de Conteudos (Professor, Aluno e a previa
    "Visualizar como aluno"): o MODULO vira uma faixa com fundo proprio, mais
    forte que as linhas de conteudo/quiz dentro dele (que sao so linhas com
-   separador fino, ver .atividades-curso__item). A borda/raio do cartao em
-   si vive so na regra .conteudos-modulo--cartao (acima) - aqui o cabecalho
-   ganha so fundo + padding, sem borda/raio proprios (isso que causava o
+   separador fino, ver .atividades-curso__item). O cartao em si nao tem
+   borda/raio/fundo proprios (so a base .conteudos-modulo, com o
+   border-bottom zerado pra esse modificador) - aqui o cabecalho ganha
+   fundo + padding + raio, sem borda propria (isso que causava o
    "cartao dentro de cartao"). Cantos do cabecalho acompanham o estado:
    todos arredondados quando fechado (o cabecalho E o cartao inteiro), so os
    superiores quando aberto (border-bottom o separa do corpo abaixo).
