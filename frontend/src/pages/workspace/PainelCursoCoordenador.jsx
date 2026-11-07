@@ -223,10 +223,10 @@ export default function PainelCursoCoordenador({
         </div>
 
         <div className="atividades-curso__kpis-compactos">
-          <CartaoEstatistica icone={<TbUsers size={16} />} rotulo="Alunos" valor={desempenho ? desempenho.totalAlunos : "—"} />
-          <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbChartBar size={16} />} rotulo="Progresso" valor={desempenho ? formatPercent(desempenho.progressoMedio) : "—"} />
-          <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCertificate size={16} />} rotulo="Certificados" valor={desempenho ? `${desempenho.certificadosEmitidos} de ${desempenho.totalAlunos}` : "—"} />
-          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={16} />} rotulo="Media" valor={desempenho ? formatGrade(desempenho.desempenhoMedio) : "—"} />
+          <CartaoEstatistica icone={<TbUsers size={20} />} rotulo="Alunos" valor={desempenho ? desempenho.totalAlunos : "—"} />
+          <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbChartBar size={20} />} rotulo="Progresso" valor={desempenho ? formatPercent(desempenho.progressoMedio) : "—"} />
+          <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCertificate size={20} />} rotulo="Certificados" valor={desempenho ? `${desempenho.certificadosEmitidos} de ${desempenho.totalAlunos}` : "—"} />
+          <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={20} />} rotulo="Media" valor={desempenho ? formatGrade(desempenho.desempenhoMedio) : "—"} />
         </div>
       </header>
 

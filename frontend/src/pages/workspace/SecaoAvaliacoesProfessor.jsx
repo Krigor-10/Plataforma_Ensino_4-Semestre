@@ -683,7 +683,7 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
         const idDetalhe = `avaliacao-detalhe-${avaliacao.id}`;
 
         return (
-          <section className="conteudos-modulo" key={avaliacao.id}>
+          <section className="conteudos-modulo conteudos-modulo--cartao" key={avaliacao.id}>
             <header className="conteudos-modulo__cabecalho">
               <h3 className="conteudos-modulo__cabecalho-wrapper">
                 <button

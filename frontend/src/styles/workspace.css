@@ -3818,28 +3818,28 @@
    Nao afeta .grade-estatisticas (usada nas outras telas). */
 .atividades-curso__kpis-compactos {
   display: grid;
-  grid-template-columns: repeat(2, minmax(6.5rem, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(7.5rem, 1fr));
+  gap: 0.6rem;
   flex-shrink: 0;
 }
 
 .atividades-curso__kpis-compactos .cartao-estatistica {
-  padding: 0.5rem 0.75rem;
-  gap: 0.5rem;
+  padding: 0.65rem 0.9rem;
+  gap: 0.6rem;
   border-top-width: 2px;
 }
 
 .atividades-curso__kpis-compactos .cartao-estatistica__icone svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .atividades-curso__kpis-compactos .cartao-estatistica__valor {
-  font-size: 0.95rem;
+  font-size: 1.1rem;
 }
 
 .atividades-curso__kpis-compactos .cartao-estatistica__rotulo {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 
 /* Curso + professor responsavel na mesma linha, exclusivo do header expandido
@@ -3922,12 +3922,32 @@
 
 /* Mesmo padrao de cartao com borda da tela Avaliacoes do aluno, reaplicado na
    tela Avaliacoes do PROFESSOR (dentro do curso selecionado) pra manter a
-   mesma linguagem visual entre as duas telas. */
+   mesma linguagem visual entre as duas telas. Fundo trocado de
+   rgba(255,255,255,0.015) (quase invisivel, cartao se confundia com o fundo
+   da pagina) pra --cor-fundo-elevado - mesmo tom usado no cabecalho dos
+   modulos de Conteudos (.conteudos-modulo--cartao > .conteudos-modulo__cabecalho
+   abaixo), so que aqui no cartao inteiro, pra dar peso visual proprio a cada
+   avaliacao. Borda continua fina/minimalista (so 1px var(--cor-borda), sem
+   cor nova), igual nos dois temas. */
 .tela-avaliacoes-professor .conteudos-modulo {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
   padding: 0 var(--espaco-md);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--cor-fundo-elevado);
+}
+
+/* .conteudos-modulo--cartao (ver mais abaixo) zera border-bottom pra nao
+   duplicar com o cabecalho - mas aqui o cartao e uma unidade so (sem
+   cabecalho visualmente separado do corpo), entao a borda de baixo precisa
+   voltar. So largura/estilo (nao a cor): a cor continua vindo do cascade
+   normal (border-color, que .conteudos-modulo:has(...) escurece quando o
+   card esta aberto) - se essa regra fixasse a cor tambem, o lado de baixo
+   ficaria sempre na cor "fechada", mesmo com o card aberto. Especificidade
+   (3 classes) vence as duas regras de 2 classes em conflito pro
+   width/style, independente da ordem no arquivo. */
+.tela-avaliacoes-professor .conteudos-modulo.conteudos-modulo--cartao {
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
 }
 
 .tela-avaliacoes-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
