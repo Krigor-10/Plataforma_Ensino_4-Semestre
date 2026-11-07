@@ -3,9 +3,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   TbArrowLeft,
   TbAward,
+  TbCertificate,
   TbChartBar,
   TbChevronDown,
-  TbCircleCheck,
   TbDotsVertical,
   TbLock,
   TbLockOpen,
@@ -225,7 +225,7 @@ export default function PainelCursoCoordenador({
         <div className="atividades-curso__kpis-compactos">
           <CartaoEstatistica icone={<TbUsers size={16} />} rotulo="Alunos" valor={desempenho ? desempenho.totalAlunos : "—"} />
           <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbChartBar size={16} />} rotulo="Progresso" valor={desempenho ? formatPercent(desempenho.progressoMedio) : "—"} />
-          <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCircleCheck size={16} />} rotulo="Concluiram" valor={desempenho ? formatPercent(desempenho.percentualConclusao) : "—"} />
+          <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbCertificate size={16} />} rotulo="Certificados" valor={desempenho ? `${desempenho.certificadosEmitidos} de ${desempenho.totalAlunos}` : "—"} />
           <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbAward size={16} />} rotulo="Media" valor={desempenho ? formatGrade(desempenho.desempenhoMedio) : "—"} />
         </div>
       </header>

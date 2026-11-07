@@ -410,6 +410,40 @@ public class CursoDesempenhoServiceTests
     }
 
     [Fact]
+    public async Task ObterDesempenhoPorCoordenadorAsync_ContaSoCertificadosDeMatriculasAprovadas()
+    {
+        var context = TestContextFactory.Criar();
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, coordenador.Id);
+        var professor = CriarProfessor(context);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var alunoComCertificado = CriarAluno(context);
+        var matriculaComCertificado = CriarMatriculaAprovada(context, alunoComCertificado.Id, curso.Id, turma.Id);
+        matriculaComCertificado.EmitirCertificado();
+
+        var alunoSemCertificado = CriarAluno(context);
+        CriarMatriculaAprovada(context, alunoSemCertificado.Id, curso.Id, turma.Id);
+
+        // Matricula nao aprovada com certificado emitido (caso defensivo, nao
+        // deveria existir na pratica) - nao pode contar nem em
+        // CertificadosEmitidos nem em TotalAlunos, ja que matriculasDoCurso
+        // so traz matriculas aprovadas.
+        var alunoNaoAprovado = CriarAluno(context);
+        var matriculaNaoAprovada = new Matricula { AlunoId = alunoNaoAprovado.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaNaoAprovada.VincularTurma(turma.Id);
+        matriculaNaoAprovada.EmitirCertificado();
+        context.Matriculas.Add(matriculaNaoAprovada);
+        context.SaveChanges();
+
+        var resultado = (await CriarService(context).ObterDesempenhoPorCoordenadorAsync(coordenador.Id)).ToList();
+
+        var cursoDto = Assert.Single(resultado);
+        Assert.Equal(2, cursoDto.TotalAlunos);
+        Assert.Equal(1, cursoDto.CertificadosEmitidos);
+    }
+
+    [Fact]
     public async Task ObterDesempenhoPorProfessorAsync_AvaliacaoSemModulo_ApareceViaCursoId()
     {
         // Prova/Exercicio podem ficar soltos direto no curso (sem modulo) — a

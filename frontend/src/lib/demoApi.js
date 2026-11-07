@@ -1661,6 +1661,7 @@ function montarCursoDesempenhoDemo(db, curso, contexto) {
     (matricula) => Number(progressoCursoPorMatriculaId.get(matricula.id)?.percentualConclusao) || 0
   );
   const concluidosNoCurso = progressosCurso.filter((percentual) => percentual >= 100).length;
+  const certificadosEmitidos = matriculasDoCurso.filter((matricula) => matricula.certificadoEmitidoEm).length;
 
   const modulosDto = db.modulos
     .filter((modulo) => modulo.cursoId === curso.id)
@@ -1689,6 +1690,7 @@ function montarCursoDesempenhoDemo(db, curso, contexto) {
     desempenhoMedio: alunosComNota.length > 0
       ? roundDemoNumber(alunosComNota.reduce((soma, matricula) => soma + Number(matricula.notaFinal), 0) / alunosComNota.length)
       : 0,
+    certificadosEmitidos,
     modulos: modulosDto,
     avaliacoesSemModulo
   };

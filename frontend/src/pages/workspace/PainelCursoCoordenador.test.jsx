@@ -32,6 +32,7 @@ const DESEMPENHO = {
   progressoMedio: 42,
   percentualConclusao: 10,
   desempenhoMedio: 7.5,
+  certificadosEmitidos: 1,
   modulos: [
     {
       moduloId: 1,
@@ -98,6 +99,15 @@ describe("PainelCursoCoordenador", () => {
 
     const titulosModulos = screen.getAllByText(/^Modulo [AB]$/).map((elemento) => elemento.textContent);
     expect(titulosModulos).toEqual(["Modulo B", "Modulo A"]);
+  });
+
+  test("KPI Certificados mostra 'N de T' e o KPI Concluiram nao existe mais", async () => {
+    mockApi(DESEMPENHO);
+    const { container } = renderPainel();
+
+    await waitFor(() => expect(container.textContent).toContain("1 de 5"));
+    expect(screen.getByText("Certificados")).toBeInTheDocument();
+    expect(screen.queryByText("Concluiram")).not.toBeInTheDocument();
   });
 
   test("modulo conta e lista so quiz nao arquivado - prova vinculada vai pra aba Avaliacoes do curso", async () => {

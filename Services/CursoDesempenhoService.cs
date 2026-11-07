@@ -180,6 +180,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 .Select(matricula => progressoCursoPorMatriculaId.TryGetValue(matricula.Id, out var progresso) ? progresso.PercentualConclusao : 0)
                 .ToList();
             var concluidosNoCurso = progressosCursoDoCurso.Count(percentual => percentual >= 100);
+            var certificadosEmitidos = matriculasDoCurso.Count(matricula => matricula.CertificadoEmitidoEm.HasValue);
 
             var modulosDoCurso = modulosPorCursoId.TryGetValue(curso.Id, out var listaModulos)
                 ? listaModulos
@@ -221,6 +222,7 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 ProgressoMedio = totalAlunos > 0 ? Math.Round(progressosCursoDoCurso.Average(), 1) : 0,
                 PercentualConclusao = totalAlunos > 0 ? Math.Round((decimal)concluidosNoCurso / totalAlunos * 100, 1) : 0,
                 DesempenhoMedio = alunosComNota.Count > 0 ? Math.Round(alunosComNota.Average(matricula => matricula.NotaFinal), 2) : 0,
+                CertificadosEmitidos = certificadosEmitidos,
                 Modulos = modulosDto,
                 AvaliacoesSemModulo = avaliacoesSemModuloDoCurso
             });
