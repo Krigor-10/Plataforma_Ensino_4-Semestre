@@ -112,6 +112,53 @@ public class ApiWebApplicationFactory : WebApplicationFactory<Program>
         return await ObterTokenAsync(email);
     }
 
+    /// <summary>Cria um Coordenador direto no banco de teste e loga via /api/v1/auth/login, devolvendo o JWT.</summary>
+    public async Task<string> CriarCoordenadorEObterTokenAsync(string email)
+    {
+        using (var scope = Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            await context.Database.EnsureCreatedAsync();
+
+            var coordenador = new Coordenador
+            {
+                Nome = "Coordenador de Teste",
+                Email = email,
+                Cpf = "11223344556",
+                CodigoRegistro = $"COORD-{Guid.NewGuid():N}"[..10]
+            };
+            coordenador.ConfigurarAcesso("Coordenador", BCrypt.Net.BCrypt.HashPassword(SenhaPadrao));
+
+            context.Coordenadores.Add(coordenador);
+            await context.SaveChangesAsync();
+        }
+
+        return await ObterTokenAsync(email);
+    }
+
+    /// <summary>Cria um Admin direto no banco de teste e loga via /api/v1/auth/login, devolvendo o JWT.</summary>
+    public async Task<string> CriarAdminEObterTokenAsync(string email)
+    {
+        using (var scope = Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            await context.Database.EnsureCreatedAsync();
+
+            var admin = new Admin
+            {
+                Nome = "Admin de Teste",
+                Email = email,
+                Cpf = "66554433221"
+            };
+            admin.ConfigurarAcesso("Admin", BCrypt.Net.BCrypt.HashPassword(SenhaPadrao));
+
+            context.Admins.Add(admin);
+            await context.SaveChangesAsync();
+        }
+
+        return await ObterTokenAsync(email);
+    }
+
     /// <summary>Loga via /api/v1/auth/login um usuario ja existente no banco de teste (criado fora desta factory) e devolve o JWT.</summary>
     public async Task<string> ObterTokenAsync(string email)
     {
