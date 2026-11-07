@@ -3939,22 +3939,20 @@
 /* .conteudos-modulo--cartao (ver mais abaixo) zera border-bottom pra nao
    duplicar com o cabecalho - mas aqui o cartao e uma unidade so (sem
    cabecalho visualmente separado do corpo), entao a borda de baixo precisa
-   voltar. So largura/estilo (nao a cor): a cor continua vindo do cascade
-   normal (border-color, que .conteudos-modulo:has(...) escurece quando o
-   card esta aberto) - se essa regra fixasse a cor tambem, o lado de baixo
-   ficaria sempre na cor "fechada", mesmo com o card aberto. Especificidade
-   (3 classes) vence as duas regras de 2 classes em conflito pro
-   width/style, independente da ordem no arquivo. */
+   voltar. O shorthand "border-bottom: none" zerado la tambem reseta a COR
+   do border-bottom pra currentcolor (cor do texto, dai a linha branca) -
+   por isso aqui a cor e fixada em --cor-borda (igual as outras bordas do
+   cartao), com --cor-borda-forte so quando o card esta aberto, igual ao
+   escurecimento que .conteudos-modulo:has(...) ja aplica nas outras 3
+   bordas. Antes isso so era corrigido no ultimo card da lista (:last-child);
+   agora vale pra todos, entao essa regra generica cobre a lista inteira e
+   as duas regras de :last-child que existiam aqui foram removidas (ficaram
+   redundantes). */
 .tela-avaliacoes-professor .conteudos-modulo.conteudos-modulo--cartao {
-  border-bottom-style: solid;
-  border-bottom-width: 1px;
-}
-
-.tela-avaliacoes-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
   border-bottom: 1px solid var(--cor-borda);
 }
 
-.tela-avaliacoes-professor .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+.tela-avaliacoes-professor .conteudos-modulo.conteudos-modulo--cartao:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
   border-bottom-color: var(--cor-borda-forte);
 }
 
