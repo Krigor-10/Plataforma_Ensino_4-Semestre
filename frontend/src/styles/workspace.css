@@ -4243,6 +4243,17 @@
   pointer-events: none;
 }
 
+/* Modulo em cartao (prompt "cards de modulo em relevo", 10/11): o menu "..."
+   (Editar/Excluir) do ultimo modulo da lista abre pra cima em vez de pra
+   baixo, senao fica cortado pelo fim da pagina - mesma tecnica ja usada em
+   .tela-conteudos pros itens de conteudo, so que aqui pro MODULO (unico
+   elemento de topo dentro de .atividades-curso__lista-modulos, sem
+   necessidade do companheiro :nth-last-child(2) que .tela-modulos tinha). */
+.atividades-curso__lista-modulos > .conteudos-modulo--gestao:last-child .menu-contexto__lista {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
 /* Espacamento das linhas: um unico lugar define o espaco de cada linha (o
    item/LI e a lista deixam de contribuir), com separador fino entre linhas -
    padding horizontal aqui tambem repoe o inset lateral que o cartao do
