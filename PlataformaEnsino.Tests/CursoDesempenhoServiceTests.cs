@@ -244,6 +244,34 @@ public class CursoDesempenhoServiceTests
         Assert.Contains(resultado, c => c.CursoId == cursoSemCoordenador.Id);
     }
 
+    [Fact]
+    public async Task ObterDesempenhoPorCursoAsync_CursoDeOutroCoordenador_LancaNotFound()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+
+        var coordenadorA = CriarCoordenador(context);
+        var coordenadorB = CriarCoordenador(context);
+        var cursoDeB = CriarCurso(context, coordenadorB.Id);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.ObterDesempenhoPorCursoAsync(cursoDeB.Id, coordenadorA.Id));
+    }
+
+    [Fact]
+    public async Task ObterDesempenhoPorCursoParaAdminAsync_RetornaCursoDeQualquerCoordenador()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, coordenador.Id);
+
+        var resultado = await service.ObterDesempenhoPorCursoParaAdminAsync(curso.Id);
+
+        Assert.Equal(curso.Id, resultado.CursoId);
+    }
+
     // ---------- Correcao da agregacao ----------
 
     [Fact]

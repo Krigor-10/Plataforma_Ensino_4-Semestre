@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbX } from "react-icons/tb";
+import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -45,10 +45,9 @@ function IconeOrdenacao({ direcao }) {
 export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh, onSessionExpired }) {
   const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
+  const [abaStatus, setAbaStatus] = useState("ativos");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
-  const [kebabAbertoId, setKebabAbertoId] = useState(null);
-  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const [coordenadorDetalhe, setCoordenadorDetalhe] = useState(null);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [coordenadorEmEdicaoId, setCoordenadorEmEdicaoId] = useState(null);
@@ -65,36 +64,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     }
   });
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
-  const [coordenadorParaExcluir, setCoordenadorParaExcluir] = useState(null);
-  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const kebabRef = useRef(null);
-
-  useEffect(() => {
-    if (!kebabAbertoId) {
-      return undefined;
-    }
-
-    function fechar(event) {
-      if (event.type === "keydown") {
-        if (event.key === "Escape") {
-          setKebabAbertoId(null);
-        }
-        return;
-      }
-
-      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
-        setKebabAbertoId(null);
-      }
-    }
-
-    document.addEventListener("mousedown", fechar);
-    document.addEventListener("keydown", fechar);
-    return () => {
-      document.removeEventListener("mousedown", fechar);
-      document.removeEventListener("keydown", fechar);
-    };
-  }, [kebabAbertoId]);
 
   const cursosPorCoordenador = useMemo(() => {
     const mapa = new Map();
@@ -124,7 +94,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
   const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
   const coordenadoresFiltrados = useMemo(() => {
-    let proximos = coordenadores;
+    let proximos = coordenadores.filter((coordenador) => Boolean(coordenador.ativo) === (abaStatus === "ativos"));
 
     if (termoBusca) {
       proximos = proximos.filter((coordenador) => {
@@ -145,13 +115,19 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       return direcao === "asc" ? comparacao : -comparacao;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordenadores, cursosPorCoordenador, direcao, termoBusca]);
+  }, [coordenadores, cursosPorCoordenador, direcao, termoBusca, abaStatus]);
 
   const totalPaginas = Math.max(1, Math.ceil(coordenadoresFiltrados.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
   const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
   const itensPagina = coordenadoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
   const totalAtivos = coordenadores.filter((coordenador) => coordenador.ativo).length;
+  const totalInativos = coordenadores.length - totalAtivos;
+
+  function selecionarAbaStatus(aba) {
+    setAbaStatus(aba);
+    setPagina(1);
+  }
 
   function limparFiltros() {
     setBusca("");
@@ -161,13 +137,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   function alternarOrdenacao() {
     setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
     setPagina(1);
-  }
-
-  function abrirKebab(event, coordenadorId) {
-    event.stopPropagation();
-    const retangulo = event.currentTarget.getBoundingClientRect();
-    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
-    setKebabAbertoId((atual) => (atual === coordenadorId ? null : coordenadorId));
   }
 
   function abrirFormulario() {
@@ -196,7 +165,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     });
     setMensagemFormulario({ tone: "", message: "" });
     setFormularioAberto(true);
-    setKebabAbertoId(null);
   }
 
   function fecharFormulario() {
@@ -301,25 +269,28 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
     }
   }
 
-  function abrirExclusaoCoordenador(coordenador) {
-    setCoordenadorParaExcluir(coordenador);
-    setMensagemExclusao("");
-    setKebabAbertoId(null);
-  }
-
-  async function confirmarExclusaoCoordenador() {
-    if (!coordenadorParaExcluir) {
-      return;
-    }
-
-    setSalvando(true);
-    setMensagemExclusao("");
+  async function alternarStatusCoordenador(coordenador) {
+    const novoStatusAtivo = !coordenador.ativo;
 
     try {
-      await apiRequest(`/Coordenadores/${coordenadorParaExcluir.id}`, { method: "DELETE" });
+      await apiRequest(`/Coordenadores/${coordenador.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nome: coordenador.nome,
+          email: coordenador.email,
+          cpf: coordenador.cpf,
+          telefone: coordenador.telefone,
+          cep: coordenador.cep,
+          rua: coordenador.rua,
+          numero: coordenador.numero,
+          bairro: coordenador.bairro,
+          cidade: coordenador.cidade,
+          estado: coordenador.estado,
+          ativo: novoStatusAtivo
+        })
+      });
 
-      setCoordenadorParaExcluir(null);
-      mostrarToast("Coordenador excluido com sucesso.", "sucesso");
+      mostrarToast(novoStatusAtivo ? "Coordenador reativado com sucesso." : "Coordenador inativado com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -327,13 +298,10 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         return;
       }
 
-      setMensagemExclusao(err.message || "Nao foi possivel excluir o coordenador agora.");
-    } finally {
-      setSalvando(false);
+      mostrarToast(err.message || "Nao foi possivel atualizar o status do coordenador agora.", "erro");
     }
   }
 
-  const coordenadorKebab = coordenadores.find((coordenador) => coordenador.id === kebabAbertoId);
   const cursosDetalhe = coordenadorDetalhe ? obterCursosDoCoordenador(coordenadorDetalhe) : [];
 
   return (
@@ -341,9 +309,11 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
-          <p className="cabecalho-pagina__subtitulo">
-            {coordenadores.length} cadastrado{coordenadores.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
-          </p>
+          <div className="indicadores-status">
+            <Insignia texto={`${coordenadores.length} cadastrado${coordenadores.length === 1 ? "" : "s"}`} variante="neutro" />
+            <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
+            <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
+          </div>
         </div>
         <div className="barra-filtros">
           <div className="campo-busca">
@@ -370,6 +340,27 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </div>
       </header>
 
+      <nav aria-label="Status dos coordenadores" className="abas-matriculas" role="tablist">
+        <button
+          aria-selected={abaStatus === "ativos"}
+          className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+          onClick={() => selecionarAbaStatus("ativos")}
+          role="tab"
+          type="button"
+        >
+          Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
+        </button>
+        <button
+          aria-selected={abaStatus === "inativos"}
+          className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
+          onClick={() => selecionarAbaStatus("inativos")}
+          role="tab"
+          type="button"
+        >
+          Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
+        </button>
+      </nav>
+
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
@@ -393,7 +384,9 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           <tbody>
             {itensPagina.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={4}>Nenhum coordenador encontrado.</td>
+                <td colSpan={4}>
+                  {abaStatus === "ativos" ? "Nenhum coordenador ativo encontrado." : "Nenhum coordenador inativo encontrado."}
+                </td>
               </tr>
             ) : (
               itensPagina.map((coordenador) => {
@@ -421,19 +414,21 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                       )}
                     </td>
                     <td data-label="Status">
-                      <Insignia texto={coordenador.ativo ? "Ativo" : "Inativo"} variante={coordenador.ativo ? "sucesso" : "erro"} />
+                      <Insignia texto={coordenador.ativo ? "Ativo" : "Inativo"} variante={coordenador.ativo ? "sucesso" : "neutro"} />
                     </td>
                     <td data-label="" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        aria-expanded={kebabAbertoId === coordenador.id}
-                        aria-haspopup="menu"
-                        aria-label={`Acoes para ${coordenador.nome}`}
-                        className="kebab-btn"
-                        onClick={(event) => abrirKebab(event, coordenador.id)}
-                        type="button"
-                      >
-                        <TbDotsVertical aria-hidden="true" size={16} />
-                      </button>
+                      <MenuKebabTabela
+                        itens={[
+                          { chave: "ver-detalhes", rotulo: "Ver detalhes", onSelecionar: () => setCoordenadorDetalhe(coordenador) },
+                          { chave: "editar", rotulo: "Editar", onSelecionar: () => abrirEdicaoCoordenador(coordenador) },
+                          {
+                            chave: "alternar-status",
+                            rotulo: coordenador.ativo ? "Inativar" : "Reativar",
+                            onSelecionar: () => alternarStatusCoordenador(coordenador)
+                          }
+                        ]}
+                        rotulo={`Acoes para ${coordenador.nome}`}
+                      />
                     </td>
                   </tr>
                 );
@@ -470,30 +465,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </nav>
       ) : null}
 
-      {kebabAbertoId && coordenadorKebab
-        ? createPortal(
-            <div className="kebab-menu" ref={kebabRef} style={{ left: kebabPos.left, top: kebabPos.top }}>
-              <button
-                className="kebab-menu__item"
-                onClick={() => {
-                  setCoordenadorDetalhe(coordenadorKebab);
-                  setKebabAbertoId(null);
-                }}
-                type="button"
-              >
-                Ver detalhes
-              </button>
-              <button className="kebab-menu__item" onClick={() => abrirEdicaoCoordenador(coordenadorKebab)} type="button">
-                Editar
-              </button>
-              <button className="kebab-menu__item kebab-menu__item--perigo" onClick={() => abrirExclusaoCoordenador(coordenadorKebab)} type="button">
-                Excluir
-              </button>
-            </div>,
-            document.body
-          )
-        : null}
-
       {coordenadorDetalhe ? (
         <Modal
           onFechar={() => setCoordenadorDetalhe(null)}
@@ -514,7 +485,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               <h3 className="detalhe-usuario__nome">{coordenadorDetalhe.nome}</h3>
               <span className="detalhe-usuario__email">{coordenadorDetalhe.email}</span>
             </div>
-            <Insignia texto={coordenadorDetalhe.ativo ? "Ativo" : "Inativo"} variante={coordenadorDetalhe.ativo ? "sucesso" : "erro"} />
+            <Insignia texto={coordenadorDetalhe.ativo ? "Ativo" : "Inativo"} variante={coordenadorDetalhe.ativo ? "sucesso" : "neutro"} />
           </div>
 
           <dl className="detalhe-usuario__dados">
@@ -550,28 +521,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               </ul>
             )}
           </section>
-        </Modal>
-      ) : null}
-
-      {coordenadorParaExcluir ? (
-        <Modal
-          onFechar={() => setCoordenadorParaExcluir(null)}
-          titulo="Excluir coordenador"
-          rodape={
-            <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={() => setCoordenadorParaExcluir(null)} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
-              </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusaoCoordenador} variante="sucesso">
-                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
-              </Botao>
-            </footer>
-          }
-        >
-          <p className="texto-confirmacao-exclusao">
-            Deseja excluir o coordenador <strong>{coordenadorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
-          </p>
-          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
       ) : null}
 

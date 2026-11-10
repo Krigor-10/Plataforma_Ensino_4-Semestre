@@ -3302,31 +3302,34 @@
   justify-content: space-between;
 }
 
-/* Variante compacta e horizontal - usada no accordion de avaliacoes dentro do
-   curso (SecaoAvaliacoesProfessor.jsx), onde os detalhes ficam lado a lado em
-   vez de empilhados como na modal "Detalhes da avaliacao" (.lista-detalhes
-   padrao continua vertical la, sem alteracao). */
+/* Variante em grid - resumo compacto de metricas, usada no accordion de
+   avaliacoes do Professor (SecaoAvaliacoesProfessor.jsx) e do Aluno
+   (SecoesAluno.jsx), e no resumo Progresso/Conclusao/Desempenho medio de
+   modulo (DetalheModuloDesempenho.jsx, reaproveitado por Progresso do
+   Professor e pela tela unica do curso). Rotulo (dt) sempre acima do valor
+   (dd) - a versao anterior (flex-direction:row + white-space:nowrap)
+   deixava dt/dd lado a lado na mesma linha, comprimindo/cortando o texto
+   quando a soma das larguras passava do espaco disponivel. Colunas iguais
+   que se ajustam ao espaco (auto-fit/minmax): exatos 5 quando ha 5 itens e
+   o container e largo (desktop), menos itens por linha em telas estreitas -
+   sem precisar de um breakpoint por tela, nem de overflow horizontal.
+   .lista-detalhes padrao (vertical, empilhado) continua sem alteracao -
+   usado por exemplo na modal "Detalhes da avaliacao". */
 .lista-detalhes--inline {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
   column-gap: 1.25rem;
-  row-gap: 0.35rem;
+  row-gap: var(--espaco-md);
 }
 
 .lista-detalhes--inline .lista-detalhes__item {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 0.35rem;
   padding-bottom: 0;
   border-bottom: none;
-  white-space: nowrap;
+  min-width: 0;
 }
 
-@media (max-width: 30rem) {
-  .lista-detalhes--inline .lista-detalhes__item {
-    white-space: normal;
-  }
+.lista-detalhes--inline .lista-detalhes__item dd {
+  font-weight: 700;
 }
 
 /* Area de acao do aluno dentro do accordion de avaliacao (Iniciar avaliacao
@@ -3971,42 +3974,12 @@
   font-size: 0.82rem;
 }
 
-/* Mesmo padrao de cartao com borda da tela Avaliacoes do aluno, reaplicado na
-   tela Avaliacoes do PROFESSOR (dentro do curso selecionado) pra manter a
-   mesma linguagem visual entre as duas telas. Fundo trocado de
-   rgba(255,255,255,0.015) (quase invisivel, cartao se confundia com o fundo
-   da pagina) pra --cor-fundo-elevado - mesmo tom usado no cabecalho dos
-   modulos de Conteudos (.conteudos-modulo--cartao > .conteudos-modulo__cabecalho
-   abaixo), so que aqui no cartao inteiro, pra dar peso visual proprio a cada
-   avaliacao. Borda continua fina/minimalista (so 1px var(--cor-borda), sem
-   cor nova), igual nos dois temas. */
-.tela-avaliacoes-professor .conteudos-modulo {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  padding: 0 var(--espaco-md);
-  background: var(--cor-fundo-elevado);
-}
-
-/* .conteudos-modulo--cartao (ver mais abaixo) zera border-bottom pra nao
-   duplicar com o cabecalho - mas aqui o cartao e uma unidade so (sem
-   cabecalho visualmente separado do corpo), entao a borda de baixo precisa
-   voltar. O shorthand "border-bottom: none" zerado la tambem reseta a COR
-   do border-bottom pra currentcolor (cor do texto, dai a linha branca) -
-   por isso aqui a cor e fixada em --cor-borda (igual as outras bordas do
-   cartao), com --cor-borda-forte so quando o card esta aberto, igual ao
-   escurecimento que .conteudos-modulo:has(...) ja aplica nas outras 3
-   bordas. Antes isso so era corrigido no ultimo card da lista (:last-child);
-   agora vale pra todos, entao essa regra generica cobre a lista inteira e
-   as duas regras de :last-child que existiam aqui foram removidas (ficaram
-   redundantes). */
-.tela-avaliacoes-professor .conteudos-modulo.conteudos-modulo--cartao {
-  border-bottom: 1px solid var(--cor-borda);
-}
-
-.tela-avaliacoes-professor .conteudos-modulo.conteudos-modulo--cartao:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
-  border-bottom-color: var(--cor-borda-forte);
-}
-
+/* Avaliacoes do PROFESSOR reaproveita o mesmo cartao --cartao de Conteudos e
+   de Avaliacoes do Aluno (regras logo abaixo, perto de .conteudos-modulo--
+   cartao) - nao tem border/padding/background proprios aqui. A versao
+   anterior desenhava um card extra por fora (border+padding+fundo), com o
+   cabecalho de --cartao ficando recuado 16px pra dentro dele ("card dentro
+   de card"). */
 .atividades-curso__progresso {
   display: flex;
   flex-direction: column;
@@ -4204,6 +4177,60 @@
 
 .atividades-curso__quizzes .atividades-curso__item:last-child {
   border-bottom: none;
+}
+
+/* ACESSO COORDENADOR — hierarquia visual dos modulos expandidos (prompt
+   10/11): reaproveita o MESMO padrao de linha de ligacao da trilha de
+   Conteudos (".trilha-conteudos", ver comentario "linha de ligacao do quiz"
+   mais abaixo), um nivel acima - aqui o tronco liga o MODULO expandido aos
+   CONTEUDOS/quiz abaixo dele (ao inves de conteudo -> quiz vinculado).
+   Escopado em .conteudos-modulo--gestao (exclusivo de PainelCursoGestao.jsx,
+   Admin/Coordenador) pra nao alterar Conteudos do Professor/Aluno nem o
+   Progresso do Professor, que reaproveitam a mesma .atividades-curso__lista/
+   __item sem esse reforco.
+   O icone (2.75rem) fica sempre encostado no topo do item (align-items:
+   flex-start, padrao da .atividades-curso__linha), entao seu centro vertical
+   e sempre 1.375rem a partir do topo do <li> - nao precisa de align-
+   items:center nem de calculo baseado na altura real da linha (que varia
+   com o numero de linhas do titulo+meta). */
+.conteudos-modulo--gestao .atividades-curso__lista {
+  position: relative;
+  padding-left: 2.25rem;
+  gap: 0;
+}
+
+.conteudos-modulo--gestao .atividades-curso__item {
+  position: relative;
+}
+
+/* Curva de cada item: desce do tronco (x: 0.75rem) e entra no centro
+   horizontal do icone (padding-left da lista + metade do icone = 2.25rem +
+   1.375rem = 3.625rem; largura da curva = 3.625rem - 0.75rem). */
+.conteudos-modulo--gestao .atividades-curso__item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 1.375rem;
+  left: 0.75rem;
+  width: 2.875rem;
+  border-left: 2px solid var(--cor-borda-forte);
+  border-bottom: 2px solid var(--cor-borda-forte);
+  border-bottom-left-radius: 0.6rem;
+  pointer-events: none;
+}
+
+/* Tronco entre um item e o seguinte - ausente no ultimo item de proposito,
+   pra cortar a guia exatamente ali e reforcar o FIM do agrupamento (o
+   INICIO ja fica marcado pela curva do primeiro item, que comeca do topo da
+   lista). */
+.conteudos-modulo--gestao .atividades-curso__item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1.375rem;
+  bottom: 0;
+  left: 0.75rem;
+  border-left: 2px solid var(--cor-borda-forte);
+  pointer-events: none;
 }
 
 /* Espacamento das linhas: um unico lugar define o espaco de cada linha (o
@@ -5855,6 +5882,22 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* Nos cards --cartao, o hover/foco do toggle nao pinta mais o proprio botao
+   (que fica recuado dentro do padding do cabecalho e desenhava uma caixa
+   menor por dentro dele) - o cabecalho INTEIRO clareia (ou escurece, no tema
+   claro) de leve via --realce-card-modulo. O menu de "Mais acoes" (MenuAcoes)
+   fica no mesmo cabecalho mas fora do toggle, entao passar o mouse nele nao
+   aciona esse realce. */
+.conteudos-modulo--cartao .conteudos-modulo__toggle:hover,
+.conteudos-modulo--cartao .conteudos-modulo__toggle:focus-visible {
+  background: none;
+}
+
+.conteudos-modulo--cartao > .conteudos-modulo__cabecalho:has(.conteudos-modulo__toggle:hover),
+.conteudos-modulo--cartao > .conteudos-modulo__cabecalho:has(.conteudos-modulo__toggle:focus-visible) {
+  background: var(--realce-card-modulo);
+}
+
 .conteudos-modulo__info {
   flex: 1;
   min-width: 0;
@@ -7295,29 +7338,22 @@
   transition: border-color var(--transicao-normal), transform var(--transicao-normal), box-shadow var(--transicao-normal);
 }
 
-.catalogo-card__selecao {
-  position: absolute;
-  top: var(--espaco-sm);
-  left: var(--espaco-sm);
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  background: rgba(10, 10, 20, 0.55);
-  border-radius: var(--raio-sm);
-  backdrop-filter: blur(2px);
-}
-
-.catalogo-card__selecao input[type="checkbox"] {
-  width: 1.15rem;
-  height: 1.15rem;
-  cursor: pointer;
-}
-
 .catalogo-card:hover {
   border-color: var(--cor-borda-forte);
+}
+
+/* CodeRyse - melhorias administrativas (10/11): mesmo card de curso que o
+   Professor ja usa (GradeCursosProfessor.jsx reaproveita a mesma
+   .catalogo-card), so que ate agora so com sombra no hover - em repouso o
+   card ficava "achatado" contra o fundo da pagina so com a borda fina pra
+   separar. --relevo-card-base (mesmo token do relevo dos cards de modulo,
+   ja adaptado por tema em base.css) aplica uma sombra sutil permanente,
+   reforcando a elevacao sem competir com o levantar+sombra do hover
+   (que continua sobrescrevendo em :hover). Escopado em .catalogo-grade--
+   relevo (so na grade de Cursos do Coordenador) pra nao alterar a grade do
+   Aluno/Professor, que nao fizeram parte deste pedido. */
+.catalogo-grade--relevo .catalogo-card {
+  box-shadow: var(--relevo-card-base);
 }
 
 /* Microinteracao sutil só em ponteiros com hover de verdade (mouse/trackpad) -

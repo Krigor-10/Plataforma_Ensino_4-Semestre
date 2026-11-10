@@ -13,8 +13,6 @@ import {
   MdAssignmentTurnedIn,
   MdBarChart,
   MdDescription,
-  MdGroups,
-  MdLayers,
   MdMenuBook,
   MdPeople,
   MdSchool,
@@ -57,8 +55,6 @@ function ChartTooltipStyle() {
 
 const ACESSO_RAPIDO = [
   { icone: <MdMenuBook size={20} />, rotulo: "Cursos", secao: "cursos" },
-  { icone: <MdLayers size={20} />, rotulo: "Modulos", secao: "modulos" },
-  { icone: <MdGroups size={20} />, rotulo: "Professores por Curso", secao: "turmas" },
   { icone: <MdAssignment size={20} />, rotulo: "Matriculas", secao: "matriculas" },
   { icone: <MdPeople size={20} />, rotulo: "Alunos", secao: "alunos" },
   { icone: <MdDescription size={20} />, rotulo: "Professores", secao: "professores" }

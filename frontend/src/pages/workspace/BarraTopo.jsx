@@ -29,7 +29,6 @@ const iconesPorSecao = {
   professores: TbChalkboard,
   coordenadores: TbUserShield,
   cursos: TbBooks,
-  modulos: TbStack,
   turmas: TbSchool,
   matriculas: TbClipboardList,
   avaliacoes: TbFileCheck,
@@ -71,9 +70,10 @@ export default function BarraTopo({
   const meta = getSectionMeta(secaoAtual, role);
   const IconeSecao = iconesPorSecao[secaoAtual] || TbLayoutDashboard;
   const temSecaoCursos = sections.some((s) => s.key === "cursos");
-  // Coordenador nao tem mais a secao "modulos" (virou parte da tela unica do
-  // curso), mas modulos continuam aparecendo na busca - so a navegacao muda.
-  const temSecaoModulos = sections.some((s) => s.key === "modulos") || role === "Coordenador";
+  // Coordenador e Admin nao tem mais a secao "modulos" (virou parte da tela
+  // unica do curso), mas modulos continuam aparecendo na busca - so a
+  // navegacao muda (direto pro curso, nao pra uma secao separada).
+  const temSecaoModulos = role === "Coordenador" || role === "Admin";
 
   useEffect(() => {
     function fecharAoClicarFora(e) {
@@ -183,7 +183,10 @@ export default function BarraTopo({
       }));
     if (secoesFiltradas.length) grupos.push({ categoria: "Seções", itens: secoesFiltradas });
 
-    const ehCoordenador = role === "Coordenador";
+    // Coordenador e Admin abrem o curso direto na tela unica
+    // (/app/cursos/:id); os outros perfis (ex. Professor buscando por um
+    // curso seu) caem na lista "/app/cursos".
+    const abreCursoDireto = role === "Coordenador" || role === "Admin";
 
     if (temSecaoCursos) {
       const cursosFiltrados = cursos
@@ -194,7 +197,7 @@ export default function BarraTopo({
           titulo: c.titulo,
           descricao: "Curso",
           Icone: TbBooks,
-          navegar: () => onNavigate(ehCoordenador ? `/app/cursos/${c.id}` : "/app/cursos"),
+          navegar: () => onNavigate(abreCursoDireto ? `/app/cursos/${c.id}` : "/app/cursos"),
         }));
       if (cursosFiltrados.length) grupos.push({ categoria: "Cursos", itens: cursosFiltrados });
     }
@@ -208,7 +211,7 @@ export default function BarraTopo({
           titulo: m.titulo,
           descricao: "Módulo",
           Icone: TbStack,
-          navegar: () => onNavigate(ehCoordenador ? `/app/cursos/${m.cursoId}` : "/app/modulos"),
+          navegar: () => onNavigate(`/app/cursos/${m.cursoId}`),
         }));
       if (modulosFiltrados.length) grupos.push({ categoria: "Módulos", itens: modulosFiltrados });
     }

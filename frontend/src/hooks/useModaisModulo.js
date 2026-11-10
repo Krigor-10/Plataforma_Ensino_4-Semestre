@@ -4,8 +4,8 @@ import { ApiError, apiRequest } from "../lib/api.js";
 const ESTADO_INICIAL_FORMULARIO = { cursoId: "", titulo: "" };
 
 /* Estado + chamadas de API dos modais de criar/editar/excluir modulo,
-   compartilhado entre SecaoModulos.jsx (Admin/Coordenador, com seletor de
-   curso) e PainelCursoCoordenador.jsx (curso ja fixo, sem seletor) - so a
+   compartilhado entre SecaoConteudosProfessor.jsx (Professor, curso ja fixo)
+   e PainelCursoGestao.jsx (Admin/Coordenador, curso ja fixo) - so a
    apresentacao (ModaisModulo.jsx) difere entre os dois. `cursoFixoId`: quando
    informado, todo modulo novo nasce vinculado a esse curso. */
 export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onSessionExpired }) {

@@ -5,12 +5,14 @@ import Modal from "./Modal.jsx";
 import SelectSimples from "./SelectSimples.jsx";
 import { InlineMessage } from "./Primitives.jsx";
 
-/* Modais de criar/editar/excluir modulo, compartilhados entre SecaoModulos.jsx
-   (Admin/Coordenador, lista de cursos pra escolher) e
-   PainelCursoCoordenador.jsx (curso ja fixo - ver `cursoFixo`). Estado e
-   chamadas de API vem do hook useModaisModulo.js. Curso nunca e alteravel ao
-   editar (so o titulo e salvo, ver useModaisModulo#salvarModulo) - o seletor
-   fica desabilitado nesse caso pra nao sugerir o contrario. */
+/* Modais de criar/editar/excluir modulo, compartilhados entre
+   SecaoConteudosProfessor.jsx e PainelCursoGestao.jsx (Admin/Coordenador) -
+   os dois chamam com o curso ja fixo (ver `cursoFixo`). O seletor de curso
+   (`cursosOrdenados`) fica disponivel pra um eventual caller sem curso fixo,
+   mas nenhum dos dois atuais precisa dele. Estado e chamadas de API vem do
+   hook useModaisModulo.js. Curso nunca e alteravel ao editar (so o titulo e
+   salvo, ver useModaisModulo#salvarModulo) - o seletor fica desabilitado
+   nesse caso pra nao sugerir o contrario. */
 export default function ModaisModulo({
   cursoFixo = null,
   cursosOrdenados = [],

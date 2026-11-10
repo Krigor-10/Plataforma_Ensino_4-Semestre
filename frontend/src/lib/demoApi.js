@@ -1596,7 +1596,7 @@ function listCoordinatorCourseDesempenho() {
 }
 
 /* GET /Cursos/{id}/desempenho (tela unica do Coordenador,
-   PainelCursoCoordenador.jsx) - mesmo contexto/builder de
+   PainelCursoGestao.jsx) - mesmo contexto/builder de
    listCoordinatorCourseDesempenho, so filtrado pro curso pedido. Curso
    inexistente ou de outro coordenador: 404, igual ao backend real
    (CursoDesempenhoService.ObterDesempenhoPorCursoAsync). */

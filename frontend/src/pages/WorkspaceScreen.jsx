@@ -12,11 +12,9 @@ import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.j
 import { SecaoConteudosProfessor } from "./workspace/SecaoConteudosProfessor.jsx";
 import { SecaoCoordenadores } from "./workspace/SecaoCoordenadores.jsx";
 import { SecaoCursos } from "./workspace/SecaoCursos.jsx";
-import { SecaoModulos } from "./workspace/SecaoModulos.jsx";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./workspace/SecoesAluno.jsx";
 import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./workspace/SecaoMatriculas.jsx";
 import { SecaoProfessores } from "./workspace/SecaoProfessores.jsx";
-import { SecaoProfessoresCurso } from "./workspace/SecaoProfessoresCurso.jsx";
 import { SecaoTurmasProfessor } from "./workspace/SecaoTurmasProfessor.jsx";
 import { ModalPerfilWorkspace } from "./workspace/ModalPerfilWorkspace.jsx";
 import { DashboardAdmin } from "./workspace/DashboardAdmin.jsx";
@@ -48,10 +46,6 @@ export default function WorkspaceScreen({
   const [refreshKey, setRefreshKey] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [confirmacaoSessao, setConfirmacaoSessao] = useState(null);
-  const [cursoEmFocoPorSecao, setCursoEmFocoPorSecao] = useState({
-    modulos: null,
-    turmas: null
-  });
 
   const role = usuario.tipoUsuario || "";
   const isManager = MANAGER_ROLES.has(role);
@@ -67,15 +61,6 @@ export default function WorkspaceScreen({
 
         if (section.key === "turmas" && role === "Professor") {
           return { ...section, label: "Progresso" };
-        }
-
-        // "Turmas" e rotulo errado pro Admin desde que a entidade Turma
-        // saiu de uso (ver pendencia_fase_b_remocao_turma na memoria do
-        // projeto) - a tela por tras (SecaoProfessoresCurso) nunca foi
-        // gestao de turma, e atribuicao de professor por curso. Renomear em
-        // vez de remover: a funcionalidade continua em uso.
-        if (section.key === "turmas" && role === "Admin") {
-          return { ...section, label: "Professores por Curso" };
         }
 
         return section;
@@ -100,7 +85,6 @@ export default function WorkspaceScreen({
   // subtitulo) — mostrar o hero generico ali so duplicaria o titulo da pagina.
   const SECOES_COM_CABECALHO_PROPRIO = [
     "cursos",
-    "modulos",
     "turmas",
     "alunos",
     "professores",
@@ -114,10 +98,12 @@ export default function WorkspaceScreen({
     SECOES_COM_CABECALHO_PROPRIO.includes(activeSection);
 
   useEffect(() => {
-    // Modulos e Progresso sairam do menu do Coordenador (viraram parte da
-    // tela unica do curso) - quem ainda tiver essas URLs salvas/em favoritos
-    // volta pra Cursos, em vez de cair no fallback generico pro Dashboard.
-    if (role === "Coordenador" && (route.section === "modulos" || route.section === "turmas")) {
+    // Modulos e Professores por Curso sairam do menu do Coordenador e do
+    // Admin (viraram parte da tela unica do curso) - quem ainda tiver essas
+    // URLs salvas/em favoritos volta pra Cursos, em vez de cair no fallback
+    // generico pro Dashboard. Professor continua usando "turmas" (Progresso),
+    // entao o redirect so vale pra quem perdeu a secao de fato.
+    if ((role === "Coordenador" || role === "Admin") && (route.section === "modulos" || route.section === "turmas")) {
       onNavigate("/app/cursos", { replace: true });
       return;
     }
@@ -492,31 +478,6 @@ export default function WorkspaceScreen({
     [approvedStudentRows]
   );
 
-  // Mantem a navegacao contextual entre Curso -> Modulos/Turmas sem precisar expandir o roteador agora.
-  function abrirSecaoRelacionadaAoCurso(section, curso) {
-    setCursoEmFocoPorSecao((atual) => ({
-      ...atual,
-      [section]: {
-        cursoId: Number(curso.id),
-        titulo: curso.titulo || `Curso #${curso.id}`
-      }
-    }));
-    onNavigate(`/app/${section}`);
-  }
-
-  function limparCursoEmFoco(section) {
-    setCursoEmFocoPorSecao((atual) => {
-      if (!atual[section]) {
-        return atual;
-      }
-
-      return {
-        ...atual,
-        [section]: null
-      };
-    });
-  }
-
   function solicitarSaida(tipo) {
     setConfirmacaoSessao(
       tipo === "demo"
@@ -576,8 +537,8 @@ export default function WorkspaceScreen({
         cursos={role === "Coordenador" ? cursosDaSecaoCursos : snapshot.cursos}
         modulos={role === "Coordenador" ? modulosDaSecaoModulos : snapshot.modulos}
         cursoAbertoTitulo={
-          role === "Coordenador" && activeSection === "cursos" && route.param
-            ? coordenadorCursos.find((curso) => curso.id === Number(route.param))?.titulo || null
+          (role === "Coordenador" || role === "Admin") && activeSection === "cursos" && route.param
+            ? (role === "Coordenador" ? coordenadorCursos : snapshot.cursos).find((curso) => curso.id === Number(route.param))?.titulo || null
             : null
         }
         onNavigate={onNavigate}
@@ -719,31 +680,12 @@ export default function WorkspaceScreen({
                 cursos={cursosDaSecaoCursos}
                 ehAdmin={role === "Admin"}
                 ehCoordenador={role === "Coordenador"}
-                ehProfessor={role === "Professor"}
                 matriculas={snapshot.matriculas}
                 modulos={snapshot.modulos}
-                onAbrirSecaoCurso={abrirSecaoRelacionadaAoCurso}
                 onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
                 professores={snapshot.professores}
-              />
-            ) : null}
-
-            {activeSection === "modulos" ? (
-              <SecaoModulos
-                alunos={snapshot.alunos}
-                cursos={cursosDaSecaoCursos}
-                cursoEmFoco={cursoEmFocoPorSecao.modulos}
-                ehAdmin={role === "Admin"}
-                ehCoordenador={role === "Coordenador"}
-                matriculas={snapshot.matriculas}
-                modulos={modulosDaSecaoModulos}
-                onCursoEmFocoAplicado={() => limparCursoEmFoco("modulos")}
-                onRefresh={() => setRefreshKey((current) => current + 1)}
-                onSessionExpired={onSessionExpired}
-                professores={snapshot.professores}
-                turmas={snapshot.turmas}
               />
             ) : null}
 
@@ -837,19 +779,8 @@ export default function WorkspaceScreen({
               />
             ) : null}
 
-            {activeSection === "turmas" ? (
-              isProfessor ? (
-                <SecaoTurmasProfessor cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
-              ) : (
-                <SecaoProfessoresCurso
-                  cursoPorId={cursoByIdParaTurmas}
-                  cursoEmFoco={cursoEmFocoPorSecao.turmas}
-                  onCursoEmFocoAplicado={() => limparCursoEmFoco("turmas")}
-                  onRefresh={() => setRefreshKey((current) => current + 1)}
-                  onSessionExpired={onSessionExpired}
-                  professores={snapshot.professores}
-                />
-              )
+            {activeSection === "turmas" && isProfessor ? (
+              <SecaoTurmasProfessor cursoPorId={cursoByIdParaTurmas} onSessionExpired={onSessionExpired} />
             ) : null}
           </ErrorBoundary>
         ) : null}

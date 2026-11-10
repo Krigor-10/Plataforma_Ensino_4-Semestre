@@ -6,6 +6,7 @@ public interface ICursoDesempenhoService
 {
     Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorCoordenadorAsync(int coordenadorId);
     Task<CursoDesempenhoResponseDto> ObterDesempenhoPorCursoAsync(int cursoId, int coordenadorId);
+    Task<CursoDesempenhoResponseDto> ObterDesempenhoPorCursoParaAdminAsync(int cursoId);
     Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorProfessorAsync(int professorId);
     Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoParaAdminAsync();
 }

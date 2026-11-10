@@ -652,16 +652,10 @@ export function SecaoConteudosProfessor({
     <div className="tela-conteudos">
       {!cursoAtivo ? (
         <GradeCursosProfessor
-          cursos={cursosDoProfessor.map(({ curso, totalConteudos, totalItensNaoArquivados, totalModulos, totalPublicados }) => ({
+          cursos={cursosDoProfessor.map(({ curso, totalConteudos, totalModulos, totalPublicados }) => ({
             curso,
             resumo: `${totalModulos} módulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"}`,
-            rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`,
-            badge:
-              totalPublicados === 0
-                ? "Rascunho"
-                : totalPublicados === totalItensNaoArquivados
-                ? "Publicado"
-                : "Parcialmente publicado"
+            rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`
           }))}
           mensagemVazia="Você ainda não está vinculado a nenhum curso."
           onSelecionar={abrirCurso}
@@ -1006,7 +1000,7 @@ function TrilhaConteudosProfessor({
   const [modalArquivadosAberto, setModalArquivadosAberto] = useState(false);
   // "Novo modulo" (rodada 2 "tela do curso do Coordenador", item 6): criar
   // modulo passou do Coordenador pro Professor - mesmo hook/modal
-  // compartilhado com SecaoModulos.jsx (Admin) e PainelCursoCoordenador.jsx.
+  // compartilhado com PainelCursoGestao.jsx (Admin/Coordenador).
   const modaisModulo = useModaisModulo({
     cursoFixoId: cursoAtivo.curso.id,
     mostrarToast,

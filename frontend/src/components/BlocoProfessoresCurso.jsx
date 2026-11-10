@@ -5,10 +5,9 @@ import Modal from "./Modal.jsx";
 import SelectUsuario from "./SelectUsuario.jsx";
 
 /* Formulario de vincular + lista de desvincular professores de UM curso,
-   compartilhado entre SecaoProfessoresCurso.jsx (Admin, sem confirmacao, pra
-   nao alterar o fluxo existente) e PainelCursoCoordenador.jsx (Coordenador,
-   com `confirmarDesvinculo` - desvincular pede confirmacao em Modal antes de
-   chamar a API). Estado/chamadas vem do hook useProfessoresCurso.js. */
+   usado por PainelCursoGestao.jsx (Admin e Coordenador) com
+   `confirmarDesvinculo` - desvincular pede confirmacao em Modal antes de
+   chamar a API. Estado/chamadas vem do hook useProfessoresCurso.js. */
 export default function BlocoProfessoresCurso({
   confirmarDesvinculo = false,
   titulo,

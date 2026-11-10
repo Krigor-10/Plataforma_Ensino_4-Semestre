@@ -278,9 +278,15 @@ public class CursosController : ControllerBase
     }
 
     [HttpGet("{id:int}/desempenho")]
-    [Authorize(Roles = "Coordenador")]
+    [Authorize(Roles = "Admin,Coordenador")]
     public async Task<IActionResult> ObterDesempenhoPorCurso(int id)
     {
+        if (User.IsInRole("Admin"))
+        {
+            var desempenhoAdmin = await _cursoDesempenhoService.ObterDesempenhoPorCursoParaAdminAsync(id);
+            return Ok(desempenhoAdmin);
+        }
+
         var coordenadorId = ObterCoordenadorId();
         if (!coordenadorId.HasValue)
         {

@@ -29,6 +29,12 @@
   --borda-card-modulo: rgba(0, 0, 0, 0.30);
   --relevo-card-topo: inset 0 1px 0 rgba(255, 255, 255, 0.09);
   --relevo-card-base: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+  /* Realce do cabecalho do card ao passar o mouse/focar o toggle (ver
+     .conteudos-modulo--cartao > .conteudos-modulo__cabecalho:has(...) em
+     workspace.css) - no escuro, cabecalho ja e o tom mais claro do card,
+     entao clareia um pouco mais; no claro (ver [data-tema="claro"] abaixo) e
+     o oposto, o cabecalho ja e branco, entao escurece de leve. */
+  --realce-card-modulo: color-mix(in srgb, var(--cor-card-modulo), #fff 3%);
 
   --cor-marca: #7b2ff7;
   --cor-marca-profunda: #5b19cf;
@@ -152,6 +158,7 @@
   --borda-card-modulo: rgba(13, 15, 24, 0.08);
   --relevo-card-topo: inset 0 1px 0 #ffffff;
   --relevo-card-base: inset 0 -2px 0 rgba(13, 15, 24, 0.06);
+  --realce-card-modulo: color-mix(in srgb, var(--cor-card-modulo), #000 4%);
 
   --cor-marca-clara: #5b19cf;
   --cor-acento: #6b21e8;

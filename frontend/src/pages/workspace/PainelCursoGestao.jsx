@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   TbAward,
+  TbCamera,
   TbCertificate,
   TbChartBar,
   TbChevronDown,
@@ -9,7 +10,9 @@ import {
   TbLock,
   TbLockOpen,
   TbPencil,
+  TbPlus,
   TbTrophy,
+  TbUserCheck,
   TbUsers
 } from "react-icons/tb";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
@@ -27,11 +30,12 @@ import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useProfessoresCurso } from "../../hooks/useProfessoresCurso.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatGrade, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
+import { formatGrade, formatMoney, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
 
 const MODELO_ACOMPANHADO = 3;
 const TIPO_AVALIACAO_QUIZ = 1;
 const STATUS_ARQUIVADO = 3;
+const ROTULOS_MODELO_CURSO = { 1: "Gratuito", 2: "Pago", 3: "Acompanhado" };
 
 function ordenarPorCriacao(moduloA, moduloB) {
   const dataA = new Date(moduloA.dataCriacao || 0).getTime();
@@ -39,24 +43,34 @@ function ordenarPorCriacao(moduloA, moduloB) {
   return dataA - dataB || Number(moduloA.id) - Number(moduloB.id);
 }
 
-/* Tela unica do curso do Coordenador (rodada 1: "fluxo do coordenador: tela
-   unica do curso"; rodada 2: ajustes de topo/abas/breadcrumb/quiz, ver
-   docs/fluxo-coordenador/). Renderizada por SecaoCursos quando ehCoordenador
-   e ha curso aberto - os modais de editar curso continuam la (modaisComuns).
-   Busca o desempenho do curso aqui dentro (GET /Cursos/{id}/desempenho),
-   independente do snapshot global. */
-export default function PainelCursoCoordenador({
+/* Tela unica do curso, compartilhada entre Coordenador e Admin (rodada 1:
+   "fluxo do coordenador: tela unica do curso"; rodada 2: ajustes de topo/
+   abas/breadcrumb/quiz; rodada 3: Admin ganha a mesma tela, ver
+   docs/fluxo-coordenador/ e docs/fluxo-admin/). Renderizada por SecaoCursos
+   quando ha curso aberto - os modais de editar curso, foto de capa e
+   atribuir coordenador continuam la (modaisComuns), SecaoCursos so passa os
+   callbacks. `perfil`("Coordenador" default | "Admin") liga as acoes
+   exclusivas de cada papel: Admin ganha Foto de capa, atribuir Coordenador e
+   Novo modulo; Encerrar/Reabrir continua so do Coordenador (regra de
+   negocio, nao de UI). Busca o desempenho do curso aqui dentro (GET
+   /Cursos/{id}/desempenho), independente do snapshot global. */
+export default function PainelCursoGestao({
+  coordenadores = [],
   curso,
   modulos,
+  onAlterarFotoCurso,
+  onAtribuirCoordenador,
   onEditarCurso,
   onEncerrarCurso,
   onReabrirCurso,
   onRefresh,
   onSessionExpired,
   onVoltar,
+  perfil = "Coordenador",
   professores,
   salvandoCurso
 }) {
+  const ehAdmin = perfil === "Admin";
   const { mostrarToast } = useToast();
   const [desempenho, setDesempenho] = useState(null);
   const [carregandoDesempenho, setCarregandoDesempenho] = useState(true);
@@ -179,6 +193,8 @@ export default function PainelCursoCoordenador({
   }
 
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
+  const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
+  const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
 
   return (
     <div className="conteudos-aluno">
@@ -188,23 +204,44 @@ export default function PainelCursoCoordenador({
         <div className="atividades-curso__cabecalho-principal">
           <h2 className="atividades-curso__titulo">{curso.titulo}</h2>
           <p className="atividades-curso__subtitulo">
-            {curso.codigoRegistro || "Sem codigo"}
-            {curso.descricao ? ` · ${curso.descricao}` : ""}
+            {ehAdmin ? (
+              <>
+                {curso.codigoRegistro || "Sem codigo"}
+                {` · ${coordenadorDoCurso ? `Coordenacao: ${coordenadorDoCurso.nome}` : "Sem coordenacao"}`}
+                {` · ${rotuloModeloCurso}`}
+                {` · ${formatMoney(curso.preco)}`}
+              </>
+            ) : (
+              <>
+                {curso.codigoRegistro || "Sem codigo"}
+                {curso.descricao ? ` · ${curso.descricao}` : ""}
+              </>
+            )}
           </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--espaco-sm)", marginTop: "var(--espaco-sm)" }}>
             <Botao onClick={onEditarCurso} tamanho="pequeno" variante="secundario">
               <TbPencil aria-hidden="true" size={16} /> Editar curso
             </Botao>
+            {ehAdmin ? (
+              <Botao onClick={onAlterarFotoCurso} tamanho="pequeno" variante="secundario">
+                <TbCamera aria-hidden="true" size={16} /> Foto de capa
+              </Botao>
+            ) : null}
             <Botao onClick={() => setModalProfessoresAberto(true)} tamanho="pequeno" variante="secundario">
               <TbUsers aria-hidden="true" size={16} /> Professores ({professoresCurso.professoresDoCurso.length})
             </Botao>
-            {ehAcompanhado && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
+            {ehAdmin ? (
+              <Botao onClick={onAtribuirCoordenador} tamanho="pequeno" variante={coordenadorDoCurso ? "secundario" : "primario"}>
+                <TbUserCheck aria-hidden="true" size={16} /> {coordenadorDoCurso ? "Coordenador" : "Atribuir coordenador"}
+              </Botao>
+            ) : null}
+            {!ehAdmin && ehAcompanhado && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
               <Botao disabled={salvandoCurso} onClick={onEncerrarCurso} tamanho="pequeno" variante="primario">
                 <TbLock aria-hidden="true" size={16} /> Encerrar curso
               </Botao>
             ) : null}
-            {ehAcompanhado && curso.encerradoEm ? (
+            {!ehAdmin && ehAcompanhado && curso.encerradoEm ? (
               <Botao disabled={salvandoCurso} onClick={onReabrirCurso} tamanho="pequeno" variante="secundario">
                 <TbLockOpen aria-hidden="true" size={16} /> Reabrir curso
               </Botao>
@@ -252,6 +289,13 @@ export default function PainelCursoCoordenador({
 
       {abaAtiva === "modulos" ? (
         <div aria-label="Modulos do curso" role="tabpanel">
+          {ehAdmin ? (
+            <div style={{ marginBottom: "var(--espaco-md)" }}>
+              <Botao onClick={() => modais.abrirFormularioNovoModulo(curso.id)} tamanho="pequeno" variante="primario">
+                <TbPlus aria-hidden="true" size={16} /> Novo modulo
+              </Botao>
+            </div>
+          ) : null}
           {modulosOrdenados.length === 0 ? (
             <p className="texto-vazio" role="status">Nenhum modulo cadastrado neste curso.</p>
           ) : (
@@ -264,7 +308,7 @@ export default function PainelCursoCoordenador({
                 const totalQuizzes = desempenhoModulo ? desempenhoModulo.avaliacoes.length : modulo.totalAvaliacoes ?? 0;
 
                 return (
-                  <section className="conteudos-modulo" key={modulo.id}>
+                  <section className="conteudos-modulo conteudos-modulo--gestao" key={modulo.id}>
                     <header className="conteudos-modulo__cabecalho">
                       <h3 className="conteudos-modulo__cabecalho-wrapper">
                         <button

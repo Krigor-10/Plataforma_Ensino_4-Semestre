@@ -33,6 +33,13 @@ public class CursoDesempenhoService : ICursoDesempenhoService
             ?? throw new KeyNotFoundException("Curso nao encontrado.");
     }
 
+    public async Task<CursoDesempenhoResponseDto> ObterDesempenhoPorCursoParaAdminAsync(int cursoId)
+    {
+        var resultado = await ObterDesempenhoInternoAsync(coordenadorId: null, professorId: null, cursoIdFiltro: cursoId);
+        return resultado.FirstOrDefault()
+            ?? throw new KeyNotFoundException("Curso nao encontrado.");
+    }
+
     public async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorProfessorAsync(int professorId)
         => await ObterDesempenhoInternoAsync(coordenadorId: null, professorId: professorId, cursoIdFiltro: null);
 

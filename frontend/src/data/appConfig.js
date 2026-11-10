@@ -6,11 +6,10 @@ export const APP_SECTIONS = [
   { key: "professores", label: "Professores", roles: ["Admin", "Coordenador"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
-  { key: "modulos", label: "Modulos", roles: ["Admin"] },
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Aluno"] },
-  { key: "turmas", label: "Turmas", roles: ["Admin", "Professor"] },
+  { key: "turmas", label: "Turmas", roles: ["Professor"] },
   { key: "meus-cursos", label: "Progresso", roles: ["Aluno"] },
   { key: "cursos-matriculados", label: "Meus Cursos", roles: ["Aluno"], showInSidebar: false },
   { key: "certificados", label: "Certificados", roles: ["Aluno"], showInSidebar: false }
@@ -140,15 +139,13 @@ export function getSectionMeta(section, role) {
       description: "Consulta dos coordenadores responsaveis pela supervisao academica dos cursos."
     },
     cursos: {
-      title: role === "Coordenador" ? "Cursos" : "Catalogo academico",
+      title: role === "Coordenador" || role === "Admin" ? "Cursos" : "Catalogo academico",
       description:
         role === "Coordenador"
           ? "Cursos ativos sob sua coordenacao - escolha um pra ver modulos, avaliacoes e professores."
-          : "A mesma base de cursos alimenta a home, o cadastro e o painel."
-    },
-    modulos: {
-      title: "Módulos por curso",
-      description: "Organizacao dos modulos por curso para sustentar conteudos, avaliacoes e progresso."
+          : role === "Admin"
+            ? "Escolha um curso pra ver modulos, avaliacoes, professores e coordenador."
+            : "A mesma base de cursos alimenta a home, o cadastro e o painel."
     },
     conteudos: {
       title: "Trilha de conteudos",
@@ -172,13 +169,8 @@ export function getSectionMeta(section, role) {
           : "Acompanhamento das solicitacoes e do status academico."
     },
     turmas: {
-      title: role === "Professor" || role === "Coordenador" ? "Progresso" : "Professores por curso",
-      description:
-        role === "Professor"
-          ? "Acompanhe o desempenho dos seus cursos e avaliacoes."
-          : role === "Coordenador"
-            ? "Progresso e desempenho dos cursos, modulos e materiais sob sua coordenacao."
-            : "Gerencie quais professores lecionam em cada curso."
+      title: "Progresso",
+      description: "Acompanhe o desempenho dos seus cursos e avaliacoes."
     },
     certificados: {
       title: "Meus certificados",

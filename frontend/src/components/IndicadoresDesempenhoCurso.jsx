@@ -1,6 +1,6 @@
 /* Bloco de indicadores de desempenho de um curso, usado por Progresso do
    Professor (SecaoTurmasProfessor). O Coordenador tem seus proprios 4
-   cartoes na tela unica do curso (PainelCursoCoordenador.jsx), que ja conta
+   cartoes na tela unica do curso (PainelCursoGestao.jsx), que ja conta
    so matriculas aprovadas no backend (CursoDesempenhoService) — por isso
    "Total de alunos" e "Alunos aprovados" eram o mesmo numero ali e esse
    cartao foi removido, ficando so aqui no Professor. "Progresso medio"

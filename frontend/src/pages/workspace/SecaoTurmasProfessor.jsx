@@ -13,7 +13,7 @@ import PainelModulosDesempenho from "./PainelModulosDesempenho.jsx";
 /* PROGRESSO DO PROFESSOR — Curso -> Modulos -> Materiais/Avaliacoes, via
    GET /Cursos/desempenho (escopado por professor autenticado) e o bloco
    compartilhado PainelModulosDesempenho/DetalheModuloDesempenho, tambem
-   reaproveitado pela tela unica do Coordenador (PainelCursoCoordenador.jsx).
+   reaproveitado pela tela unica do curso (PainelCursoGestao.jsx).
    So nesta tela: "Exportar desempenho" (acao operacional que so faz sentido
    pra quem leciona a turma). Sem nenhuma acao de vinculo professor-curso —
    isso e exclusivo do Admin em SecaoProfessoresCurso.jsx. */

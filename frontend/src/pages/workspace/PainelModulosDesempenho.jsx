@@ -10,8 +10,8 @@ import { formatGrade, normalizePublicationStatus, normalizeTipoAvaliacao } from 
 /* Bloco de Modulos (accordion) + Avaliacoes sem modulo do Progresso do
    Professor (SecaoTurmasProfessor.jsx), consumindo CursoDesempenhoResponseDto
    (GET /Cursos/desempenho). So visualizacao/analise, sem nenhuma acao
-   administrativa. O Coordenador tem sua propria tela unica do curso
-   (PainelCursoCoordenador.jsx), que reaproveita so o detalhe do modulo
+   administrativa. Admin e Coordenador tem sua propria tela unica do curso
+   (PainelCursoGestao.jsx), que reaproveita so o detalhe do modulo
    (DetalheModuloDesempenho.jsx) com `contextoCoordenador` - ver aquele
    componente pro que essa prop muda (oculta tipo de conteudo/status de
    publicacao, troca "X% concluido" por "N alunos concluiram · X%"). */

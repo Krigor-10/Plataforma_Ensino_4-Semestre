@@ -340,15 +340,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
           cursos={cursosDoProfessor.map(({ curso, totalAvaliacoes, totalPublicadas }) => ({
             curso,
             resumo: `${totalAvaliacoes} avaliaca${totalAvaliacoes === 1 ? "o" : "oes"}`,
-            rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`,
-            badge:
-              totalAvaliacoes === 0
-                ? "Sem avaliacoes"
-                : totalPublicadas === 0
-                ? "Rascunho"
-                : totalPublicadas === totalAvaliacoes
-                ? "Publicado"
-                : "Parcialmente publicado"
+            rodapeEsquerda: `${totalPublicadas} publicada${totalPublicadas === 1 ? "" : "s"}`
           }))}
           mensagemVazia="Voce ainda nao esta vinculado a nenhum curso."
           onSelecionar={abrirCurso}

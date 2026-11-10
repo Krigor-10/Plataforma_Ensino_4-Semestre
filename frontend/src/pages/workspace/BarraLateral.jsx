@@ -14,7 +14,6 @@ import {
   MdCastForEducation,
   MdManageAccounts,
   MdMenuBook,
-  MdLayers,
   MdGroups,
   MdAssignment,
   MdAssignmentTurnedIn,
@@ -40,7 +39,6 @@ const ICONES_SECAO = {
   professores: <MdCastForEducation size={18} />,
   coordenadores: <MdManageAccounts size={18} />,
   cursos: <TbBook size={18} />,
-  modulos: <MdLayers size={18} />,
   turmas: <MdGroups size={18} />,
   matriculas: <MdAssignment size={18} />,
   avaliacoes: <MdAssignmentTurnedIn size={18} />,
@@ -59,7 +57,7 @@ export const GRUPOS_DEF = {
   academico: {
     rotulo: "Acadêmico",
     Icone: MdMenuBook,
-    filhos: ["cursos", "modulos", "conteudos", "avaliacoes", "meus-cursos", "turmas"],
+    filhos: ["cursos", "conteudos", "avaliacoes", "meus-cursos", "turmas"],
   },
 };
 

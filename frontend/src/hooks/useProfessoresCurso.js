@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ApiError, apiRequest } from "../lib/api.js";
 
 /* Estado + chamadas de API dos professores vinculados a UM curso (N:N,
-   tabela ProfessoresCursos), compartilhado entre SecaoProfessoresCurso.jsx
-   (Admin) e PainelCursoCoordenador.jsx (Coordenador, curso ja fixo). So a
-   apresentacao (BlocoProfessoresCurso.jsx) difere entre os dois papeis. */
+   tabela ProfessoresCursos), usado por PainelCursoGestao.jsx (Admin e
+   Coordenador, curso ja fixo). Apresentacao em BlocoProfessoresCurso.jsx. */
 export function useProfessoresCurso({ cursoId, mostrarToast, onRefresh, onSessionExpired, professores = [] }) {
   const [professoresDoCurso, setProfessoresDoCurso] = useState([]);
   const [carregando, setCarregando] = useState(false);

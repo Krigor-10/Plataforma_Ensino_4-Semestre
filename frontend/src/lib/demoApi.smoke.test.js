@@ -179,7 +179,7 @@ describe("Progresso do Coordenador (regressao dos achados A1/A2)", () => {
   });
 });
 
-describe("Tela unica do curso do Coordenador (PainelCursoCoordenador)", () => {
+describe("Tela unica do curso do Coordenador (PainelCursoGestao)", () => {
   test("GET /Cursos/{id}/desempenho retorna o mesmo curso da listagem", async () => {
     await loginComo("coordenacao@demo.edtech");
 

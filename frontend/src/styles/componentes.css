@@ -27,6 +27,17 @@
   gap: 0.375rem;
 }
 
+/* Linha de indicadores discretos (Total/Ativos/Inativos) no cabecalho das
+   tabelas administrativas (Professores/Coordenadores) - so organiza os
+   .insignia existentes em linha com wrap, sem estilo visual proprio. */
+.indicadores-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm);
+  margin-top: var(--espaco-xs);
+}
+
 /* ------------------------------------------------------------
    BOTÕES
    ------------------------------------------------------------ */
@@ -616,12 +627,25 @@ select.campo__entrada option {
 }
 
 .tabela-dados thead tr {
+  background: var(--cor-fundo-elevado);
   border-bottom: 1px solid var(--cor-borda);
+}
+
+/* Acompanha o raio do .painel-secao que envolve a tabela (tabela-dados-
+   container), senao o fundo do cabecalho fica com os cantos quadrados por
+   cima dos cantos arredondados do container - exatamente a "borda branca"
+   de contraste excessivo que a auditoria de UX pediu pra evitar. */
+.tabela-dados thead tr th:first-child {
+  border-top-left-radius: var(--raio-lg);
+}
+
+.tabela-dados thead tr th:last-child {
+  border-top-right-radius: var(--raio-lg);
 }
 
 .tabela-dados th {
   text-align: left;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   font-size: var(--texto-sm);
   font-weight: 600;
   text-transform: uppercase;
@@ -630,7 +654,7 @@ select.campo__entrada option {
 }
 
 .tabela-dados td {
-  padding: 0.85rem 1rem;
+  padding: 1rem;
   color: var(--cor-texto-forte);
   border-bottom: 1px solid var(--cor-borda);
 }

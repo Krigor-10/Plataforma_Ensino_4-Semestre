@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbDotsVertical, TbPlus, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdGroups, MdSave, MdSchool } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -48,10 +48,9 @@ function IconeOrdenacao({ direcao }) {
 export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, professores = [], turmas = [] }) {
   const { mostrarToast } = useToast();
   const [busca, setBusca] = useState("");
+  const [abaStatus, setAbaStatus] = useState("ativos");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
-  const [kebabAbertoId, setKebabAbertoId] = useState(null);
-  const [kebabPos, setKebabPos] = useState({ top: 0, left: 0 });
   const [professorDetalhe, setProfessorDetalhe] = useState(null);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [professorEmEdicaoId, setProfessorEmEdicaoId] = useState(null);
@@ -68,36 +67,11 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
     }
   });
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
-  const [professorParaExcluir, setProfessorParaExcluir] = useState(null);
-  const [mensagemExclusao, setMensagemExclusao] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const kebabRef = useRef(null);
-
-  useEffect(() => {
-    if (!kebabAbertoId) {
-      return undefined;
-    }
-
-    function fechar(event) {
-      if (event.type === "keydown") {
-        if (event.key === "Escape") {
-          setKebabAbertoId(null);
-        }
-        return;
-      }
-
-      if (kebabRef.current && !kebabRef.current.contains(event.target)) {
-        setKebabAbertoId(null);
-      }
-    }
-
-    document.addEventListener("mousedown", fechar);
-    document.addEventListener("keydown", fechar);
-    return () => {
-      document.removeEventListener("mousedown", fechar);
-      document.removeEventListener("keydown", fechar);
-    };
-  }, [kebabAbertoId]);
+  const [selecionados, setSelecionados] = useState(() => new Set());
+  const [confirmacaoLote, setConfirmacaoLote] = useState(null);
+  const [executandoLote, setExecutandoLote] = useState(false);
+  const refCheckboxCabecalho = useRef(null);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmasPorProfessor = useMemo(() => {
@@ -122,7 +96,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
 
   const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
   const professoresFiltrados = useMemo(() => {
-    let proximos = professores;
+    let proximos = professores.filter((professor) => Boolean(professor.ativo) === (abaStatus === "ativos"));
 
     if (termoBusca) {
       proximos = proximos.filter((professor) => {
@@ -135,13 +109,132 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       const comparacao = String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR");
       return direcao === "asc" ? comparacao : -comparacao;
     });
-  }, [direcao, professores, termoBusca]);
+  }, [abaStatus, direcao, professores, termoBusca]);
 
   const totalPaginas = Math.max(1, Math.ceil(professoresFiltrados.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
   const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
   const itensPagina = professoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
   const totalAtivos = professores.filter((professor) => professor.ativo).length;
+  const totalInativos = professores.length - totalAtivos;
+
+  const idsVisiveis = useMemo(() => new Set(itensPagina.map((professor) => professor.id)), [itensPagina]);
+  const todosSelecionadosNaPagina = itensPagina.length > 0 && itensPagina.every((professor) => selecionados.has(professor.id));
+  const algunsSelecionadosNaPagina = itensPagina.some((professor) => selecionados.has(professor.id));
+
+  // Poda a selecao pros ids que ainda estao visiveis na pagina atual - cobre
+  // automaticamente troca de aba, busca e paginacao (o professor selecionado
+  // simplesmente nao existe mais na outra aba, ja que ativo/inativo sao
+  // mutuamente exclusivos) sem precisar de reset manual em cada handler.
+  useEffect(() => {
+    setSelecionados((atuais) => {
+      const proximos = new Set([...atuais].filter((id) => idsVisiveis.has(id)));
+      return proximos.size === atuais.size ? atuais : proximos;
+    });
+  }, [idsVisiveis]);
+
+  useEffect(() => {
+    if (refCheckboxCabecalho.current) {
+      refCheckboxCabecalho.current.indeterminate = algunsSelecionadosNaPagina && !todosSelecionadosNaPagina;
+    }
+  }, [algunsSelecionadosNaPagina, todosSelecionadosNaPagina]);
+
+  function alternarSelecao(professorId) {
+    setSelecionados((atuais) => {
+      const proximos = new Set(atuais);
+
+      if (proximos.has(professorId)) {
+        proximos.delete(professorId);
+      } else {
+        proximos.add(professorId);
+      }
+
+      return proximos;
+    });
+  }
+
+  function alternarSelecaoPagina() {
+    setSelecionados((atuais) => {
+      const proximos = new Set(atuais);
+
+      if (todosSelecionadosNaPagina) {
+        itensPagina.forEach((professor) => proximos.delete(professor.id));
+      } else {
+        itensPagina.forEach((professor) => proximos.add(professor.id));
+      }
+
+      return proximos;
+    });
+  }
+
+  function limparSelecao() {
+    setSelecionados(new Set());
+  }
+
+  async function executarAcaoLote() {
+    const reativando = confirmacaoLote === "reativar";
+    const alvos = itensPagina.filter((professor) => selecionados.has(professor.id));
+
+    setExecutandoLote(true);
+
+    let sucesso = 0;
+    let falha = 0;
+
+    for (const professor of alvos) {
+      try {
+        await apiRequest(`/Professores/${professor.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            nome: professor.nome,
+            email: professor.email,
+            cpf: professor.cpf,
+            telefone: professor.telefone,
+            cep: professor.cep,
+            rua: professor.rua,
+            numero: professor.numero,
+            bairro: professor.bairro,
+            cidade: professor.cidade,
+            estado: professor.estado,
+            especialidade: professor.especialidade,
+            ativo: reativando
+          })
+        });
+        sucesso += 1;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          setExecutandoLote(false);
+          onSessionExpired?.();
+          return;
+        }
+
+        falha += 1;
+      }
+    }
+
+    setExecutandoLote(false);
+    setConfirmacaoLote(null);
+    setSelecionados(new Set());
+    onRefresh?.();
+
+    if (falha === 0) {
+      mostrarToast(
+        reativando
+          ? `${sucesso} professor${sucesso === 1 ? "" : "es"} reativado${sucesso === 1 ? "" : "s"} com sucesso.`
+          : `${sucesso} professor${sucesso === 1 ? "" : "es"} inativado${sucesso === 1 ? "" : "s"} com sucesso.`,
+        "sucesso"
+      );
+    } else {
+      mostrarToast(
+        `${sucesso} de ${alvos.length} professores atualizados; ${falha} falharam e continuam com o status anterior.`,
+        "erro"
+      );
+    }
+  }
+
+  function selecionarAbaStatus(aba) {
+    setAbaStatus(aba);
+    setPagina(1);
+  }
 
   function limparFiltros() {
     setBusca("");
@@ -151,13 +244,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   function alternarOrdenacao() {
     setDirecao((atual) => (atual === "asc" ? "desc" : "asc"));
     setPagina(1);
-  }
-
-  function abrirKebab(event, professorId) {
-    event.stopPropagation();
-    const retangulo = event.currentTarget.getBoundingClientRect();
-    setKebabPos({ top: retangulo.bottom + 6, left: retangulo.right - 168 });
-    setKebabAbertoId((atual) => (atual === professorId ? null : professorId));
   }
 
   function obterCursosDoProfessor(professor) {
@@ -196,7 +282,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
     });
     setMensagemFormulario({ tone: "", message: "" });
     setFormularioAberto(true);
-    setKebabAbertoId(null);
   }
 
   function fecharFormulario() {
@@ -302,25 +387,29 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
     }
   }
 
-  function abrirExclusaoProfessor(professor) {
-    setProfessorParaExcluir(professor);
-    setMensagemExclusao("");
-    setKebabAbertoId(null);
-  }
-
-  async function confirmarExclusaoProfessor() {
-    if (!professorParaExcluir) {
-      return;
-    }
-
-    setSalvando(true);
-    setMensagemExclusao("");
+  async function alternarStatusProfessor(professor) {
+    const novoStatusAtivo = !professor.ativo;
 
     try {
-      await apiRequest(`/Professores/${professorParaExcluir.id}`, { method: "DELETE" });
+      await apiRequest(`/Professores/${professor.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nome: professor.nome,
+          email: professor.email,
+          cpf: professor.cpf,
+          telefone: professor.telefone,
+          cep: professor.cep,
+          rua: professor.rua,
+          numero: professor.numero,
+          bairro: professor.bairro,
+          cidade: professor.cidade,
+          estado: professor.estado,
+          especialidade: professor.especialidade,
+          ativo: novoStatusAtivo
+        })
+      });
 
-      setProfessorParaExcluir(null);
-      mostrarToast("Professor excluido com sucesso.", "sucesso");
+      mostrarToast(novoStatusAtivo ? "Professor reativado com sucesso." : "Professor inativado com sucesso.", "sucesso");
       onRefresh?.();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -328,13 +417,10 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         return;
       }
 
-      setMensagemExclusao(err.message || "Nao foi possivel excluir o professor agora.");
-    } finally {
-      setSalvando(false);
+      mostrarToast(err.message || "Nao foi possivel atualizar o status do professor agora.", "erro");
     }
   }
 
-  const professorKebab = professores.find((professor) => professor.id === kebabAbertoId);
   const cursosDetalhe = professorDetalhe ? obterCursosDoProfessor(professorDetalhe) : [];
   const turmasDetalhe = professorDetalhe ? turmasPorProfessor.get(Number(professorDetalhe.id)) || [] : [];
 
@@ -343,9 +429,11 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Professores</h2>
-          <p className="cabecalho-pagina__subtitulo">
-            {professores.length} cadastrado{professores.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
-          </p>
+          <div className="indicadores-status">
+            <Insignia texto={`${professores.length} cadastrado${professores.length === 1 ? "" : "s"}`} variante="neutro" />
+            <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
+            <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
+          </div>
         </div>
         <div className="barra-filtros">
           <div className="campo-busca">
@@ -372,16 +460,69 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </div>
       </header>
 
+      <nav aria-label="Status dos professores" className="abas-matriculas" role="tablist">
+        <button
+          aria-selected={abaStatus === "ativos"}
+          className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+          onClick={() => selecionarAbaStatus("ativos")}
+          role="tab"
+          type="button"
+        >
+          Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
+        </button>
+        <button
+          aria-selected={abaStatus === "inativos"}
+          className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
+          onClick={() => selecionarAbaStatus("inativos")}
+          role="tab"
+          type="button"
+        >
+          Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
+        </button>
+      </nav>
+
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
       </div>
 
+      {selecionados.size > 0 ? (
+        <div className="toolbar-massa">
+          <span className="toolbar-massa__contador">
+            {selecionados.size} professor{selecionados.size === 1 ? "" : "es"} selecionado{selecionados.size === 1 ? "" : "s"}
+          </span>
+          <div className="toolbar-massa__acoes">
+            {abaStatus === "ativos" ? (
+              <Botao onClick={() => setConfirmacaoLote("inativar")} tamanho="pequeno" variante="secundario">
+                Inativar selecionados
+              </Botao>
+            ) : (
+              <Botao onClick={() => setConfirmacaoLote("reativar")} tamanho="pequeno" variante="secundario">
+                Reativar selecionados
+              </Botao>
+            )}
+            <Botao onClick={limparSelecao} tamanho="pequeno" variante="fantasma">
+              Limpar selecao
+            </Botao>
+          </div>
+        </div>
+      ) : null}
+
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Lista de professores" className="tabela-dados">
           <thead>
             <tr>
+              <th scope="col">
+                <input
+                  aria-label="Selecionar todos os professores desta pagina"
+                  checked={todosSelecionadosNaPagina}
+                  disabled={itensPagina.length === 0}
+                  onChange={alternarSelecaoPagina}
+                  ref={refCheckboxCabecalho}
+                  type="checkbox"
+                />
+              </th>
               <th scope="col">
                 <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
                   Professor <IconeOrdenacao direcao={direcao} />
@@ -396,7 +537,9 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
           <tbody>
             {itensPagina.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={5}>Nenhum professor encontrado.</td>
+                <td colSpan={6}>
+                  {abaStatus === "ativos" ? "Nenhum professor ativo encontrado." : "Nenhum professor inativo encontrado."}
+                </td>
               </tr>
             ) : (
               itensPagina.map((professor) => {
@@ -404,6 +547,14 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
 
                 return (
                   <tr className="tabela-linha-clicavel" key={professor.id} onClick={() => setProfessorDetalhe(professor)}>
+                    <td data-label="" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        aria-label={`Selecionar ${professor.nome}`}
+                        checked={selecionados.has(professor.id)}
+                        onChange={() => alternarSelecao(professor.id)}
+                        type="checkbox"
+                      />
+                    </td>
                     <td data-label="Professor">
                       <div className="tabela-aluno">
                         <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
@@ -424,19 +575,21 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
                       )}
                     </td>
                     <td data-label="Status">
-                      <Insignia texto={professor.ativo ? "Ativo" : "Inativo"} variante={professor.ativo ? "sucesso" : "erro"} />
+                      <Insignia texto={professor.ativo ? "Ativo" : "Inativo"} variante={professor.ativo ? "sucesso" : "neutro"} />
                     </td>
                     <td data-label="" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        aria-expanded={kebabAbertoId === professor.id}
-                        aria-haspopup="menu"
-                        aria-label={`Acoes para ${professor.nome}`}
-                        className="kebab-btn"
-                        onClick={(event) => abrirKebab(event, professor.id)}
-                        type="button"
-                      >
-                        <TbDotsVertical aria-hidden="true" size={16} />
-                      </button>
+                      <MenuKebabTabela
+                        itens={[
+                          { chave: "ver-detalhes", rotulo: "Ver detalhes", onSelecionar: () => setProfessorDetalhe(professor) },
+                          { chave: "editar", rotulo: "Editar", onSelecionar: () => abrirEdicaoProfessor(professor) },
+                          {
+                            chave: "alternar-status",
+                            rotulo: professor.ativo ? "Inativar" : "Reativar",
+                            onSelecionar: () => alternarStatusProfessor(professor)
+                          }
+                        ]}
+                        rotulo={`Acoes para ${professor.nome}`}
+                      />
                     </td>
                   </tr>
                 );
@@ -473,29 +626,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </nav>
       ) : null}
 
-      {kebabAbertoId && professorKebab
-        ? createPortal(
-            <div className="kebab-menu" ref={kebabRef} style={{ left: kebabPos.left, top: kebabPos.top }}>
-              <button
-                className="kebab-menu__item"
-                onClick={() => {
-                  setProfessorDetalhe(professorKebab);
-                  setKebabAbertoId(null);
-                }}
-                type="button"
-              >
-                Ver detalhes
-              </button>
-              <button className="kebab-menu__item" onClick={() => abrirEdicaoProfessor(professorKebab)} type="button">
-                Editar
-              </button>
-              <button className="kebab-menu__item kebab-menu__item--perigo" onClick={() => abrirExclusaoProfessor(professorKebab)} type="button">
-                Excluir
-              </button>
-            </div>,
-            document.body
-          )
-        : null}
 
       {professorDetalhe ? (
         <Modal
@@ -517,7 +647,7 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               <h3 className="detalhe-usuario__nome">{professorDetalhe.nome}</h3>
               <span className="detalhe-usuario__email">{professorDetalhe.email}</span>
             </div>
-            <Insignia texto={professorDetalhe.ativo ? "Ativo" : "Inativo"} variante={professorDetalhe.ativo ? "sucesso" : "erro"} />
+            <Insignia texto={professorDetalhe.ativo ? "Ativo" : "Inativo"} variante={professorDetalhe.ativo ? "sucesso" : "neutro"} />
           </div>
 
           <dl className="detalhe-usuario__dados">
@@ -563,25 +693,31 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </Modal>
       ) : null}
 
-      {professorParaExcluir ? (
+      {confirmacaoLote ? (
         <Modal
-          onFechar={() => setProfessorParaExcluir(null)}
-          titulo="Excluir professor"
+          onFechar={() => !executandoLote && setConfirmacaoLote(null)}
+          titulo={confirmacaoLote === "reativar" ? "Reativar professores selecionados" : "Inativar professores selecionados"}
           rodape={
             <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={() => setProfessorParaExcluir(null)} variante="perigo">
+              <Botao disabled={executandoLote} onClick={() => setConfirmacaoLote(null)} variante="perigo">
                 <TbX aria-hidden="true" size={15} /> Cancelar
               </Botao>
-              <Botao disabled={salvando} onClick={confirmarExclusaoProfessor} variante="sucesso">
-                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
+              <Botao disabled={executandoLote} onClick={executarAcaoLote} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} />{" "}
+                {executandoLote
+                  ? "Processando..."
+                  : confirmacaoLote === "reativar"
+                  ? "Confirmar reativacao"
+                  : "Confirmar inativacao"}
               </Botao>
             </footer>
           }
         >
           <p className="texto-confirmacao-exclusao">
-            Deseja excluir o professor <strong>{professorParaExcluir.nome}</strong>? Esta acao nao pode ser desfeita.
+            {confirmacaoLote === "reativar"
+              ? `Deseja reativar ${selecionados.size} professor${selecionados.size === 1 ? "" : "es"} selecionado${selecionados.size === 1 ? "" : "s"}?`
+              : `Deseja inativar ${selecionados.size} professor${selecionados.size === 1 ? "" : "es"} selecionado${selecionados.size === 1 ? "" : "s"}? Os dados e o historico continuam preservados.`}
           </p>
-          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
         </Modal>
       ) : null}
 

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import PainelCursoCoordenador from "./PainelCursoCoordenador.jsx";
+import PainelCursoGestao from "./PainelCursoGestao.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
 import { apiRequest } from "../../lib/api.js";
 
@@ -60,7 +60,7 @@ const DESEMPENHO = {
 function renderPainel(props = {}) {
   return render(
     <ToastProvider>
-      <PainelCursoCoordenador
+      <PainelCursoGestao
         curso={CURSO}
         modulos={MODULOS_SNAPSHOT}
         onEditarCurso={vi.fn()}
@@ -85,7 +85,7 @@ function mockApi(desempenho, professoresDoCurso = []) {
   });
 }
 
-describe("PainelCursoCoordenador", () => {
+describe("PainelCursoGestao", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -187,5 +187,56 @@ describe("PainelCursoCoordenador", () => {
     await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
 
     expect(screen.queryByRole("tab", { name: /Avaliacoes do curso/ })).not.toBeInTheDocument();
+  });
+
+  test("perfil Admin mostra Foto de capa, Coordenador e Novo modulo, e nao mostra Encerrar curso", async () => {
+    mockApi(DESEMPENHO);
+
+    const cursoAcompanhadoConcluido = { ...CURSO, modeloCurso: 3, concluidoPeloProfessorEm: "2026-01-01", coordenadorId: 7 };
+
+    renderPainel({
+      coordenadores: [{ id: 7, nome: "Coordenadora Teste" }],
+      curso: cursoAcompanhadoConcluido,
+      onAlterarFotoCurso: vi.fn(),
+      onAtribuirCoordenador: vi.fn(),
+      perfil: "Admin"
+    });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /Foto de capa/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Coordenador" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Novo modulo/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Encerrar curso/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Coordenacao: Coordenadora Teste/)).toBeInTheDocument();
+  });
+
+  test("perfil Admin sem coordenador: botao vira 'Atribuir coordenador' e subtitulo mostra 'Sem coordenacao'", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({
+      coordenadores: [],
+      onAlterarFotoCurso: vi.fn(),
+      onAtribuirCoordenador: vi.fn(),
+      perfil: "Admin"
+    });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /Atribuir coordenador/ })).toBeInTheDocument();
+    expect(screen.getByText(/Sem coordenacao/)).toBeInTheDocument();
+  });
+
+  test("perfil Coordenador (default) nao mostra as acoes exclusivas do Admin", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel();
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: /Foto de capa/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Atribuir coordenador/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Coordenador" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
   });
 });

@@ -19,7 +19,7 @@ const ICONE_TIPO_MATERIAL = {
 
 /* Detalhe de um MODULO aberto (Progresso/Conclusao/Desempenho medio +
    materiais/avaliacoes), extraido de PainelModulosDesempenho pra ser
-   reaproveitado tambem pela tela unica do Coordenador (PainelCursoCoordenador)
+   reaproveitado tambem pela tela unica do curso (PainelCursoGestao)
    - cada chamador cuida do proprio accordion/toggle, este componente so
    renderiza o CONTEUDO de dentro. `contextoCoordenador` oculta tipo de
    arquivo/status de publicacao (info de gestao, ver PainelModulosDesempenho).
