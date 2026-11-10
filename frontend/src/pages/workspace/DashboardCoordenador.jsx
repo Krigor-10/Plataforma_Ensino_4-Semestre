@@ -74,7 +74,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onAbrirCurs
 
       <section aria-labelledby="titulo-stats-coord">
         <h2 className="visualmente-oculto" id="titulo-stats-coord">Indicadores academicos</h2>
-        <div className="grade-estatisticas">
+        <div className="grade-estatisticas grade-estatisticas--horizontal">
           <CartaoEstatistica icone={<MdMenuBook size={22} />} rotulo="Cursos sob coordenacao" valor={meusCursos.length} />
           <CartaoEstatistica
             corBorda="var(--cor-sucesso)"

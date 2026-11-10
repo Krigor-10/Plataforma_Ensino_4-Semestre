@@ -30,6 +30,7 @@ import {
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -92,6 +93,7 @@ const ICONE_TIPO_CONTEUDO_PROGRESSO = {
 export function SecaoCursosAluno({
   avaliacoes = [],
   conteudos,
+  cursoIdSelecionado = null,
   cursos,
   matriculaIdsComPagamentoPendente = EMPTY_SET,
   matriculas,
@@ -101,8 +103,6 @@ export function SecaoCursosAluno({
   progressos = {},
   turmas
 }) {
-  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
-
   // Fonte unica de verdade pra "certificado disponivel" e o servidor (GET
   // /Certificados/status, ver CertificadoService.ObterPendenciasAsync) -
   // nunca o percentual de progresso local (que nao sabe de avaliacao
@@ -226,8 +226,11 @@ export function SecaoCursosAluno({
   );
 
   const linhaSelecionada = useMemo(
-    () => linhasMatriculasAprovadas.find((linha) => Number(linha.cursoId) === cursoSelecionadoId) || null,
-    [cursoSelecionadoId, linhasMatriculasAprovadas]
+    () =>
+      cursoIdSelecionado
+        ? linhasMatriculasAprovadas.find((linha) => Number(linha.cursoId) === cursoIdSelecionado) || null
+        : null,
+    [cursoIdSelecionado, linhasMatriculasAprovadas]
   );
 
   const detalheCursoSelecionado = useMemo(() => {
@@ -326,11 +329,11 @@ export function SecaoCursosAluno({
   ]);
 
   function selecionarCurso(cursoId) {
-    setCursoSelecionadoId(Number(cursoId));
+    onNavigate?.(`/app/meus-cursos/${cursoId}`);
   }
 
   function voltarParaLista() {
-    setCursoSelecionadoId(null);
+    onNavigate?.("/app/meus-cursos");
   }
 
   if (!linhasMatriculasAprovadas.length) {
@@ -384,12 +387,7 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
 
   return (
     <div className="conteudos-aluno">
-      <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
-        <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
-          <TbArrowLeft aria-hidden="true" size={22} />
-          Voltar para Progresso
-        </button>
-      </nav>
+      <BotaoVoltar destino="Progresso" onClick={onVoltar} />
 
       <header className="atividades-curso__cabecalho">
         <div>
@@ -1301,7 +1299,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cu
 
       const atual = agrupados.get(avaliacao.cursoId) || {
         cursoId: avaliacao.cursoId,
-        cursoTitulo: avaliacao.cursoTitulo || `Curso #${avaliacao.cursoId}`,
+        cursoTitulo: avaliacao.cursoTitulo || cursoPorId.get(avaliacao.cursoId)?.titulo || `Curso #${avaliacao.cursoId}`,
         total: 0,
         disponiveis: 0
       };
@@ -1315,7 +1313,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cu
     });
 
     return [...agrupados.values()].sort((left, right) => left.cursoTitulo.localeCompare(right.cursoTitulo, "pt-BR"));
-  }, [avaliacoes]);
+  }, [avaliacoes, cursoPorId]);
 
   const cursoAtivo = useMemo(
     () => (cursoIdSelecionado ? cursosComAvaliacao.find((entrada) => entrada.cursoId === cursoIdSelecionado) || null : null),
@@ -1362,12 +1360,7 @@ export function SecaoAvaliacoesAluno({ avaliacoes, cursoIdSelecionado = null, cu
         />
       ) : (
         <>
-          <nav aria-label="Navegacao das avaliacoes" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaCursos} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Avaliacoes
-            </button>
-          </nav>
+          <BotaoVoltar destino="Avaliações" onClick={voltarParaCursos} />
 
           <header className="atividades-curso__cabecalho">
             <div>
@@ -1415,7 +1408,7 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
         const temNota = !ehQuiz && avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
 
         return (
-          <section className="conteudos-modulo" key={avaliacao.id}>
+          <section className="conteudos-modulo conteudos-modulo--cartao" key={avaliacao.id}>
             <header className="conteudos-modulo__cabecalho">
               <h3 className="conteudos-modulo__cabecalho-wrapper">
                 <button
@@ -1426,8 +1419,8 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                   type="button"
                 >
                   <div className="conteudos-modulo__info">
-                    <span aria-hidden="true" className="conteudos-modulo__icone">
-                      <TbTrophy size="1.4rem" />
+                    <span aria-hidden="true" className="conteudos-modulo__icone conteudos-modulo__icone--caixa">
+                      <TbTrophy size="1.15rem" />
                     </span>
                     <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
                     <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
@@ -1448,6 +1441,7 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
               {aberta ? (
                 <motion.div
                   animate={{ height: "auto", opacity: 1 }}
+                  className="conteudos-modulo__corpo"
                   exit={{ height: 0, opacity: 0 }}
                   id={idDetalhe}
                   initial={{ height: 0, opacity: 0 }}
@@ -1960,14 +1954,7 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
 
   return (
     <div className="conteudos-aluno trilha-conteudos">
-      {onVoltarConteudos ? (
-        <nav aria-label="Navegação da trilha de conteúdos" className="atividades-curso__navegacao">
-          <button className="atividades-curso__voltar" onClick={onVoltarConteudos} type="button">
-            <TbArrowLeft aria-hidden="true" size={22} />
-            Voltar para Conteúdos
-          </button>
-        </nav>
-      ) : null}
+      {onVoltarConteudos ? <BotaoVoltar destino="Conteúdos" onClick={onVoltarConteudos} /> : null}
 
       <header className="atividades-curso__cabecalho">
         <h2 className="atividades-curso__titulo">{curso.titulo}</h2>
@@ -2480,7 +2467,11 @@ const CHAVE_RASCUNHO_AVALIACAO = "edtech.rascunhoAvaliacao";
 
 function obterIdUsuarioLogado() {
   try {
-    const bruto = window.localStorage.getItem("usuarioLogado");
+    // "usuarioLogado" mora em sessionStorage desde a auditoria de segurança
+    // 09/11 (ver webStorage.js) - so a leitura do usuario muda aqui; o
+    // rascunho em si continua em localStorage de proposito, pra sobreviver
+    // a fechar a aba (ver comentario de CHAVE_RASCUNHO_AVALIACAO acima).
+    const bruto = window.sessionStorage.getItem("usuarioLogado");
     const usuario = bruto ? JSON.parse(bruto) : null;
     return usuario?.id ?? null;
   } catch {

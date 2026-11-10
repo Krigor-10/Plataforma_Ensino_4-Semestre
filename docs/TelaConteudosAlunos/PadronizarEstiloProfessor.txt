@@ -1,0 +1,95 @@
+## 9. PADRONIZAÇÃO VISUAL — CONTEÚDOS DO PROFESSOR E DO ALUNO
+
+Após concluir os ajustes visuais da tela de gerenciamento de conteúdos do Professor, realizar uma análise comparativa entre:
+
+- Tela de Conteúdos do Professor.
+- Tela de Conteúdos do Aluno.
+
+### Objetivo
+
+Padronizar a identidade visual das duas telas para que pertençam ao mesmo ecossistema visual do CodeRyse, mantendo consistência de cores, componentes, hierarquia, espaçamentos e organização.
+
+### 9.1. Auditoria comparativa
+
+Antes de implementar qualquer alteração:
+
+1. Localizar os componentes responsáveis pela tela de Conteúdos do Professor e pela tela de Conteúdos do Aluno.
+2. Analisar como cada tela organiza módulos, conteúdos e quizzes.
+3. Identificar diferenças de cores, ícones, fundos, divisórias, tipografia, espaçamentos e containers.
+4. Identificar componentes que podem ser reutilizados ou compartilhados.
+5. Verificar se já existem tokens de cores ou componentes reutilizáveis no projeto.
+
+### 9.2. Identidade visual compartilhada
+
+Utilizar a tela de Conteúdos do Professor como referência visual para padronizar a tela do Aluno.
+
+Aplicar os mesmos conceitos de:
+
+- Cores dos ícones por categoria.
+- Fundos dos containers e elementos internos.
+- Hierarquia de cores entre background, módulos e conteúdos.
+- Bordas e divisórias sutis.
+- Raios de borda e espaçamentos.
+- Tipografia e hierarquia dos textos.
+- Identificação visual de módulos.
+- Organização visual de materiais e quizzes.
+
+### 9.3. Padronização das cores por tipo
+
+Manter a mesma identidade visual nas duas telas:
+
+- Todos os materiais didáticos (Texto, PDF, Imagem, Vídeo e outros): ícones verdes, com fundo verde translúcido.
+- Todos os quizzes: ícones roxos, com fundo roxo translúcido.
+
+A identificação deve ser consistente independentemente do perfil que está acessando o conteúdo.
+
+### 9.4. Hierarquia de cores
+
+A tela do Aluno também deve apresentar diferenciação perceptível entre:
+
+1. Background geral da aplicação.
+2. Container principal da área de conteúdos.
+3. Containers dos módulos.
+4. Linhas individuais de materiais e quizzes.
+
+Evitar que todos os elementos utilizem praticamente a mesma tonalidade de fundo.
+
+Utilizar variações sutis de grafite, preservando o tema escuro e a identidade visual do CodeRyse.
+
+### 9.5. Reutilização de componentes
+
+Sempre que tecnicamente viável:
+
+- Reutilizar componentes visuais compartilhados.
+- Centralizar cores e tokens de design.
+- Evitar duplicação de CSS.
+- Evitar implementar duas versões diferentes do mesmo padrão visual.
+- Manter componentes específicos quando houver diferenças reais de comportamento entre Professor e Aluno.
+
+**Importante:** compartilhar a identidade visual não significa compartilhar todas as funcionalidades.
+
+O Professor deve continuar tendo suas funcionalidades de gerenciamento, edição, publicação e organização.
+
+O Aluno deve continuar tendo sua experiência de aprendizagem, acesso aos materiais, acompanhamento de progresso e realização de quizzes.
+
+Não adicionar controles administrativos à tela do Aluno.
+
+### 9.6. Responsividade e regressão
+
+Garantir que a padronização não prejudique:
+
+- Web.
+- Desktop.
+- Mobile.
+- Tablets.
+- Navegação entre módulos e conteúdos.
+- Visualização de materiais.
+- Reprodução de vídeos.
+- Realização de quizzes.
+- Acompanhamento de progresso.
+
+### 9.7. Critério de aceite
+
+As duas telas devem apresentar uma identidade visual consistente, como se fossem partes do mesmo produto, diferenciando-se apenas pelas funcionalidades próprias de cada perfil.
+
+Priorizar reutilização, consistência visual e regressão zero.

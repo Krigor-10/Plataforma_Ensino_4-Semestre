@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbArrowLeft, TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
 import { MdDelete } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -354,12 +355,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         />
       ) : (
         <>
-          <nav aria-label="Navegacao das avaliacoes" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaCursos} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Avaliacoes
-            </button>
-          </nav>
+          <BotaoVoltar destino="Avaliações" onClick={voltarParaCursos} />
 
           <header className="atividades-curso__cabecalho">
             <h2 className="atividades-curso__titulo">{cursoAtivo.curso.titulo}</h2>

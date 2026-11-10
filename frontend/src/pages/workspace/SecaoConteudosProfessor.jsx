@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   TbArchive,
-  TbArrowLeft,
   TbCheck,
   TbChevronDown,
   TbExternalLink,
@@ -18,6 +17,7 @@ import {
 } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
@@ -1393,14 +1393,7 @@ function TrilhaConteudosProfessor({
 
   return (
     <div className="conteudos-aluno trilha-conteudos trilha-conteudos--editavel">
-      {onVoltar ? (
-        <nav aria-label="Navegação da trilha de conteúdos" className="atividades-curso__navegacao">
-          <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
-            <TbArrowLeft aria-hidden="true" size={22} />
-            Voltar para Conteúdos
-          </button>
-        </nav>
-      ) : null}
+      {onVoltar ? <BotaoVoltar destino="Conteúdos" onClick={onVoltar} /> : null}
 
       <header className="atividades-curso__cabecalho">
         <div className="atividades-curso__cabecalho-principal">
@@ -1420,7 +1413,7 @@ function TrilhaConteudosProfessor({
               <TbArchive aria-hidden="true" size={15} /> Ver arquivados ({totalArquivadosCurso})
             </Botao>
           ) : null}
-          <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="secundario">
+          <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="sucesso">
             <TbPlus aria-hidden="true" size={15} /> Novo modulo
           </Botao>
           <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">

@@ -21,6 +21,15 @@
   --cor-fundo-alt: #1e2028;
   --cor-fundo-elevado: #22242e;
 
+  /* "Relevo duplo" dos cards de modulo nas trilhas de Conteudos (Professor/
+     Aluno/previa "Visualizar como aluno") - card grafite com brilho fino no
+     topo e sombra fina embaixo, pra se destacar do fundo sem chamar atencao
+     (opcao J4 de 13, escolhida pelo usuario via imagem, 09/11). */
+  --cor-card-modulo: #282b37;
+  --borda-card-modulo: rgba(0, 0, 0, 0.30);
+  --relevo-card-topo: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --relevo-card-base: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+
   --cor-marca: #7b2ff7;
   --cor-marca-profunda: #5b19cf;
   --cor-marca-clara: #b992ff;
@@ -138,6 +147,11 @@
   --cor-fundo: #f0f2f8;
   --cor-fundo-alt: #e6e9f3;
   --cor-fundo-elevado: #ffffff;
+
+  --cor-card-modulo: #ffffff;
+  --borda-card-modulo: rgba(13, 15, 24, 0.08);
+  --relevo-card-topo: inset 0 1px 0 #ffffff;
+  --relevo-card-base: inset 0 -2px 0 rgba(13, 15, 24, 0.06);
 
   --cor-marca-clara: #5b19cf;
   --cor-acento: #6b21e8;

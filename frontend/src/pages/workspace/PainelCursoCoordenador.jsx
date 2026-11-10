@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  TbArrowLeft,
   TbAward,
   TbCertificate,
   TbChartBar,
@@ -16,6 +15,7 @@ import {
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import BlocoProfessoresCurso from "../../components/BlocoProfessoresCurso.jsx";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import DetalheModuloDesempenho from "../../components/DetalheModuloDesempenho.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -182,12 +182,7 @@ export default function PainelCursoCoordenador({
 
   return (
     <div className="conteudos-aluno">
-      <nav aria-label="Navegacao dos cursos" className="atividades-curso__navegacao">
-        <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
-          <TbArrowLeft aria-hidden="true" size={22} />
-          Voltar para Cursos
-        </button>
-      </nav>
+      <BotaoVoltar destino="Cursos" onClick={onVoltar} />
 
       <header className="atividades-curso__cabecalho">
         <div className="atividades-curso__cabecalho-principal">

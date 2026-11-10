@@ -69,6 +69,15 @@ export default function WorkspaceScreen({
           return { ...section, label: "Progresso" };
         }
 
+        // "Turmas" e rotulo errado pro Admin desde que a entidade Turma
+        // saiu de uso (ver pendencia_fase_b_remocao_turma na memoria do
+        // projeto) - a tela por tras (SecaoProfessoresCurso) nunca foi
+        // gestao de turma, e atribuicao de professor por curso. Renomear em
+        // vez de remover: a funcionalidade continua em uso.
+        if (section.key === "turmas" && role === "Admin") {
+          return { ...section, label: "Professores por Curso" };
+        }
+
         return section;
       }),
     [role]
@@ -100,7 +109,7 @@ export default function WorkspaceScreen({
     "cursos-matriculados"
   ];
   const ocultarHeroGenerico =
-    (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
+    (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes" || activeSection === "meus-cursos") && Boolean(route.param)) ||
     (isProfessor && (activeSection === "conteudos" || activeSection === "avaliacoes") && Boolean(route.param)) ||
     SECOES_COM_CABECALHO_PROPRIO.includes(activeSection);
 
@@ -633,6 +642,7 @@ export default function WorkspaceScreen({
                 <DashboardAdmin
                   alunos={snapshot.alunos}
                   coordenadores={snapshot.coordenadores}
+                  cursos={snapshot.cursos}
                   matriculas={matriculaRows}
                   onMudarSecao={(secao) => onNavigate(`/app/${secao}`)}
                   onSessionExpired={onSessionExpired}
@@ -667,6 +677,7 @@ export default function WorkspaceScreen({
               <SecaoCursosAluno
                 avaliacoes={snapshot.avaliacoes}
                 conteudos={snapshot.conteudos}
+                cursoIdSelecionado={route.param ? Number(route.param) : null}
                 cursos={snapshot.cursos}
                 matriculaIdsComPagamentoPendente={matriculaIdsComPagamentoPendente}
                 matriculas={snapshot.matriculas}

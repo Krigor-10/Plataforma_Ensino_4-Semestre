@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TbArrowRight, TbClock, TbCreditCard, TbSearch } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
@@ -8,7 +8,7 @@ import Insignia from "../../components/Insignia.jsx";
 import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { clampPercent, formatDate, formatGrade, formatMoney } from "../../lib/format.js";
+import { clampPercent, formatDate, formatGrade, formatMoney, formatPercent } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
@@ -30,7 +30,7 @@ export function SecaoMatriculas({ cursos, ehAluno, linhasMatriculas, onNavigate,
     );
   }
 
-  return <VistaGestorMatriculas linhasMatriculas={linhasMatriculas} />;
+  return <VistaGestorMatriculas onSessionExpired={onSessionExpired} />;
 }
 
 /* Mapa cursoId -> matricula mais relevante do aluno (prioriza Aprovada > Pendente > Rejeitada/Cancelada) */
@@ -347,41 +347,62 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
 /* Lista de consulta do Admin: matricula e sempre automatica, entao nao ha
    mais acao manual de aprovar/rejeitar aqui - so visualizacao por status,
    util pra auditoria/suporte. */
-function VistaGestorMatriculas({ linhasMatriculas }) {
-  const [abaAtiva, setAbaAtiva] = useState("aprovadas");
+/* Era uma lista de matriculas individuais por status (Pendente/Aprovada/
+   Rejeitada/Cancelada), sem nenhuma acao desde que a matricula virou sempre
+   automatica (ver pendencia_matriculas_sempre_automatica_2026_10_27 na
+   memoria do projeto) - so consulta, sem lookup por aluno/protocolo que
+   justificasse manter a listagem crua. Virou uma tabela de metricas por
+   curso (prompt "sidebar do admin", 09/11): matriculas aprovadas, %
+   conclusao e certificados emitidos, via GET /Cursos/desempenho (mesma
+   agregacao ja usada por Coordenador/Professor, so sem filtro de dono). */
+function VistaGestorMatriculas({ onSessionExpired }) {
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [cursosDesempenho, setCursosDesempenho] = useState([]);
 
-  const matriculasPendentes = useMemo(
-    () => linhasMatriculas.filter((matricula) => matricula.status === "Pendente"),
-    [linhasMatriculas]
-  );
-  const matriculasAprovadas = useMemo(
-    () => linhasMatriculas.filter((matricula) => matricula.status === "Aprovada"),
-    [linhasMatriculas]
-  );
-  const matriculasRejeitadas = useMemo(
-    () => linhasMatriculas.filter((matricula) => matricula.status === "Rejeitada"),
-    [linhasMatriculas]
-  );
-  const matriculasCanceladas = useMemo(
-    () => linhasMatriculas.filter((matricula) => matricula.status === "Cancelada"),
-    [linhasMatriculas]
-  );
+  useEffect(() => {
+    let ativo = true;
 
-  const abas = [
-    { chave: "aprovadas", rotulo: "Aprovadas", contagem: matriculasAprovadas.length },
-    { chave: "pendentes", rotulo: "Pendentes", contagem: matriculasPendentes.length },
-    { chave: "rejeitadas", rotulo: "Rejeitadas", contagem: matriculasRejeitadas.length },
-    { chave: "canceladas", rotulo: "Canceladas", contagem: matriculasCanceladas.length }
-  ];
+    async function carregarDesempenho() {
+      try {
+        setCarregando(true);
+        setErro("");
+        const dados = await apiRequest("/Cursos/desempenho");
 
-  const linhasDaAba =
-    abaAtiva === "pendentes"
-      ? matriculasPendentes
-      : abaAtiva === "aprovadas"
-        ? matriculasAprovadas
-        : abaAtiva === "rejeitadas"
-          ? matriculasRejeitadas
-          : matriculasCanceladas;
+        if (!ativo) {
+          return;
+        }
+
+        setCursosDesempenho(dados);
+      } catch (err) {
+        if (!ativo) {
+          return;
+        }
+
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+
+        setErro(err.message || "Nao foi possivel carregar as metricas dos cursos agora.");
+      } finally {
+        if (ativo) {
+          setCarregando(false);
+        }
+      }
+    }
+
+    carregarDesempenho();
+    return () => {
+      ativo = false;
+    };
+  }, [onSessionExpired]);
+
+  const totalMatriculasAprovadas = cursosDesempenho.reduce((total, curso) => total + curso.totalAlunos, 0);
+  const cursosOrdenados = useMemo(
+    () => [...cursosDesempenho].sort((cursoA, cursoB) => cursoB.totalAlunos - cursoA.totalAlunos),
+    [cursosDesempenho]
+  );
 
   return (
     <div className="tela-matriculas">
@@ -389,65 +410,46 @@ function VistaGestorMatriculas({ linhasMatriculas }) {
         <div>
           <h2 className="cabecalho-pagina__titulo">Matriculas</h2>
           <p className="cabecalho-pagina__subtitulo">
-            {linhasMatriculas.length} no total - matricula e sempre automatica, esta tela e so consulta.
+            Matricula e sempre automatica - acompanhe aqui o volume por curso, conclusao e certificados emitidos.
           </p>
         </div>
       </header>
 
-      <nav aria-label="Filtrar matriculas por status" className="abas-matriculas" role="tablist">
-        {abas.map((aba) => (
-          <button
-            aria-selected={abaAtiva === aba.chave}
-            className={`abas-matriculas__aba${abaAtiva === aba.chave ? " abas-matriculas__aba--ativa" : ""}`}
-            key={aba.chave}
-            onClick={() => setAbaAtiva(aba.chave)}
-            role="tab"
-            type="button"
-          >
-            {aba.rotulo}
-            {aba.contagem > 0 ? <span className="abas-matriculas__contagem">{aba.contagem}</span> : null}
-          </button>
-        ))}
-      </nav>
+      {erro ? <InlineMessage tone="erro">{erro}</InlineMessage> : null}
 
-      <div className="tabela-dados-container painel-secao">
-        <table aria-label="Matriculas" className="tabela-dados">
-          <thead>
-            <tr>
-              <th scope="col">Protocolo</th>
-              <th scope="col">Aluno</th>
-              <th scope="col">Curso</th>
-              <th scope="col">Turma</th>
-              <th scope="col">Solicitada em</th>
-            </tr>
-          </thead>
-          <tbody>
-            {linhasDaAba.length === 0 ? (
-              <tr className="tabela-dados--sem-dados">
-                <td colSpan={5}>
-                  {abaAtiva === "pendentes"
-                    ? "Nenhuma matricula pendente encontrada."
-                    : abaAtiva === "aprovadas"
-                      ? "Nenhuma matricula aprovada encontrada."
-                      : abaAtiva === "rejeitadas"
-                        ? "Nenhuma matricula rejeitada encontrada."
-                        : "Nenhuma matricula cancelada encontrada."}
-                </td>
+      {carregando ? (
+        <p className="texto-vazio" role="status">Carregando metricas...</p>
+      ) : cursosOrdenados.length === 0 ? (
+        <EmptyState message="Nenhum curso cadastrado ainda." />
+      ) : (
+        <div className="tabela-dados-container painel-secao">
+          <table aria-label="Metricas de matricula por curso" className="tabela-dados">
+            <thead>
+              <tr>
+                <th scope="col">Curso</th>
+                <th scope="col">Matriculas aprovadas</th>
+                <th scope="col">Alunos ativos</th>
+                <th scope="col">% Conclusao</th>
+                <th scope="col">Certificados emitidos</th>
               </tr>
-            ) : (
-              linhasDaAba.map((matricula) => (
-                <tr key={matricula.id}>
-                  <td data-label="Protocolo">{matricula.codigoRegistro || "Sem protocolo"}</td>
-                  <td data-label="Aluno">{matricula.aluno}</td>
-                  <td data-label="Curso">{matricula.curso}</td>
-                  <td data-label="Turma">{matricula.turma}</td>
-                  <td data-label="Solicitada em">{formatDate(matricula.dataSolicitacao)}</td>
+            </thead>
+            <tbody>
+              {cursosOrdenados.map((curso) => (
+                <tr key={curso.cursoId}>
+                  <td data-label="Curso">{curso.cursoTitulo}</td>
+                  <td data-label="Matriculas aprovadas">{curso.totalAlunos}</td>
+                  <td data-label="Alunos ativos">{curso.alunosAtivos}</td>
+                  <td data-label="% Conclusao">{formatPercent(curso.percentualConclusao)}</td>
+                  <td data-label="Certificados emitidos">{curso.certificadosEmitidos}</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+          <p className="texto-mudo" style={{ fontSize: "0.82rem", marginTop: "var(--espaco-sm)" }}>
+            {totalMatriculasAprovadas} matricula{totalMatriculasAprovadas === 1 ? "" : "s"} aprovada{totalMatriculasAprovadas === 1 ? "" : "s"} no total, em {cursosOrdenados.length} curso{cursosOrdenados.length === 1 ? "" : "s"}.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

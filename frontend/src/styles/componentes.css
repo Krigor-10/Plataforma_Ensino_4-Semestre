@@ -46,6 +46,14 @@
               transform 80ms ease, filter var(--transicao-rapida);
   white-space: nowrap;
   text-decoration: none;
+  /* Causa real do "icone + sumido" em Cadastrar Professor/Coordenador
+     (auditoria 09/11, confirmado via DOM ao vivo): dentro de .barra-filtros
+     (flex-wrap:nowrap), o campo de busca tem flex-shrink:0 proprio, entao
+     TODO o espaco que falta e tirado so do botao - e, como o texto (nowrap)
+     nao cede, quem absorve o aperto e o unico filho do botao que ainda pode
+     encolher: o <span> do icone, espremido ate 0px de largura. flex-shrink:0
+     aqui impede o botao de ser comprimido, parando o efeito em cascata. */
+  flex-shrink: 0;
   position: relative;
   user-select: none;
 }

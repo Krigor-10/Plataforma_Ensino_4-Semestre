@@ -14,6 +14,10 @@
   min-width: 0;
   margin-left: var(--largura-sidebar);
   transition: margin-left var(--transicao-normal);
+  /* Area queryable pro botao Voltar ir pra margem (ver .atividades-curso__navegacao
+     mais abaixo) - precisa ser a largura REAL sobrando ao lado da sidebar, nao a
+     da janela, porque a sidebar muda de ~17rem pra ~4rem quando recolhida. */
+  container-type: inline-size;
 }
 
 .layout-principal {
@@ -22,6 +26,8 @@
   max-width: 1280px;
   width: 100%;
   margin: 0 auto;
+  /* Referencia de posicionamento pro botao Voltar na margem esquerda. */
+  position: relative;
 }
 
 .layout-principal--com-tabs {
@@ -350,6 +356,18 @@
   min-width: 0;
 }
 
+/* KPIs horizontais do Dashboard do Coordenador (auditoria 09/11): com poucos
+   cartoes no grid auto-fit, cada um fica bem mais largo que o necessario pro
+   texto, que sobra alinhado a esquerda colado no icone com um vao vazio a
+   direita. Centraliza so o texto (icone continua a esquerda, flex__texto ja
+   ocupa a largura toda por causa do align-items:stretch padrao do flex).
+   Escopado em .grade-estatisticas--horizontal pra nao alterar os KPIs
+   compactos (4+ cartoes) de outras telas, que ficam estreitos o bastante
+   pra nao sofrer desse desequilibrio. */
+.grade-estatisticas--horizontal .cartao-estatistica__texto {
+  text-align: center;
+}
+
 .cartao-estatistica__valor {
   font-family: var(--fonte-display);
   font-size: clamp(1rem, 1.6vw, 1.75rem);
@@ -577,7 +595,8 @@
   white-space: nowrap;
 }
 
-.progresso-xp--completa .progresso-xp__nivel svg {
+.progresso-xp--completa .progresso-xp__nivel svg,
+.progresso-xp--compacta .progresso-xp__nivel svg {
   color: var(--cor-marca);
 }
 
@@ -594,16 +613,27 @@
   flex-shrink: 0;
 }
 
-.progresso-xp--compacta .progresso-xp__nivel {
-  font-size: var(--texto-xs);
-}
+/* Era --texto-xs (menor que as abas ao lado, "Nivel N" quase sumia) - a
+   base de .progresso-xp__nivel ja usa --texto-sm/700/texto-forte, igual ou
+   um pouco mais forte que as abas; sem override aqui a compacta herda isso
+   direto (prompt "barra de XP compacta", 09/11). */
 
 .progresso-xp--compacta .barra-progresso-wrapper {
-  width: 5rem;
+  width: 8rem;
 }
 
 .progresso-xp--compacta .barra-progresso {
-  height: 4px;
+  height: 6px;
+}
+
+/* A barra de abas (.nav-grupo) tem overflow-x:auto - a compacta nunca
+   "corta" as abas, mas em larguras medias pode alongar o scroll sem
+   necessidade. Reduz so a barra (nunca o texto/icone) abaixo do minimo
+   util de 6rem, mesmo breakpoint ja usado em .grade-3 nesta tela. */
+@media (max-width: 1100px) {
+  .progresso-xp--compacta .barra-progresso-wrapper {
+    width: 6rem;
+  }
 }
 
 /* ------------------------------------------------------------

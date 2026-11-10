@@ -59,7 +59,7 @@ export const GRUPOS_DEF = {
   academico: {
     rotulo: "Acadêmico",
     Icone: MdMenuBook,
-    filhos: ["cursos", "modulos", "conteudos", "avaliacoes", "turmas"],
+    filhos: ["cursos", "modulos", "conteudos", "avaliacoes", "meus-cursos", "turmas"],
   },
 };
 

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TbArrowLeft, TbAward, TbCamera, TbCurrencyReal, TbFlagCheck, TbLayoutGrid, TbLock, TbLockOpen, TbPencil, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
+import { TbAward, TbCamera, TbCurrencyReal, TbFlagCheck, TbLayoutGrid, TbLock, TbLockOpen, TbPencil, TbPlus, TbSearch, TbUserCheck, TbUsers, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -699,12 +700,7 @@ export function SecaoCursos({
     return (
       <div className="tela-cursos">
         <div className="conteudos-aluno">
-          <nav aria-label="Navegacao dos cursos" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaListaCursos} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Cursos
-            </button>
-          </nav>
+          <BotaoVoltar destino="Cursos" onClick={voltarParaListaCursos} />
 
           <header className="atividades-curso__cabecalho">
             <div>

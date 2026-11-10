@@ -10,6 +10,7 @@ import {
   TbClipboardCheck,
   TbFileText,
   TbCertificate,
+  TbTrendingUp,
 } from "react-icons/tb";
 import { GRUPOS_DEF, FILHO_PARA_GRUPO } from "./BarraLateral.jsx";
 
@@ -25,6 +26,7 @@ const ICONE_COMP = {
   avaliacoes: TbClipboardCheck,
   conteudos: TbFileText,
   certificados: TbCertificate,
+  "meus-cursos": TbTrendingUp,
 };
 
 function obterItensNavMobile(sections) {

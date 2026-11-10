@@ -1,0 +1,124 @@
+# CodeRyse — Refinamento visual da lista de conteúdos e quizzes
+
+## Objetivo
+Realizar ajustes pontuais na interface de gerenciamento de conteúdos do professor, utilizando a imagem de referência enviada como orientação visual.
+
+**IMPORTANTE:** Esta tarefa é exclusivamente de refinamento visual e organização da interface. Não reconstruir a tela e não modificar funcionalidades existentes fora do escopo descrito.
+
+## 1. Checkboxes de seleção
+
+- Reduzir o tamanho dos checkboxes utilizados para seleção individual dos conteúdos e quizzes.
+- Manter dimensões proporcionais aos elementos da linha, com aparência discreta e moderna.
+- Preservar a funcionalidade de seleção individual e múltipla.
+- Manter a opção de selecionar todos os elementos do módulo.
+- Preservar o contador de itens selecionados e as ações em lote.
+- Garantir alinhamento vertical e espaçamento adequado entre checkbox, ícone e identificação do conteúdo.
+
+## 2. Remover controles de ordenação
+
+Remover exclusivamente os botões de seta para cima e para baixo presentes em cada linha de conteúdo.
+
+- Eliminar os respectivos elementos visuais.
+- Ajustar o espaçamento horizontal após a remoção.
+- Não alterar a ordem atual dos conteúdos.
+- Não modificar outras funcionalidades de gerenciamento.
+
+## 3. Diferenciação visual por categoria
+
+Padronizar as cores dos ícones conforme a seguinte regra:
+
+**CONTEÚDOS / MATERIAIS: VERDE**
+- Texto;
+- PDF;
+- Imagem;
+- Vídeo;
+- Demais tipos de materiais didáticos.
+
+Todos devem utilizar ícones verdes, acompanhados de um fundo verde discreto e translúcido.
+
+**QUIZZES: ROXO**
+- Todos os quizzes, independentemente de estarem vinculados a um conteúdo ou serem independentes.
+- Manter o ícone de troféu.
+- Utilizar fundo roxo translúcido.
+- Preservar a identidade visual atual do CodeRyse.
+
+A diferenciação deve ser consistente em todos os estados da interface.
+
+## 4. Diferenciação de cores da tabela
+
+Atualmente, a área onde os conteúdos são organizados possui praticamente a mesma tonalidade do background geral do site.
+
+Modificar essa característica:
+
+- Aplicar um tom de grafite ligeiramente mais claro ou mais escuro que o background principal, criando contraste perceptível.
+- Diferenciar visualmente o container do módulo e as linhas dos conteúdos.
+- Utilizar divisórias sutis, com baixa opacidade.
+- Evitar bordas excessivas em todos os elementos.
+- Preservar os cantos arredondados e a identidade visual atual.
+- Criar uma hierarquia visual clara entre background, container do módulo e itens internos.
+
+O resultado deve transmitir profundidade e organização sem deixar a interface carregada.
+
+## 5. COMPONENTES QUE NÃO PODEM SER ALTERADOS
+
+Preservar integralmente:
+
+- Botão NOVO CONTEÚDO.
+- Botão ADICIONAR QUIZ.
+- Botão GERAR QUIZ COM IA.
+- Botões de EDITAR presentes em cada conteúdo e quiz.
+- Menus de ações existentes.
+- Indicadores de PUBLICADO e RASCUNHO.
+- Expansão e recolhimento dos conteúdos.
+- Expansão e recolhimento dos módulos.
+- Associação entre conteúdos e quizzes.
+- Seleção múltipla e ações em lote.
+- Navegação e botão VISUALIZAR COMO ALUNO.
+
+Não alterar posicionamento, dimensões, cores, textos ou comportamento dos três botões inferiores.
+
+## 6. Responsividade e compatibilidade
+
+A interface deve continuar funcionando corretamente em:
+
+- Desktop;
+- Web;
+- Tablet;
+- Mobile.
+
+Requisitos:
+- Não utilizar dimensões fixas desnecessárias.
+- Utilizar unidades responsivas quando aplicável.
+- Evitar quebra de textos, sobreposição de ícones e botões.
+- Preservar espaçamentos e alinhamentos.
+- Garantir que a remoção das setas não provoque desalinhamento das linhas.
+- Não permitir que os novos checkboxes comprometam a largura disponível em telas menores.
+
+## 7. REGRAS OBRIGATÓRIAS DE IMPLEMENTAÇÃO
+
+1. Antes de alterar qualquer código, localizar e analisar os componentes responsáveis pela renderização da lista de conteúdos e quizzes.
+2. Identificar os estilos compartilhados e específicos por plataforma.
+3. Reaproveitar componentes, tokens de cores e padrões já existentes.
+4. Evitar duplicação de CSS e regras conflitantes.
+5. Não modificar controllers, services, repositories, DTOs, models, APIs ou banco de dados.
+6. Não alterar regras de negócio, estados de publicação ou persistência.
+7. Não realizar refatorações fora do escopo solicitado.
+8. Não remover funcionalidades que não estejam explicitamente mencionadas.
+
+## 8. TESTES E VALIDAÇÃO
+
+Após a implementação:
+
+- Verificar visualmente todos os tipos de conteúdo e quizzes.
+- Testar seleção individual e múltipla.
+- Testar selecionar tudo e desmarcar tudo.
+- Verificar as ações em lote.
+- Confirmar que editar continua funcionando.
+- Confirmar que os três botões inferiores continuam funcionando normalmente.
+- Testar expansão e recolhimento.
+- Validar os layouts em diferentes resoluções.
+- Verificar possíveis efeitos colaterais em Web, Desktop e Mobile.
+
+**CRITÉRIO DE ACEITE: REGRESSÃO ZERO.**
+
+A entrega deve conter somente as alterações visuais e estruturais explicitamente solicitadas, mantendo todas as funcionalidades existentes.

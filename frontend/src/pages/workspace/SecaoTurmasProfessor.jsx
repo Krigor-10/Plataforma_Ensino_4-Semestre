@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbDownload } from "react-icons/tb";
+import { TbDownload } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import IndicadoresDesempenhoCurso from "../../components/IndicadoresDesempenhoCurso.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
@@ -140,12 +141,7 @@ export function SecaoTurmasProfessor({ cursoPorId, onSessionExpired }) {
         </>
       ) : (
         <>
-          <nav aria-label="Navegacao do progresso" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Progresso
-            </button>
-          </nav>
+          <BotaoVoltar destino="Progresso" onClick={voltarParaLista} />
 
           <header className="atividades-curso__cabecalho">
             <h2 className="atividades-curso__titulo">{cursoSelecionado.cursoTitulo}</h2>

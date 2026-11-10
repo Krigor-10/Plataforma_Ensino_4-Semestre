@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbUsers } from "react-icons/tb";
+import { TbUsers } from "react-icons/tb";
 import BlocoProfessoresCurso from "../../components/BlocoProfessoresCurso.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
@@ -65,12 +66,7 @@ export function SecaoProfessoresCurso({ cursoEmFoco, cursoPorId, onCursoEmFocoAp
         </>
       ) : (
         <>
-          <nav aria-label="Navegacao dos cursos" className="atividades-curso__navegacao">
-            <button className="atividades-curso__voltar" onClick={voltarParaLista} type="button">
-              <TbArrowLeft aria-hidden="true" size={22} />
-              Voltar para Professores por curso
-            </button>
-          </nav>
+          <BotaoVoltar destino="Professores por curso" onClick={voltarParaLista} />
 
           <header className="atividades-curso__cabecalho">
             <div>

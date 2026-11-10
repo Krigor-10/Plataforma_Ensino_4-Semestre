@@ -3761,6 +3761,54 @@
   }
 }
 
+.atividades-curso__voltar-texto-curto {
+  display: none;
+}
+
+/* Botao Voltar na margem esquerda (prompt "botao voltar margem esquerda",
+   09/11): so quando sobram pelo menos ~9rem de cada lado da coluna de
+   1320px (.layout-principal), o botao sai do fluxo e vai pra margem, com
+   so "Voltar" visivel (o nome completo fica no aria-label/title). Usa
+   container query em .layout-conteudo (nao @media) porque a largura que
+   importa e a da area ao lado da sidebar, nao a da janela - a sidebar
+   muda de ~17rem (aberta) pra ~4rem (recolhida), entao a mesma largura de
+   janela pode ou nao ter espaco sobrando dependendo do estado dela.
+   1320px (coluna) + 2 * 9rem (respiro minimo dos dois lados) = 100.5rem. */
+/* Mesma causa do bug "icone sumido" dos botoes de Cadastrar (ver
+   achado_bug_icone_sumido_flex_shrink_botoes na memoria do projeto):
+   dentro do container query abaixo, a largura calculada pro nav absoluto
+   (right + left:auto) fica negativa, e o unico filho que ainda pode
+   encolher - o svg da seta, flex-shrink:1 por padrao - e espremido ate 0.
+   Fora do container query nao tem efeito nenhum (svg ja tem a largura
+   intrinseca do icone, nunca precisa encolher). */
+.atividades-curso__voltar svg {
+  flex-shrink: 0;
+}
+
+@container (min-width: 100.5rem) {
+  .atividades-curso__navegacao {
+    position: absolute;
+    /* top:auto (padrao) usa a posicao estatica do elemento - como ele sai
+       do fluxo, o titulo abaixo sobe pra ocupar o lugar dele, e a posicao
+       estatica cai exatamente nessa mesma altura, alinhando os dois. */
+    top: auto;
+    right: calc(100% + var(--espaco-lg));
+    margin-bottom: 0;
+    /* Sem isso, a largura calculada do nav (right definido, left:auto) da
+       negativa e ele encolhe pro minimo possivel - mata a seta mesmo com
+       flex-shrink:0 nela (o pai some, a seta some junto). */
+    width: max-content;
+  }
+
+  .atividades-curso__voltar-texto {
+    display: none;
+  }
+
+  .atividades-curso__voltar-texto-curto {
+    display: inline;
+  }
+}
+
 /* ------------------------------------------------------------
    ATIVIDADES DO CURSO — cabecalho compacto reaproveitado (com
    grade-estatisticas) por Progresso, Turmas e Modulos do
@@ -3896,28 +3944,31 @@
   margin-bottom: var(--espaco-lg);
 }
 
-/* Cada avaliacao do ALUNO vira uma unidade visual com borda propria (cartao
-   fechado: cabecalho + detalhes + botao Iniciar), diferente do padrao "linha
-   com divisor inferior" usado no professor e em Conteudos, que reaproveitam
-   a mesma classe base .conteudos-modulo. O espacamento entre cartoes continua
-   vindo do gap do container (.atividades-curso__lista-modulos). */
-.tela-avaliacoes-aluno .conteudos-modulo {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  padding: 0 var(--espaco-md);
-  background: rgba(255, 255, 255, 0.015);
+/* Avaliacoes do ALUNO reaproveita o mesmo cartao de Conteudos
+   (.conteudos-modulo--cartao, aplicado no JSX): cabecalho em
+   --cor-fundo-elevado sempre visivel - fechado, so o cabecalho aparece;
+   aberto, o corpo some por baixo em --cor-fundo-alt. Era borda propria de
+   1px + rgba(255,255,255,0.015) (quase invisivel) - a borda saiu (igual a
+   Conteudos) porque, com o fundo solido, "cartao com borda" parecia cartao
+   dentro de cartao. O espacamento entre cartoes continua vindo do gap do
+   container (.atividades-curso__lista-modulos). Prompt "Avaliacoes do
+   aluno: destaque dos cards", 09/11. */
+
+/* Titulo do cabecalho maior (pedido 09/11, depois do aumento da caixa do
+   icone): "AVALIACAO 01" (eyebrow), o titulo da avaliacao e a contagem de
+   questoes sobem de tamanho em conjunto. Escopado so em
+   .tela-avaliacoes-aluno pra nao alterar Avaliacoes do Professor nem
+   Conteudos/Progresso/Modulos, que reaproveitam as mesmas classes base. */
+.tela-avaliacoes-aluno .conteudos-modulo__eyebrow {
+  font-size: 0.74rem;
 }
 
-/* .atividades-curso__lista-modulos > .conteudos-modulo:last-child remove o
-   border-bottom (pensado pra lista com divisorias); aqui cada cartao e
-   independente, entao o ultimo tambem precisa da borda completa — inclusive
-   no destaque de expandido, que sem isso perderia so o traco de baixo. */
-.tela-avaliacoes-aluno .atividades-curso__lista-modulos > .conteudos-modulo:last-child {
-  border-bottom: 1px solid var(--cor-borda);
+.tela-avaliacoes-aluno .conteudos-modulo__titulo {
+  font-size: 1.05rem;
 }
 
-.tela-avaliacoes-aluno .atividades-curso__lista-modulos > .conteudos-modulo:last-child:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
-  border-bottom-color: var(--cor-borda-forte);
+.tela-avaliacoes-aluno .conteudos-modulo__contagem {
+  font-size: 0.82rem;
 }
 
 /* Mesmo padrao de cartao com borda da tela Avaliacoes do aluno, reaplicado na
@@ -4423,17 +4474,22 @@
   align-items: center;
 }
 
+/* Hierarquia do titulo "Quizzes do modulo" (auditoria 09/11): tamanho e cor
+   antigos (0.72rem, --cor-texto-mudo) ficavam quase ilegiveis perto dos
+   titulos de conteudo (0.92rem, --cor-texto-forte). Sobe um pouco o peso e
+   troca pra --cor-marca-clara (mesmo tom do icone de quiz) pra ganhar
+   presenca sem disputar com os titulos de conteudo em si. */
 .atividades-curso__quizzes-modulo-titulo {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.72rem;
+  gap: 0.4rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cor-texto-mudo);
+  letter-spacing: 0.05em;
+  color: var(--cor-marca-clara);
   margin: 0;
-  padding: var(--espaco-sm) var(--espaco-md) 0.2rem;
+  padding: var(--espaco-md) var(--espaco-md) 0.4rem;
 }
 
 /* Mesmo padrao de cartao com borda, reaplicado nos MODULOS da tela Modulos
@@ -4470,7 +4526,11 @@
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-md);
   padding: 0 var(--espaco-md);
-  background: rgba(255, 255, 255, 0.015);
+  /* Era rgba(255,255,255,0.015) (quase invisivel, cartao se confundia com o
+     fundo da pagina) - mesmo tom ja usado no cabecalho dos modulos de
+     Conteudos, pra dar peso visual proprio a cada card de progresso
+     (auditoria 09/11). */
+  background: var(--cor-fundo-elevado);
 }
 
 .tela-progresso-coordenador .atividades-curso__lista-modulos > .conteudos-modulo:last-child,
@@ -4520,17 +4580,18 @@
 }
 
 /* Bucket "Avaliacoes do curso" (Prova/Exercicio sem modulo) — mesmo cartao com
-   borda dos modulos, mas sempre aberto (sem toggle), entao o cabecalho precisa
-   do padding vertical que .conteudos-modulo__toggle normalmente fornece. */
-.conteudos-modulo--sem-toggle {
-  margin-bottom: var(--espaco-lg);
+   borda dos modulos. Ganhou toggle (auditoria 09/11, item "Progresso do
+   Professor"): usa o .conteudos-modulo__toggle padrao, que ja fornece o
+   padding vertical do cabecalho - so o respiro abaixo do cartao e a margem
+   da descricao continuam proprios daqui. Era --espaco-lg (1.5rem, quase o
+   dobro) - agora bate com o gap de 0.75rem entre os proprios modulos
+   (.atividades-curso__lista-modulos) pra nao ficar mais afastado da lista
+   que os modulos ficam entre si (prompt "tamanho das linhas"). */
+.conteudos-modulo--avaliacoes-curso {
+  margin-bottom: 0.75rem;
 }
 
-.conteudos-modulo--sem-toggle .conteudos-modulo__cabecalho {
-  padding: var(--espaco-sm) 0;
-}
-
-.conteudos-modulo--sem-toggle .conteudos-modulo__descricao {
+.conteudos-modulo--avaliacoes-curso .conteudos-modulo__descricao {
   margin: 0 0 var(--espaco-sm);
 }
 
@@ -5299,11 +5360,16 @@
   gap: var(--espaco-xs);
 }
 
+/* Paginacao minimalista (auditoria 09/11): borda em todo numero de pagina
+   deixava a lista carregada visualmente - border transparente (em vez de
+   remover a propriedade) mantem a mesma caixa/tamanho em todos os estados,
+   so sem o contorno visivel em repouso. Hover/ativo continuam distinguindo
+   o estado so por fundo e cor de texto. */
 .paginacao__pagina {
   min-width: 32px;
   height: 32px;
   border-radius: var(--raio-md);
-  border: 1px solid var(--cor-borda);
+  border: 1px solid transparent;
   background: none;
   color: var(--cor-texto-suave);
   font-size: 0.82rem;
@@ -5326,7 +5392,7 @@
 
 .paginacao__pagina--ativa {
   background: var(--cor-marca);
-  border-color: var(--cor-marca);
+  border-color: transparent;
   color: #fff;
   font-weight: 700;
 }
@@ -5686,6 +5752,40 @@
   border-bottom: none;
 }
 
+/* Cards de Conteudos (Professor e Aluno, item "padronizacao visual"): o
+   cartao do modulo inteiro ganha a mancha de fundo --cor-fundo-alt (um
+   degrau abaixo do cabecalho, que ja usa --cor-fundo-elevado) pra as linhas
+   de conteudo dentro dele deixarem de se confundir com o background da
+   pagina. As linhas continuam sem fundo/raio proprios (herdam este aqui) -
+   evita reabrir frestas nos cantos de cada linha e preserva os guias de
+   quiz vinculado, que dependem de gap:0 entre linhas. */
+.conteudos-modulo--cartao {
+  background: var(--cor-fundo-alt);
+  border-radius: var(--raio-md);
+  /* "Relevo duplo" (opcao J4, 09/11): borda escura fina + sombra fina
+     embaixo, acompanhando o card inteiro fechado ou aberto. */
+  border: 1px solid var(--borda-card-modulo);
+  box-shadow: var(--relevo-card-base);
+}
+
+/* .conteudos-modulo:has(...expanded) (acima) troca a borda pra
+   --cor-borda-forte (roxo) quando o card abre - nos cards de Conteudos
+   isso criava um contorno roxo destoante do relevo grafite. Mesma
+   especificidade do original (classe dobrada + :has) garante a vitoria
+   sem !important, independente da ordem no arquivo. */
+.conteudos-modulo.conteudos-modulo--cartao:has(.conteudos-modulo__toggle[aria-expanded="true"]) {
+  border-color: var(--borda-card-modulo);
+}
+
+/* Corpo do cartao quando aberto (ex.: detalhes + botao Iniciar nas
+   Avaliacoes do Aluno) - o cabecalho tem seu proprio padding lateral
+   (.conteudos-modulo__cabecalho abaixo); sem essa classe o corpo ficava
+   colado nas bordas do cartao, porque o cartao em si nao tem padding
+   proprio (perdeu de proposito, ver comentario acima). */
+.conteudos-modulo--cartao > .conteudos-modulo__corpo {
+  padding: 0 var(--espaco-md) var(--espaco-md);
+}
+
 .conteudos-modulo__cabecalho {
   display: flex;
   align-items: center;
@@ -5706,9 +5806,10 @@
    nao alterar a tela Modulos do Admin/Coordenador nem Progresso/Avaliacoes,
    que reaproveitam a mesma .conteudos-modulo sem o visual de cartao. */
 .conteudos-modulo--cartao > .conteudos-modulo__cabecalho {
-  background: var(--cor-fundo-elevado);
+  background: var(--cor-card-modulo);
   border-radius: var(--raio-md);
   padding: 0 var(--espaco-md);
+  box-shadow: var(--relevo-card-topo);
 }
 
 .conteudos-modulo--cartao:has(.conteudos-modulo__toggle[aria-expanded="true"]) > .conteudos-modulo__cabecalho {
@@ -5792,12 +5893,22 @@
    (Professor/Aluno) - o fallback de 2.25rem cobre o componente NumeroModulo
    reaproveitado fora dela (Painel do Coordenador, Progresso do Professor,
    Modulos do Admin). */
-.conteudos-modulo__numero {
+/* Mesma caixa do numero, reaproveitada pra outros icones de cabecalho que
+   precisam ficar do mesmo tamanho dos modulos (prompt "tamanho das linhas",
+   09/11) - ex.: o trofeu de "Avaliacoes do curso" no Progresso do Professor,
+   que antes usava so .conteudos-modulo__icone (sem largura/fundo propios) e
+   ficava com a linha mais baixa e o titulo desalinhado em relacao aos
+   modulos abaixo. */
+.conteudos-modulo__numero,
+.conteudos-modulo__icone--caixa {
   width: var(--coluna-icone-conteudo, 2.25rem);
   height: var(--coluna-icone-conteudo, 2.25rem);
   border-radius: var(--raio-md);
   background: rgba(123, 47, 247, 0.08);
   border: 1px solid rgba(123, 47, 247, 0.28);
+}
+
+.conteudos-modulo__numero {
   font-size: 0.8rem;
   font-weight: 700;
 }

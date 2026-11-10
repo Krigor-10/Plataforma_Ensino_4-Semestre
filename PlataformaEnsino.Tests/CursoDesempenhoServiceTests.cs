@@ -222,6 +222,28 @@ public class CursoDesempenhoServiceTests
         Assert.DoesNotContain(resultado, c => c.CursoId == cursoB.Id);
     }
 
+    [Fact]
+    public async Task ObterDesempenhoParaAdminAsync_RetornaCursosDeTodosOsDonos()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+
+        var coordenadorA = CriarCoordenador(context);
+        var cursoA = CriarCurso(context, coordenadorA.Id);
+
+        var coordenadorB = CriarCoordenador(context);
+        var cursoB = CriarCurso(context, coordenadorB.Id);
+
+        var cursoSemCoordenador = CriarCurso(context);
+
+        var resultado = (await service.ObterDesempenhoParaAdminAsync()).ToList();
+
+        Assert.Equal(3, resultado.Count);
+        Assert.Contains(resultado, c => c.CursoId == cursoA.Id);
+        Assert.Contains(resultado, c => c.CursoId == cursoB.Id);
+        Assert.Contains(resultado, c => c.CursoId == cursoSemCoordenador.Id);
+    }
+
     // ---------- Correcao da agregacao ----------
 
     [Fact]

@@ -17,6 +17,7 @@ import { formatGrade, normalizePublicationStatus, normalizeTipoAvaliacao } from 
    publicacao, troca "X% concluido" por "N alunos concluiram · X%"). */
 export default function PainelModulosDesempenho({ contextoCoordenador = false, curso }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
+  const [avaliacoesCursoAbertas, setAvaliacoesCursoAbertas] = useState(true);
 
   function alternarModulo(moduloId) {
     setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
@@ -25,45 +26,75 @@ export default function PainelModulosDesempenho({ contextoCoordenador = false, c
   return (
     <>
       {curso.avaliacoesSemModulo?.length > 0 ? (
-        <section className="conteudos-modulo conteudos-modulo--sem-toggle" aria-label="Avaliacoes do curso">
+        <section className="conteudos-modulo conteudos-modulo--avaliacoes-curso" aria-label="Avaliacoes do curso">
           <header className="conteudos-modulo__cabecalho">
-            <div className="conteudos-modulo__info">
-              <span aria-hidden="true" className="conteudos-modulo__icone">
-                <TbTrophy size="1.4rem" />
-              </span>
-              <span className="conteudos-modulo__titulo">Avaliacoes do curso</span>
-              <span className="conteudos-modulo__contagem">
-                {curso.avaliacoesSemModulo.length} avaliacao{curso.avaliacoesSemModulo.length === 1 ? "" : "es"}
-              </span>
-            </div>
-          </header>
-          <p className="atividades-curso__meta conteudos-modulo__descricao">Provas e exercicios vinculados direto ao curso, sem modulo.</p>
-          <ul aria-label="Avaliacoes vinculadas direto ao curso" className="atividades-curso__lista" role="list">
-            {curso.avaliacoesSemModulo.map((avaliacao) => (
-              <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
-                <div className="atividades-curso__linha">
-                  <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                    <TbTrophy aria-hidden="true" size="1.75rem" />
+            <h3 className="conteudos-modulo__cabecalho-wrapper">
+              <button
+                aria-controls="avaliacoes-curso-detalhe"
+                aria-expanded={avaliacoesCursoAbertas}
+                className="conteudos-modulo__toggle"
+                onClick={() => setAvaliacoesCursoAbertas((atual) => !atual)}
+                type="button"
+              >
+                <div className="conteudos-modulo__info">
+                  <span aria-hidden="true" className="conteudos-modulo__icone conteudos-modulo__icone--caixa">
+                    <TbTrophy size="1.15rem" />
                   </span>
-                  <div className="atividades-curso__corpo">
-                    <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
-                    <p className="atividades-curso__meta">
-                      <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
-                      {contextoCoordenador ? null : (
-                        <>
-                          <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                          <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="atividades-curso__metrica">
-                    {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"} · Media {formatGrade(avaliacao.mediaNota)}
-                  </div>
+                  <span className="conteudos-modulo__titulo">Avaliacoes do curso</span>
+                  <span className="conteudos-modulo__contagem">
+                    {curso.avaliacoesSemModulo.length} avaliacao{curso.avaliacoesSemModulo.length === 1 ? "" : "es"}
+                  </span>
                 </div>
-              </li>
-            ))}
-          </ul>
+                <TbChevronDown
+                  aria-hidden="true"
+                  className={`conteudos-modulo__chevron${avaliacoesCursoAbertas ? " conteudos-modulo__chevron--aberto" : ""}`}
+                  size="1.1rem"
+                />
+              </button>
+            </h3>
+          </header>
+
+          <AnimatePresence initial={false}>
+            {avaliacoesCursoAbertas ? (
+              <motion.div
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                id="avaliacoes-curso-detalhe"
+                initial={{ height: 0, opacity: 0 }}
+                key="avaliacoes-curso-detalhe-motion"
+                style={{ overflow: "hidden" }}
+                transition={{ duration: 0.24, ease: "easeInOut" }}
+              >
+                <p className="atividades-curso__meta conteudos-modulo__descricao">Provas e exercicios vinculados direto ao curso, sem modulo.</p>
+                <ul aria-label="Avaliacoes vinculadas direto ao curso" className="atividades-curso__lista" role="list">
+                  {curso.avaliacoesSemModulo.map((avaliacao) => (
+                    <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
+                      <div className="atividades-curso__linha">
+                        <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
+                          <TbTrophy aria-hidden="true" size="1.75rem" />
+                        </span>
+                        <div className="atividades-curso__corpo">
+                          <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
+                          <p className="atividades-curso__meta">
+                            <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
+                            {contextoCoordenador ? null : (
+                              <>
+                                <span aria-hidden="true" className="atividades-curso__separador">·</span>
+                                <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <div className="atividades-curso__metrica">
+                          {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"} · Media {formatGrade(avaliacao.mediaNota)}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </section>
       ) : null}
 

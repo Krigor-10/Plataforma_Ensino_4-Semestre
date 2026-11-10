@@ -49,13 +49,13 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
   });
 
   test("lista os modulos do curso mesmo quando a matricula nao tem turma vinculada", async () => {
-    const usuario = userEvent.setup();
     const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos, turmas } = montarCenario();
 
     render(
       <SecaoCursosAluno
         avaliacoes={avaliacoes}
         conteudos={conteudos}
+        cursoIdSelecionado={10}
         cursos={cursos}
         matriculas={matriculas}
         modulos={modulos}
@@ -65,14 +65,11 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       />
     );
 
-    await usuario.click(screen.getByRole("button", { name: /Curso Sem Turma na Matricula/i }));
-
     expect(screen.queryByText(/ainda nao possui modulos publicados/i)).not.toBeInTheDocument();
     expect(screen.getByText("Fundamentos")).toBeInTheDocument();
   });
 
   test("mostra o estado vazio quando o curso realmente nao tem modulo nenhum", async () => {
-    const usuario = userEvent.setup();
     const cursos = [{ id: 20, titulo: "Curso Sem Modulo Nenhum", imagemUrl: null }];
     const matriculas = [{ id: 6, cursoId: 20, turmaId: null, status: "Aprovada", notaFinal: 0 }];
     const progressos = { conteudos: [], modulos: [], cursos: [] };
@@ -81,6 +78,7 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       <SecaoCursosAluno
         avaliacoes={[]}
         conteudos={[]}
+        cursoIdSelecionado={20}
         cursos={cursos}
         matriculas={matriculas}
         modulos={[]}
@@ -90,16 +88,52 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       />
     );
 
-    await usuario.click(screen.getByRole("button", { name: /Curso Sem Modulo Nenhum/i }));
-
     expect(screen.getByText(/ainda nao possui modulos publicados/i)).toBeInTheDocument();
+  });
+
+  test("clicar num curso navega pra /app/meus-cursos/:id, e Voltar navega de volta pra lista", async () => {
+    const usuario = userEvent.setup();
+    const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos, turmas } = montarCenario();
+    const onNavigate = vi.fn();
+
+    const { rerender } = render(
+      <SecaoCursosAluno
+        avaliacoes={avaliacoes}
+        conteudos={conteudos}
+        cursos={cursos}
+        matriculas={matriculas}
+        modulos={modulos}
+        onNavigate={onNavigate}
+        progressos={progressos}
+        turmas={turmas}
+      />
+    );
+
+    await usuario.click(screen.getByRole("button", { name: /Curso Sem Turma na Matricula/i }));
+    expect(onNavigate).toHaveBeenCalledWith("/app/meus-cursos/10");
+
+    rerender(
+      <SecaoCursosAluno
+        avaliacoes={avaliacoes}
+        conteudos={conteudos}
+        cursoIdSelecionado={10}
+        cursos={cursos}
+        matriculas={matriculas}
+        modulos={modulos}
+        onNavigate={onNavigate}
+        progressos={progressos}
+        turmas={turmas}
+      />
+    );
+
+    await usuario.click(screen.getByRole("button", { name: "Voltar para Progresso" }));
+    expect(onNavigate).toHaveBeenCalledWith("/app/meus-cursos");
   });
 
   // Reproduz o bug: progresso de conteudo/modulo em 100% nao pode, por si
   // so, liberar o card de certificado - so GET /Certificados/status (que
   // sabe de avaliacao formal/nota minima/correcao pendente) pode.
   test("nao mostra o card de certificado so porque o progresso de conteudo esta em 100%", async () => {
-    const usuario = userEvent.setup();
     const { avaliacoes, conteudos, cursos, modulos, turmas } = montarCenario();
     const matriculas = [{ id: 5, cursoId: 10, turmaId: null, status: "Aprovada", notaFinal: 0 }];
     const progressos = {
@@ -115,6 +149,7 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       <SecaoCursosAluno
         avaliacoes={avaliacoes}
         conteudos={conteudos}
+        cursoIdSelecionado={10}
         cursos={cursos}
         matriculas={matriculas}
         modulos={modulos}
@@ -124,14 +159,12 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       />
     );
 
-    await usuario.click(screen.getByRole("button", { name: /Curso Sem Turma na Matricula/i }));
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/Certificados/status"));
 
     expect(screen.queryByText(/Parabens! Certificado disponivel/i)).not.toBeInTheDocument();
   });
 
   test("mostra o card de certificado quando o backend confirma a liberacao real", async () => {
-    const usuario = userEvent.setup();
     const { avaliacoes, conteudos, cursos, modulos, turmas } = montarCenario();
     const matriculas = [{ id: 5, cursoId: 10, turmaId: null, status: "Aprovada", notaFinal: 8 }];
     const progressos = {
@@ -145,6 +178,7 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
       <SecaoCursosAluno
         avaliacoes={avaliacoes}
         conteudos={conteudos}
+        cursoIdSelecionado={10}
         cursos={cursos}
         matriculas={matriculas}
         modulos={modulos}
@@ -153,8 +187,6 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
         turmas={turmas}
       />
     );
-
-    await usuario.click(screen.getByRole("button", { name: /Curso Sem Turma na Matricula/i }));
 
     expect(await screen.findByText(/Parabens! Certificado disponivel/i)).toBeInTheDocument();
   });

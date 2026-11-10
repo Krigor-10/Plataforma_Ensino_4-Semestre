@@ -246,9 +246,15 @@ public class CursosController : ControllerBase
     }
 
     [HttpGet("desempenho")]
-    [Authorize(Roles = "Coordenador,Professor")]
+    [Authorize(Roles = "Coordenador,Professor,Admin")]
     public async Task<IActionResult> ListarDesempenho()
     {
+        if (User.IsInRole("Admin"))
+        {
+            var desempenhoAdmin = await _cursoDesempenhoService.ObterDesempenhoParaAdminAsync();
+            return Ok(desempenhoAdmin);
+        }
+
         if (User.IsInRole("Professor"))
         {
             var professorId = ObterProfessorId();

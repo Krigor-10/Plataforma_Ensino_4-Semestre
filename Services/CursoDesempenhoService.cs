@@ -36,6 +36,9 @@ public class CursoDesempenhoService : ICursoDesempenhoService
     public async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoPorProfessorAsync(int professorId)
         => await ObterDesempenhoInternoAsync(coordenadorId: null, professorId: professorId, cursoIdFiltro: null);
 
+    public async Task<IEnumerable<CursoDesempenhoResponseDto>> ObterDesempenhoParaAdminAsync()
+        => await ObterDesempenhoInternoAsync(coordenadorId: null, professorId: null, cursoIdFiltro: null);
+
     /* coordenadorId e professorId sao mutuamente exclusivos - exatamente um dos
        dois deve vir preenchido, dependendo de qual papel esta consultando. O
        resto da agregacao (modulos, materiais, avaliacoes, progresso) e 100%
@@ -52,11 +55,11 @@ public class CursoDesempenhoService : ICursoDesempenhoService
                 .Where(curso => curso.CoordenadorId == coordenadorId.Value && (!cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value))
                 .ToListAsync();
         }
-        else
+        else if (professorId.HasValue)
         {
             var cursoIdsDoProfessor = await _context.ProfessoresCursos
                 .AsNoTracking()
-                .Where(vinculo => vinculo.ProfessorId == professorId!.Value)
+                .Where(vinculo => vinculo.ProfessorId == professorId.Value)
                 .Select(vinculo => vinculo.CursoId)
                 .Distinct()
                 .ToListAsync();
@@ -64,6 +67,14 @@ public class CursoDesempenhoService : ICursoDesempenhoService
             cursos = await _context.Cursos
                 .AsNoTracking()
                 .Where(curso => cursoIdsDoProfessor.Contains(curso.Id) && (!cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value))
+                .ToListAsync();
+        }
+        else
+        {
+            // Admin: sem dono pra filtrar, pega todos os cursos da plataforma.
+            cursos = await _context.Cursos
+                .AsNoTracking()
+                .Where(curso => !cursoIdFiltro.HasValue || curso.Id == cursoIdFiltro.Value)
                 .ToListAsync();
         }
 

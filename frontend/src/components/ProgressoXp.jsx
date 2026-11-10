@@ -16,7 +16,10 @@ export default function ProgressoXp({ xp, variante = "completa" }) {
   if (variante === "compacta") {
     return (
       <div className="progresso-xp progresso-xp--compacta">
-        <span className="progresso-xp__nivel">Nível {nivel}</span>
+        <span className="progresso-xp__nivel">
+          <TbBolt aria-hidden="true" size={15} />
+          Nível {nivel}
+        </span>
         <BarraProgresso mostrarTexto={false} percentual={xp.percentualNivel} rotuloAria={rotuloAria} />
       </div>
     );

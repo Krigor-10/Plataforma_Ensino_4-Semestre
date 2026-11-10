@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbArrowLeft, TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUsers } from "react-icons/tb";
+import { TbChevronDown, TbDotsVertical, TbLayoutGrid, TbPlus, TbUsers } from "react-icons/tb";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { mapById } from "../../lib/dashboard.js";
@@ -271,12 +272,7 @@ function SlideCurso({
 
   return (
     <div className="conteudos-aluno">
-      <nav aria-label="Navegacao entre cursos" className="atividades-curso__navegacao">
-        <button className="atividades-curso__voltar" onClick={onVoltar} type="button">
-          <TbArrowLeft aria-hidden="true" size={22} />
-          Voltar para Modulos
-        </button>
-      </nav>
+      <BotaoVoltar destino="Módulos" onClick={onVoltar} />
 
       <header className="atividades-curso__cabecalho">
         <div>
