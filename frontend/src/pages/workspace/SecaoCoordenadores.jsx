@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
@@ -7,6 +7,7 @@ import Insignia from "../../components/Insignia.jsx";
 import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { useConsultaCep } from "../../hooks/useConsultaCep.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
@@ -52,6 +53,8 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [coordenadorEmEdicaoId, setCoordenadorEmEdicaoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
   const { status: statusCep, mensagem: mensagemCep, consultarCep } = useConsultaCep({
     onEncontrado: (endereco) => {
       setDadosFormulario((atual) => ({
@@ -340,7 +343,12 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </div>
       </header>
 
-      <nav aria-label="Status dos coordenadores" className="abas-matriculas" role="tablist">
+      <nav
+        aria-label="Status dos coordenadores"
+        className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+        ref={refAbas}
+        role="tablist"
+      >
         <button
           aria-selected={abaStatus === "ativos"}
           className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}

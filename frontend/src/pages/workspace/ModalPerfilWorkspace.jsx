@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TbLock, TbMoon, TbSettings, TbSun, TbUserCircle, TbUserEdit, TbUserFilled } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { InlineMessage, MiniList } from "../../components/Primitives.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatCep, onlyDigits } from "../../lib/format.js";
 import { corPorTipo } from "./BarraLateral.jsx";
@@ -55,6 +56,8 @@ export function ModalPerfilWorkspace({
 }) {
   const [aba, setAba] = useState("informacoes");
   const [temaClaro, setTemaClaro] = usarTemaClaro();
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
   const [dadosPerfil, setDadosPerfil] = useState(() => estadoFormularioPerfilInicial(usuario));
   const [mensagemPerfil, setMensagemPerfil] = useState({ tone: "", message: "" });
@@ -245,7 +248,13 @@ export function ModalPerfilWorkspace({
         </aside>
 
         <div className="perfil-painel">
-          <nav aria-label="Secoes do perfil" className="abas-matriculas" role="tablist" style={{ marginBottom: "var(--espaco-lg)" }}>
+          <nav
+            aria-label="Secoes do perfil"
+            className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+            ref={refAbas}
+            role="tablist"
+            style={{ marginBottom: "var(--espaco-lg)" }}
+          >
             <button
               aria-selected={aba === "informacoes"}
               className={`abas-matriculas__aba${aba === "informacoes" ? " abas-matriculas__aba--ativa" : ""}`}

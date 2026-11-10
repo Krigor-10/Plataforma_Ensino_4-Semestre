@@ -8,6 +8,7 @@ import Insignia from "../../components/Insignia.jsx";
 import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { useConsultaCep } from "../../hooks/useConsultaCep.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
@@ -72,6 +73,8 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   const [confirmacaoLote, setConfirmacaoLote] = useState(null);
   const [executandoLote, setExecutandoLote] = useState(false);
   const refCheckboxCabecalho = useRef(null);
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmasPorProfessor = useMemo(() => {
@@ -460,7 +463,12 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </div>
       </header>
 
-      <nav aria-label="Status dos professores" className="abas-matriculas" role="tablist">
+      <nav
+        aria-label="Status dos professores"
+        className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+        ref={refAbas}
+        role="tablist"
+      >
         <button
           aria-selected={abaStatus === "ativos"}
           className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}

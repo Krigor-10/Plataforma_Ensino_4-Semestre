@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { TbX } from "react-icons/tb";
 import Botao from "../components/Botao.jsx";
@@ -8,6 +8,7 @@ import { formatCep, onlyDigits } from "../lib/format.js";
 import { apiRequest } from "../lib/api.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 import { useConsultaCep } from "../hooks/useConsultaCep.js";
+import { useIndicadorRolagemHorizontal } from "../hooks/useIndicadorRolagemHorizontal.js";
 
 const ABAS = ["Dados Pessoais e Senha", "Endereco"];
 const CAMPOS_ABA_0 = ["nome", "email", "cpf", "telefone", "cursoId", "senha", "confirmarSenha"];
@@ -41,6 +42,8 @@ export default function CadastroScreen({ isDemoMode, onNavigate, cursoId }) {
   const [tone, setTone] = useState("info");
   const [abaAtual, setAbaAtual] = useState(0);
   const [campoComErro, setCampoComErro] = useState("");
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
   const { status: statusCep, mensagem: mensagemCep, consultarCep } = useConsultaCep({
     onEncontrado: (endereco) => {
@@ -257,7 +260,11 @@ export default function CadastroScreen({ isDemoMode, onNavigate, cursoId }) {
             </InlineMessage>
           ) : null}
 
-          <nav className="abas-matriculas" aria-label="Etapas do cadastro">
+          <nav
+            aria-label="Etapas do cadastro"
+            className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+            ref={refAbas}
+          >
             {ABAS.map((rotulo, indice) => (
               <button
                 className={`abas-matriculas__aba${abaAtual === indice ? " abas-matriculas__aba--ativa" : ""}`}

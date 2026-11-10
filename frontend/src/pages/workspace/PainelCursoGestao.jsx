@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   TbAward,
@@ -26,6 +26,7 @@ import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useProfessoresCurso } from "../../hooks/useProfessoresCurso.js";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -80,6 +81,8 @@ export default function PainelCursoGestao({
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
   useEffect(() => {
     let ativo = true;
@@ -264,7 +267,12 @@ export default function PainelCursoGestao({
 
       {erroDesempenho ? <InlineMessage tone="error">{erroDesempenho}</InlineMessage> : null}
 
-      <nav aria-label="Secoes do curso" className="abas-matriculas" role="tablist">
+      <nav
+        aria-label="Secoes do curso"
+        className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+        ref={refAbas}
+        role="tablist"
+      >
         <button
           aria-selected={abaAtiva === "modulos"}
           className={`abas-matriculas__aba${abaAtiva === "modulos" ? " abas-matriculas__aba--ativa" : ""}`}
@@ -308,7 +316,7 @@ export default function PainelCursoGestao({
                 const totalQuizzes = desempenhoModulo ? desempenhoModulo.avaliacoes.length : modulo.totalAvaliacoes ?? 0;
 
                 return (
-                  <section className="conteudos-modulo conteudos-modulo--gestao" key={modulo.id}>
+                  <section className="conteudos-modulo conteudos-modulo--gestao conteudos-modulo--cartao" key={modulo.id}>
                     <header className="conteudos-modulo__cabecalho">
                       <h3 className="conteudos-modulo__cabecalho-wrapper">
                         <button
@@ -371,6 +379,7 @@ export default function PainelCursoGestao({
                       {aberto ? (
                         <motion.div
                           animate={{ height: "auto", opacity: 1 }}
+                          className="conteudos-modulo__corpo"
                           exit={{ height: 0, opacity: 0 }}
                           id={idDetalhe}
                           initial={{ height: 0, opacity: 0 }}

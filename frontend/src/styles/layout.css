@@ -1134,10 +1134,17 @@
   gap: 4px;
   margin-bottom: var(--espaco-lg);
   padding: 4px;
-  /* Esmaece as bordas quando ha abas escondidas pelo scroll horizontal —
-     em telas estreitas o conjunto de abas pode nao caber inteiro
-     (ex.: as 3 abas do modal "Meu perfil"), e sem essa pista visual
-     nao ha nenhum sinal de que existe mais conteudo pra rolar. */
+}
+
+/* Esmaece a borda direita so quando ha abas escondidas pelo scroll
+   horizontal — em telas estreitas o conjunto de abas pode nao caber
+   inteiro (ex.: as 3 abas do modal "Meu perfil"), e sem essa pista visual
+   nao ha nenhum sinal de que existe mais conteudo pra rolar. Antes isso
+   era parte da regra base (sempre aplicado, mesmo com tudo visivel -
+   aparecia como uma sombra falsa na borda direita); agora e um modificador
+   ligado por JS (useIndicadorRolagemHorizontal.js), que mede se realmente
+   sobra conteudo pra rolar. */
+.abas-matriculas--mais-a-direita {
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
   mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
 }
