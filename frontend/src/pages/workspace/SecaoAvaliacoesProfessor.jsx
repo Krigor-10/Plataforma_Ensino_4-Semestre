@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { TbCheck, TbChevronDown, TbDotsVertical, TbPencil, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
+import {
+  TbAward,
+  TbCheck,
+  TbChevronDown,
+  TbClock,
+  TbDotsVertical,
+  TbHelpCircle,
+  TbPencil,
+  TbPlus,
+  TbRepeat,
+  TbSparkles,
+  TbTarget,
+  TbTrophy,
+  TbX
+} from "react-icons/tb";
 import { MdDelete } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
@@ -739,6 +753,7 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
               {aberta ? (
                 <motion.div
                   animate={{ height: "auto", opacity: 1 }}
+                  className="conteudos-modulo__corpo"
                   exit={{ height: 0, opacity: 0 }}
                   id={idDetalhe}
                   initial={{ height: 0, opacity: 0 }}
@@ -749,30 +764,30 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
                   <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
                     {Number(avaliacao.tipoAvaliacao) === 1 ? (
                       <div className="lista-detalhes__item">
-                        <dt>Tipo</dt>
+                        <dt><TbTrophy aria-hidden="true" size={15} /> Tipo</dt>
                         <dd>Quiz - formativo, sem nota</dd>
                       </div>
                     ) : (
                       <div className="lista-detalhes__item">
-                        <dt>Nota media</dt>
+                        <dt><TbAward aria-hidden="true" size={15} /> Nota média</dt>
                         <dd>{formatGrade(mediaNotaPorAvaliacaoId.get(avaliacao.id))}</dd>
                       </div>
                     )}
                     <div className="lista-detalhes__item">
-                      <dt>Questoes</dt>
+                      <dt><TbHelpCircle aria-hidden="true" size={15} /> Questões</dt>
                       <dd>{avaliacao.totalQuestoes || 0}</dd>
                     </div>
                     <div className="lista-detalhes__item">
-                      <dt>Tentativas permitidas</dt>
+                      <dt><TbRepeat aria-hidden="true" size={15} /> Tentativas permitidas</dt>
                       <dd>{avaliacao.tentativasPermitidas}</dd>
                     </div>
                     <div className="lista-detalhes__item">
-                      <dt>Tempo limite</dt>
+                      <dt><TbClock aria-hidden="true" size={15} /> Tempo limite</dt>
                       <dd>{avaliacao.tempoLimiteMinutos ? `${avaliacao.tempoLimiteMinutos} min` : "Sem limite"}</dd>
                     </div>
                     {Number(avaliacao.tipoAvaliacao) !== 1 ? (
                       <div className="lista-detalhes__item">
-                        <dt>Nota maxima</dt>
+                        <dt><TbTarget aria-hidden="true" size={15} /> Nota máxima</dt>
                         <dd>{formatDecimal(avaliacao.notaMaxima)}</dd>
                       </div>
                     ) : null}
