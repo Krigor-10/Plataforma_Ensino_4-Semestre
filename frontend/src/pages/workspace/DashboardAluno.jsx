@@ -223,7 +223,9 @@ export function DashboardAluno({ avaliacoes = [], conteudos = [], matriculas = [
       </section>
 
       {avaliacoes.length === 0 && conteudos.length === 0 && matriculasAprovadas.length === 0 ? (
-        <EmptyState message="Assim que sua primeira matricula for aprovada, seu painel ganha vida por aqui." />
+        <div style={{ marginTop: "var(--espaco-xl)" }}>
+          <EmptyState message="Assim que sua primeira matricula for aprovada, seu painel ganha vida por aqui." />
+        </div>
       ) : null}
     </main>
   );

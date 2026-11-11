@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdGroups, MdSave, MdSchool } from "react-icons/md";
@@ -9,6 +9,7 @@ import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
+import { useSelecaoEmLote } from "../../hooks/useSelecaoEmLote.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { useConsultaCep } from "../../hooks/useConsultaCep.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
@@ -69,10 +70,8 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   });
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
-  const [selecionados, setSelecionados] = useState(() => new Set());
   const [confirmacaoLote, setConfirmacaoLote] = useState(null);
   const [executandoLote, setExecutandoLote] = useState(false);
-  const refCheckboxCabecalho = useRef(null);
   const refAbas = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
@@ -121,58 +120,15 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
   const totalAtivos = professores.filter((professor) => professor.ativo).length;
   const totalInativos = professores.length - totalAtivos;
 
-  const idsVisiveis = useMemo(() => new Set(itensPagina.map((professor) => professor.id)), [itensPagina]);
-  const todosSelecionadosNaPagina = itensPagina.length > 0 && itensPagina.every((professor) => selecionados.has(professor.id));
-  const algunsSelecionadosNaPagina = itensPagina.some((professor) => selecionados.has(professor.id));
-
-  // Poda a selecao pros ids que ainda estao visiveis na pagina atual - cobre
-  // automaticamente troca de aba, busca e paginacao (o professor selecionado
-  // simplesmente nao existe mais na outra aba, ja que ativo/inativo sao
-  // mutuamente exclusivos) sem precisar de reset manual em cada handler.
-  useEffect(() => {
-    setSelecionados((atuais) => {
-      const proximos = new Set([...atuais].filter((id) => idsVisiveis.has(id)));
-      return proximos.size === atuais.size ? atuais : proximos;
-    });
-  }, [idsVisiveis]);
-
-  useEffect(() => {
-    if (refCheckboxCabecalho.current) {
-      refCheckboxCabecalho.current.indeterminate = algunsSelecionadosNaPagina && !todosSelecionadosNaPagina;
-    }
-  }, [algunsSelecionadosNaPagina, todosSelecionadosNaPagina]);
-
-  function alternarSelecao(professorId) {
-    setSelecionados((atuais) => {
-      const proximos = new Set(atuais);
-
-      if (proximos.has(professorId)) {
-        proximos.delete(professorId);
-      } else {
-        proximos.add(professorId);
-      }
-
-      return proximos;
-    });
-  }
-
-  function alternarSelecaoPagina() {
-    setSelecionados((atuais) => {
-      const proximos = new Set(atuais);
-
-      if (todosSelecionadosNaPagina) {
-        itensPagina.forEach((professor) => proximos.delete(professor.id));
-      } else {
-        itensPagina.forEach((professor) => proximos.add(professor.id));
-      }
-
-      return proximos;
-    });
-  }
-
-  function limparSelecao() {
-    setSelecionados(new Set());
-  }
+  const {
+    selecionados,
+    setSelecionados,
+    refCheckboxCabecalho,
+    todosSelecionadosNaPagina,
+    alternarSelecao,
+    alternarSelecaoPagina,
+    limparSelecao
+  } = useSelecaoEmLote(itensPagina);
 
   async function executarAcaoLote() {
     const reativando = confirmacaoLote === "reativar";
@@ -432,11 +388,6 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Professores</h2>
-          <div className="indicadores-status">
-            <Insignia texto={`${professores.length} cadastrado${professores.length === 1 ? "" : "s"}`} variante="neutro" />
-            <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
-            <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
-          </div>
         </div>
         <div className="barra-filtros">
           <div className="campo-busca">
@@ -463,44 +414,49 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
         </div>
       </header>
 
-      <nav
-        aria-label="Status dos professores"
-        className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
-        ref={refAbas}
-        role="tablist"
-      >
-        <button
-          aria-selected={abaStatus === "ativos"}
-          className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
-          onClick={() => selecionarAbaStatus("ativos")}
-          role="tab"
-          type="button"
+      <div className="linha-abas-status">
+        <nav
+          aria-label="Status dos professores"
+          className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+          ref={refAbas}
+          role="tablist"
         >
-          Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
-        </button>
-        <button
-          aria-selected={abaStatus === "inativos"}
-          className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
-          onClick={() => selecionarAbaStatus("inativos")}
-          role="tab"
-          type="button"
-        >
-          Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
-        </button>
-      </nav>
+          <button
+            aria-selected={abaStatus === "ativos"}
+            className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("ativos")}
+            role="tab"
+            type="button"
+          >
+            Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
+          </button>
+          <button
+            aria-selected={abaStatus === "inativos"}
+            className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("inativos")}
+            role="tab"
+            type="button"
+          >
+            Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
+          </button>
+        </nav>
+        <div className="indicadores-status">
+          <Insignia texto={`${professores.length} cadastrado${professores.length === 1 ? "" : "s"}`} variante="neutro" />
+          <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
+          <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
+        </div>
+      </div>
 
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
-      </div>
 
-      {selecionados.size > 0 ? (
-        <div className="toolbar-massa">
-          <span className="toolbar-massa__contador">
-            {selecionados.size} professor{selecionados.size === 1 ? "" : "es"} selecionado{selecionados.size === 1 ? "" : "s"}
-          </span>
-          <div className="toolbar-massa__acoes">
+        {selecionados.size > 0 ? (
+          <div className="barra-filtros__selecao">
+            <span aria-live="polite" className="barra-filtros__selecao-contador">
+              {selecionados.size} professor{selecionados.size === 1 ? "" : "es"} selecionado{selecionados.size === 1 ? "" : "s"}
+            </span>
             {abaStatus === "ativos" ? (
               <Botao onClick={() => setConfirmacaoLote("inativar")} tamanho="pequeno" variante="secundario">
                 Inativar selecionados
@@ -511,11 +467,11 @@ export function SecaoProfessores({ cursos = [], onRefresh, onSessionExpired, pro
               </Botao>
             )}
             <Botao onClick={limparSelecao} tamanho="pequeno" variante="fantasma">
-              Limpar selecao
+              Limpar seleção
             </Botao>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Lista de professores" className="tabela-dados">

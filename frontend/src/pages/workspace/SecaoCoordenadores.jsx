@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -8,6 +8,7 @@ import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
+import { useSelecaoEmLote } from "../../hooks/useSelecaoEmLote.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { useConsultaCep } from "../../hooks/useConsultaCep.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
@@ -68,6 +69,8 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   });
   const [mensagemFormulario, setMensagemFormulario] = useState({ tone: "", message: "" });
   const [salvando, setSalvando] = useState(false);
+  const [confirmacaoLote, setConfirmacaoLote] = useState(null);
+  const [executandoLote, setExecutandoLote] = useState(false);
 
   const cursosPorCoordenador = useMemo(() => {
     const mapa = new Map();
@@ -126,6 +129,75 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const itensPagina = coordenadoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
   const totalAtivos = coordenadores.filter((coordenador) => coordenador.ativo).length;
   const totalInativos = coordenadores.length - totalAtivos;
+
+  const {
+    selecionados,
+    setSelecionados,
+    refCheckboxCabecalho,
+    todosSelecionadosNaPagina,
+    alternarSelecao,
+    alternarSelecaoPagina,
+    limparSelecao
+  } = useSelecaoEmLote(itensPagina);
+
+  async function executarAcaoLote() {
+    const reativando = confirmacaoLote === "reativar";
+    const alvos = itensPagina.filter((coordenador) => selecionados.has(coordenador.id));
+
+    setExecutandoLote(true);
+
+    let sucesso = 0;
+    let falha = 0;
+
+    for (const coordenador of alvos) {
+      try {
+        await apiRequest(`/Coordenadores/${coordenador.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            nome: coordenador.nome,
+            email: coordenador.email,
+            cpf: coordenador.cpf,
+            telefone: coordenador.telefone,
+            cep: coordenador.cep,
+            rua: coordenador.rua,
+            numero: coordenador.numero,
+            bairro: coordenador.bairro,
+            cidade: coordenador.cidade,
+            estado: coordenador.estado,
+            ativo: reativando
+          })
+        });
+        sucesso += 1;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          setExecutandoLote(false);
+          onSessionExpired?.();
+          return;
+        }
+
+        falha += 1;
+      }
+    }
+
+    setExecutandoLote(false);
+    setConfirmacaoLote(null);
+    setSelecionados(new Set());
+    onRefresh?.();
+
+    if (falha === 0) {
+      mostrarToast(
+        reativando
+          ? `${sucesso} coordenador${sucesso === 1 ? "" : "es"} reativado${sucesso === 1 ? "" : "s"} com sucesso.`
+          : `${sucesso} coordenador${sucesso === 1 ? "" : "es"} inativado${sucesso === 1 ? "" : "s"} com sucesso.`,
+        "sucesso"
+      );
+    } else {
+      mostrarToast(
+        `${sucesso} de ${alvos.length} coordenadores atualizados; ${falha} falharam e continuam com o status anterior.`,
+        "erro"
+      );
+    }
+  }
 
   function selecionarAbaStatus(aba) {
     setAbaStatus(aba);
@@ -312,11 +384,6 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
-          <div className="indicadores-status">
-            <Insignia texto={`${coordenadores.length} cadastrado${coordenadores.length === 1 ? "" : "s"}`} variante="neutro" />
-            <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
-            <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
-          </div>
         </div>
         <div className="barra-filtros">
           <div className="campo-busca">
@@ -343,42 +410,79 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
         </div>
       </header>
 
-      <nav
-        aria-label="Status dos coordenadores"
-        className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
-        ref={refAbas}
-        role="tablist"
-      >
-        <button
-          aria-selected={abaStatus === "ativos"}
-          className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
-          onClick={() => selecionarAbaStatus("ativos")}
-          role="tab"
-          type="button"
+      <div className="linha-abas-status">
+        <nav
+          aria-label="Status dos coordenadores"
+          className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+          ref={refAbas}
+          role="tablist"
         >
-          Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
-        </button>
-        <button
-          aria-selected={abaStatus === "inativos"}
-          className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
-          onClick={() => selecionarAbaStatus("inativos")}
-          role="tab"
-          type="button"
-        >
-          Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
-        </button>
-      </nav>
+          <button
+            aria-selected={abaStatus === "ativos"}
+            className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("ativos")}
+            role="tab"
+            type="button"
+          >
+            Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
+          </button>
+          <button
+            aria-selected={abaStatus === "inativos"}
+            className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("inativos")}
+            role="tab"
+            type="button"
+          >
+            Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
+          </button>
+        </nav>
+        <div className="indicadores-status">
+          <Insignia texto={`${coordenadores.length} cadastrado${coordenadores.length === 1 ? "" : "s"}`} variante="neutro" />
+          <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
+          <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
+        </div>
+      </div>
 
       <div className="barra-filtros">
         <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
+
+        {selecionados.size > 0 ? (
+          <div className="barra-filtros__selecao">
+            <span aria-live="polite" className="barra-filtros__selecao-contador">
+              {selecionados.size} coordenador{selecionados.size === 1 ? "" : "es"} selecionado{selecionados.size === 1 ? "" : "s"}
+            </span>
+            {abaStatus === "ativos" ? (
+              <Botao onClick={() => setConfirmacaoLote("inativar")} tamanho="pequeno" variante="secundario">
+                Inativar selecionados
+              </Botao>
+            ) : (
+              <Botao onClick={() => setConfirmacaoLote("reativar")} tamanho="pequeno" variante="secundario">
+                Reativar selecionados
+              </Botao>
+            )}
+            <Botao onClick={limparSelecao} tamanho="pequeno" variante="fantasma">
+              Limpar seleção
+            </Botao>
+          </div>
+        ) : null}
       </div>
 
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Lista de coordenadores" className="tabela-dados">
           <thead>
             <tr>
+              <th scope="col">
+                <input
+                  aria-label="Selecionar todos os coordenadores desta pagina"
+                  checked={todosSelecionadosNaPagina}
+                  disabled={itensPagina.length === 0}
+                  onChange={alternarSelecaoPagina}
+                  ref={refCheckboxCabecalho}
+                  type="checkbox"
+                />
+              </th>
               <th scope="col">
                 <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
                   Coordenador <IconeOrdenacao direcao={direcao} />
@@ -392,7 +496,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
           <tbody>
             {itensPagina.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={4}>
+                <td colSpan={5}>
                   {abaStatus === "ativos" ? "Nenhum coordenador ativo encontrado." : "Nenhum coordenador inativo encontrado."}
                 </td>
               </tr>
@@ -403,6 +507,14 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
                 return (
                   <tr className="tabela-linha-clicavel" key={coordenador.id} onClick={() => setCoordenadorDetalhe(coordenador)}>
+                    <td data-label="" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        aria-label={`Selecionar ${coordenador.nome}`}
+                        checked={selecionados.has(coordenador.id)}
+                        onChange={() => alternarSelecao(coordenador.id)}
+                        type="checkbox"
+                      />
+                    </td>
                     <td data-label="Coordenador">
                       <div className="tabela-aluno">
                         <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
@@ -529,6 +641,34 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
               </ul>
             )}
           </section>
+        </Modal>
+      ) : null}
+
+      {confirmacaoLote ? (
+        <Modal
+          onFechar={() => !executandoLote && setConfirmacaoLote(null)}
+          titulo={confirmacaoLote === "reativar" ? "Reativar coordenadores selecionados" : "Inativar coordenadores selecionados"}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={executandoLote} onClick={() => setConfirmacaoLote(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={executandoLote} onClick={executarAcaoLote} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} />{" "}
+                {executandoLote
+                  ? "Processando..."
+                  : confirmacaoLote === "reativar"
+                  ? "Confirmar reativacao"
+                  : "Confirmar inativacao"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p className="texto-confirmacao-exclusao">
+            {confirmacaoLote === "reativar"
+              ? `Deseja reativar ${selecionados.size} coordenador${selecionados.size === 1 ? "" : "es"} selecionado${selecionados.size === 1 ? "" : "s"}?`
+              : `Deseja inativar ${selecionados.size} coordenador${selecionados.size === 1 ? "" : "es"} selecionado${selecionados.size === 1 ? "" : "s"}? Os dados e o historico continuam preservados.`}
+          </p>
         </Modal>
       ) : null}
 

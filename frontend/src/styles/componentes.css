@@ -38,6 +38,28 @@
   margin-top: var(--espaco-xs);
 }
 
+/* Agrupa as abas Ativos/Inativos com os indicadores de status
+   (Professores/Coordenadores) na mesma linha, com os indicadores logo a
+   direita das abas em vez de embaixo do titulo. Zera as margens proprias
+   de .abas-matriculas e .indicadores-status so aqui dentro - as outras
+   telas que usam essas classes (Meu perfil, cadastro, tela do curso)
+   continuam com a margem delas. */
+.linha-abas-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+.linha-abas-status .abas-matriculas {
+  margin-bottom: 0;
+}
+
+.linha-abas-status .indicadores-status {
+  margin-top: 0;
+}
+
 /* ------------------------------------------------------------
    BOTÕES
    ------------------------------------------------------------ */
@@ -420,6 +442,24 @@
   flex-wrap: wrap;
   gap: var(--espaco-md);
   margin-bottom: var(--espaco-lg);
+}
+
+/* Contador + acoes de selecao em lote, empurrados pra direita da propria
+   .barra-filtros (em vez de uma faixa nova acima da tabela) — a linha nao
+   muda de altura no desktop; em telas estreitas quebra pelo flex-wrap do
+   pai. */
+.barra-filtros__selecao {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-md);
+  margin-left: auto;
+}
+
+.barra-filtros__selecao-contador {
+  color: var(--cor-texto-forte);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 /* Checkbox "Selecionar cursos" das barras de filtro em lote — antes repetido

@@ -3697,15 +3697,6 @@
   }
 }
 
-/* .toolbar-massa em Matriculas fica colada a tabela logo abaixo (por isso so
-   arredonda o topo). Em Cursos ela fica sobre a grade de cards, sem uma borda
-   pareada abaixo — precisa se fechar como um bloco completo e proprio. */
-.tela-cursos .toolbar-massa {
-  border-radius: var(--raio-md);
-  border-bottom: 1px solid var(--cor-borda);
-  margin-bottom: var(--espaco-lg);
-}
-
 .atividades-curso__navegacao {
   display: flex;
 }
