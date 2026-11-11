@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbPlus, TbSearch, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
@@ -54,7 +54,9 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [coordenadorEmEdicaoId, setCoordenadorEmEdicaoId] = useState(null);
   const [dadosFormulario, setDadosFormulario] = useState(ESTADO_INICIAL_FORMULARIO);
+  const [filtroSemCurso, setFiltroSemCurso] = useState(false);
   const refAbas = useRef(null);
+  const refBuscaCoordenadores = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
   const { status: statusCep, mensagem: mensagemCep, consultarCep } = useConsultaCep({
     onEncontrado: (endereco) => {
@@ -102,6 +104,10 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const coordenadoresFiltrados = useMemo(() => {
     let proximos = coordenadores.filter((coordenador) => Boolean(coordenador.ativo) === (abaStatus === "ativos"));
 
+    if (filtroSemCurso) {
+      proximos = proximos.filter((coordenador) => obterCursosDoCoordenador(coordenador).length === 0);
+    }
+
     if (termoBusca) {
       proximos = proximos.filter((coordenador) => {
         const cursosSupervisionados = obterCursosDoCoordenador(coordenador);
@@ -121,7 +127,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       return direcao === "asc" ? comparacao : -comparacao;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordenadores, cursosPorCoordenador, direcao, termoBusca, abaStatus]);
+  }, [coordenadores, cursosPorCoordenador, direcao, termoBusca, abaStatus, filtroSemCurso]);
 
   const totalPaginas = Math.max(1, Math.ceil(coordenadoresFiltrados.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
@@ -129,6 +135,17 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
   const itensPagina = coordenadoresFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
   const totalAtivos = coordenadores.filter((coordenador) => coordenador.ativo).length;
   const totalInativos = coordenadores.length - totalAtivos;
+  const coordenadoresDaAba = coordenadores.filter((coordenador) => Boolean(coordenador.ativo) === (abaStatus === "ativos"));
+  const totalSemCursoNaAba = coordenadoresDaAba.filter((coordenador) => obterCursosDoCoordenador(coordenador).length === 0).length;
+
+  // Se o lote sem curso esvaziar (ex.: um coordenador filtrado ganhou curso
+  // em outra aba), desliga o filtro sozinho em vez de deixar a tabela vazia
+  // com o atalho escondido (o botao some quando o total chega a 0).
+  useEffect(() => {
+    if (filtroSemCurso && totalSemCursoNaAba === 0) {
+      setFiltroSemCurso(false);
+    }
+  }, [filtroSemCurso, totalSemCursoNaAba]);
 
   const {
     selecionados,
@@ -201,6 +218,11 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
 
   function selecionarAbaStatus(aba) {
     setAbaStatus(aba);
+    setPagina(1);
+  }
+
+  function alternarFiltroSemCurso() {
+    setFiltroSemCurso((atual) => !atual);
     setPagina(1);
   }
 
@@ -384,6 +406,7 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Coordenadores</h2>
+          <p className="cabecalho-pagina__subtitulo">Quem supervisiona cada curso</p>
         </div>
         <div className="barra-filtros">
           <div className="campo-busca">
@@ -397,9 +420,23 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                 setPagina(1);
               }}
               placeholder="Buscar por nome ou e-mail..."
+              ref={refBuscaCoordenadores}
               type="search"
               value={busca}
             />
+            {busca ? (
+              <button
+                aria-label="Limpar busca"
+                className="campo-busca__limpar"
+                onClick={() => {
+                  limparFiltros();
+                  refBuscaCoordenadores.current?.focus();
+                }}
+                type="button"
+              >
+                <TbX aria-hidden="true" size={13} />
+              </button>
+            ) : null}
           </div>
           <Botao onClick={abrirFormulario} tamanho="pequeno" variante="primario">
             <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
@@ -436,17 +473,21 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
             Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
           </button>
         </nav>
-        <div className="indicadores-status">
-          <Insignia texto={`${coordenadores.length} cadastrado${coordenadores.length === 1 ? "" : "s"}`} variante="neutro" />
-          <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
-          <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
-        </div>
-      </div>
 
-      <div className="barra-filtros">
-        <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
-          Limpar filtros
-        </Botao>
+        {totalSemCursoNaAba > 0 ? (
+          <button
+            aria-pressed={filtroSemCurso}
+            className="indicador-filtro"
+            onClick={alternarFiltroSemCurso}
+            type="button"
+          >
+            <Insignia
+              style={filtroSemCurso ? { borderColor: "var(--cor-borda-forte)" } : undefined}
+              texto={`${totalSemCursoNaAba} sem curso`}
+              variante="neutro"
+            />
+          </button>
+        ) : null}
 
         {selecionados.size > 0 ? (
           <div className="barra-filtros__selecao">
@@ -488,22 +529,21 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                   Coordenador <IconeOrdenacao direcao={direcao} />
                 </button>
               </th>
-              <th scope="col">Curso sob supervisao</th>
-              <th scope="col">Status</th>
+              <th scope="col">Cursos supervisionados</th>
               <th className="tabela-dados__col-acoes" scope="col" />
             </tr>
           </thead>
           <tbody>
             {itensPagina.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={5}>
+                <td colSpan={4}>
                   {abaStatus === "ativos" ? "Nenhum coordenador ativo encontrado." : "Nenhum coordenador inativo encontrado."}
                 </td>
               </tr>
             ) : (
               itensPagina.map((coordenador) => {
                 const cursosDoCoordenador = obterCursosDoCoordenador(coordenador);
-                const cursoPrincipal = cursosDoCoordenador[0]?.titulo || "";
+                const totalCursosDoCoordenador = cursosDoCoordenador.length;
 
                 return (
                   <tr className="tabela-linha-clicavel" key={coordenador.id} onClick={() => setCoordenadorDetalhe(coordenador)}>
@@ -526,15 +566,21 @@ export function SecaoCoordenadores({ coordenadores = [], cursos = [], onRefresh,
                         </div>
                       </div>
                     </td>
-                    <td data-label="Curso sob supervisao">
-                      {cursoPrincipal ? (
-                        <span>{cursoPrincipal}{cursosDoCoordenador.length > 1 ? ` +${cursosDoCoordenador.length - 1}` : ""}</span>
+                    <td data-label="Cursos supervisionados">
+                      {totalCursosDoCoordenador === 0 ? (
+                        <Insignia texto="Sem curso" variante="neutro" />
                       ) : (
-                        <span className="tabela-matricula__vazio">Sem curso</span>
+                        <div className="celula-cursos">
+                          <strong className="celula-cursos__contagem">
+                            {totalCursosDoCoordenador} curso{totalCursosDoCoordenador === 1 ? "" : "s"}
+                          </strong>
+                          <span className="celula-cursos__detalhe">
+                            {totalCursosDoCoordenador === 1
+                              ? cursosDoCoordenador[0].titulo
+                              : `${cursosDoCoordenador[0].titulo} e mais ${totalCursosDoCoordenador - 1}`}
+                          </span>
+                        </div>
                       )}
-                    </td>
-                    <td data-label="Status">
-                      <Insignia texto={coordenador.ativo ? "Ativo" : "Inativo"} variante={coordenador.ativo ? "sucesso" : "neutro"} />
                     </td>
                     <td data-label="" onClick={(event) => event.stopPropagation()}>
                       <MenuKebabTabela

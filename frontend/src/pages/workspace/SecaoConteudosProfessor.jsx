@@ -116,7 +116,6 @@ export function SecaoConteudosProfessor({
   const [quizParaExcluir, setQuizParaExcluir] = useState(null);
   const [mensagemExclusaoQuiz, setMensagemExclusaoQuiz] = useState("");
   const [acaoEmAndamentoId, setAcaoEmAndamentoId] = useState(null);
-  const [mensagemLista, setMensagemLista] = useState({ tone: "", message: "" });
   const [enviandoArquivo, setEnviandoArquivo] = useState(false);
   const [nomeArquivoSelecionado, setNomeArquivoSelecionado] = useState("");
   const [assistenteQuizAberto, setAssistenteQuizAberto] = useState(false);
@@ -178,10 +177,6 @@ export function SecaoConteudosProfessor({
     () => (cursoAtivo ? modulosPorCursoId.get(cursoAtivo.curso.id) || [] : []),
     [cursoAtivo, modulosPorCursoId]
   );
-
-  useEffect(() => {
-    setMensagemLista({ tone: "", message: "" });
-  }, [cursoIdSelecionado]);
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/conteudos/${cursoId}`);
@@ -453,7 +448,6 @@ export function SecaoConteudosProfessor({
     const proximoStatus = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO ? STATUS_RASCUNHO : STATUS_PUBLICADO;
 
     setAcaoEmAndamentoId(conteudo.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, {
@@ -471,7 +465,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível atualizar o status agora." });
+      mostrarToast(err.message || "Não foi possível atualizar o status agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -482,7 +476,6 @@ export function SecaoConteudosProfessor({
   // de alternar a partir do status atual (alternar levaria Arquivado -> Publicado).
   async function restaurarConteudoParaRascunho(conteudo) {
     setAcaoEmAndamentoId(conteudo.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, {
@@ -497,7 +490,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível restaurar o conteúdo agora." });
+      mostrarToast(err.message || "Não foi possível restaurar o conteúdo agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -507,7 +500,6 @@ export function SecaoConteudosProfessor({
     const proximoStatus = Number(quiz.statusPublicacao) === STATUS_PUBLICADO ? STATUS_RASCUNHO : STATUS_PUBLICADO;
 
     setAcaoEmAndamentoId(quiz.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Avaliacoes/${quiz.id}`, {
@@ -522,7 +514,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível atualizar o status do quiz agora." });
+      mostrarToast(err.message || "Não foi possível atualizar o status do quiz agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -530,7 +522,6 @@ export function SecaoConteudosProfessor({
 
   async function restaurarQuizParaRascunho(quiz) {
     setAcaoEmAndamentoId(quiz.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Avaliacoes/${quiz.id}`, {
@@ -545,7 +536,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível restaurar o quiz agora." });
+      mostrarToast(err.message || "Não foi possível restaurar o quiz agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -553,7 +544,6 @@ export function SecaoConteudosProfessor({
 
   async function arquivarQuiz(quiz) {
     setAcaoEmAndamentoId(quiz.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Avaliacoes/${quiz.id}`, {
@@ -568,7 +558,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível arquivar o quiz agora." });
+      mostrarToast(err.message || "Não foi possível arquivar o quiz agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -585,7 +575,6 @@ export function SecaoConteudosProfessor({
     const vizinho = listaDoModulo[indiceAlvo];
 
     setAcaoEmAndamentoId(conteudo.id);
-    setMensagemLista({ tone: "", message: "" });
 
     try {
       await apiRequest(`/ConteudosDidaticos/${conteudo.id}`, {
@@ -603,7 +592,7 @@ export function SecaoConteudosProfessor({
         return;
       }
 
-      setMensagemLista({ tone: "error", message: err.message || "Não foi possível reordenar o conteúdo agora." });
+      mostrarToast(err.message || "Não foi possível reordenar o conteúdo agora.", "erro", 6000);
     } finally {
       setAcaoEmAndamentoId(null);
     }
@@ -666,7 +655,6 @@ export function SecaoConteudosProfessor({
           avaliacoes={avaliacoes}
           conteudos={conteudos}
           cursoAtivo={cursoAtivo}
-          mensagemLista={mensagemLista}
           modulosDoCurso={modulosDisponiveis}
           onAbrirEdicao={abrirEdicaoConteudo}
           onAlternarPublicacao={alternarPublicacao}
@@ -977,7 +965,6 @@ function TrilhaConteudosProfessor({
   avaliacoes,
   conteudos,
   cursoAtivo,
-  mensagemLista,
   modulosDoCurso,
   onAbrirEdicao,
   onAlternarPublicacao,
@@ -1415,8 +1402,6 @@ function TrilhaConteudosProfessor({
           </Botao>
         </div>
       </header>
-
-      {mensagemLista.message ? <InlineMessage tone={mensagemLista.tone}>{mensagemLista.message}</InlineMessage> : null}
 
       {modulosDoCurso.length === 0 ? (
         <p className="texto-vazio" role="status">Este curso ainda não tem módulos cadastrados.</p>

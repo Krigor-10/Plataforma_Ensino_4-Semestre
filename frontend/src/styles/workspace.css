@@ -3697,6 +3697,74 @@
   }
 }
 
+/* Reorganizacao da tela Coordenadores (Admin) - atalho de filtro "N sem
+   curso" ao lado das abas, "x" pra limpar a busca (substitui a linha
+   "Limpar filtros", removida) e a celula de cursos supervisionados em duas
+   linhas. Mantem as cores existentes (avatares, Insignia, caixas nativas) -
+   nenhuma cor nova, so reorganizacao e reaproveitamento do que ja existia. */
+.tela-coordenadores .campo-busca .campo__entrada {
+  padding-right: 1.75rem;
+}
+
+.tela-coordenadores .campo-busca input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tela-coordenadores .campo-busca__limpar {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--cor-texto-mudo);
+  cursor: pointer;
+  display: flex;
+  padding: 0;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: color var(--transicao-rapida);
+}
+
+.tela-coordenadores .campo-busca__limpar:hover {
+  color: var(--cor-texto-forte);
+}
+
+/* Atalho de filtro "N sem curso" - um botao sem estilo proprio por baixo
+   da Insignia que ja carrega a aparencia (pilula neutra); ativo so troca a
+   cor da borda da propria Insignia (via style prop) pra --cor-borda-forte,
+   ja usada em destaques leves no resto do app. */
+.tela-coordenadores .indicador-filtro {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  padding: 0;
+}
+
+.tela-coordenadores .celula-cursos {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tela-coordenadores .celula-cursos__contagem {
+  color: var(--cor-texto-forte);
+}
+
+.tela-coordenadores .celula-cursos__detalhe {
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-xs);
+}
+
+/* Linhas um pouco mais baixas so nesta tela - reduz so o padding vertical,
+   mantendo o horizontal e as demais tabelas (.tabela-dados e a base) sem
+   mudanca. */
+.tela-coordenadores .tabela-dados td {
+  padding-bottom: 0.65rem;
+  padding-top: 0.65rem;
+}
+
 .atividades-curso__navegacao {
   display: flex;
 }
@@ -4752,6 +4820,19 @@
 .trilha-conteudos .atividades-curso__icone {
   width: var(--coluna-icone-conteudo);
   height: var(--coluna-icone-conteudo);
+}
+
+/* Trofeu do quiz (vinculado a um material ou solto no modulo) na mesma
+   proporcao da tela do Coordenador (~64% da caixa, ver .atividades-curso__
+   icone--quiz em DetalheModuloDesempenho.jsx): aqui a caixa encolhe pra
+   --quiz-vinculado-icone (quiz vinculado) ou --coluna-icone-conteudo (quiz do
+   modulo), mas o SVG continha o tamanho fixo de size="1.75rem" do TbTrophy -
+   caixa e icone do mesmo tamanho faziam o fundo/borda roxos somirem atras do
+   proprio desenho. So sobrescreve o width/height que o react-icons grava
+   como atributo do <svg>, sem mexer no tamanho das caixas em si. */
+.trilha-conteudos .atividades-curso__icone--quiz svg {
+  width: 64%;
+  height: 64%;
 }
 
 .atividades-curso__corpo {

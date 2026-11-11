@@ -532,6 +532,26 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     );
   });
 
+  test("publicar quiz sem questoes mostra toast de erro dispensavel, sem faixa fixa no topo", async () => {
+    apiRequest.mockRejectedValueOnce(new ApiError("Adicione ao menos uma questao antes de publicar o quiz.", 422));
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 1, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
+
+    const mensagemErro = await screen.findByText("Adicione ao menos uma questao antes de publicar o quiz.");
+    expect(mensagemErro.closest(".toast")).not.toBeNull();
+
+    await usuario.click(screen.getByRole("button", { name: "Fechar notificação" }));
+    expect(screen.queryByText("Adicione ao menos uma questao antes de publicar o quiz.")).not.toBeInTheDocument();
+  });
+
   test('"Excluir" no menu do quiz abre confirmacao e mostra toast de arquivamento quando o backend arquiva', async () => {
     apiRequest.mockResolvedValueOnce({ arquivado: true });
     const usuario = userEvent.setup();
