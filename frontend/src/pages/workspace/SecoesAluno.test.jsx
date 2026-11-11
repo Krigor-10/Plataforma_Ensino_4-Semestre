@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { SecaoConteudosAluno, SecaoCursosAluno } from "./SecoesAluno.jsx";
+import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./SecoesAluno.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
 import { apiRequest } from "../../lib/api.js";
 
@@ -189,6 +189,89 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
     );
 
     expect(await screen.findByText(/Parabens! Certificado disponivel/i)).toBeInTheDocument();
+  });
+});
+
+describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () => {
+  const CURSO_ID = 10;
+
+  beforeEach(() => {
+    apiRequest.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function renderAvaliacoesAluno(avaliacoes) {
+    return render(
+      <ToastProvider>
+        <SecaoAvaliacoesAluno
+          avaliacoes={avaliacoes}
+          cursoIdSelecionado={CURSO_ID}
+          cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
+          onNavigate={vi.fn()}
+          onRefresh={vi.fn()}
+          onSessionExpired={vi.fn()}
+        />
+      </ToastProvider>
+    );
+  }
+
+  test("prova disponivel com nota: metricas centralizadas mostram Status/Questoes/Tentativas/Ultima nota com icone", async () => {
+    const usuario = userEvent.setup();
+    renderAvaliacoesAluno([
+      {
+        id: 1,
+        cursoId: CURSO_ID,
+        titulo: "Prova Final",
+        tipoAvaliacao: 2,
+        totalQuestoes: 5,
+        tentativasRealizadas: 1,
+        tentativasPermitidas: 2,
+        tentativasRestantes: 1,
+        progressoLiberado: true,
+        ultimaNota: 7.5,
+        notaMaxima: 10
+      }
+    ]);
+
+    await usuario.click(screen.getByRole("button", { name: /Prova Final/ }));
+
+    expect(screen.getByText("Disponivel")).toBeInTheDocument();
+    expect(screen.getByText("Questões")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
+    expect(screen.getByText("Tentativas")).toBeInTheDocument();
+    expect(screen.getByText("1/2")).toBeInTheDocument();
+    expect(screen.getByText("Última nota")).toBeInTheDocument();
+    expect(screen.getByText("7,5")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Iniciar avaliacao/ })).toBeInTheDocument();
+  });
+
+  test("avaliacao bloqueada: mostra Nota máxima (sem Ultima nota) e a mensagem de bloqueio no lugar do botao", async () => {
+    const usuario = userEvent.setup();
+    renderAvaliacoesAluno([
+      {
+        id: 2,
+        cursoId: CURSO_ID,
+        titulo: "Prova Bloqueada",
+        tipoAvaliacao: 2,
+        totalQuestoes: 3,
+        tentativasRealizadas: 0,
+        tentativasPermitidas: 1,
+        tentativasRestantes: 1,
+        progressoLiberado: false,
+        ultimaNota: null,
+        notaMaxima: 10
+      }
+    ]);
+
+    await usuario.click(screen.getByRole("button", { name: /Prova Bloqueada/ }));
+
+    expect(screen.getByText("Nota máxima")).toBeInTheDocument();
+    expect(screen.queryByText("Última nota")).not.toBeInTheDocument();
+    expect(screen.getByText(/Conclua todos os conteudos e quizzes do curso/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Iniciar avaliacao/ })).not.toBeInTheDocument();
   });
 });
 

@@ -6,11 +6,13 @@ import {
   TbCertificate,
   TbChartBar,
   TbChevronDown,
+  TbCircleCheck,
   TbDotsVertical,
   TbLock,
   TbLockOpen,
   TbPencil,
   TbPlus,
+  TbTarget,
   TbTrophy,
   TbUserCheck,
   TbUsers
@@ -78,6 +80,7 @@ export default function PainelCursoGestao({
   const [erroDesempenho, setErroDesempenho] = useState("");
   const [tentativaRecarga, setTentativaRecarga] = useState(0);
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
+  const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
@@ -188,6 +191,10 @@ export default function PainelCursoGestao({
 
   function alternarModulo(moduloId) {
     setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
+  }
+
+  function alternarAvaliacaoDoCurso(avaliacaoId) {
+    setAvaliacaoAbertaId((atual) => (atual === avaliacaoId ? null : avaliacaoId));
   }
 
   function abrirExclusaoModulo(modulo) {
@@ -405,26 +412,92 @@ export default function PainelCursoGestao({
         </div>
       ) : (
         <div aria-label="Avaliacoes do curso" role="tabpanel">
-          <ul aria-label="Avaliacoes do curso" className="atividades-curso__lista" role="list">
-            {avaliacoesDoCurso.map((avaliacao) => (
-              <li className="atividades-curso__item atividades-curso__item--quiz" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
-                <div className="atividades-curso__linha">
-                  <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                    <TbTrophy aria-hidden="true" size="1.75rem" />
-                  </span>
-                  <div className="atividades-curso__corpo">
-                    <strong className="atividades-curso__item-titulo">{avaliacao.titulo}</strong>
-                    <p className="atividades-curso__meta">
-                      <span>{normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)}</span>
-                    </p>
-                  </div>
-                  <div className="atividades-curso__metrica">
-                    {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"} · Media {formatGrade(avaliacao.mediaNota)}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="atividades-curso__lista-modulos">
+            {avaliacoesDoCurso.map((avaliacao, indice) => {
+              const avaliacaoAberta = avaliacaoAbertaId === avaliacao.avaliacaoId;
+              const idDetalheAvaliacao = `avaliacao-curso-detalhe-${avaliacao.avaliacaoId}`;
+              const ehQuizDoCurso = Number(avaliacao.tipoAvaliacao) === TIPO_AVALIACAO_QUIZ;
+
+              return (
+                <section className="conteudos-modulo conteudos-modulo--cartao" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
+                  <header className="conteudos-modulo__cabecalho">
+                    <h3 className="conteudos-modulo__cabecalho-wrapper">
+                      <button
+                        aria-controls={idDetalheAvaliacao}
+                        aria-expanded={avaliacaoAberta}
+                        className="conteudos-modulo__toggle"
+                        onClick={() => alternarAvaliacaoDoCurso(avaliacao.avaliacaoId)}
+                        type="button"
+                      >
+                        <div className="conteudos-modulo__info">
+                          <span aria-hidden="true" className="conteudos-modulo__icone conteudos-modulo__icone--caixa">
+                            <TbTrophy size="1.15rem" />
+                          </span>
+                          <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
+                          <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
+                        </div>
+                        <span className="atividades-curso__metrica">
+                          {normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)} · {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"}
+                        </span>
+                        <TbChevronDown
+                          aria-hidden="true"
+                          className={`conteudos-modulo__chevron${avaliacaoAberta ? " conteudos-modulo__chevron--aberto" : ""}`}
+                          size="1.1rem"
+                        />
+                      </button>
+                    </h3>
+                  </header>
+
+                  <AnimatePresence initial={false}>
+                    {avaliacaoAberta ? (
+                      <motion.div
+                        animate={{ height: "auto", opacity: 1 }}
+                        className="conteudos-modulo__corpo"
+                        exit={{ height: 0, opacity: 0 }}
+                        id={idDetalheAvaliacao}
+                        initial={{ height: 0, opacity: 0 }}
+                        key={`detalhe-avaliacao-curso-${avaliacao.avaliacaoId}`}
+                        style={{ overflow: "hidden" }}
+                        transition={{ duration: 0.24, ease: "easeInOut" }}
+                      >
+                        <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline lista-detalhes--metricas">
+                          <div className="lista-detalhes__item">
+                            <dt><TbUsers aria-hidden="true" size={15} /> Participantes</dt>
+                            <dd>{avaliacao.totalParticipantes || 0}</dd>
+                          </div>
+                          {ehQuizDoCurso ? (
+                            <div className="lista-detalhes__item">
+                              <dt><TbTrophy aria-hidden="true" size={15} /> Tipo</dt>
+                              <dd>Quiz - formativo, sem nota</dd>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="lista-detalhes__item">
+                                <dt><TbAward aria-hidden="true" size={15} /> Nota média</dt>
+                                <dd>{formatGrade(avaliacao.mediaNota)}</dd>
+                              </div>
+                              <div className="lista-detalhes__item">
+                                <dt><TbTarget aria-hidden="true" size={15} /> Nota máxima</dt>
+                                <dd>{formatGrade(avaliacao.notaMaxima)}</dd>
+                              </div>
+                            </>
+                          )}
+                          <div className="lista-detalhes__item">
+                            <dt><TbCircleCheck aria-hidden="true" size={15} /> Conclusão</dt>
+                            <dd>{formatPercent(avaliacao.percentualConclusao)}</dd>
+                          </div>
+                          <div className="lista-detalhes__item">
+                            <dt><TbChartBar aria-hidden="true" size={15} /> Aproveitamento</dt>
+                            <dd>{formatPercent(avaliacao.percentualAproveitamento)}</dd>
+                          </div>
+                        </dl>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </section>
+              );
+            })}
+          </div>
         </div>
       )}
 

@@ -1449,27 +1449,34 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                   style={{ overflow: "hidden" }}
                   transition={{ duration: 0.24, ease: "easeInOut" }}
                 >
-                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline lista-detalhes--metricas">
                     <div className="lista-detalhes__item">
-                      <dt>Status</dt>
+                      <dt>
+                        {disponibilidade.podeRealizar ? (
+                          <TbCircleCheck aria-hidden="true" size={15} />
+                        ) : (
+                          <TbLock aria-hidden="true" size={15} />
+                        )}{" "}
+                        Status
+                      </dt>
                       <dd><StatusPill tone={statusTone}>{statusLabel}</StatusPill></dd>
                     </div>
                     <div className="lista-detalhes__item">
-                      <dt>Questoes</dt>
+                      <dt><TbHelpCircle aria-hidden="true" size={15} /> Questões</dt>
                       <dd>{avaliacao.totalQuestoes || 0}</dd>
                     </div>
                     <div className="lista-detalhes__item">
-                      <dt>Tentativas</dt>
+                      <dt><TbRepeat aria-hidden="true" size={15} /> Tentativas</dt>
                       <dd>{avaliacao.tentativasRealizadas || 0}/{avaliacao.tentativasPermitidas || 1}</dd>
                     </div>
                     {ehQuiz ? (
                       <div className="lista-detalhes__item">
-                        <dt>Tipo</dt>
+                        <dt><TbTrophy aria-hidden="true" size={15} /> Tipo</dt>
                         <dd>Quiz - formativo, sem nota</dd>
                       </div>
                     ) : (
                       <div className="lista-detalhes__item">
-                        <dt>{temNota ? "Ultima nota" : "Nota maxima"}</dt>
+                        <dt><TbAward aria-hidden="true" size={15} /> {temNota ? "Última nota" : "Nota máxima"}</dt>
                         <dd>{temNota ? formatScore(avaliacao.ultimaNota) : formatGrade(avaliacao.notaMaxima)}</dd>
                       </div>
                     )}

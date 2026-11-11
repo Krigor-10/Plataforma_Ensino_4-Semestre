@@ -761,7 +761,7 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
                   style={{ overflow: "hidden" }}
                   transition={{ duration: 0.24, ease: "easeInOut" }}
                 >
-                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline">
+                  <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline lista-detalhes--metricas">
                     {Number(avaliacao.tipoAvaliacao) === 1 ? (
                       <div className="lista-detalhes__item">
                         <dt><TbTrophy aria-hidden="true" size={15} /> Tipo</dt>

@@ -132,6 +132,38 @@ describe("PainelCursoGestao", () => {
     expect(screen.getByText("Prova solta do curso")).toBeInTheDocument();
   });
 
+  test("aba Avaliacoes do curso: card fechado nao mostra metricas, abre com as 5 metricas e so um fica aberto por vez (aria-expanded)", async () => {
+    mockApi(DESEMPENHO);
+    renderPainel();
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("tab", { name: /Avaliacoes do curso/ }));
+
+    expect(screen.queryByText("Participantes")).not.toBeInTheDocument();
+
+    const botaoModuloA = screen.getByRole("button", { name: /Prova do modulo A/ });
+    const botaoProvaSolta = screen.getByRole("button", { name: /Prova solta do curso/ });
+
+    await userEvent.click(botaoModuloA);
+
+    expect(botaoModuloA).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Participantes")).toBeInTheDocument();
+    expect(screen.getByText("Nota média")).toBeInTheDocument();
+    expect(screen.getByText("Nota máxima")).toBeInTheDocument();
+    expect(screen.getByText("Conclusão")).toBeInTheDocument();
+    expect(screen.getByText("Aproveitamento")).toBeInTheDocument();
+    expect(screen.getByText("5,0")).toBeInTheDocument();
+
+    await userEvent.click(botaoProvaSolta);
+
+    expect(botaoProvaSolta).toHaveAttribute("aria-expanded", "true");
+    expect(botaoModuloA).toHaveAttribute("aria-expanded", "false");
+
+    await userEvent.click(botaoProvaSolta);
+
+    expect(botaoProvaSolta).toHaveAttribute("aria-expanded", "false");
+  });
+
   test("botao Professores abre modal com carregamento antes da lista", async () => {
     let resolverProfessores;
     apiRequest.mockImplementation((url) => {

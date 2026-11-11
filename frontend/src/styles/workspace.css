@@ -3332,44 +3332,45 @@
   font-weight: 700;
 }
 
-/* Metricas do card de avaliacao do Professor (Nota media/Questoes/
-   Tentativas/Tempo limite/Nota maxima): mesma .lista-detalhes--inline das
-   outras telas, mas so aqui dentro de .tela-avaliacoes-professor ela vira
-   colunas de largura igual (uma por item), centralizadas, com icone+rotulo
-   em cima do valor e uma divisoria fina entre os itens - nao mexe na base
-   nem nas outras telas que reaproveitam a mesma classe (Avaliacoes do
-   Aluno, Progresso). minmax(0, 1fr) faz o grid abrir exatas N colunas (4 ou
-   5, conforme prova/quiz) sem quebrar linha no desktop. */
-.tela-avaliacoes-professor .lista-detalhes--inline {
+/* Modificador reaproveitavel de metricas centralizadas (nasceu no card de
+   avaliacao do Professor, depois estendido pro Aluno e pra aba "Avaliacoes
+   do curso" do Admin/Coordenador - sempre junto de .lista-detalhes--inline,
+   nunca sozinho): colunas de largura igual (uma por item), centralizadas,
+   com icone+rotulo em cima do valor e uma divisoria fina entre os itens -
+   nao mexe em .lista-detalhes--inline isolada, usada sem este modificador
+   em Progresso do professor e no detalhe de modulo do Coordenador.
+   minmax(0, 1fr) faz o grid abrir exatas N colunas (4 ou 5, conforme a
+   tela/tipo) sem quebrar linha no desktop. */
+.lista-detalhes--inline.lista-detalhes--metricas {
   column-gap: 0;
   grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   margin: var(--espaco-md) 0;
   row-gap: var(--espaco-md);
 }
 
-.tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item {
+.lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item {
   align-items: center;
   padding: 0 var(--espaco-sm);
   text-align: center;
 }
 
-.tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item:not(:first-child) {
+.lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item:not(:first-child) {
   border-left: 1px solid var(--cor-borda);
 }
 
-.tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item dt {
+.lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item dt {
   align-items: center;
   display: flex;
   gap: 0.3rem;
   justify-content: center;
 }
 
-.tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item dt svg {
+.lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item dt svg {
   color: var(--cor-marca-clara);
   flex-shrink: 0;
 }
 
-.tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item dd {
+.lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item dd {
   font-family: var(--fonte-display);
   font-size: 1.15rem;
 }
@@ -3379,27 +3380,32 @@
    dividir contra) e uma divisoria horizontal entrando a partir da 2a
    linha. */
 @media (max-width: 480px) {
-  .tela-avaliacoes-professor .lista-detalhes--inline {
+  .lista-detalhes--inline.lista-detalhes--metricas {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item:nth-child(2n+1) {
+  .lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item:nth-child(2n+1) {
     border-left: none;
   }
 
-  .tela-avaliacoes-professor .lista-detalhes--inline .lista-detalhes__item:nth-child(n+3) {
+  .lista-detalhes--inline.lista-detalhes--metricas .lista-detalhes__item:nth-child(n+3) {
     border-top: 1px solid var(--cor-borda);
     padding-top: var(--espaco-sm);
   }
 }
 
 /* Area de acao do aluno dentro do accordion de avaliacao (Iniciar avaliacao
-   ou mensagem de bloqueio), abaixo da lista de detalhes inline. */
+   ou mensagem de bloqueio), abaixo da lista de detalhes inline - separada
+   das metricas por uma divisoria fina e centralizada, igual ao resto do
+   card nessa tela. */
 .atividades-curso__acoes-aluno {
   align-items: center;
+  border-top: 1px solid var(--cor-borda);
   display: flex;
+  justify-content: center;
   margin-top: var(--espaco-md);
   margin-bottom: var(--espaco-lg);
+  padding-top: var(--espaco-md);
 }
 
 /* Botao "Iniciar avaliacao" mais compacto que o padrao .botao--pequeno,
