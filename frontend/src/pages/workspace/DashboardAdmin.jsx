@@ -7,6 +7,7 @@
    de resetar dados de demonstracao nao existe: e um recurso do
    modo mock do protótipo, sem equivalente no backend real.
    ============================================================ */
+import { useMemo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   MdAssignment,
@@ -18,6 +19,7 @@ import {
   MdSchool,
   MdTrendingUp
 } from "react-icons/md";
+import { TbTag } from "react-icons/tb";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import { mapById } from "../../lib/dashboard.js";
@@ -53,6 +55,8 @@ function ChartTooltipStyle() {
   };
 }
 
+const MODELO_GRATUITO = 1;
+
 const ACESSO_RAPIDO = [
   { icone: <MdMenuBook size={20} />, rotulo: "Cursos", secao: "cursos" },
   { icone: <MdAssignment size={20} />, rotulo: "Matriculas", secao: "matriculas" },
@@ -77,12 +81,28 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
   const taxaConversao = alunos.length ? Math.round((alunosComMatriculaAprovada / alunos.length) * 100) : 0;
   const matriculasEmCursoPago = matriculasAprovadas.filter((matricula) => cursoPorId.get(matricula.cursoId)?.ehGratuito === false).length;
 
+  // Plano fluxo-venda-cursos, Round 6: so conta Gratuito encerrado - e o
+  // unico modelo que fica "aguardando o Admin" preparar pra venda (achado
+  // 7 do plano). Acompanhado encerrado nao entra aqui, nao tem acao de
+  // pacote associada.
+  const totalCursosEncerradosAguardandoVenda = useMemo(
+    () => cursos.filter((curso) => Number(curso.modeloCurso) === MODELO_GRATUITO && Boolean(curso.encerradoEm)).length,
+    [cursos]
+  );
+
   const kpis = [
     { detalhe: `${professores.length} professor(es), ${coordenadores.length} coordenador(es)`, icone: <MdPeople size={22} />, rotulo: "Usuarios", valor: totalUsuarios },
     { corBorda: "var(--cor-info)", detalhe: `de ${alunos.length} cadastrados`, icone: <MdSchool size={22} />, rotulo: "Alunos ativos", valor: alunosAtivos },
     { corBorda: "var(--cor-sucesso)", detalhe: "das matriculas registradas", icone: <MdBarChart size={22} />, rotulo: "Taxa de aprovacao", valor: `${taxaAprovacao}%` },
     { corBorda: "var(--cor-marca)", detalhe: "alunos cadastrados com matricula aprovada", icone: <MdTrendingUp size={22} />, rotulo: "Conversao", valor: `${taxaConversao}%` },
-    { corBorda: "var(--cor-aviso)", detalhe: "matriculas aprovadas em cursos pagos", icone: <MdAssignmentTurnedIn size={22} />, rotulo: "Em cursos pagos", valor: matriculasEmCursoPago }
+    { corBorda: "var(--cor-aviso)", detalhe: "matriculas aprovadas em cursos pagos", icone: <MdAssignmentTurnedIn size={22} />, rotulo: "Em cursos pagos", valor: matriculasEmCursoPago },
+    {
+      corBorda: "var(--cor-aviso)",
+      icone: <TbTag size={22} />,
+      onClick: () => onMudarSecao("cursos"),
+      rotulo: "Cursos encerrados aguardando voce",
+      valor: totalCursosEncerradosAguardandoVenda
+    }
   ];
 
   const dadosGraficoMatriculas = gerarDadosPorMes(matriculas, (matricula) => matricula.dataSolicitacao);
@@ -102,7 +122,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
       <section aria-label="Metricas gerais da plataforma">
         <div className="grade-estatisticas">
           {kpis.map((kpi) => (
-            <CartaoEstatistica corBorda={kpi.corBorda} icone={kpi.icone} key={kpi.rotulo} rotulo={kpi.rotulo} valor={kpi.valor} />
+            <CartaoEstatistica corBorda={kpi.corBorda} icone={kpi.icone} key={kpi.rotulo} onClick={kpi.onClick} rotulo={kpi.rotulo} valor={kpi.valor} />
           ))}
         </div>
       </section>

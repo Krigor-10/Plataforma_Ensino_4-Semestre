@@ -11,6 +11,7 @@ import {
   TbLock,
   TbLockOpen,
   TbPencil,
+  TbTag,
   TbTarget,
   TbTrophy,
   TbUserCheck,
@@ -25,6 +26,7 @@ import DetalheModuloDesempenho from "../../components/DetalheModuloDesempenho.js
 import Insignia from "../../components/Insignia.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
+import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
@@ -89,6 +91,7 @@ export default function PainelCursoGestao({
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
+  const [modalPrepararVendaAberto, setModalPrepararVendaAberto] = useState(false);
   const refAbas = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
@@ -216,6 +219,11 @@ export default function PainelCursoGestao({
   // Admin nunca passa por aqui.
   const temCicloDeEncerramento = ehAcompanhado || ehGratuito || (ehPagoPacote && Boolean(curso.concluidoPeloProfessorEm));
   const pacoteTravadoNaVenda = ehPagoPacote && Boolean(curso.publicadoParaVendaEm);
+  // Round 6 (plano fluxo-venda-cursos): Gratuito encerrado abre a janela pra
+  // virar pacote; PagoPacote (criado direto ou ja convertido) reabre a mesma
+  // janela pra editar preco/descricao e alternar Colocar/Tirar da venda -
+  // ModalPrepararVenda.jsx ja adapta o rotulo do botao de venda sozinho.
+  const podeGerenciarVenda = ehAdmin && (ehPagoPacote || (ehGratuito && Boolean(curso.encerradoEm)));
   const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
   const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
 
@@ -257,6 +265,11 @@ export default function PainelCursoGestao({
             {ehAdmin ? (
               <Botao onClick={onAtribuirCoordenador} tamanho="pequeno" variante={coordenadorDoCurso ? "secundario" : "primario"}>
                 <TbUserCheck aria-hidden="true" size={16} /> {coordenadorDoCurso ? "Coordenador" : "Atribuir coordenador"}
+              </Botao>
+            ) : null}
+            {podeGerenciarVenda ? (
+              <Botao onClick={() => setModalPrepararVendaAberto(true)} tamanho="pequeno" variante="primario">
+                <TbTag aria-hidden="true" size={16} /> {ehPagoPacote ? "Gerenciar venda" : "Preparar para venda"}
               </Botao>
             ) : null}
             {!ehAdmin && temCicloDeEncerramento && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
@@ -512,6 +525,18 @@ export default function PainelCursoGestao({
           </div>
         </div>
       )}
+
+      {modalPrepararVendaAberto ? (
+        <ModalPrepararVenda
+          curso={curso}
+          onFechar={() => setModalPrepararVendaAberto(false)}
+          onSalvo={() => {
+            mostrarToast("Curso preparado para venda com sucesso.", "sucesso");
+            onRefresh?.();
+          }}
+          onSessionExpired={onSessionExpired}
+        />
+      ) : null}
 
       {modalProfessoresAberto ? (
         <Modal

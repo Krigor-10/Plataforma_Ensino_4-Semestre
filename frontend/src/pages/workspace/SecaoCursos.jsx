@@ -8,6 +8,7 @@ import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHo
 import { useToast } from "../../hooks/useToast.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
+import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import { mapById } from "../../lib/dashboard.js";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { formatGrade, normalizeStatus } from "../../lib/format.js";
@@ -80,6 +81,7 @@ export function SecaoCursos({
   const [abaCurso, setAbaCurso] = useState("andamento");
   const refAbasCursos = useRef(null);
   const abasCursosTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbasCursos);
+  const [cursoParaPrepararVenda, setCursoParaPrepararVenda] = useState(null);
   const [buscaCurso, setBuscaCurso] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [cursoParaCoordenador, setCursoParaCoordenador] = useState(null);
@@ -224,15 +226,12 @@ export function SecaoCursos({
     onNavigate?.("/app/cursos");
   }
 
-  // Leva direto pra tela do curso - a partir do Round 6 (janela "Preparar
-  // para venda" em PainelCursoGestao.jsx), um Gratuito encerrado abre essa
-  // janela automaticamente ao entrar; por enquanto so abre a tela normal do
-  // curso. stopPropagation (plano Round 5) evita que o clique tambem dispare
-  // a abertura "padrao" do card se algum dia esse botao deixar de navegar
-  // direto e passar a abrir a janela sem sair da grade.
+  // stopPropagation (plano Round 5) evita que o clique tambem dispare a
+  // abertura do card por algum listener futuro no <li>/<ul> - o botao em si
+  // ja fica fora do <button> do card (nao aninhado, ver JSX abaixo).
   function prepararCursoParaVenda(curso, event) {
     event.stopPropagation();
-    abrirDetalheCurso(curso);
+    setCursoParaPrepararVenda(curso);
   }
 
   function limparFiltros() {
@@ -511,6 +510,18 @@ export function SecaoCursos({
 
   const modaisComuns = (
     <>
+      {cursoParaPrepararVenda ? (
+        <ModalPrepararVenda
+          curso={cursoParaPrepararVenda}
+          onFechar={() => setCursoParaPrepararVenda(null)}
+          onSalvo={() => {
+            mostrarToast("Curso preparado para venda com sucesso.", "sucesso");
+            onRefresh?.();
+          }}
+          onSessionExpired={onSessionExpired}
+        />
+      ) : null}
+
       {formularioCriacaoAberto ? (
         <Modal
           onFechar={fecharFormularioCriacaoCurso}

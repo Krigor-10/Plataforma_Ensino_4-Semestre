@@ -3,11 +3,10 @@ import { TbArrowRight, TbChevronDown, TbCreditCard, TbX } from "react-icons/tb";
 import { MdPersonAdd } from "react-icons/md";
 import GlobalHeader from "../components/GlobalHeader.jsx";
 import Botao from "../components/Botao.jsx";
+import CartaoCursoPublico from "../components/CartaoCursoPublico.jsx";
 import Modal from "../components/Modal.jsx";
 import { InlineMessage } from "../components/Primitives.jsx";
 import { CURATED_COURSES, PUBLIC_PILLARS, isCursoVisivelNoCatalogoPublico } from "../data/appConfig.js";
-import { getCourseCover } from "../data/courseCovers.js";
-import { resolverImagemCurso } from "../lib/courseImage.js";
 import { formatMoney } from "../lib/format.js";
 import homeBannerImage from "../assets/home-publica-banner.jpg";
 import { apiRequest } from "../lib/api.js";
@@ -135,56 +134,11 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
             <ul className="grade-cursos" role="list" aria-label="Cursos disponiveis">
               {courses.map((curso) => (
                 <li key={curso.id}>
-                  <article className="cartao-curso">
-                    <button
-                      type="button"
-                      className="cartao-curso__acionador"
-                      aria-labelledby={`curso-titulo-${curso.id}`}
-                      onClick={() => setCursoModal(curso)}
-                    >
-                      <div className="cartao-curso__topo" aria-hidden="true">
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          className="cartao-curso__imagem"
-                          loading="lazy"
-                          src={resolverImagemCurso(curso)}
-                          onError={(event) => {
-                            event.currentTarget.onerror = null;
-                            event.currentTarget.src = getCourseCover(curso);
-                          }}
-                        />
-                      </div>
-
-                      <div className="cartao-curso__corpo">
-                        <h3 className="cartao-curso__titulo" id={`curso-titulo-${curso.id}`}>
-                          {curso.titulo}
-                        </h3>
-                        <p className="cartao-curso__descricao">{curso.descricao}</p>
-                      </div>
-                    </button>
-
-                    <footer className="cartao-curso__rodape">
-                      <strong className="cartao-curso__preco">{curso.ehGratuito ? "Gratis" : formatMoney(curso.preco)}</strong>
-                      <Botao
-                        variante="primario"
-                        tamanho="pequeno"
-                        onClick={() => onNavigate(`/cadastro/${curso.id}`)}
-                        aria-label={curso.ehGratuito ? `Começar grátis em ${curso.titulo}` : `Comprar ${curso.titulo}`}
-                        className="linha-icone-texto"
-                      >
-                        {curso.ehGratuito ? (
-                          <>
-                            <MdPersonAdd size={18} aria-hidden="true" /> Começar grátis
-                          </>
-                        ) : (
-                          <>
-                            <TbCreditCard size={18} aria-hidden="true" /> Comprar · {formatMoney(curso.preco)}
-                          </>
-                        )}
-                      </Botao>
-                    </footer>
-                  </article>
+                  <CartaoCursoPublico
+                    curso={curso}
+                    onAbrirDetalhe={setCursoModal}
+                    onComprar={(cursoEscolhido) => onNavigate(`/cadastro/${cursoEscolhido.id}`)}
+                  />
                 </li>
               ))}
             </ul>

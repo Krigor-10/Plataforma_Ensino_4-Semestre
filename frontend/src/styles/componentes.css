@@ -841,6 +841,41 @@ select.campo__entrada option {
   max-width: min(40rem, 95vw);
 }
 
+.modal-caixa--preparar-venda {
+  width: min(56rem, 95vw);
+  max-width: min(56rem, 95vw);
+}
+
+/* Janela "Preparar para venda" (plano fluxo-venda-cursos, Round 6): form a
+   esquerda, previa do cartao publico (CartaoCursoPublico) a direita,
+   atualizando ao digitar. Empilha em 1 coluna embaixo de 768px - mobile
+   first, sem rolagem horizontal (regra 4/5 do CLAUDE.md). */
+.janela-preparar-venda {
+  display: grid;
+  gap: var(--espaco-lg);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+}
+
+.janela-preparar-venda__previa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.janela-preparar-venda__previa-rotulo {
+  color: var(--cor-texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .janela-preparar-venda {
+    grid-template-columns: 1fr;
+  }
+}
+
 .modal-caixa--certificado {
   max-width: min(720px, 90vw);
 }

@@ -335,6 +335,18 @@
   box-shadow: var(--sombra-md);
 }
 
+.cartao-estatistica--acionavel {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.cartao-estatistica--acionavel:focus-visible {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 2px;
+}
+
 .cartao-estatistica__icone {
   display: inline-flex;
   align-items: center;
