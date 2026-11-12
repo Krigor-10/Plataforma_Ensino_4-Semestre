@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { TbPlus, TbSearch, TbX } from "react-icons/tb";
+import { TbPlus, TbSearch, TbTag, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -14,12 +15,46 @@ import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
 import PainelCursoGestao from "./PainelCursoGestao.jsx";
 
+const MODELO_GRATUITO = 1;
+const MODELO_PAGO_PACOTE = 2;
+const MODELO_ACOMPANHADO = 3;
+const ROTULO_MODELO_CURSO = { [MODELO_GRATUITO]: "Gratuito", [MODELO_PAGO_PACOTE]: "Pago", [MODELO_ACOMPANHADO]: "Acompanhado" };
+
 function normalizarBusca(valor) {
   return String(valor ?? "")
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
+}
+
+/* Particao exaustiva dos cursos nas 4 abas do Admin (plano fluxo-venda-
+   cursos, Round 5) - ciclo de vida (Encerrado/Em andamento) e venda (A
+   venda/Fora da venda) sao eixos independentes (um pacote vindo do fluxo
+   Gratuito->pacote pode estar Encerrado E a venda ao mesmo tempo), entao a
+   prioridade abaixo decide em qual aba UNICA cada curso cai: "a venda" vem
+   primeiro (e o estado que mais importa pro Admin acompanhar), depois
+   "encerrados" (precisa de acao - preparar pra venda), depois "fora da
+   venda" (pacote existente mas indisponivel), e por fim "andamento"
+   (Acompanhado/Gratuito rodando normalmente). */
+function categoriaCicloCurso(curso) {
+  const modeloCurso = Number(curso.modeloCurso);
+  const ehPagoPacote = modeloCurso === MODELO_PAGO_PACOTE;
+  const ehAcompanhadoOuGratuito = modeloCurso === MODELO_ACOMPANHADO || modeloCurso === MODELO_GRATUITO;
+
+  if (ehPagoPacote && curso.publicadoParaVendaEm) {
+    return "a-venda";
+  }
+
+  if ((ehAcompanhadoOuGratuito || ehPagoPacote) && curso.encerradoEm) {
+    return "encerrados";
+  }
+
+  if (ehPagoPacote) {
+    return "fora-da-venda";
+  }
+
+  return "andamento";
 }
 
 /* CURSOS — grade de cards (mesmo padrao catalogo-card/catalogo-grade usado em
@@ -41,6 +76,10 @@ export function SecaoCursos({
 }) {
   const { mostrarToast } = useToast();
   const [filtroCoordenador, setFiltroCoordenador] = useState("todos");
+  const [filtroModelo, setFiltroModelo] = useState("todos");
+  const [abaCurso, setAbaCurso] = useState("andamento");
+  const refAbasCursos = useRef(null);
+  const abasCursosTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbasCursos);
   const [buscaCurso, setBuscaCurso] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [cursoParaCoordenador, setCursoParaCoordenador] = useState(null);
@@ -107,8 +146,26 @@ export function SecaoCursos({
   }
 
   const termoBusca = useMemo(() => normalizarBusca(buscaCurso), [buscaCurso]);
+
+  const contagemPorAbaCurso = useMemo(() => {
+    const contagem = { andamento: 0, encerrados: 0, "a-venda": 0, "fora-da-venda": 0 };
+    cursos.forEach((curso) => {
+      contagem[categoriaCicloCurso(curso)] += 1;
+    });
+    return contagem;
+  }, [cursos]);
+
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
+
+    if (ehAdmin) {
+      proximosCursos = proximosCursos.filter((curso) => categoriaCicloCurso(curso) === abaCurso);
+
+      if (filtroModelo !== "todos") {
+        const modeloCurso = Number(filtroModelo);
+        proximosCursos = proximosCursos.filter((curso) => Number(curso.modeloCurso) === modeloCurso);
+      }
+    }
 
     if (ehAdmin && filtroCoordenador === "aguardando") {
       proximosCursos = proximosCursos.filter((curso) => !curso.coordenadorId);
@@ -136,8 +193,8 @@ export function SecaoCursos({
 
       return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
     }).sort((left, right) => String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR"));
-  }, [coordenadorPorId, cursos, ehAdmin, filtroCoordenador, resumoPorCursoId, termoBusca]);
-  const temFiltroAtivo = Boolean(termoBusca || (ehAdmin && filtroCoordenador !== "todos"));
+  }, [abaCurso, coordenadorPorId, cursos, ehAdmin, filtroCoordenador, filtroModelo, resumoPorCursoId, termoBusca]);
+  const temFiltroAtivo = Boolean(termoBusca || (ehAdmin && (filtroCoordenador !== "todos" || filtroModelo !== "todos")));
 
   const cursoSelecionado = useMemo(
     () => cursos.find((curso) => curso.id === cursoIdSelecionado) || null,
@@ -167,9 +224,25 @@ export function SecaoCursos({
     onNavigate?.("/app/cursos");
   }
 
+  // Leva direto pra tela do curso - a partir do Round 6 (janela "Preparar
+  // para venda" em PainelCursoGestao.jsx), um Gratuito encerrado abre essa
+  // janela automaticamente ao entrar; por enquanto so abre a tela normal do
+  // curso. stopPropagation (plano Round 5) evita que o clique tambem dispare
+  // a abertura "padrao" do card se algum dia esse botao deixar de navegar
+  // direto e passar a abrir a janela sem sair da grade.
+  function prepararCursoParaVenda(curso, event) {
+    event.stopPropagation();
+    abrirDetalheCurso(curso);
+  }
+
   function limparFiltros() {
     setBuscaCurso("");
     setFiltroCoordenador("todos");
+    setFiltroModelo("todos");
+  }
+
+  function selecionarAbaCurso(aba) {
+    setAbaCurso(aba);
   }
 
   function abrirModalCoordenadorCurso(curso) {
@@ -664,6 +737,54 @@ export function SecaoCursos({
       </header>
 
       {ehAdmin ? (
+        <div className="linha-abas-status">
+          <nav
+            aria-label="Status dos cursos"
+            className={`abas-matriculas${abasCursosTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+            ref={refAbasCursos}
+            role="tablist"
+          >
+            <button
+              aria-selected={abaCurso === "andamento"}
+              className={`abas-matriculas__aba${abaCurso === "andamento" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => selecionarAbaCurso("andamento")}
+              role="tab"
+              type="button"
+            >
+              Em andamento <span className="abas-matriculas__contagem">{contagemPorAbaCurso.andamento}</span>
+            </button>
+            <button
+              aria-selected={abaCurso === "encerrados"}
+              className={`abas-matriculas__aba${abaCurso === "encerrados" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => selecionarAbaCurso("encerrados")}
+              role="tab"
+              type="button"
+            >
+              Encerrados <span className="abas-matriculas__contagem">{contagemPorAbaCurso.encerrados}</span>
+            </button>
+            <button
+              aria-selected={abaCurso === "a-venda"}
+              className={`abas-matriculas__aba${abaCurso === "a-venda" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => selecionarAbaCurso("a-venda")}
+              role="tab"
+              type="button"
+            >
+              À venda <span className="abas-matriculas__contagem">{contagemPorAbaCurso["a-venda"]}</span>
+            </button>
+            <button
+              aria-selected={abaCurso === "fora-da-venda"}
+              className={`abas-matriculas__aba${abaCurso === "fora-da-venda" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => selecionarAbaCurso("fora-da-venda")}
+              role="tab"
+              type="button"
+            >
+              Fora da venda <span className="abas-matriculas__contagem">{contagemPorAbaCurso["fora-da-venda"]}</span>
+            </button>
+          </nav>
+        </div>
+      ) : null}
+
+      {ehAdmin ? (
         <div className="barra-filtros">
           <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
           <select
@@ -679,6 +800,18 @@ export function SecaoCursos({
                 {coordenador.nome}
               </option>
             ))}
+          </select>
+          <label className="visualmente-oculto" htmlFor="filtro-modelo-curso">Filtrar por modelo de curso</label>
+          <select
+            className="campo__entrada barra-filtros__select"
+            id="filtro-modelo-curso"
+            onChange={(event) => setFiltroModelo(event.target.value)}
+            value={filtroModelo}
+          >
+            <option value="todos">Todos os modelos</option>
+            <option value={MODELO_GRATUITO}>Gratuito</option>
+            <option value={MODELO_PAGO_PACOTE}>Pago</option>
+            <option value={MODELO_ACOMPANHADO}>Acompanhado</option>
           </select>
           <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
             Limpar filtros
@@ -696,6 +829,8 @@ export function SecaoCursos({
             const resumo = resumoPorCursoId.get(curso.id) || { modulos: 0, alunosMatriculados: 0, notasContadas: 0 };
             const media = mediaDoCurso(resumo);
             const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
+
+            const mostrarBotaoPrepararVenda = ehAdmin && abaCurso === "encerrados" && Number(curso.modeloCurso) === MODELO_GRATUITO;
 
             return (
               <li key={curso.id}>
@@ -719,6 +854,9 @@ export function SecaoCursos({
                       <strong className="catalogo-card__titulo">{curso.titulo}</strong>
                       <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} />
                     </div>
+                    {ehAdmin ? (
+                      <p className="catalogo-card__data">{ROTULO_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}</p>
+                    ) : null}
                     <p className="catalogo-card__data">
                       {resumo.alunosMatriculados} aluno{resumo.alunosMatriculados === 1 ? "" : "s"} · {resumo.modulos} modulo{resumo.modulos === 1 ? "" : "s"}
                     </p>
@@ -728,6 +866,20 @@ export function SecaoCursos({
                     </footer>
                   </div>
                 </button>
+                {mostrarBotaoPrepararVenda ? (
+                  // Fora do <button> do card de proposito - <button> dentro de
+                  // <button> e HTML invalido. stopPropagation (plano Round 5,
+                  // mesma tecnica do MenuAcoes.jsx) protege contra o clique
+                  // tambem abrir o card por algum listener futuro no <li>/<ul>.
+                  <Botao
+                    onClick={(event) => prepararCursoParaVenda(curso, event)}
+                    style={{ marginTop: "var(--espaco-xs)", width: "100%" }}
+                    tamanho="pequeno"
+                    variante="primario"
+                  >
+                    <TbTag aria-hidden="true" size={15} /> Preparar para venda
+                  </Botao>
+                ) : null}
               </li>
             );
           })}
