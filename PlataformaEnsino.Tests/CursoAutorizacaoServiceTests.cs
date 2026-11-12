@@ -165,6 +165,31 @@ public class CursoAutorizacaoServiceTests
         Assert.True(podeGerenciar);
     }
 
+    [Fact]
+    public async Task PodeGerenciarModuloAsync_ProfessorVinculadoAoCurso_RetornaTrue()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        VincularProfessorCurso(context, professorId: 4, cursoId: curso.Id);
+
+        var podeGerenciar = await CriarService(context).PodeGerenciarModuloAsync(CriarPrincipal(4, "Professor"), modulo.Id);
+
+        Assert.True(podeGerenciar);
+    }
+
+    [Fact]
+    public async Task PodeGerenciarModuloAsync_ProfessorSemVinculoAoCurso_RetornaFalse()
+    {
+        var context = TestContextFactory.Criar();
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+
+        var podeGerenciar = await CriarService(context).PodeGerenciarModuloAsync(CriarPrincipal(4, "Professor"), modulo.Id);
+
+        Assert.False(podeGerenciar);
+    }
+
     // ---------- PodeCriarModuloAsync ----------
 
     [Fact]

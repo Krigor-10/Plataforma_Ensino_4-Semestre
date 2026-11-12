@@ -3705,6 +3705,15 @@
   color: var(--cor-texto-forte);
 }
 
+/* Separa visualmente grupos de itens dentro do mesmo menu (ex.: "Editar/
+   Excluir modulo" das acoes em lote sobre a selecao, em
+   SecaoConteudosProfessor.jsx). */
+.menu-contexto__divisor {
+  height: 1px;
+  background: var(--cor-borda);
+  margin: var(--espaco-xs) var(--espaco-sm);
+}
+
 /* ------------------------------------------------------------
    CABECALHO DE SLIDE (Modulos / Turmas) — mesmo padrao visual
    usado na trilha do aluno

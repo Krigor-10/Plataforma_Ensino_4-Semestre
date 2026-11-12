@@ -134,22 +134,26 @@ export default function MenuAcoes({ itens, rotulo, textoBotao, iconeBotao, class
       )}
       {aberto ? (
         <ul className="menu-contexto__lista" onKeyDown={navegarComSeta} ref={refLista} role="menu">
-          {itensVisiveis.map((item) => (
-            <li key={item.chave} role="none">
-              <button
-                className={item.perigo ? "menu-item--perigo" : undefined}
-                disabled={item.desabilitado}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  selecionar(item);
-                }}
-                role="menuitem"
-                type="button"
-              >
-                {item.rotulo}
-              </button>
-            </li>
-          ))}
+          {itensVisiveis.map((item) =>
+            item.divisor ? (
+              <li aria-hidden="true" className="menu-contexto__divisor" key={item.chave} role="separator" />
+            ) : (
+              <li key={item.chave} role="none">
+                <button
+                  className={item.perigo ? "menu-item--perigo" : undefined}
+                  disabled={item.desabilitado}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    selecionar(item);
+                  }}
+                  role="menuitem"
+                  type="button"
+                >
+                  {item.rotulo}
+                </button>
+              </li>
+            )
+          )}
         </ul>
       ) : null}
     </div>

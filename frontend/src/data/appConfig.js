@@ -3,7 +3,7 @@ export const MANAGER_ROLES = new Set(["Admin", "Coordenador"]);
 export const APP_SECTIONS = [
   { key: "dashboard", label: "Dashboard", roles: ["Admin", "Coordenador", "Professor", "Aluno"] },
   { key: "alunos", label: "Alunos", roles: ["Admin"] },
-  { key: "professores", label: "Professores", roles: ["Admin", "Coordenador"] },
+  { key: "professores", label: "Professores", roles: ["Admin"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },

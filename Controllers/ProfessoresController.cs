@@ -27,7 +27,13 @@ namespace PlataformaEnsino.API.Controllers
         }
 
         // POST: api/Professores
+        // Cadastrar/editar/inativar-reativar/excluir professor fica so com o
+        // Admin (ajuste de responsabilidades - antes era Admin,Coordenador
+        // igual ao GET, herdado do Authorize de classe). O Coordenador
+        // continua so vinculando/desvinculando professor pela tela do curso
+        // (Cursos/{id}/professores), nao muda aqui.
         [HttpPost]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<ActionResult<ProfessorResponseDto>> PostProfessor([FromBody] CriarProfessorDto dto)
         {
             var professor = await _professorService.CriarProfessorAsync(dto);
@@ -36,6 +42,7 @@ namespace PlataformaEnsino.API.Controllers
 
         // PUT: api/Professores/5
         [HttpPut("{id:int}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<ActionResult<ProfessorResponseDto>> PutProfessor(int id, [FromBody] AtualizarProfessorDto dto)
         {
             var professor = await _professorService.AtualizarProfessorAsync(id, dto);
@@ -44,6 +51,7 @@ namespace PlataformaEnsino.API.Controllers
 
         // DELETE: api/Professores/5
         [HttpDelete("{id:int}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteProfessor(int id)
         {
             await _professorService.ExcluirProfessorAsync(id);

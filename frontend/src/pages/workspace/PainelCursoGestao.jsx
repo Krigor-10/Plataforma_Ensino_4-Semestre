@@ -11,7 +11,6 @@ import {
   TbLock,
   TbLockOpen,
   TbPencil,
-  TbPlus,
   TbTarget,
   TbTrophy,
   TbUserCheck,
@@ -53,10 +52,14 @@ function ordenarPorCriacao(moduloA, moduloB) {
    quando ha curso aberto - os modais de editar curso, foto de capa e
    atribuir coordenador continuam la (modaisComuns), SecaoCursos so passa os
    callbacks. `perfil`("Coordenador" default | "Admin") liga as acoes
-   exclusivas de cada papel: Admin ganha Foto de capa, atribuir Coordenador e
-   Novo modulo; Encerrar/Reabrir continua so do Coordenador (regra de
-   negocio, nao de UI). Busca o desempenho do curso aqui dentro (GET
-   /Cursos/{id}/desempenho), independente do snapshot global. */
+   exclusivas de cada papel: Admin ganha Foto de capa e atribuir Coordenador;
+   Encerrar/Reabrir continua so do Coordenador (regra de negocio, nao de UI).
+   Admin NAO tem mais "Novo modulo" aqui (ajuste de responsabilidades - a
+   trilha de modulos e so do Professor agora, ver
+   docs/permissoes/PROMPT-agente-ajuste-responsabilidades-perfis.md); Admin e
+   Coordenador continuam editando/excluindo modulo pelo menu ⋮. Busca o
+   desempenho do curso aqui dentro (GET /Cursos/{id}/desempenho),
+   independente do snapshot global. */
 export default function PainelCursoGestao({
   coordenadores = [],
   curso,
@@ -304,13 +307,6 @@ export default function PainelCursoGestao({
 
       {abaAtiva === "modulos" ? (
         <div aria-label="Modulos do curso" role="tabpanel">
-          {ehAdmin ? (
-            <div style={{ marginBottom: "var(--espaco-md)" }}>
-              <Botao onClick={() => modais.abrirFormularioNovoModulo(curso.id)} tamanho="pequeno" variante="primario">
-                <TbPlus aria-hidden="true" size={16} /> Novo modulo
-              </Botao>
-            </div>
-          ) : null}
           {modulosOrdenados.length === 0 ? (
             <p className="texto-vazio" role="status">Nenhum modulo cadastrado neste curso.</p>
           ) : (

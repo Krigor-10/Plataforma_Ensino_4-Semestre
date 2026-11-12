@@ -221,7 +221,7 @@ describe("PainelCursoGestao", () => {
     expect(screen.queryByRole("tab", { name: /Avaliacoes do curso/ })).not.toBeInTheDocument();
   });
 
-  test("perfil Admin mostra Foto de capa, Coordenador e Novo modulo, e nao mostra Encerrar curso", async () => {
+  test("perfil Admin mostra Foto de capa e Coordenador, nao mostra Novo modulo nem Encerrar curso", async () => {
     mockApi(DESEMPENHO);
 
     const cursoAcompanhadoConcluido = { ...CURSO, modeloCurso: 3, concluidoPeloProfessorEm: "2026-01-01", coordenadorId: 7 };
@@ -238,7 +238,7 @@ describe("PainelCursoGestao", () => {
 
     expect(screen.getByRole("button", { name: /Foto de capa/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Coordenador" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Novo modulo/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Encerrar curso/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Coordenacao: Coordenadora Teste/)).toBeInTheDocument();
   });

@@ -972,4 +972,67 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(apiRequest).not.toHaveBeenCalledWith("/ConteudosDidaticos/1", expect.anything());
     expect(await screen.findByText(/já estava nesse status/)).toBeInTheDocument();
   });
+
+  test('"Mais ações" tem Editar/Excluir modulo sempre habilitados, mesmo com o modulo vazio', async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({ conteudos: [] });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    const menu = screen.getByRole("menu");
+
+    expect(within(menu).getByRole("menuitem", { name: "Editar módulo" })).toBeEnabled();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir módulo" })).toBeEnabled();
+  });
+
+  test('"Editar módulo" abre o formulario preenchido e salva o novo titulo', async () => {
+    apiRequest.mockResolvedValueOnce({});
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Editar módulo" }));
+
+    const campoTitulo = screen.getByLabelText("Titulo *");
+    expect(campoTitulo).toHaveValue("Módulo 1");
+
+    await usuario.clear(campoTitulo);
+    await usuario.type(campoTitulo, "Módulo renomeado");
+    await usuario.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith(
+        `/Modulos/${MODULO_ID}`,
+        expect.objectContaining({ method: "PUT", body: JSON.stringify({ titulo: "Módulo renomeado" }) })
+      )
+    );
+  });
+
+  test('"Excluir módulo" vazio chama o DELETE e atualiza a trilha', async () => {
+    apiRequest.mockResolvedValueOnce({});
+    const usuario = userEvent.setup();
+    const { onRefresh } = renderTrilha({ conteudos: [] });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar exclusao" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(`/Modulos/${MODULO_ID}`, expect.objectContaining({ method: "DELETE" })));
+    await waitFor(() => expect(onRefresh).toHaveBeenCalled());
+  });
+
+  test('"Excluir módulo" bloqueado por dependencias mostra a mensagem do backend', async () => {
+    apiRequest.mockRejectedValueOnce(new Error("Nao e possivel excluir o modulo porque ele ja possui dependencias academicas."));
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    await usuario.click(screen.getByRole("menuitem", { name: "Excluir módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Confirmar exclusao" }));
+
+    expect(await screen.findByText(/dependencias academicas/)).toBeInTheDocument();
+  });
 });

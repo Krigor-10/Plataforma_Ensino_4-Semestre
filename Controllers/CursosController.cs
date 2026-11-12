@@ -33,7 +33,7 @@ public class CursosController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CriarCurso([FromBody] CriarCursoDto dto)
     {
         var criadoPorId = User.ObterUsuarioId();

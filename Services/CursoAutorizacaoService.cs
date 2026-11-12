@@ -58,7 +58,12 @@ public class CursoAutorizacaoService : ICursoAutorizacaoService
             return true;
         }
 
-        return await PodeGerenciarCursoAsync(usuario, modulo.CursoId);
+        if (await PodeGerenciarCursoAsync(usuario, modulo.CursoId))
+        {
+            return true;
+        }
+
+        return await ProfessorVinculadoAoCursoAsync(usuario, modulo.CursoId);
     }
 
     public async Task<bool> PodeCriarModuloAsync(ClaimsPrincipal usuario, int cursoId)
@@ -68,6 +73,11 @@ public class CursoAutorizacaoService : ICursoAutorizacaoService
             return true;
         }
 
+        return await ProfessorVinculadoAoCursoAsync(usuario, cursoId);
+    }
+
+    private async Task<bool> ProfessorVinculadoAoCursoAsync(ClaimsPrincipal usuario, int cursoId)
+    {
         if (!usuario.IsInRole("Professor"))
         {
             return false;

@@ -1441,6 +1441,18 @@ function TrilhaConteudosProfessor({
             const algunsSelecionadosNoModulo = totalSelecionadoNoModulo > 0 && !todosSelecionadosNoModulo;
             const itensMaisAcoes = [
               {
+                chave: "editar-modulo",
+                rotulo: "Editar módulo",
+                onSelecionar: () => modaisModulo.abrirEdicaoModulo(modulo)
+              },
+              {
+                chave: "excluir-modulo",
+                rotulo: "Excluir módulo",
+                perigo: true,
+                onSelecionar: () => modaisModulo.abrirExclusaoModulo(modulo)
+              },
+              { chave: "divisor-acoes-em-lote", divisor: true },
+              {
                 chave: "publicar",
                 rotulo: "Publicar selecionados",
                 desabilitado: totalSelecionadoNoModulo === 0,
@@ -1526,31 +1538,33 @@ function TrilhaConteudosProfessor({
                       style={{ overflow: modulosComOverflowLiberado.has(modulo.id) ? "visible" : "hidden" }}
                       transition={{ duration: 0.28, ease: "easeInOut" }}
                     >
-                      {chavesSelecionaveisDoModulo.length > 0 ? (
-                        <div className="atividades-curso__barra-selecao">
-                          <label className="atividades-curso__selecionar-tudo">
-                            <span className="atividades-curso__checkbox-alvo">
-                              <input
-                                checked={todosSelecionadosNoModulo}
-                                className="tabela-checkbox"
-                                onChange={() => alternarSelecaoTudo(chavesSelecionaveisDoModulo)}
-                                ref={(elemento) => {
-                                  if (elemento) {
-                                    elemento.indeterminate = algunsSelecionadosNoModulo;
-                                  }
-                                }}
-                                type="checkbox"
-                              />
+                      <div className="atividades-curso__barra-selecao">
+                        {chavesSelecionaveisDoModulo.length > 0 ? (
+                          <>
+                            <label className="atividades-curso__selecionar-tudo">
+                              <span className="atividades-curso__checkbox-alvo">
+                                <input
+                                  checked={todosSelecionadosNoModulo}
+                                  className="tabela-checkbox"
+                                  onChange={() => alternarSelecaoTudo(chavesSelecionaveisDoModulo)}
+                                  ref={(elemento) => {
+                                    if (elemento) {
+                                      elemento.indeterminate = algunsSelecionadosNoModulo;
+                                    }
+                                  }}
+                                  type="checkbox"
+                                />
+                              </span>
+                              Selecionar tudo
+                            </label>
+                            <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
+                            <span aria-live="polite" className="atividades-curso__contagem-selecao">
+                              {totalSelecionadoNoModulo} selecionado{totalSelecionadoNoModulo === 1 ? "" : "s"}
                             </span>
-                            Selecionar tudo
-                          </label>
-                          <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
-                          <span aria-live="polite" className="atividades-curso__contagem-selecao">
-                            {totalSelecionadoNoModulo} selecionado{totalSelecionadoNoModulo === 1 ? "" : "s"}
-                          </span>
-                          <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
-                        </div>
-                      ) : null}
+                          </>
+                        ) : null}
+                        <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
+                      </div>
 
                       {loteFalhas.length > 0 ? (
                         <InlineMessage tone="error">

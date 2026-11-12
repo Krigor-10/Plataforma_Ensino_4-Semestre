@@ -119,4 +119,40 @@ public class CursosControllerIntegrationTests : IClassFixture<ApiWebApplicationF
         Assert.Equal(149.90m, cursoAtualizado.Preco);
         Assert.Equal(ModeloCurso.Gratuito, cursoAtualizado.ModeloCurso);
     }
+
+    // ---------- POST /Cursos (ajuste de responsabilidades - criar curso so pelo Admin) ----------
+
+    [Fact]
+    public async Task CriarCurso_Coordenador_Retorna403()
+    {
+        var tokenCoordenador = await _factory.CriarCoordenadorEObterTokenAsync($"coord.{Guid.NewGuid():N}@teste.local");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenCoordenador);
+
+        var resposta = await client.PostAsJsonAsync("/api/v1/cursos", new
+        {
+            titulo = "Curso criado pelo coordenador",
+            descricao = "Nao deveria ser permitido",
+            preco = 0m
+        });
+
+        Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
+    }
+
+    [Fact]
+    public async Task CriarCurso_Admin_Retorna201ECriaOCurso()
+    {
+        var tokenAdmin = await _factory.CriarAdminEObterTokenAsync($"admin.{Guid.NewGuid():N}@teste.local");
+        using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenAdmin);
+
+        var resposta = await client.PostAsJsonAsync("/api/v1/cursos", new
+        {
+            titulo = "Curso criado pelo admin",
+            descricao = "Permitido",
+            preco = 0m
+        });
+
+        Assert.Equal(HttpStatusCode.Created, resposta.StatusCode);
+    }
 }

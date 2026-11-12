@@ -100,7 +100,7 @@ public class ModulosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin,Coordenador,Professor")]
     public async Task<IActionResult> AtualizarModulo(int id, [FromBody] AtualizarModuloDto dto)
     {
         if (!ModelState.IsValid)
@@ -118,7 +118,7 @@ public class ModulosController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin,Coordenador,Professor")]
     public async Task<IActionResult> ExcluirModulo(int id)
     {
         if (!await _cursoAutorizacaoService.PodeGerenciarModuloAsync(User, id))
