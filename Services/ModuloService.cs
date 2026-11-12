@@ -11,15 +11,18 @@ public class ModuloService : IModuloService
     private readonly PlataformaContext _context;
     private readonly IModuloRepository _moduloRepository;
     private readonly IGenericRepository<Curso> _cursoRepository;
+    private readonly ICursoService _cursoService;
 
     public ModuloService(
         IModuloRepository moduloRepository,
         IGenericRepository<Curso> cursoRepository,
+        ICursoService cursoService,
         PlataformaContext context)
     {
         _context = context;
         _moduloRepository = moduloRepository;
         _cursoRepository = cursoRepository;
+        _cursoService = cursoService;
     }
 
     public async Task<Modulo> CriarModuloAsync(Modulo modulo)
@@ -27,6 +30,7 @@ public class ModuloService : IModuloService
         ArgumentNullException.ThrowIfNull(modulo);
 
         await ValidarCursoAsync(modulo.CursoId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
         ValidarTitulo(modulo.Titulo);
 
         var existe = await _moduloRepository.ExisteModuloComMesmoTituloAsync(modulo.Titulo, modulo.CursoId);
@@ -75,6 +79,7 @@ public class ModuloService : IModuloService
     {
         var modulo = await _moduloRepository.ObterPorIdAsync(id)
             ?? throw new KeyNotFoundException("Modulo nao encontrado.");
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
 
         ValidarTitulo(titulo);
 
@@ -94,6 +99,7 @@ public class ModuloService : IModuloService
     {
         var modulo = await _moduloRepository.ObterPorIdAsync(id)
             ?? throw new KeyNotFoundException("Modulo nao encontrado.");
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
 
         if (await _moduloRepository.PossuiDependenciasAsync(id))
         {

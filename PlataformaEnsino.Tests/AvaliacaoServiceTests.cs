@@ -352,6 +352,54 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
+    public async Task AtualizarAvaliacaoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarAvaliacaoAsync(avaliacao.Id, professor.Id, new AtualizarAvaliacaoDto
+            {
+                Titulo = avaliacao.Titulo,
+                Descricao = avaliacao.Descricao,
+                CursoId = curso.Id,
+                ModuloId = modulo.Id,
+                TipoAvaliacao = avaliacao.TipoAvaliacao,
+                StatusPublicacao = StatusPublicacao.Rascunho,
+                TentativasPermitidas = avaliacao.TentativasPermitidas,
+                NotaMaxima = avaliacao.NotaMaxima,
+                PesoNota = avaliacao.PesoNota,
+                PesoProgresso = avaliacao.PesoProgresso
+            }));
+    }
+
+    [Fact]
+    public async Task ExcluirAvaliacaoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExcluirAvaliacaoAsync(avaliacao.Id, professor.Id));
+    }
+
+    [Fact]
     public async Task ExcluirAvaliacaoAsync_DeOutroProfessor_LancaKeyNotFound()
     {
         var context = TestContextFactory.Criar();
@@ -426,6 +474,45 @@ public class AvaliacaoServiceTests
 
         Assert.Equal(1, questao.Ordem);
         Assert.Equal(2, questao.Alternativas.Count);
+    }
+
+    [Fact]
+    public async Task AdicionarQuestaoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto()));
+    }
+
+    [Fact]
+    public async Task AdicionarQuestoesEmLoteAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AdicionarQuestoesEmLoteAsync(avaliacao.Id, professor.Id, new CriarQuestoesEmLoteDto
+            {
+                Questoes = new List<CriarQuestaoAvaliacaoDto> { NovaQuestaoObjetivaDto() }
+            }));
     }
 
     [Fact]
@@ -637,6 +724,57 @@ public class AvaliacaoServiceTests
             () => service.AtualizarQuestaoAsync(avaliacao.Id, questao.Id, professor.Id, dto));
     }
 
+    [Fact]
+    public async Task AtualizarQuestaoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        var dto = new AtualizarQuestaoAvaliacaoDto
+        {
+            TituloInterno = "Questao editada",
+            Enunciado = "Enunciado editado",
+            TipoQuestao = TipoQuestao.MultiplaEscolha,
+            Pontos = 8,
+            Alternativas = new List<CriarAlternativaAvaliacaoDto>
+            {
+                new() { Letra = "A", Texto = "Nova certa", EhCorreta = true },
+                new() { Letra = "B", Texto = "Nova errada", EhCorreta = false }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarQuestaoAsync(avaliacao.Id, questao.Id, professor.Id, dto));
+    }
+
+    [Fact]
+    public async Task ExcluirQuestaoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExcluirQuestaoAsync(avaliacao.Id, questao.Id, professor.Id));
+    }
+
     // ---------- ReordenarQuestoesAsync ----------
 
     [Fact]
@@ -687,6 +825,35 @@ public class AvaliacaoServiceTests
         };
 
         await Assert.ThrowsAsync<ArgumentException>(
+            () => service.ReordenarQuestoesAsync(avaliacao.Id, professor.Id, dto));
+    }
+
+    [Fact]
+    public async Task ReordenarQuestoesAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var primeira = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var segunda = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        var dto = new ReordenarQuestoesDto
+        {
+            Posicoes = new List<PosicaoQuestaoDto>
+            {
+                new() { QuestaoId = primeira.Id, NovaOrdem = 2 },
+                new() { QuestaoId = segunda.Id, NovaOrdem = 1 }
+            }
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.ReordenarQuestoesAsync(avaliacao.Id, professor.Id, dto));
     }
 
@@ -1197,6 +1364,41 @@ public class AvaliacaoServiceTests
         Assert.Equal(StatusTentativaAvaliacao.Corrigida, item.UltimoStatusTentativa);
     }
 
+    // Regressao do risco critico do plano fluxo-venda-cursos (achado 1): o
+    // filtro em memoria desta listagem reusa AcessoAcademicoService.
+    // MatriculaTemAcessoLiberado, que le ValorNaMatricula (congelado na
+    // matricula), nunca o Curso.Preco atual - senao um curso que vira pago
+    // depois da matricula tiraria a avaliacao da lista do aluno antigo.
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_CursoViraPagoDepoisDaMatricula_MatriculaAntigaContinuaVendoAAvaliacao()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var alunoAntigo = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        CriarMatriculaAprovadaSemTurma(context, alunoAntigo.Id, curso.Id);
+        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var resultadoAntigo = await service.ListarAvaliacoesPorAlunoAsync(alunoAntigo.Id);
+        Assert.Single(resultadoAntigo);
+
+        var alunoNovo = CriarAluno(context);
+        var matriculaNova = new Matricula { AlunoId = alunoNovo.Id, CursoId = curso.Id, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matriculaNova.DefinirValorNaMatricula(curso.Preco);
+        matriculaNova.Aprovar();
+        context.Matriculas.Add(matriculaNova);
+        context.SaveChanges();
+
+        var resultadoNovo = await service.ListarAvaliacoesPorAlunoAsync(alunoNovo.Id);
+        Assert.Empty(resultadoNovo);
+    }
+
     // ---------- GerarQuestoesComIaAsync ----------
 
     [Fact]
@@ -1279,6 +1481,31 @@ public class AvaliacaoServiceTests
 
         Assert.False(iaFake.MaterialRecebido!.EhDocumento);
         Assert.Equal("Conteudo de apoio pra gerar questoes.", iaFake.MaterialRecebido.TextoFonte);
+    }
+
+    [Fact]
+    public async Task GerarQuestoesComIaDeConteudoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+
+        var conteudo = new ConteudoDidatico { Titulo = "Aula 1", TurmaId = turma.Id, ModuloId = modulo.Id, CorpoTexto = "Conteudo de apoio pra gerar questoes." };
+        conteudo.DefinirProfessorAutor(professor.Id);
+        conteudo.DefinirCurso(curso.Id);
+        context.ConteudosDidaticos.Add(conteudo);
+        context.SaveChanges();
+
+        var service = CriarService(context);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GerarQuestoesComIaDeConteudoAsync(avaliacao.Id, professor.Id, conteudo.Id, new GerarQuestoesIaRequestDto(), CancellationToken.None));
     }
 
     [Fact]

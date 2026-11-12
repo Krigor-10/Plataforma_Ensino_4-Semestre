@@ -215,6 +215,33 @@ public class ConteudoDidaticoServiceTests
     }
 
     [Fact]
+    public async Task AtualizarConteudoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarConteudoAsync(conteudo.Id, professor.Id, new AtualizarConteudoDidaticoDto
+            {
+                Titulo = conteudo.Titulo,
+                TipoConteudo = conteudo.TipoConteudo,
+                CorpoTexto = conteudo.CorpoTexto,
+                ModuloId = modulo.Id,
+                StatusPublicacao = StatusPublicacao.Rascunho,
+                OrdemExibicao = conteudo.OrdemExibicao,
+                PesoProgresso = conteudo.PesoProgresso
+            }));
+    }
+
+    [Fact]
     public async Task ExcluirConteudoAsync_SemDependencias_Exclui()
     {
         var context = TestContextFactory.Criar();
@@ -228,6 +255,24 @@ public class ConteudoDidaticoServiceTests
         await service.ExcluirConteudoAsync(conteudo.Id, professor.Id);
 
         Assert.Null(context.ConteudosDidaticos.Find(conteudo.Id));
+    }
+
+    [Fact]
+    public async Task ExcluirConteudoAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        var conteudo = await service.CriarConteudoAsync(professor.Id, NovoConteudoDto(modulo.Id));
+
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ExcluirConteudoAsync(conteudo.Id, professor.Id));
     }
 
     [Fact]

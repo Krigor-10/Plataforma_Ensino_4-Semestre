@@ -84,6 +84,9 @@ const STATUS_RASCUNHO = 1;
 const STATUS_PUBLICADO = 2;
 const STATUS_ARQUIVADO = 3;
 
+const MODELO_GRATUITO = 1;
+const MODELO_ACOMPANHADO = 3;
+
 const TITULO_LOTE_POR_ACAO = {
   publicar: "Publicar selecionados",
   rascunho: "Voltar para rascunho",
@@ -985,6 +988,9 @@ function TrilhaConteudosProfessor({
   const { mostrarToast } = useToast();
   const [previaAberta, setPreviaAberta] = useState(false);
   const [modalArquivadosAberto, setModalArquivadosAberto] = useState(false);
+  const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
+  const [concluindoCurso, setConcluindoCurso] = useState(false);
+  const [mensagemConclusao, setMensagemConclusao] = useState("");
   // "Novo modulo" (rodada 2 "tela do curso do Coordenador", item 6): criar
   // modulo passou do Coordenador pro Professor - mesmo hook/modal
   // compartilhado com PainelCursoGestao.jsx (Admin/Coordenador).
@@ -994,6 +1000,31 @@ function TrilhaConteudosProfessor({
     onSalvo: onRefresh,
     onSessionExpired
   });
+
+  const modeloCursoAtivo = Number(cursoAtivo.curso.modeloCurso);
+  const cursoAceitaConclusao = modeloCursoAtivo === MODELO_GRATUITO || modeloCursoAtivo === MODELO_ACOMPANHADO;
+  const cursoJaConcluido = Boolean(cursoAtivo.curso.concluidoPeloProfessorEm);
+
+  async function confirmarConclusaoCurso() {
+    setConcluindoCurso(true);
+    setMensagemConclusao("");
+
+    try {
+      await apiRequest(`/Cursos/${cursoAtivo.curso.id}/concluir`, { method: "POST" });
+      setConfirmandoConclusao(false);
+      mostrarToast("Curso marcado como concluído. O coordenador foi notificado.", "sucesso");
+      onRefresh();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired();
+        return;
+      }
+
+      setMensagemConclusao(err.message || "Não foi possível concluir o curso agora.");
+    } finally {
+      setConcluindoCurso(false);
+    }
+  }
 
   const conteudosDoCurso = useMemo(
     () => conteudos.filter((conteudo) => conteudo.cursoId === cursoAtivo.curso.id),
@@ -1397,11 +1428,40 @@ function TrilhaConteudosProfessor({
           <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="sucesso">
             <TbPlus aria-hidden="true" size={15} /> Novo modulo
           </Botao>
+          {cursoAceitaConclusao && !cursoJaConcluido ? (
+            <Botao onClick={() => setConfirmandoConclusao(true)} tamanho="pequeno" variante="primario">
+              <TbCheck aria-hidden="true" size={15} /> Concluir curso
+            </Botao>
+          ) : null}
+          {cursoAceitaConclusao && cursoJaConcluido ? <Insignia texto="Concluído, aguardando o coordenador" /> : null}
           <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">
             <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
           </Botao>
         </div>
       </header>
+
+      {confirmandoConclusao ? (
+        <Modal
+          onFechar={() => setConfirmandoConclusao(false)}
+          titulo="Concluir curso"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={concluindoCurso} onClick={() => setConfirmandoConclusao(false)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao disabled={concluindoCurso} onClick={confirmarConclusaoCurso} variante="sucesso">
+                <TbCheck aria-hidden="true" size={15} /> {concluindoCurso ? "Concluindo..." : "Confirmar conclusão"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+            Deseja marcar o curso <strong>{cursoAtivo.curso.titulo}</strong> como concluído? O coordenador será notificado
+            para revisar e encerrar o curso.
+          </p>
+          {mensagemConclusao ? <InlineMessage tone="error">{mensagemConclusao}</InlineMessage> : null}
+        </Modal>
+      ) : null}
 
       {modulosDoCurso.length === 0 ? (
         <p className="texto-vazio" role="status">Este curso ainda não tem módulos cadastrados.</p>

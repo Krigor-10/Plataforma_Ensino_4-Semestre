@@ -27,6 +27,15 @@ public class Matricula
     public int CursoId { get; set; }
     public Curso? Curso { get; set; }
 
+    /// <summary>
+    /// Preco do curso CONGELADO no momento desta matricula — fonte de verdade
+    /// pra decisao de acesso (ver AcessoAcademicoService.MatriculaTemAcessoLiberado),
+    /// nunca Curso.Preco ao vivo. Garante que um aluno que entrou de graca
+    /// nao perde acesso se o curso virar pago depois (ex.: fluxo Gratuito ->
+    /// pacote pago).
+    /// </summary>
+    public decimal ValorNaMatricula { get; private set; }
+
     public int? TurmaId { get; private set; }
     public Turma? Turma { get; set; }
 
@@ -67,6 +76,16 @@ public class Matricula
     public void RegistrarSolicitacao(DateTime? dataSolicitacao = null)
     {
         DataSolicitacao = dataSolicitacao ?? DateTime.UtcNow;
+    }
+
+    public void DefinirValorNaMatricula(decimal valor)
+    {
+        if (valor < 0)
+        {
+            throw new ArgumentException("O valor da matricula nao pode ser negativo.");
+        }
+
+        ValorNaMatricula = valor;
     }
 
     public void VincularTurma(int turmaId)

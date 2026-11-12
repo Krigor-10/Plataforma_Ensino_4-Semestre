@@ -66,9 +66,10 @@ public class UploadAutorizacaoServiceTests
     private static Modulo CriarModulo(PlataformaContext context, int cursoId) =>
         Salvar(context, new Modulo { Titulo = "Modulo Teste", CodigoRegistro = $"MOD-{Guid.NewGuid():N}"[..9], CursoId = cursoId });
 
-    private static Matricula CriarMatriculaAprovada(PlataformaContext context, int alunoId, int cursoId, int turmaId)
+    private static Matricula CriarMatriculaAprovada(PlataformaContext context, int alunoId, int cursoId, int turmaId, decimal valorNaMatricula = 0)
     {
         var matricula = new Matricula { AlunoId = alunoId, CursoId = cursoId, CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..9] };
+        matricula.DefinirValorNaMatricula(valorNaMatricula);
         matricula.VincularTurma(turmaId);
         matricula.Aprovar();
         context.Matriculas.Add(matricula);
@@ -217,7 +218,7 @@ public class UploadAutorizacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var modulo = CriarModulo(context, curso.Id);
         var aluno = CriarAluno(context);
-        CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
+        CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id, valorNaMatricula: curso.Preco);
         CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-3.pdf");
 
         var service = CriarService(context);

@@ -65,8 +65,8 @@ public class MatriculaService : IMatriculaService
     /// apps (o aluno nao precisa mais de duas chamadas separadas). Matricula
     /// com pagamento pendente so confirma o pagamento (nao duplica matricula).
     /// Matricula ja aprovada sem pendencia (curso gratuito, ou pago e ja pago)
-    /// devolve conflito. Curso Acompanhado encerrado recusa via
-    /// MatricularComAprovacaoAutomaticaAsync -> GarantirCursoAbertoAsync.
+    /// devolve conflito. Curso Gratuito/Acompanhado encerrado recusa via
+    /// MatricularComAprovacaoAutomaticaAsync -> GarantirCursoAbertoParaMatriculaAsync.
     /// </summary>
     public async Task<Matricula> ComprarCursoAsync(int alunoId, int cursoId)
     {
@@ -93,6 +93,20 @@ public class MatriculaService : IMatriculaService
         }
         else
         {
+            // "So compra o que esta a venda": regra independente do guard de
+            // GarantirCursoAbertoParaMatriculaAsync (que nunca bloqueia PagoPacote,
+            // ver CursoService) - um pacote fora da venda nao aparece no catalogo,
+            // mas ainda podia ser comprado direto pelo id sem esta checagem.
+            var cursoDaCompra = await _context.Cursos
+                .Where(curso => curso.Id == cursoId)
+                .Select(curso => new { curso.ModeloCurso, curso.PublicadoParaVendaEm })
+                .FirstOrDefaultAsync();
+
+            if (cursoDaCompra is not null && cursoDaCompra.ModeloCurso == ModeloCurso.PagoPacote && !cursoDaCompra.PublicadoParaVendaEm.HasValue)
+            {
+                throw new InvalidOperationException("Este curso nao esta disponivel para compra no momento.");
+            }
+
             var matriculaNova = await MatricularComAprovacaoAutomaticaAsync(alunoId, cursoId);
             matriculaId = matriculaNova.Id;
 
@@ -124,7 +138,12 @@ public class MatriculaService : IMatriculaService
     /// </summary>
     private async Task<Matricula> CriarMatriculaPendenteAsync(int alunoId, int cursoId)
     {
-        await _cursoService.GarantirCursoAbertoAsync(cursoId);
+        await _cursoService.GarantirCursoAbertoParaMatriculaAsync(cursoId);
+
+        var precoCurso = await _context.Cursos
+            .Where(curso => curso.Id == cursoId)
+            .Select(curso => curso.Preco)
+            .FirstOrDefaultAsync();
 
         var novaMatricula = new Matricula
         {
@@ -132,6 +151,10 @@ public class MatriculaService : IMatriculaService
             CursoId = cursoId,
             CodigoRegistro = await GerarCodigoMatriculaAsync()
         };
+        // Congela o preco do curso no momento da matricula (ver
+        // Matricula.ValorNaMatricula) — fonte de verdade da decisao de
+        // acesso, pra nunca depender do Curso.Preco ao vivo.
+        novaMatricula.DefinirValorNaMatricula(precoCurso);
         novaMatricula.RegistrarSolicitacao(DateTime.UtcNow);
 
         await _matriculaRepository.AdicionarAsync(novaMatricula);
@@ -292,6 +315,8 @@ public class MatriculaService : IMatriculaService
     /// pendente vinculada a matricula recem-aprovada. Nao ha integracao com
     /// gateway externo — o aluno "paga" confirmando via PagamentosController,
     /// e o registro so existe pra o app nao tratar Curso.Preco como decorativo.
+    /// Le ValorNaMatricula (ja congelado na propria matricula, ver
+    /// CriarMatriculaPendenteAsync), nao o Curso.Preco atual.
     /// </summary>
     private async Task CriarPagamentoPendenteSeNecessarioAsync(Matricula matricula)
     {
@@ -302,17 +327,12 @@ public class MatriculaService : IMatriculaService
             return;
         }
 
-        var precoCurso = await _context.Cursos
-            .Where(curso => curso.Id == matricula.CursoId)
-            .Select(curso => curso.Preco)
-            .FirstOrDefaultAsync();
-
-        if (precoCurso <= 0)
+        if (matricula.ValorNaMatricula <= 0)
         {
             return;
         }
 
-        await _context.Pagamentos.AddAsync(Pagamento.CriarPendente(matricula.Id, precoCurso));
+        await _context.Pagamentos.AddAsync(Pagamento.CriarPendente(matricula.Id, matricula.ValorNaMatricula));
     }
 
     private async Task<Matricula?> ObterMatriculaAprovadaNoCursoAsync(Matricula matricula)

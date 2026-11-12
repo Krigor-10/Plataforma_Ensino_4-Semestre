@@ -37,8 +37,9 @@ public class ConteudoDidaticoRepository : GenericRepository<ConteudoDidatico>, I
 
     public async Task<List<ConteudoDidatico>> ListarPublicadosPorAlunoAsync(int alunoId)
     {
-        // Curso pago so libera conteudo com pagamento confirmado (Preco <= 0
-        // e sempre liberado — curso gratuito nunca gera Pagamento).
+        // Curso pago (na matricula, ver Matricula.ValorNaMatricula - a fonte de
+        // verdade centralizada em AcessoAcademicoService.MatriculaTemAcessoLiberado)
+        // so libera conteudo com pagamento confirmado.
         return await Context.ConteudosDidaticos
             .AsNoTracking()
             .Where(conteudo =>
@@ -48,7 +49,7 @@ public class ConteudoDidaticoRepository : GenericRepository<ConteudoDidatico>, I
                     matricula.AlunoId == alunoId &&
                     matricula.Status == StatusMatricula.Aprovada &&
                     matricula.CursoId == conteudo.CursoId &&
-                    (matricula.Curso!.Preco <= 0 ||
+                    (matricula.ValorNaMatricula <= 0 ||
                      Context.Pagamentos.Any(pagamento => pagamento.MatriculaId == matricula.Id && pagamento.Status == StatusPagamento.Pago))))
             .Include(conteudo => conteudo.Turma)
             .Include(conteudo => conteudo.Modulo)

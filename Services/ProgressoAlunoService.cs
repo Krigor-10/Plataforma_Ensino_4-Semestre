@@ -21,15 +21,16 @@ public class ProgressoAlunoService : IProgressoAlunoService
     {
         await ValidarAlunoAsync(alunoId);
 
-        // Curso pago so entra com pagamento confirmado (subquery correlacionada
-        // em vez de reaproveitar IAcessoAcademicoService — EF Core nao traduz
-        // chamada de metodo C# dentro de Where/Select pra SQL).
+        // Curso pago (na matricula, ver ValorNaMatricula) so entra com pagamento
+        // confirmado - subquery correlacionada em vez de reaproveitar
+        // AcessoAcademicoService.MatriculaTemAcessoLiberado: EF Core nao
+        // traduz chamada de metodo C# dentro de Where/Select pra SQL.
         var matriculaIds = await _context.Matriculas
             .AsNoTracking()
             .Where(matricula =>
                 matricula.AlunoId == alunoId &&
                 matricula.Status == StatusMatricula.Aprovada &&
-                (matricula.Curso!.Preco <= 0 ||
+                (matricula.ValorNaMatricula <= 0 ||
                  _context.Pagamentos.Any(pagamento => pagamento.MatriculaId == matricula.Id && pagamento.Status == StatusPagamento.Pago)))
             .Select(matricula => matricula.Id)
             .ToListAsync();

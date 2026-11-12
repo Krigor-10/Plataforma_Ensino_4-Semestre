@@ -105,6 +105,55 @@ public class ProgressoAlunoServiceTests
         Assert.Equal(100m, cursoProgresso.PercentualConclusao);
     }
 
+    // Regressao do risco critico do plano fluxo-venda-cursos (achado 1): o
+    // aluno matriculou quando o curso era gratuito - ValorNaMatricula ficou
+    // congelado em 0 na matricula (ver CriarCenarioAprovado, que cria o curso
+    // com Preco=0 e nao chama DefinirValorNaMatricula, equivalente ao
+    // default 0). O curso depois vira pago (ex.: fluxo Gratuito -> pacote).
+    // O snapshot continua liberado pra essa matricula antiga, porque o
+    // predicado le ValorNaMatricula, nunca o Curso.Preco atual.
+    [Fact]
+    public async Task ObterSnapshotAsync_CursoViraPagoDepoisDaMatricula_MatriculaAntigaContinuaLiberada()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+
+        // Progresso registrado AINDA com o curso gratuito.
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo.Id);
+
+        // Curso vira pago DEPOIS - ValorNaMatricula da matricula ja existente
+        // continua 0, entao o snapshot precisa continuar mostrando o progresso.
+        cenario.Curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var snapshot = await service.ObterSnapshotAsync(cenario.Aluno.Id);
+
+        Assert.Contains(snapshot.Conteudos, item => item.ConteudoDidaticoId == conteudo.Id);
+    }
+
+    [Fact]
+    public async Task MarcarConteudoConcluidoAsync_MatriculaNovaEmCursoJaPagoSemPagamento_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+
+        cenario.Curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var alunoNovo = CriarAluno(context);
+        var matriculaNova = new Matricula { AlunoId = alunoNovo.Id, CursoId = cenario.Curso.Id, CodigoRegistro = "MAT-0002" };
+        matriculaNova.DefinirValorNaMatricula(cenario.Curso.Preco);
+        matriculaNova.VincularTurma(cenario.Turma.Id);
+        matriculaNova.Aprovar();
+        context.Matriculas.Add(matriculaNova);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.MarcarConteudoConcluidoAsync(alunoNovo.Id, conteudo.Id));
+    }
+
     [Fact]
     public async Task MarcarConteudoConcluidoAsync_UmDeDoisConteudos_DeixaModuloEmAndamentoNaMetade()
     {

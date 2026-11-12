@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Repositories;
@@ -11,7 +12,13 @@ public class ModuloServiceTests
     private static (ModuloService Service, PlataformaContext Context) CriarService()
     {
         var context = TestContextFactory.Criar();
-        return (new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), context), context);
+        var cursoService = new CursoService(
+            context,
+            new GenericRepository<Curso>(context),
+            new GenericRepository<Coordenador>(context),
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            new CertificadoService(context, new AcessoAcademicoService(context)));
+        return (new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), cursoService, context), context);
     }
 
     private static Curso CriarCurso(PlataformaContext context)
@@ -82,5 +89,59 @@ public class ModuloServiceTests
         context.SaveChanges();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExcluirModuloAsync(modulo.Id));
+    }
+
+    [Fact]
+    public async Task CriarModuloAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        var novoModulo = new Modulo { Titulo = "Modulo Novo", CursoId = curso.Id };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CriarModuloAsync(novoModulo));
+    }
+
+    [Fact]
+    public async Task AtualizarModuloAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.AtualizarModuloAsync(modulo.Id, "Titulo novo"));
+    }
+
+    [Fact]
+    public async Task ExcluirModuloAsync_CursoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ExcluirModuloAsync(modulo.Id));
+    }
+
+    [Fact]
+    public async Task CriarModuloAsync_CursoReabertoAposEncerrar_VoltaAFuncionar()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        curso.Reabrir();
+        context.SaveChanges();
+
+        var novoModulo = new Modulo { Titulo = "Modulo Novo", CursoId = curso.Id };
+
+        var moduloCriado = await service.CriarModuloAsync(novoModulo);
+
+        Assert.NotEqual(0, moduloCriado.Id);
     }
 }

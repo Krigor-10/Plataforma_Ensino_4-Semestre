@@ -164,6 +164,10 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .HasPrecision(4, 2);
 
         builder
+            .Property(m => m.ValorNaMatricula)
+            .HasPrecision(10, 2);
+
+        builder
             .Property(m => m.CodigoRegistro)
             .HasMaxLength(16)
             .IsRequired();

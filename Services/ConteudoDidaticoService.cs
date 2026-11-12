@@ -69,7 +69,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         var modulo = await ValidarModuloAsync(dto.ModuloId);
         await ValidarProfessorNoCursoAsync(professorId, modulo.CursoId);
-        await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
 
         var conteudo = new ConteudoDidatico
         {
@@ -110,7 +110,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         var statusAnterior = conteudo.StatusPublicacao;
         var modulo = await ValidarModuloAsync(dto.ModuloId);
         await ValidarProfessorNoCursoAsync(professorId, modulo.CursoId);
-        await _cursoService.GarantirCursoAbertoAsync(modulo.CursoId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
 
         conteudo.ModuloId = modulo.Id;
         conteudo.DefinirCurso(modulo.CursoId);
@@ -157,6 +157,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     public async Task<bool> ExcluirConteudoAsync(int id, int professorId)
     {
         var conteudo = await ObterConteudoPorProfessorAsync(id, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(conteudo.CursoId);
 
         if (conteudo.ExcluidoEm is not null)
         {

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
@@ -26,9 +27,25 @@ public class MatriculaServiceTests
         return (service, context);
     }
 
+    // Infere ModeloCurso a partir do Preco (mesma regra de CursoService.CriarCursoAsync)
+    // e publica pacotes pagos por padrao (Round 3: so compra o que esta a
+    // venda) - testes que precisam de um pacote FORA da venda chamam
+    // curso.DespublicarDaVenda() explicitamente depois.
     private static Curso CriarCurso(PlataformaContext context, decimal preco = 0)
     {
-        var curso = new Curso { Titulo = "Curso Teste", CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..10], Preco = preco };
+        var curso = new Curso
+        {
+            Titulo = "Curso Teste",
+            CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..10],
+            Preco = preco,
+            ModeloCurso = preco <= 0 ? ModeloCurso.Gratuito : ModeloCurso.PagoPacote
+        };
+
+        if (curso.ModeloCurso == ModeloCurso.PagoPacote)
+        {
+            curso.PublicarParaVenda();
+        }
+
         context.Cursos.Add(curso);
         context.SaveChanges();
         return curso;
@@ -133,6 +150,72 @@ public class MatriculaServiceTests
     }
 
     [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoGratuitoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Gratuito;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id));
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoPagoPacoteEncerrado_NuncaBloqueia()
+    {
+        // PagoPacote nunca bloqueia matricula nova por este guard - "so compra
+        // o que esta a venda" (Round 3) e quem decide isso pra esse modelo.
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 99.90m);
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_GravaValorNaMatriculaIgualAoPrecoDoCursoNoMomento()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 149.90m);
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(149.90m, matricula.ValorNaMatricula);
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoVirouPagoDepoisDeOutraMatricula_ValorNaMatriculaAntigaPermaneceCongelado()
+    {
+        // Risco critico do plano fluxo-venda-cursos (achado 1): matricula
+        // antiga, feita quando o curso era gratuito, nao pode "herdar" o
+        // preco novo so porque o Curso.Preco mudou depois dela existir.
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var alunoAntigo = CriarAluno(context);
+
+        var matriculaAntiga = await service.MatricularComAprovacaoAutomaticaAsync(alunoAntigo.Id, curso.Id);
+        Assert.Equal(0m, matriculaAntiga.ValorNaMatricula);
+
+        curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var alunoNovo = CriarAluno(context);
+        var matriculaNova = await service.MatricularComAprovacaoAutomaticaAsync(alunoNovo.Id, curso.Id);
+
+        var matriculaAntigaRecarregada = context.Matriculas.AsNoTracking().Single(m => m.Id == matriculaAntiga.Id);
+        Assert.Equal(0m, matriculaAntigaRecarregada.ValorNaMatricula);
+        Assert.Equal(29.90m, matriculaNova.ValorNaMatricula);
+    }
+
+    [Fact]
     public async Task ComprarCursoAsync_CursoPago_AprovaMatriculaEConfirmaPagamento()
     {
         var (service, context) = CriarService();
@@ -158,6 +241,21 @@ public class MatriculaServiceTests
 
         Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
         Assert.False(context.Pagamentos.Any(p => p.MatriculaId == matricula.Id));
+    }
+
+    [Fact]
+    public async Task ComprarCursoAsync_PagoPacoteForaDaVenda_LancaInvalidOperation()
+    {
+        // "So compra o que esta a venda" (Round 3) - independente do guard de
+        // GarantirCursoAbertoParaMatriculaAsync, que nunca bloqueia PagoPacote.
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        curso.DespublicarDaVenda();
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ComprarCursoAsync(aluno.Id, curso.Id));
     }
 
     [Fact]

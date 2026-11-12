@@ -180,15 +180,40 @@ public class CursoService : ICursoService
         await _cursoRepository.SalvarAlteracoesAsync();
     }
 
-    public async Task GarantirCursoAbertoAsync(int cursoId)
+    /// <summary>
+    /// Trava edicao de conteudo/avaliacao/modulo: qualquer modelo de curso com
+    /// EncerradoEm preenchido fica congelado, inclusive um PagoPacote que veio
+    /// do fluxo Gratuito->pacote (so volta a editar depois do coordenador
+    /// reabrir). Nao confundir com <see cref="GarantirCursoAbertoParaMatriculaAsync"/>,
+    /// que tem uma regra diferente pra matricula nova.
+    /// </summary>
+    public async Task GarantirCursoAbertoParaEdicaoAsync(int cursoId)
     {
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso == ModeloCurso.Acompanhado && curso.EncerradoEm.HasValue)
+        if (curso.EncerradoEm.HasValue)
         {
             throw new InvalidOperationException(
-                "Este curso foi encerrado e nao aceita mais conteudo, avaliacoes ou matriculas novas.");
+                "Este curso foi encerrado e nao aceita mais alteracoes de conteudo, avaliacoes ou modulos.");
+        }
+    }
+
+    /// <summary>
+    /// Trava matricula nova: so bloqueia Gratuito/Acompanhado encerrados. Um
+    /// PagoPacote nunca bloqueia aqui — "so compra o que esta a venda" e regra
+    /// separada (ver venda/publicar), independente do conteudo estar travado.
+    /// </summary>
+    public async Task GarantirCursoAbertoParaMatriculaAsync(int cursoId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        var modeloComCicloDeVida = curso.ModeloCurso == ModeloCurso.Acompanhado || curso.ModeloCurso == ModeloCurso.Gratuito;
+        if (modeloComCicloDeVida && curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Este curso foi encerrado e nao aceita mais matriculas novas.");
         }
     }
 
@@ -197,9 +222,9 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso != ModeloCurso.Acompanhado)
+        if (curso.ModeloCurso != ModeloCurso.Acompanhado && curso.ModeloCurso != ModeloCurso.Gratuito)
         {
-            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado podem ser concluidos pelo professor.");
+            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado ou Gratuito podem ser concluidos pelo professor.");
         }
 
         if (!await ProfessorPertenceAoCursoAsync(professorId, cursoId))
@@ -232,9 +257,16 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso != ModeloCurso.Acompanhado)
+        // Acompanhado/Gratuito: ciclo de vida normal. PagoPacote so pode
+        // reencerrar se veio do fluxo Gratuito->pacote (ConcluidoPeloProfessorEm
+        // preenchido) — um pacote criado direto nunca passa por aqui.
+        var modeloAceito = curso.ModeloCurso == ModeloCurso.Acompanhado
+            || curso.ModeloCurso == ModeloCurso.Gratuito
+            || (curso.ModeloCurso == ModeloCurso.PagoPacote && curso.ConcluidoPeloProfessorEm.HasValue);
+
+        if (!modeloAceito)
         {
-            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado podem ser encerrados.");
+            throw new InvalidOperationException("Este curso nao pode ser encerrado.");
         }
 
         if (curso.CoordenadorId != coordenadorId)
@@ -258,14 +290,33 @@ public class CursoService : ICursoService
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
 
-        // Curso Acompanhado: o aluno nunca pede o certificado - o encerramento
-        // e o gatilho da emissao automatica pra quem ja cumpre os requisitos
-        // (ver ICertificadoService.EmitirCertificadosDoCursoAsync). Na mesma
-        // transacao do encerramento pra nao sobrar curso encerrado sem
-        // certificados se a emissao falhar no meio do caminho.
-        await _certificadoService.EmitirCertificadosDoCursoAsync(cursoId);
+        if (curso.ModeloCurso == ModeloCurso.Acompanhado)
+        {
+            // Curso Acompanhado: o aluno nunca pede o certificado - o encerramento
+            // e o gatilho da emissao automatica pra quem ja cumpre os requisitos
+            // (ver ICertificadoService.EmitirCertificadosDoCursoAsync). Na mesma
+            // transacao do encerramento pra nao sobrar curso encerrado sem
+            // certificados se a emissao falhar no meio do caminho. Gratuito e
+            // PagoPacote nao emitem em lote aqui — certificado deles segue a
+            // regra normal de pendencias (ICertificadoService.ObterPendenciasAsync).
+            await _certificadoService.EmitirCertificadosDoCursoAsync(cursoId);
+        }
 
         await transaction.CommitAsync();
+
+        // Fora da transacao (mesmo padrao do aviso ao coordenador em
+        // ConcluirCursoComoProfessorAsync): falha ao notificar nao pode desfazer
+        // o encerramento. Link abre o curso especifico, nao a lista.
+        var adminIds = await _context.Admins.AsNoTracking().Select(admin => admin.Id).ToListAsync();
+        foreach (var adminId in adminIds)
+        {
+            await _notificacaoService.NotificarAsync(
+                adminId,
+                "Curso encerrado",
+                $"O curso \"{curso.Titulo}\" foi encerrado.",
+                TipoNotificacao.CursoEncerrado,
+                $"/app/cursos/{cursoId}");
+        }
     }
 
     public async Task ReabrirCursoAsync(int cursoId, int coordenadorId)
@@ -283,7 +334,94 @@ public class CursoService : ICursoService
             throw new InvalidOperationException("Este curso nao esta encerrado.");
         }
 
+        // Correcao Adendo 2 item 1: um pacote que os alunos ja estao comprando
+        // nao pode ser reaberto por baixo dos pes deles - o Admin precisa
+        // tirar da venda primeiro (PublicarParaVendaAsync/DespublicarDaVendaAsync).
+        if (curso.ModeloCurso == ModeloCurso.PagoPacote && curso.PublicadoParaVendaEm.HasValue)
+        {
+            throw new InvalidOperationException("Tire o curso da venda antes de reabrir.");
+        }
+
         curso.Reabrir();
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+    }
+
+    /// <summary>
+    /// Transforma um Gratuito-encerrado em pacote pago (ou edita preco/descricao
+    /// de um pacote ja existente) - metadado do curso, nao conteudo, entao nao e
+    /// bloqueado pelo "travado" (GarantirCursoAbertoParaEdicaoAsync). Nao toca
+    /// EncerradoEm/ConcluidoPeloProfessorEm nem publica a venda.
+    /// </summary>
+    public async Task<Curso> DefinirPacoteAsync(int cursoId, AtualizarPacoteCursoDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        var podeDefinirPacote = curso.ModeloCurso == ModeloCurso.PagoPacote
+            || (curso.ModeloCurso == ModeloCurso.Gratuito && curso.EncerradoEm.HasValue);
+
+        if (!podeDefinirPacote)
+        {
+            throw new InvalidOperationException(
+                "Somente um curso Gratuito encerrado ou ja do modelo Pago pode ter preco/descricao de pacote definidos.");
+        }
+
+        if (dto.Preco <= 0)
+        {
+            throw new ArgumentException("O preco do pacote deve ser maior que zero.");
+        }
+
+        curso.ModeloCurso = ModeloCurso.PagoPacote;
+        curso.Preco = dto.Preco;
+        if (dto.Descricao is not null)
+        {
+            curso.Descricao = dto.Descricao.Trim();
+        }
+
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+
+        return curso;
+    }
+
+    public async Task PublicarParaVendaAsync(int cursoId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.ModeloCurso != ModeloCurso.PagoPacote)
+        {
+            throw new InvalidOperationException("Somente um pacote pago pode ser publicado para venda.");
+        }
+
+        if (curso.Preco <= 0)
+        {
+            throw new InvalidOperationException("Defina um preco maior que zero antes de publicar o pacote para venda.");
+        }
+
+        // So exige "travado" (EncerradoEm) pra um pacote que veio do fluxo
+        // Gratuito->pacote (ConcluidoPeloProfessorEm preenchido). Um pacote
+        // criado direto pelo Admin nunca passou por conclusao/encerramento e
+        // publica sem essa exigencia.
+        if (curso.ConcluidoPeloProfessorEm.HasValue && !curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException("Encerre o curso antes de publica-lo para venda.");
+        }
+
+        curso.PublicarParaVenda();
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+    }
+
+    public async Task DespublicarDaVendaAsync(int cursoId)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        curso.DespublicarDaVenda();
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
     }

@@ -205,6 +205,32 @@ public class CursosController : ControllerBase
         return Ok(new { mensagem = "Curso reaberto com sucesso." });
     }
 
+    // Preco/descricao do pacote (venda) sao responsabilidade exclusiva do
+    // Admin, assim como preco e modelo em AtualizarCurso.
+    [HttpPut("{id:int}/pacote")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AtualizarPacote(int id, [FromBody] AtualizarPacoteCursoDto dto)
+    {
+        var curso = await _cursoService.DefinirPacoteAsync(id, dto);
+        return Ok(curso);
+    }
+
+    [HttpPost("{id:int}/venda/publicar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> PublicarCursoParaVenda(int id)
+    {
+        await _cursoService.PublicarParaVendaAsync(id);
+        return Ok(new { mensagem = "Curso publicado para venda com sucesso." });
+    }
+
+    [HttpPost("{id:int}/venda/despublicar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DespublicarCursoDaVenda(int id)
+    {
+        await _cursoService.DespublicarDaVendaAsync(id);
+        return Ok(new { mensagem = "Curso removido da venda com sucesso." });
+    }
+
     [HttpPost("{id:int}/imagem")]
     [Authorize(Roles = "Admin")]
     [RequestSizeLimit(6_000_000)]

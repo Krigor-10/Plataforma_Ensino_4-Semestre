@@ -40,14 +40,15 @@ public class ModuloRepository : GenericRepository<Modulo>, IModuloRepository
 
     public async Task<List<Modulo>> ObterPorAlunoAsync(int alunoId)
     {
-        // Curso pago so libera modulo com pagamento confirmado (Preco <= 0
-        // e sempre liberado — curso gratuito nunca gera Pagamento).
+        // Curso pago (na matricula, ver Matricula.ValorNaMatricula - a fonte de
+        // verdade centralizada em AcessoAcademicoService.MatriculaTemAcessoLiberado)
+        // so libera modulo com pagamento confirmado.
         return await Context.Modulos
             .Where(modulo => Context.Matriculas.Any(matricula =>
                 matricula.AlunoId == alunoId &&
                 matricula.Status == StatusMatricula.Aprovada &&
                 matricula.CursoId == modulo.CursoId &&
-                (matricula.Curso!.Preco <= 0 ||
+                (matricula.ValorNaMatricula <= 0 ||
                  Context.Pagamentos.Any(pagamento => pagamento.MatriculaId == matricula.Id && pagamento.Status == StatusPagamento.Pago))))
             .OrderBy(modulo => modulo.CursoId)
             .ThenBy(modulo => modulo.DataCriacao)

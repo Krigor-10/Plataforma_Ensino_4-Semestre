@@ -46,6 +46,15 @@ public class Curso
     public int? EncerradoPorId { get; private set; }
     public DateTime? EncerradoEm { get; private set; }
 
+    /// <summary>
+    /// Quando o Admin publicou este pacote (ModeloCurso.PagoPacote) na home
+    /// publica. Null = fora da venda. Um pacote que veio do fluxo Gratuito->
+    /// pacote (ConcluidoPeloProfessorEm preenchido) so pode ser republicado
+    /// se estiver encerrado (ver CursoService.PublicarParaVendaAsync); um
+    /// pacote criado direto nao tem essa exigencia.
+    /// </summary>
+    public DateTime? PublicadoParaVendaEm { get; private set; }
+
     [JsonIgnore]
     [ValidateNever]
     public Coordenador? Coordenador { get; set; }
@@ -119,5 +128,15 @@ public class Curso
     {
         EncerradoPorId = null;
         EncerradoEm = null;
+    }
+
+    public void PublicarParaVenda(DateTime? momento = null)
+    {
+        PublicadoParaVendaEm = momento ?? DateTime.UtcNow;
+    }
+
+    public void DespublicarDaVenda()
+    {
+        PublicadoParaVendaEm = null;
     }
 }

@@ -13,7 +13,8 @@ public enum TipoNotificacao
     AvaliacaoCorrigida = 2,
     ConteudoPublicado = 3,
     PagamentoConfirmado = 4,
-    CursoConcluidoPeloProfessor = 5
+    CursoConcluidoPeloProfessor = 5,
+    CursoEncerrado = 6
 }
 
 public class Notificacao

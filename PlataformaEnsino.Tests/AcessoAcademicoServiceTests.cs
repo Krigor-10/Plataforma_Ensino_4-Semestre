@@ -66,6 +66,7 @@ public class AcessoAcademicoServiceTests
         var curso = CriarCurso(context, preco: 0);
         var aluno = CriarAluno(context);
         var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0001" };
+        matricula.DefinirValorNaMatricula(curso.Preco);
         matricula.AprovarComTurma(1, curso.Id);
         context.Matriculas.Add(matricula);
         context.SaveChanges();
@@ -82,6 +83,7 @@ public class AcessoAcademicoServiceTests
         var curso = CriarCurso(context, preco: 199.90m);
         var aluno = CriarAluno(context);
         var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0001" };
+        matricula.DefinirValorNaMatricula(curso.Preco);
         matricula.AprovarComTurma(1, curso.Id);
         context.Matriculas.Add(matricula);
         context.SaveChanges();
@@ -94,6 +96,58 @@ public class AcessoAcademicoServiceTests
         Assert.False(temAcesso);
     }
 
+    // Regressao do risco critico do plano fluxo-venda-cursos (achado 1): o
+    // aluno matriculou quando o curso era gratuito (ValorNaMatricula
+    // congelado em 0 na matricula). O curso depois vira pago (ex.: fluxo
+    // Gratuito -> pacote) - o acesso da matricula antiga nao pode depender
+    // do Curso.Preco atual, so da ValorNaMatricula.
+    [Fact]
+    public async Task TemAcessoLiberadoAsync_CursoViraPagoDepoisDaMatricula_MatriculaAntigaContinuaComAcesso()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 0);
+        var aluno = CriarAluno(context);
+        var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0001" };
+        matricula.DefinirValorNaMatricula(curso.Preco);
+        matricula.AprovarComTurma(1, curso.Id);
+        context.Matriculas.Add(matricula);
+        context.SaveChanges();
+
+        // Curso vira pago (ex.: Admin converteu Gratuito encerrado em pacote).
+        curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var temAcesso = await service.TemAcessoLiberadoAsync(matricula);
+
+        Assert.True(temAcesso);
+    }
+
+    [Fact]
+    public async Task TemAcessoLiberadoAsync_MatriculaNovaAposCursoVirarPagoSemPagamento_RetornaFalse()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 0);
+        var alunoAntigo = CriarAluno(context);
+        var matriculaAntiga = new Matricula { AlunoId = alunoAntigo.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0001" };
+        matriculaAntiga.DefinirValorNaMatricula(curso.Preco);
+        matriculaAntiga.AprovarComTurma(1, curso.Id);
+        context.Matriculas.Add(matriculaAntiga);
+        context.SaveChanges();
+
+        curso.Preco = 29.90m;
+        context.SaveChanges();
+
+        var alunoNovo = CriarAluno(context);
+        var matriculaNova = new Matricula { AlunoId = alunoNovo.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0002" };
+        matriculaNova.DefinirValorNaMatricula(curso.Preco);
+        matriculaNova.AprovarComTurma(1, curso.Id);
+        context.Matriculas.Add(matriculaNova);
+        context.SaveChanges();
+
+        Assert.True(await service.TemAcessoLiberadoAsync(matriculaAntiga));
+        Assert.False(await service.TemAcessoLiberadoAsync(matriculaNova));
+    }
+
     [Fact]
     public async Task TemAcessoLiberadoAsync_CursoPagoComPagamentoConfirmado_RetornaTrue()
     {
@@ -101,6 +155,7 @@ public class AcessoAcademicoServiceTests
         var curso = CriarCurso(context, preco: 199.90m);
         var aluno = CriarAluno(context);
         var matricula = new Matricula { AlunoId = aluno.Id, CursoId = curso.Id, Curso = curso, CodigoRegistro = "MAT-0001" };
+        matricula.DefinirValorNaMatricula(curso.Preco);
         matricula.AprovarComTurma(1, curso.Id);
         context.Matriculas.Add(matricula);
         context.SaveChanges();

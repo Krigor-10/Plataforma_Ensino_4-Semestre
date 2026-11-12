@@ -426,6 +426,9 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<DateTime?>("PublicadoParaVendaEm")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Titulo")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -548,6 +551,10 @@ namespace Sistema_Academico_Integrado.Migrations
 
                     b.Property<int?>("TurmaId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("ValorNaMatricula")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.HasKey("Id");
 

@@ -139,6 +139,85 @@ public class CursosControllerIntegrationTests : IClassFixture<ApiWebApplicationF
         Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
     }
 
+    // ---------- Ciclo de vida (concluir/encerrar/reabrir) aceitando Gratuito ----------
+
+    private async Task<(string TokenProfessor, string TokenCoordenador, Curso Curso)> SemearCursoGratuitoComProfessorEVinculoAsync(
+        string emailProfessor, string emailCoordenador)
+    {
+        var tokenProfessor = await _factory.CriarProfessorEObterTokenAsync(emailProfessor);
+        var tokenCoordenador = await _factory.CriarCoordenadorEObterTokenAsync(emailCoordenador);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+
+        var professor = await context.Professores.AsNoTracking().FirstAsync(p => p.Email == emailProfessor);
+        var coordenador = await context.Coordenadores.AsNoTracking().FirstAsync(c => c.Email == emailCoordenador);
+
+        var curso = new Curso
+        {
+            Titulo = "Curso Gratuito Teste",
+            Descricao = "Descricao",
+            CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..9],
+            Preco = 0,
+            ModeloCurso = ModeloCurso.Gratuito,
+            CoordenadorId = coordenador.Id
+        };
+        context.Cursos.Add(curso);
+        await context.SaveChangesAsync();
+
+        context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professor.Id, CursoId = curso.Id });
+        await context.SaveChangesAsync();
+
+        return (tokenProfessor, tokenCoordenador, curso);
+    }
+
+    [Fact]
+    public async Task CicloDeVidaCursoGratuito_ConcluirEncerrarReabrir_FuncionaViaHttp()
+    {
+        // Um unico teste cobrindo os 3 passos do ciclo (em vez de 3 testes
+        // separados) de proposito: cada login consome a cota do rate limiter
+        // "auth" (10/min/IP) compartilhada por toda a classe de teste - 3
+        // testes independentes multiplicariam logins sem necessidade, já que
+        // os passos sao sequenciais e dependentes entre si mesmo.
+        var (tokenProfessor, tokenCoordenador, curso) = await SemearCursoGratuitoComProfessorEVinculoAsync(
+            $"prof.{Guid.NewGuid():N}@teste.local", $"coord.{Guid.NewGuid():N}@teste.local");
+
+        using var clientProfessor = _factory.CreateClient();
+        clientProfessor.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenProfessor);
+        using var clientCoordenador = _factory.CreateClient();
+        clientCoordenador.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokenCoordenador);
+
+        var respostaConcluir = await clientProfessor.PostAsync($"/api/v1/cursos/{curso.Id}/concluir", null);
+        Assert.Equal(HttpStatusCode.OK, respostaConcluir.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            var cursoAposConcluir = await context.Cursos.AsNoTracking().FirstAsync(c => c.Id == curso.Id);
+            Assert.NotNull(cursoAposConcluir.ConcluidoPeloProfessorEm);
+        }
+
+        var respostaEncerrar = await clientCoordenador.PostAsync($"/api/v1/cursos/{curso.Id}/encerrar", null);
+        Assert.Equal(HttpStatusCode.OK, respostaEncerrar.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            var cursoAposEncerrar = await context.Cursos.AsNoTracking().FirstAsync(c => c.Id == curso.Id);
+            Assert.NotNull(cursoAposEncerrar.EncerradoEm);
+        }
+
+        var respostaReabrir = await clientCoordenador.PostAsync($"/api/v1/cursos/{curso.Id}/reabrir", null);
+        Assert.Equal(HttpStatusCode.OK, respostaReabrir.StatusCode);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
+            var cursoAposReabrir = await context.Cursos.AsNoTracking().FirstAsync(c => c.Id == curso.Id);
+            Assert.Null(cursoAposReabrir.EncerradoEm);
+        }
+    }
+
     [Fact]
     public async Task CriarCurso_Admin_Retorna201ECriaOCurso()
     {

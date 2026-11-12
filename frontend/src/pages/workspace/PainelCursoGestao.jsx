@@ -34,6 +34,8 @@ import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatGrade, formatMoney, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
 
+const MODELO_GRATUITO = 1;
+const MODELO_PAGO_PACOTE = 2;
 const MODELO_ACOMPANHADO = 3;
 const TIPO_AVALIACAO_QUIZ = 1;
 const STATUS_ARQUIVADO = 3;
@@ -206,6 +208,14 @@ export default function PainelCursoGestao({
   }
 
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
+  const ehGratuito = Number(curso.modeloCurso) === MODELO_GRATUITO;
+  const ehPagoPacote = Number(curso.modeloCurso) === MODELO_PAGO_PACOTE;
+  // Acompanhado/Gratuito sempre tem o ciclo concluir->encerrar->reabrir; um
+  // PagoPacote so entra nele se veio do fluxo Gratuito->pacote
+  // (concluidoPeloProfessorEm preenchido) - um pacote criado direto pelo
+  // Admin nunca passa por aqui.
+  const temCicloDeEncerramento = ehAcompanhado || ehGratuito || (ehPagoPacote && Boolean(curso.concluidoPeloProfessorEm));
+  const pacoteTravadoNaVenda = ehPagoPacote && Boolean(curso.publicadoParaVendaEm);
   const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
   const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
 
@@ -249,17 +259,23 @@ export default function PainelCursoGestao({
                 <TbUserCheck aria-hidden="true" size={16} /> {coordenadorDoCurso ? "Coordenador" : "Atribuir coordenador"}
               </Botao>
             ) : null}
-            {!ehAdmin && ehAcompanhado && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
+            {!ehAdmin && temCicloDeEncerramento && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
               <Botao disabled={salvandoCurso} onClick={onEncerrarCurso} tamanho="pequeno" variante="primario">
                 <TbLock aria-hidden="true" size={16} /> Encerrar curso
               </Botao>
             ) : null}
-            {!ehAdmin && ehAcompanhado && curso.encerradoEm ? (
-              <Botao disabled={salvandoCurso} onClick={onReabrirCurso} tamanho="pequeno" variante="secundario">
+            {!ehAdmin && temCicloDeEncerramento && curso.encerradoEm ? (
+              <Botao
+                disabled={salvandoCurso || pacoteTravadoNaVenda}
+                onClick={onReabrirCurso}
+                tamanho="pequeno"
+                variante="secundario"
+                title={pacoteTravadoNaVenda ? "Tire o curso da venda antes de reabrir." : undefined}
+              >
                 <TbLockOpen aria-hidden="true" size={16} /> Reabrir curso
               </Botao>
             ) : null}
-            {ehAcompanhado ? (
+            {temCicloDeEncerramento ? (
               <Insignia
                 texto={curso.encerradoEm ? "Encerrado" : curso.concluidoPeloProfessorEm ? "Aguardando encerramento" : "Em andamento"}
               />

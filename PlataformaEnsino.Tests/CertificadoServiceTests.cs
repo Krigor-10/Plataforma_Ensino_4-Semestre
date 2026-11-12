@@ -76,6 +76,7 @@ public class CertificadoServiceTests
             CursoId = curso.Id,
             CodigoRegistro = $"MAT-{Guid.NewGuid():N}"[..16]
         };
+        matricula.DefinirValorNaMatricula(curso.Preco);
         matricula.VincularTurma(turma.Id);
         matricula.AprovarComTurma(turma.Id, curso.Id);
         context.Matriculas.Add(matricula);

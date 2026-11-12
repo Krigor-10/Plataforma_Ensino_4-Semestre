@@ -74,15 +74,16 @@ public class AvaliacaoService : IAvaliacaoService
             return Enumerable.Empty<AvaliacaoAlunoResponseDto>();
         }
 
-        // Cursos pagos so entram na lista com pagamento confirmado — gratuitos
-        // (Preco <= 0) nunca geram Pagamento, entao a matricula aprovada basta.
+        // Cursos pagos (na matricula, nao no curso ao vivo) so entram na lista
+        // com pagamento confirmado — ver AcessoAcademicoService.MatriculaTemAcessoLiberado.
         var matriculaIdsComPagamentoConfirmado = await _context.Pagamentos
             .Where(pagamento => pagamento.Status == StatusPagamento.Pago)
             .Select(pagamento => pagamento.MatriculaId)
             .ToListAsync();
 
         matriculas = matriculas
-            .Where(matricula => matricula.Curso!.Preco <= 0 || matriculaIdsComPagamentoConfirmado.Contains(matricula.Id))
+            .Where(matricula => AcessoAcademicoService.MatriculaTemAcessoLiberado(
+                matricula, matriculaIdsComPagamentoConfirmado.Contains(matricula.Id)))
             .ToList();
 
         if (matriculas.Count == 0)
@@ -176,7 +177,7 @@ public class AvaliacaoService : IAvaliacaoService
         var modulo = await ValidarModuloAsync(dto.ModuloId, dto.TipoAvaliacao);
         var cursoId = await ValidarCursoDaAvaliacaoAsync(professorId, dto.CursoId, modulo);
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
-        await _cursoService.GarantirCursoAbertoAsync(cursoId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(cursoId);
 
         var avaliacao = new Avaliacao
         {
@@ -202,7 +203,7 @@ public class AvaliacaoService : IAvaliacaoService
         var modulo = await ValidarModuloAsync(dto.ModuloId, dto.TipoAvaliacao);
         var cursoId = await ValidarCursoDaAvaliacaoAsync(professorId, dto.CursoId, modulo);
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
-        await _cursoService.GarantirCursoAbertoAsync(cursoId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(cursoId);
 
         // So bloqueia aqui (update), nao na criacao: o fluxo real sempre cria o quiz
         // como Rascunho e so publica depois, pelo "Publicar" do menu ou do lote, que
@@ -227,6 +228,7 @@ public class AvaliacaoService : IAvaliacaoService
     public async Task<bool> ExcluirAvaliacaoAsync(int id, int professorId)
     {
         var avaliacao = await ObterAvaliacaoPorProfessorAsync(id, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacao.CursoId);
 
         // Arquivar em vez de bloquear quando ja ha tentativa de aluno registrada: antes isso
         // so lancava excecao e deixava o professor sem nenhuma saida pra "limpar" a avaliacao
@@ -274,7 +276,8 @@ public class AvaliacaoService : IAvaliacaoService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoDaQuestao = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoDaQuestao.CursoId);
         ValidarDadosQuestao(dto);
 
         var questaoBanco = new QuestaoBanco
@@ -359,7 +362,8 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("Informe ao menos uma questao para adicionar.");
         }
 
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoDoLote = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoDoLote.CursoId);
 
         // Valida TODAS as questoes antes de persistir qualquer uma - tudo-ou-nada,
         // sem risco de o professor confirmar N questoes na revisao e o backend
@@ -462,7 +466,8 @@ public class AvaliacaoService : IAvaliacaoService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoDaQuestaoAtualizada = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoDaQuestaoAtualizada.CursoId);
         ValidarDadosQuestao(dto);
 
         // ThenInclude de QuestaoBanco.Alternativas/Afirmativas e obrigatorio aqui: sem
@@ -550,7 +555,8 @@ public class AvaliacaoService : IAvaliacaoService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoReordenada = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoReordenada.CursoId);
 
         var questaoIds = dto.Posicoes.Select(posicao => posicao.QuestaoId).ToList();
         if (questaoIds.Count != questaoIds.Distinct().Count())
@@ -604,7 +610,8 @@ public class AvaliacaoService : IAvaliacaoService
 
     public async Task ExcluirQuestaoAsync(int avaliacaoId, int questaoId, int professorId)
     {
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoDaQuestaoExcluida = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoDaQuestaoExcluida.CursoId);
 
         var questao = await _context.QuestoesPublicadas
             .Include(item => item.Alternativas)
@@ -957,7 +964,8 @@ public class AvaliacaoService : IAvaliacaoService
     {
         ArgumentNullException.ThrowIfNull(configuracao);
 
-        _ = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        var avaliacaoParaIa = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoParaIa.CursoId);
 
         if (arquivo is null || arquivo.Length == 0)
         {
@@ -1024,6 +1032,7 @@ public class AvaliacaoService : IAvaliacaoService
         ArgumentNullException.ThrowIfNull(configuracao);
 
         var avaliacao = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
+        await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacao.CursoId);
 
         var conteudo = await _context.ConteudosDidaticos
             .AsNoTracking()
