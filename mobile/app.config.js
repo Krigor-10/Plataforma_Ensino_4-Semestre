@@ -50,7 +50,8 @@ module.exports = {
       ],
       "@sentry/react-native",
       "expo-secure-store",
-      "expo-video"
+      "expo-video",
+      "expo-sharing"
     ],
     extra: {
       eas: {

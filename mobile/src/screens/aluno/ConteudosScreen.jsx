@@ -19,7 +19,8 @@ import CapaCurso from "../../components/CapaCurso.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
-import { resolverUrlArquivo } from "../../lib/arquivos.js";
+import { abrirArquivoSeguro } from "../../lib/abrirArquivoSeguro";
+import { ehArquivoProprio, extrairNomeArquivo, resolverUrlArquivo, resolverUrlArquivoAbsoluta } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
@@ -252,23 +253,41 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   }
 
   async function abrirConteudo(conteudo) {
+    const caminho = conteudo.arquivoUrl || conteudo.linkUrl;
+    if (!caminho) {
+      return;
+    }
+
     // Busca um token valido na hora de abrir, em vez de usar um token vindo
     // via prop (que pode ter sido emitido ha mais de Jwt:ExpireMinutes e
     // nunca mais atualizado nesse componente) - renova sozinho se estiver
     // vencendo. Ver shared/apiClient.js:obterTokenValido.
-    const tokenValido = await obterTokenValido();
-    const url = resolverUrlArquivo(conteudo.arquivoUrl || conteudo.linkUrl, tokenValido);
-    if (!url) {
-      return;
-    }
-
     if (TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo)) {
+      const tokenValido = await obterTokenValido();
       setConteudoVisualizando(conteudo);
-      setUrlVisualizando(url);
+      setUrlVisualizando(resolverUrlArquivo(caminho, tokenValido));
       return;
     }
 
-    Linking.openURL(url).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
+    // Arquivo proprio fora do visualizador integrado (ex.: anexo de texto):
+    // baixa com o token so no header, nunca na URL - ver Fase 4 em
+    // mobile_seguranca_sessao_e_certificado. Link externo (tipo Link) nao
+    // precisa de token e continua abrindo direto no navegador/app do sistema.
+    if (ehArquivoProprio(caminho)) {
+      try {
+        const tokenValido = await obterTokenValido();
+        await abrirArquivoSeguro({
+          nomeArquivo: extrairNomeArquivo(caminho, conteudo.titulo),
+          token: tokenValido,
+          urlAbsoluta: resolverUrlArquivoAbsoluta(caminho)
+        });
+      } catch {
+        setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." });
+      }
+      return;
+    }
+
+    Linking.openURL(caminho).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
   }
 
   if (grupos.length === 0) {

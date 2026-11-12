@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ActivityIndicator, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import VisualizadorPdf from "./VisualizadorPdf";
+import Toast from "./Toast.jsx";
+import { abrirArquivoSeguro } from "../lib/abrirArquivoSeguro";
+import { extrairNomeArquivo, resolverUrlArquivoAbsoluta } from "../lib/arquivos.js";
+import { obterTokenValido } from "../lib/api.js";
 import { cores, espacamentos, tipografia } from "../lib/theme.js";
 
 const TIPO_PDF = 2;
@@ -22,10 +26,40 @@ export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir
   const insets = useSafeAreaInsets();
   const tipo = conteudo?.tipoConteudo;
   const concluidoRef = useRef(false);
+  const [baixando, setBaixando] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState("");
 
   useEffect(() => {
     concluidoRef.current = false;
   }, [conteudo?.id]);
+
+  // So reseta o erro de download aqui (em vez de a cada troca de `conteudo`)
+  // porque o modal e full-screen: o usuario so consegue selecionar outro
+  // conteudo depois de fechar este, nunca com o viewer ainda aberto.
+  function fechar() {
+    setMensagemErro("");
+    onFechar?.();
+  }
+
+  async function baixarArquivo() {
+    if (!conteudo?.arquivoUrl || baixando) {
+      return;
+    }
+    setBaixando(true);
+    setMensagemErro("");
+    try {
+      const token = await obterTokenValido();
+      await abrirArquivoSeguro({
+        nomeArquivo: extrairNomeArquivo(conteudo.arquivoUrl, conteudo.titulo),
+        token,
+        urlAbsoluta: resolverUrlArquivoAbsoluta(conteudo.arquivoUrl)
+      });
+    } catch {
+      setMensagemErro("Não foi possível baixar o arquivo.");
+    } finally {
+      setBaixando(false);
+    }
+  }
 
   useEffect(() => {
     if (!visivel || !conteudo || jaConcluido || concluidoRef.current) {
@@ -45,21 +79,27 @@ export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir
   }
 
   return (
-    <Modal animationType="slide" onRequestClose={onFechar} presentationStyle="pageSheet" visible={visivel}>
+    <Modal animationType="slide" onRequestClose={fechar} presentationStyle="pageSheet" visible={visivel}>
       <View style={estilos.container}>
         <View style={[estilos.cabecalho, { paddingTop: insets.top + 16 }]}>
           <Text numberOfLines={1} style={estilos.titulo}>{conteudo?.titulo}</Text>
           <View style={estilos.cabecalhoDireita}>
-            {url ? (
+            {conteudo?.arquivoUrl ? (
               <TouchableOpacity
-                accessibilityHint="Abre o arquivo original para baixar"
+                accessibilityHint="Baixa o arquivo original e abre a opção de compartilhar/abrir"
                 accessibilityLabel="Baixar arquivo"
                 accessibilityRole="button"
+                accessibilityState={{ disabled: baixando }}
+                disabled={baixando}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                onPress={() => Linking.openURL(url)}
+                onPress={baixarArquivo}
                 style={estilos.botaoIcone}
               >
-                <Ionicons color={cores.texto} name="download-outline" size={20} />
+                {baixando ? (
+                  <ActivityIndicator color={cores.texto} size="small" />
+                ) : (
+                  <Ionicons color={cores.texto} name="download-outline" size={20} />
+                )}
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
@@ -67,13 +107,19 @@ export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir
               accessibilityLabel="Fechar"
               accessibilityRole="button"
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              onPress={onFechar}
+              onPress={fechar}
               style={estilos.botaoIcone}
             >
               <Ionicons color={cores.erro} name="close" size={22} />
             </TouchableOpacity>
           </View>
         </View>
+
+        {mensagemErro ? (
+          <View style={estilos.toastContainer}>
+            <Toast mensagem={mensagemErro} onFechar={() => setMensagemErro("")} tipo="erro" />
+          </View>
+        ) : null}
 
         <View style={estilos.corpo}>
           {!visivel || !url ? null : tipo === TIPO_IMAGEM ? (
@@ -149,6 +195,7 @@ const estilos = StyleSheet.create({
   titulo: { color: cores.texto, fontSize: tipografia.subtitulo, fontWeight: "700", flex: 1, marginRight: espacamentos.md },
   cabecalhoDireita: { flexDirection: "row", alignItems: "center", gap: espacamentos.md },
   botaoIcone: { padding: 4 },
+  toastContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
   corpo: { flex: 1 },
   imagemScroll: { flex: 1 },
   imagemScrollConteudo: { flexGrow: 1, alignItems: "center", justifyContent: "center" },
