@@ -5,6 +5,20 @@ export const DEMO_PASSWORD = "demo123";
 
 export const DEMO_ACCOUNTS = Object.freeze([
   {
+    key: "admin",
+    label: "Administracao",
+    description: "Gestao da plataforma: cursos, pacotes e venda.",
+    email: "admin@demo.edtech",
+    password: DEMO_PASSWORD,
+    user: {
+      id: 1001,
+      nome: "Marcos Andrade",
+      email: "admin@demo.edtech",
+      cpf: "50987612345",
+      tipoUsuario: "Admin"
+    }
+  },
+  {
     key: "coordenador",
     label: "Coordenacao",
     description: "Visao completa de gestao com cursos, alunos e matriculas.",

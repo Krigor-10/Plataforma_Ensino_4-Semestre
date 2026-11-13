@@ -58,6 +58,18 @@ export async function demoRequest(endpoint, options = {}) {
       return linkCourseProfessor(...getCourseProfessorActionIds(path));
     case /^\/Cursos\/\d+\/professores\/\d+$/.test(path) && method === "DELETE":
       return unlinkCourseProfessor(...getCourseProfessorActionIds(path));
+    case /^\/Cursos\/\d+\/concluir$/.test(path) && method === "POST":
+      return concludeCourseDemo(getCourseActionId(path, "concluir"));
+    case /^\/Cursos\/\d+\/encerrar$/.test(path) && method === "POST":
+      return closeCourseDemo(getCourseActionId(path, "encerrar"));
+    case /^\/Cursos\/\d+\/reabrir$/.test(path) && method === "POST":
+      return reopenCourseDemo(getCourseActionId(path, "reabrir"));
+    case /^\/Cursos\/\d+\/pacote$/.test(path) && method === "PUT":
+      return setCoursePackageDemo(getCourseActionId(path, "pacote"), payload);
+    case /^\/Cursos\/\d+\/venda\/publicar$/.test(path) && method === "POST":
+      return publishCourseSaleDemo(getCourseActionId(path, "venda/publicar"));
+    case /^\/Cursos\/\d+\/venda\/despublicar$/.test(path) && method === "POST":
+      return unpublishCourseSaleDemo(getCourseActionId(path, "venda/despublicar"));
     case path === "/Alunos/cadastro-completo" && method === "POST":
       return registerStudent(payload);
     case path === "/Alunos" && method === "GET":
@@ -322,6 +334,166 @@ function assignCourseCoordinator(courseId, coordinatorIdPayload) {
   curso.coordenadorId = coordenador.id;
   saveDemoDb(db);
   return { mensagem: "Coordenador demo atribuido ao curso com sucesso." };
+}
+
+/* Ciclo de vida do curso (plano fluxo-venda-cursos) - espelha
+   CursoService.{ConcluirCursoComoProfessorAsync,EncerrarCursoAsync,
+   ReabrirCursoAsync,DefinirPacoteAsync,PublicarParaVendaAsync,
+   DespublicarDaVendaAsync} do backend real. ModeloCurso: 1=Gratuito,
+   2=PagoPacote, 3=Acompanhado. */
+function concludeCourseDemo(courseId) {
+  const user = requireProfessor();
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  const modeloCurso = Number(curso.modeloCurso);
+  if (modeloCurso !== 3 && modeloCurso !== 1) {
+    throw new DemoApiError("Apenas cursos do modelo Acompanhado ou Gratuito podem ser concluidos pelo professor.", 422);
+  }
+
+  const vinculado = (db.professoresCursos || []).some(
+    (vinculo) => vinculo.cursoId === courseId && vinculo.professorId === user.id
+  );
+  if (!vinculado) {
+    throw new DemoApiError("O professor demo informado nao esta vinculado a este curso.", 422);
+  }
+
+  if (curso.concluidoPeloProfessorEm) {
+    throw new DemoApiError("Este curso ja foi marcado como concluido pelo professor.", 422);
+  }
+
+  curso.concluidoPeloProfessorId = user.id;
+  curso.concluidoPeloProfessorEm = new Date().toISOString();
+  saveDemoDb(db);
+  return { mensagem: "Curso demo marcado como concluido. O coordenador foi notificado." };
+}
+
+function closeCourseDemo(courseId) {
+  const user = requireRole("Coordenador");
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  const modeloCurso = Number(curso.modeloCurso);
+  const modeloAceito = modeloCurso === 3 || modeloCurso === 1 || (modeloCurso === 2 && Boolean(curso.concluidoPeloProfessorEm));
+  if (!modeloAceito) {
+    throw new DemoApiError("Este curso nao pode ser encerrado.", 422);
+  }
+
+  if (curso.coordenadorId !== user.id) {
+    throw new DemoApiError("Apenas o coordenador responsavel por este curso pode encerra-lo.", 422);
+  }
+
+  if (!curso.concluidoPeloProfessorEm) {
+    throw new DemoApiError("O professor ainda nao concluiu este curso.", 422);
+  }
+
+  if (curso.encerradoEm) {
+    throw new DemoApiError("Este curso ja esta encerrado.", 422);
+  }
+
+  curso.encerradoPorId = user.id;
+  curso.encerradoEm = new Date().toISOString();
+  saveDemoDb(db);
+  return { mensagem: "Curso demo encerrado com sucesso." };
+}
+
+function reopenCourseDemo(courseId) {
+  const user = requireRole("Coordenador");
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  if (curso.coordenadorId !== user.id) {
+    throw new DemoApiError("Apenas o coordenador responsavel por este curso pode reabri-lo.", 422);
+  }
+
+  if (!curso.encerradoEm) {
+    throw new DemoApiError("Este curso nao esta encerrado.", 422);
+  }
+
+  if (Number(curso.modeloCurso) === 2 && curso.publicadoParaVendaEm) {
+    throw new DemoApiError("Tire o curso da venda antes de reabrir.", 422);
+  }
+
+  curso.encerradoPorId = null;
+  curso.encerradoEm = null;
+  saveDemoDb(db);
+  return { mensagem: "Curso demo reaberto com sucesso." };
+}
+
+function setCoursePackageDemo(courseId, payload) {
+  requireAdmin();
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  const modeloCurso = Number(curso.modeloCurso);
+  const podeDefinirPacote = modeloCurso === 2 || (modeloCurso === 1 && Boolean(curso.encerradoEm));
+  if (!podeDefinirPacote) {
+    throw new DemoApiError("Somente um curso Gratuito encerrado ou ja do modelo Pago pode ter preco/descricao de pacote definidos.", 422);
+  }
+
+  const preco = Number(payload?.preco);
+  if (!Number.isFinite(preco) || preco <= 0) {
+    throw new DemoApiError("O preco do pacote deve ser maior que zero.", 400);
+  }
+
+  curso.modeloCurso = 2;
+  curso.preco = preco;
+  if (payload?.descricao !== undefined && payload?.descricao !== null) {
+    curso.descricao = String(payload.descricao).trim();
+  }
+
+  saveDemoDb(db);
+  return clone(curso);
+}
+
+function publishCourseSaleDemo(courseId) {
+  requireAdmin();
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  if (Number(curso.modeloCurso) !== 2) {
+    throw new DemoApiError("Somente um pacote pago pode ser publicado para venda.", 422);
+  }
+
+  if (!(Number(curso.preco) > 0)) {
+    throw new DemoApiError("Defina um preco maior que zero antes de publicar o pacote para venda.", 422);
+  }
+
+  if (curso.concluidoPeloProfessorEm && !curso.encerradoEm) {
+    throw new DemoApiError("Encerre o curso antes de publica-lo para venda.", 422);
+  }
+
+  curso.publicadoParaVendaEm = new Date().toISOString();
+  saveDemoDb(db);
+  return { mensagem: "Curso demo publicado para venda com sucesso." };
+}
+
+function unpublishCourseSaleDemo(courseId) {
+  requireAdmin();
+  const db = readDemoDb();
+  const curso = db.cursos.find((item) => item.id === courseId);
+  if (!curso) {
+    throw new DemoApiError("Curso demo nao encontrado.", 404);
+  }
+
+  curso.publicadoParaVendaEm = null;
+  saveDemoDb(db);
+  return { mensagem: "Curso demo removido da venda com sucesso." };
 }
 
 function uploadCourseImage(courseId, payload) {
@@ -2739,6 +2911,23 @@ function ensureProfessoresCursosCollection(db) {
   db.professoresCursos ||= [];
 }
 
+// Migra bases demo salvas antes do plano fluxo-venda-cursos existir: o
+// curso 3 (Analise de Dados) passa a nascer Gratuito-encerrado, ja
+// concluido pelo professor, pra quem ja tinha uma base demo antiga no
+// localStorage tambem poder testar o fluxo inteiro sem limpar os dados.
+function ensureCourseLifecycleFields(db) {
+  const curso = db.cursos.find((item) => item.id === 3);
+  if (curso && curso.modeloCurso === undefined) {
+    curso.preco = 0;
+    curso.modeloCurso = 1;
+    curso.concluidoPeloProfessorId = 301;
+    curso.concluidoPeloProfessorEm = "2026-11-01T10:00:00.000Z";
+    curso.encerradoPorId = 901;
+    curso.encerradoEm = "2026-11-05T10:00:00.000Z";
+    curso.publicadoParaVendaEm = null;
+  }
+}
+
 function ensurePagamentosCollection(db) {
   db.pagamentos ||= [];
 
@@ -3114,6 +3303,7 @@ function readDemoDb() {
         ensureRegistrationCodes(parsed);
         ensurePagamentosCollection(parsed);
         ensureProfessoresCursosCollection(parsed);
+        ensureCourseLifecycleFields(parsed);
         saveDemoDb(parsed);
         return parsed;
       }
@@ -3180,8 +3370,14 @@ function createInitialDemoDb() {
         codigoRegistro: "CUR-00MXZX",
         titulo: "Analise de Dados",
         descricao: "Metricas, dashboards e interpretacao de indicadores com foco academico.",
-        preco: 209.9,
-        coordenadorId: 901
+        preco: 0,
+        modeloCurso: 1,
+        coordenadorId: 901,
+        concluidoPeloProfessorId: 301,
+        concluidoPeloProfessorEm: "2026-11-01T10:00:00.000Z",
+        encerradoPorId: 901,
+        encerradoEm: "2026-11-05T10:00:00.000Z",
+        publicadoParaVendaEm: null
       }
     ],
     modulos: [
@@ -3651,6 +3847,17 @@ function getCertificadoVerificarCodigo(path) {
 
 function getPagamentoConfirmActionId(path) {
   const match = String(path).match(/^\/Pagamentos\/(\d+)\/confirmar$/);
+  const id = Number(match?.[1]);
+
+  if (!Number.isInteger(id)) {
+    throw new DemoApiError("Identificador demo invalido.", 400);
+  }
+
+  return id;
+}
+
+function getCourseActionId(path, suffix) {
+  const match = String(path).match(new RegExp(`^/Cursos/(\\d+)/${suffix}$`));
   const id = Number(match?.[1]);
 
   if (!Number.isInteger(id)) {

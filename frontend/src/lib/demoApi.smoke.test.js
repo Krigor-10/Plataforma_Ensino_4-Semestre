@@ -248,6 +248,81 @@ describe("Certificados - regra de nota minima no modo demo (espelha CertificadoS
   });
 });
 
+describe("ciclo de vida do curso - fluxo Gratuito -> pacote pago (plano fluxo-venda-cursos)", () => {
+  test("POST /Cursos/{id}/concluir recusa curso que nao e Acompanhado nem Gratuito", async () => {
+    await loginComo("professor@demo.edtech");
+
+    await expect(
+      demoRequest("/Cursos/2/concluir", { method: "POST" })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  test("POST /Cursos/{id}/concluir recusa curso ja concluido pelo professor", async () => {
+    await loginComo("professor@demo.edtech");
+
+    // Curso 3 (Analise de Dados) nasce Gratuito e ja concluido no seed demo,
+    // justamente pra deixar o resto do ciclo pronto pra testar sem precisar
+    // de uma rota de criacao de curso (que o modo demo nao tem).
+    await expect(
+      demoRequest("/Cursos/3/concluir", { method: "POST" })
+    ).rejects.toMatchObject({ status: 422 });
+  });
+
+  test("ciclo completo: reabrir -> encerrar -> virar pacote -> publicar -> reabrir bloqueado -> despublicar -> reabrir", async () => {
+    await loginComo("coordenacao@demo.edtech");
+
+    await demoRequest("/Cursos/3/reabrir", { method: "POST" });
+    let curso3 = (await demoRequest("/Cursos")).find((curso) => curso.id === 3);
+    expect(curso3.encerradoEm).toBeFalsy();
+
+    await demoRequest("/Cursos/3/encerrar", { method: "POST" });
+    curso3 = (await demoRequest("/Cursos")).find((curso) => curso.id === 3);
+    expect(curso3.encerradoEm).toBeTruthy();
+
+    await loginComo("admin@demo.edtech");
+
+    const pacote = await demoRequest("/Cursos/3/pacote", {
+      method: "PUT",
+      body: JSON.stringify({ preco: 49.9, descricao: "Pacote pronto pra consumo imediato." })
+    });
+    expect(pacote.modeloCurso).toBe(2);
+    expect(pacote.preco).toBe(49.9);
+
+    await demoRequest("/Cursos/3/venda/publicar", { method: "POST" });
+    curso3 = (await demoRequest("/Cursos")).find((curso) => curso.id === 3);
+    expect(curso3.publicadoParaVendaEm).toBeTruthy();
+
+    await loginComo("coordenacao@demo.edtech");
+    await expect(
+      demoRequest("/Cursos/3/reabrir", { method: "POST" })
+    ).rejects.toMatchObject({ status: 422, message: "Tire o curso da venda antes de reabrir." });
+
+    await loginComo("admin@demo.edtech");
+    await demoRequest("/Cursos/3/venda/despublicar", { method: "POST" });
+
+    await loginComo("coordenacao@demo.edtech");
+    await demoRequest("/Cursos/3/reabrir", { method: "POST" });
+    curso3 = (await demoRequest("/Cursos")).find((curso) => curso.id === 3);
+    expect(curso3.encerradoEm).toBeFalsy();
+  });
+
+  test("PUT /Cursos/{id}/pacote recusa preco zero", async () => {
+    await loginComo("admin@demo.edtech");
+
+    await expect(
+      demoRequest("/Cursos/3/pacote", { method: "PUT", body: JSON.stringify({ preco: 0 }) })
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  test("rotas de pacote/venda exigem perfil Admin", async () => {
+    await loginComo("coordenacao@demo.edtech");
+
+    await expect(
+      demoRequest("/Cursos/3/pacote", { method: "PUT", body: JSON.stringify({ preco: 49.9 }) })
+    ).rejects.toMatchObject({ status: 403 });
+  });
+});
+
 describe("Progresso do Professor (regressao do achado A1)", () => {
   test("GET /Turmas/desempenho retorna as turmas do professor", async () => {
     await loginComo("professor@demo.edtech");

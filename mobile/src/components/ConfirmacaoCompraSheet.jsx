@@ -19,7 +19,7 @@ const MODELO_ACOMPANHADO = 3;
    CatalogoScreen.jsx). Chama POST /Matriculas/comprar internamente, como o
    QuizModal chama a API de avaliacoes - a tela que abre este painel so
    precisa fornecer o curso e os callbacks de recarregar/navegar. */
-export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFechar, onIrParaCurso, onSessionExpired, visivel }) {
+export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFechar, onIrParaCurso, onSessionExpired, valorTotal, visivel }) {
   const [fase, setFase] = useState("confirmar");
   const [erro, setErro] = useState("");
   const insets = useSafeAreaInsets();
@@ -37,6 +37,11 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
   }
 
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
+  // Concluir pagamento pendente usa o valor CONGELADO no Pagamento (passado
+  // via valorTotal), nunca o Curso.Preco atual - achado 9 do plano
+  // fluxo-venda-cursos. Fluxo de compra nova (Catalogo) nao passa valorTotal,
+  // entao cai no preco do curso normalmente.
+  const valorExibido = valorTotal ?? curso.preco;
 
   async function confirmar() {
     setFase("enviando");
@@ -108,7 +113,7 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
 
               <View style={estilos.totalLinha}>
                 <Text style={estilos.totalRotulo}>Total</Text>
-                <Text style={estilos.totalValor}>{formatMoney(curso.preco)}</Text>
+                <Text style={estilos.totalValor}>{formatMoney(valorExibido)}</Text>
               </View>
 
               <View style={estilos.avisoCartao}>

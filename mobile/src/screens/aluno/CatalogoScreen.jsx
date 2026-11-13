@@ -10,6 +10,7 @@ import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
+import { isCursoVisivelNoCatalogoPublico } from "../../../../shared/catalogoVisibilidade.js";
 
 const MODELO_ACOMPANHADO = 3;
 
@@ -23,8 +24,10 @@ const MODELO_ACOMPANHADO = 3;
    Turma deixou de ser exigida pra comprar (pendencia_compra_cursos): o
    aluno "compra" cursos pagos (abre ConfirmacaoCompraSheet, que chama
    POST /Matriculas/comprar) e "comeca gratis" os gratuitos (POST
-   /Matriculas direto, sem confirmacao). Acompanhado ja encerrado nao
-   aparece pra quem ainda nao tem o curso. */
+   /Matriculas direto, sem confirmacao). isCursoVisivelNoCatalogoPublico
+   (shared/, Round 7 do plano fluxo-venda-cursos) cobre Acompanhado/Gratuito
+   encerrados e PagoPacote fora da venda — antes so Acompanhado encerrado
+   era filtrado aqui, por conta propria. */
 export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapshot, usuario }) {
   const [busca, setBusca] = useState("");
   const [processando, setProcessando] = useState(null);
@@ -38,7 +41,7 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
     () =>
       snapshot.cursos
         .filter((curso) => !cursoIdsMatriculados.has(curso.id))
-        .filter((curso) => !(Number(curso.modeloCurso) === MODELO_ACOMPANHADO && curso.encerradoEm))
+        .filter(isCursoVisivelNoCatalogoPublico)
         .filter((curso) => curso.titulo.toLowerCase().includes(busca.toLowerCase())),
     [snapshot.cursos, cursoIdsMatriculados, busca]
   );

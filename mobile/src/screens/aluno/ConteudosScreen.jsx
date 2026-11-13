@@ -80,6 +80,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
   const [cursoParaComprar, setCursoParaComprar] = useState(null);
+  const [valorPagamentoPendenteParaComprar, setValorPagamentoPendenteParaComprar] = useState(null);
   const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
   const [urlVisualizando, setUrlVisualizando] = useState(null);
   const route = useRoute();
@@ -213,10 +214,15 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   // POST /Matriculas/comprar) pra concluir a compra de uma matricula com
   // pagamento pendente — precisa do curso completo (preco/modeloCurso), que
   // itensGrade nao carrega, por isso busca em snapshot.cursos por id.
+  // valorPagamento (ja calculado em itensGrade a partir do Pagamento real)
+  // vai pro painel como "Total" - achado 9 do plano fluxo-venda-cursos: o
+  // curso pode ter ficado mais caro depois que esta matricula foi criada,
+  // e quem ja tem pagamento pendente paga o valor congelado, nao o atual.
   function abrirConfirmacaoCompra(item) {
     const curso = cursoPorId.get(item.id);
     if (curso) {
       setCursoParaComprar(curso);
+      setValorPagamentoPendenteParaComprar(item.valorPagamento);
     }
   }
 
@@ -334,12 +340,17 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         <ConfirmacaoCompraSheet
           curso={cursoParaComprar}
           onCompraConfirmada={onRecarregar}
-          onFechar={() => setCursoParaComprar(null)}
+          onFechar={() => {
+            setCursoParaComprar(null);
+            setValorPagamentoPendenteParaComprar(null);
+          }}
           onIrParaCurso={(cursoId) => {
             setCursoParaComprar(null);
+            setValorPagamentoPendenteParaComprar(null);
             setCursoSelecionadoId(cursoId);
           }}
           onSessionExpired={onSessionExpired}
+          valorTotal={valorPagamentoPendenteParaComprar}
           visivel={Boolean(cursoParaComprar)}
         />
       </View>
