@@ -6,6 +6,7 @@ import SelectSimples from "./SelectSimples.jsx";
 import { EmptyState, InlineMessage } from "./Primitives.jsx";
 import { ApiError, apiRequest } from "../lib/api.js";
 import { compactText } from "../lib/format.js";
+import { LARGURA_MAXIMA_BARRA_DEITADA } from "../lib/graficos.js";
 
 const CORES_SERIE = ["var(--cor-marca-clara)", "var(--cor-sucesso)", "var(--cor-info)", "var(--cor-aviso)", "var(--cor-erro)"];
 const MAXIMO_CURSOS_NO_RANKING = 10;
@@ -256,7 +257,7 @@ export default function GraficoTaxaAdesao({ onSessionExpired, papel }) {
                   cursor={{ fill: "rgba(157,103,255,0.08)" }}
                   formatter={(valor, _nome, item) => [`${valor} matricula(s)`, item.payload.cursoTitulo]}
                 />
-                <Bar dataKey="matriculasConfirmadas" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="matriculasConfirmadas" maxBarSize={LARGURA_MAXIMA_BARRA_DEITADA} radius={[0, 4, 4, 0]}>
                   {rankingExibido.map((curso, indice) => (
                     <Cell
                       fill={curso.matriculasConfirmadas === maiorValorRanking && maiorValorRanking > 0 ? "var(--cor-marca-clara)" : "rgba(157,103,255,0.35)"}

@@ -13,6 +13,8 @@ import Botao from "../../components/Botao.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import { EmptyState } from "../../components/Primitives.jsx";
+import { compactText } from "../../lib/format.js";
+import { LARGURA_MAXIMA_BARRA_DEITADA } from "../../lib/graficos.js";
 
 function ChartTooltipStyle() {
   return {
@@ -58,8 +60,7 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onAbrirCurs
     const aprovados = matriculas.filter(
       (matricula) => Number(matricula.cursoId) === Number(curso.id) && matricula.status === "Aprovada"
     ).length;
-    const nome = curso.titulo.length > 16 ? `${curso.titulo.slice(0, 14)}...` : curso.titulo;
-    return { nome, aprovados };
+    return { aprovados, titulo: curso.titulo, tituloCurto: compactText(curso.titulo, 26) };
   });
   const maxAprovados = dadosGrafico.length ? Math.max(...dadosGrafico.map((item) => item.aprovados)) : 0;
 
@@ -98,12 +99,17 @@ export function DashboardCoordenador({ cursos = [], matriculas = [], onAbrirCurs
             <span className="admin-grafico-subtitulo">matriculas com status aprovada</span>
           </header>
           <div className="painel-secao__conteudo admin-grafico-wrapper">
-            <ResponsiveContainer height={220} width="100%">
-              <BarChart barCategoryGap="30%" data={dadosGrafico} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <XAxis axisLine={false} dataKey="nome" tick={{ fill: "var(--cor-texto-suave)", fontSize: 11 }} tickLine={false} />
-                <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--cor-texto-mudo)", fontSize: 11 }} tickLine={false} width={32} />
-                <Tooltip cursor={{ fill: "rgba(157,103,255,0.08)" }} contentStyle={ChartTooltipStyle()} formatter={(valor) => [valor, "Alunos aprovados"]} />
-                <Bar dataKey="aprovados" radius={[4, 4, 0, 0]}>
+            <ResponsiveContainer height={Math.max(120, dadosGrafico.length * 40)} width="100%">
+              <BarChart data={dadosGrafico} layout="vertical" margin={{ top: 8, right: 24, left: 8, bottom: 0 }}>
+                <XAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--cor-texto-mudo)", fontSize: 11 }} tickLine={false} type="number" />
+                <YAxis axisLine={false} dataKey="tituloCurto" tick={{ fill: "var(--cor-texto-suave)", fontSize: 11 }} tickLine={false} type="category" width={160} />
+                <Tooltip
+                  contentStyle={ChartTooltipStyle()}
+                  cursor={{ fill: "rgba(157,103,255,0.08)" }}
+                  formatter={(valor) => [valor, "Alunos aprovados"]}
+                  labelFormatter={(_rotulo, payload) => payload?.[0]?.payload?.titulo ?? ""}
+                />
+                <Bar dataKey="aprovados" maxBarSize={LARGURA_MAXIMA_BARRA_DEITADA} radius={[0, 4, 4, 0]}>
                   {dadosGrafico.map((item, indice) => (
                     <Cell fill={item.aprovados === maxAprovados && maxAprovados > 0 ? "var(--cor-marca-clara)" : "rgba(157,103,255,0.35)"} key={indice} />
                   ))}

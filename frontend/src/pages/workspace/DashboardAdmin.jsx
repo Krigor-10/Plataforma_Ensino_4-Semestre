@@ -23,6 +23,7 @@ import { TbTag } from "react-icons/tb";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import { mapById } from "../../lib/dashboard.js";
+import { LARGURA_MAXIMA_BARRA_EM_PE } from "../../lib/graficos.js";
 import { parseApiDate } from "../../lib/format.js";
 
 const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -162,7 +163,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
                 <XAxis axisLine={false} dataKey="mes" tick={{ fill: "var(--cor-texto-suave)", fontSize: 12 }} tickLine={false} />
                 <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--cor-texto-mudo)", fontSize: 11 }} tickLine={false} width={36} />
                 <Tooltip cursor={{ fill: "rgba(157,103,255,0.08)" }} contentStyle={ChartTooltipStyle()} formatter={(valor) => [valor, "Matriculas"]} />
-                <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="total" maxBarSize={LARGURA_MAXIMA_BARRA_EM_PE} radius={[4, 4, 0, 0]}>
                   {dadosGraficoMatriculas.map((item, indice) => (
                     <Cell fill={item.total === maxTotalMatriculas ? "var(--cor-marca-clara)" : "rgba(157,103,255,0.35)"} key={indice} />
                   ))}
@@ -183,7 +184,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
                 <XAxis axisLine={false} dataKey="mes" tick={{ fill: "var(--cor-texto-suave)", fontSize: 12 }} tickLine={false} />
                 <YAxis allowDecimals={false} axisLine={false} tick={{ fill: "var(--cor-texto-mudo)", fontSize: 11 }} tickLine={false} width={36} />
                 <Tooltip cursor={{ fill: "rgba(34,197,94,0.08)" }} contentStyle={ChartTooltipStyle()} formatter={(valor) => [valor, "Alunos"]} />
-                <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="total" maxBarSize={LARGURA_MAXIMA_BARRA_EM_PE} radius={[4, 4, 0, 0]}>
                   {dadosGraficoCadastros.map((item, indice) => (
                     <Cell fill={item.total === maxTotalCadastros ? "var(--cor-sucesso)" : "rgba(34,197,94,0.35)"} key={indice} />
                   ))}
