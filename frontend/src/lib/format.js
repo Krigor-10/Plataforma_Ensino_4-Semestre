@@ -125,6 +125,15 @@ export function formatDate(value) {
   }).format(parsed);
 }
 
+export function formatDayMonth(value) {
+  const parsed = parseApiDate(value);
+  if (!parsed) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(parsed);
+}
+
 export function parseApiDate(value) {
   if (!value) {
     return null;

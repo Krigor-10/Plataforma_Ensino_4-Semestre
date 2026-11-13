@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  TbAlertTriangle,
   TbAward,
+  TbBan,
   TbCamera,
   TbCertificate,
   TbChartBar,
   TbChevronDown,
   TbCircleCheck,
   TbDotsVertical,
+  TbInfoCircle,
   TbLock,
   TbLockOpen,
   TbPencil,
@@ -34,7 +37,7 @@ import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useProfessoresCurso } from "../../hooks/useProfessoresCurso.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { formatGrade, formatMoney, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
+import { formatDayMonth, formatGrade, formatMoney, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
@@ -92,6 +95,9 @@ export default function PainelCursoGestao({
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
   const [modalPrepararVendaAberto, setModalPrepararVendaAberto] = useState(false);
+  const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
+  const [confirmandoReabrir, setConfirmandoReabrir] = useState(false);
+  const [processandoConfirmacaoCiclo, setProcessandoConfirmacaoCiclo] = useState(false);
   const refAbas = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
@@ -210,6 +216,41 @@ export default function PainelCursoGestao({
     setMenuAbertoId(null);
   }
 
+  // Encerrar/Reabrir agora passam por confirmacao (PROMPT-agente-confirmacao-
+  // encerrar-curso.md) - onEncerrarCurso/onReabrirCurso (SecaoCursos.jsx)
+  // nunca rejeitam a promise, ja tratam sucesso/erro com toast proprio
+  // (executarAcaoCurso); por isso a janela sempre fecha ao final dos dois
+  // casos, sem precisar saber o resultado.
+  async function confirmarEncerramento() {
+    setProcessandoConfirmacaoCiclo(true);
+    await onEncerrarCurso();
+    setProcessandoConfirmacaoCiclo(false);
+    setConfirmandoEncerrar(false);
+  }
+
+  async function confirmarReabertura() {
+    setProcessandoConfirmacaoCiclo(true);
+    await onReabrirCurso();
+    setProcessandoConfirmacaoCiclo(false);
+    setConfirmandoReabrir(false);
+  }
+
+  function fecharConfirmacaoEncerrar() {
+    if (processandoConfirmacaoCiclo) {
+      return;
+    }
+
+    setConfirmandoEncerrar(false);
+  }
+
+  function fecharConfirmacaoReabrir() {
+    if (processandoConfirmacaoCiclo) {
+      return;
+    }
+
+    setConfirmandoReabrir(false);
+  }
+
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
   const ehGratuito = Number(curso.modeloCurso) === MODELO_GRATUITO;
   const ehPagoPacote = Number(curso.modeloCurso) === MODELO_PAGO_PACOTE;
@@ -273,14 +314,14 @@ export default function PainelCursoGestao({
               </Botao>
             ) : null}
             {!ehAdmin && temCicloDeEncerramento && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
-              <Botao disabled={salvandoCurso} onClick={onEncerrarCurso} tamanho="pequeno" variante="primario">
+              <Botao disabled={salvandoCurso} onClick={() => setConfirmandoEncerrar(true)} tamanho="pequeno" variante="primario">
                 <TbLock aria-hidden="true" size={16} /> Encerrar curso
               </Botao>
             ) : null}
             {!ehAdmin && temCicloDeEncerramento && curso.encerradoEm ? (
               <Botao
                 disabled={salvandoCurso || pacoteTravadoNaVenda}
-                onClick={onReabrirCurso}
+                onClick={() => setConfirmandoReabrir(true)}
                 tamanho="pequeno"
                 variante="secundario"
                 title={pacoteTravadoNaVenda ? "Tire o curso da venda antes de reabrir." : undefined}
@@ -536,6 +577,118 @@ export default function PainelCursoGestao({
           }}
           onSessionExpired={onSessionExpired}
         />
+      ) : null}
+
+      {confirmandoEncerrar ? (
+        <Modal
+          onFechar={fecharConfirmacaoEncerrar}
+          titulo={
+            <span className="linha-icone-texto">
+              <TbLock aria-hidden="true" size={18} /> Encerrar "{curso.titulo}"?
+            </span>
+          }
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={fecharConfirmacaoEncerrar} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={confirmarEncerramento} variante="primario">
+                {processandoConfirmacaoCiclo ? "Encerrando..." : ehAcompanhado ? "Encerrar e emitir certificados" : "Encerrar curso"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)" }}>
+            {curso.concluidoPeloProfessorEm
+              ? `O professor concluiu este curso em ${formatDayMonth(curso.concluidoPeloProfessorEm)}. Confira o que acontece ao encerrar:`
+              : "Confira o que acontece ao encerrar:"}
+          </p>
+
+          <ul className="lista-consequencias">
+            <li className="lista-consequencias__item">
+              <TbBan aria-hidden="true" className="lista-consequencias__icone" size={18} />
+              <p className="lista-consequencias__texto">
+                Sai da home e do catálogo; <strong>nenhum aluno novo</strong> consegue entrar.
+              </p>
+            </li>
+
+            {ehAcompanhado ? (
+              <li className="lista-consequencias__item">
+                <TbCertificate aria-hidden="true" className="lista-consequencias__icone" size={18} />
+                <p className="lista-consequencias__texto">
+                  <strong>Os alunos que cumpriram os requisitos recebem o certificado automaticamente.</strong>
+                </p>
+              </li>
+            ) : (
+              <li className="lista-consequencias__item">
+                <TbCircleCheck aria-hidden="true" className="lista-consequencias__icone" size={18} />
+                <p className="lista-consequencias__texto">
+                  {desempenho
+                    ? <>Os <strong>{desempenho.totalAlunos} alunos matriculados continuam</strong> estudando e podem pedir o certificado.</>
+                    : <>Os <strong>alunos matriculados continuam</strong> estudando e podem pedir o certificado.</>}
+                </p>
+              </li>
+            )}
+
+            <li className="lista-consequencias__item">
+              <TbLock aria-hidden="true" className="lista-consequencias__icone" size={18} />
+              <p className="lista-consequencias__texto">
+                Materiais, quizzes e módulos ficam <strong>travados</strong> para edição.
+              </p>
+            </li>
+
+            {ehGratuito ? (
+              // So faz sentido "transformar em pacote pago" pra quem ainda e
+              // Gratuito - um PagoPacote reencerrado (veio do fluxo, Admin
+              // reabriu/Professor editou/Coordenador reencerra) ja e um
+              // pacote, nao tem o que virar.
+              <li className="lista-consequencias__item">
+                <TbAlertTriangle aria-hidden="true" className="lista-consequencias__icone" size={18} />
+                <p className="lista-consequencias__texto">
+                  O <strong>Admin é avisado</strong> e pode transformar o curso em pacote pago.
+                </p>
+              </li>
+            ) : null}
+          </ul>
+
+          {ehAcompanhado ? (
+            <InlineMessage tone="error">
+              <TbAlertTriangle aria-hidden="true" size={16} style={{ verticalAlign: "-3px", marginRight: "0.375rem" }} />
+              Os certificados emitidos <strong>não são desfeitos</strong>, mesmo se o curso for reaberto.
+            </InlineMessage>
+          ) : (
+            <InlineMessage tone="warning">
+              <TbInfoCircle aria-hidden="true" size={16} style={{ verticalAlign: "-3px", marginRight: "0.375rem" }} />
+              Dá para <strong>reabrir depois</strong>, enquanto o curso não estiver à venda.
+            </InlineMessage>
+          )}
+        </Modal>
+      ) : null}
+
+      {confirmandoReabrir ? (
+        <Modal
+          onFechar={fecharConfirmacaoReabrir}
+          titulo={
+            <span className="linha-icone-texto">
+              <TbLockOpen aria-hidden="true" size={18} /> Reabrir "{curso.titulo}"?
+            </span>
+          }
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={fecharConfirmacaoReabrir} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={confirmarReabertura} variante="primario">
+                {processandoConfirmacaoCiclo ? "Reabrindo..." : "Reabrir curso"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
+            O conteúdo volta a ser editável pelo professor e o curso volta a aceitar novos alunos.
+            {ehAcompanhado ? " Os certificados já emitidos continuam válidos." : ""}
+          </p>
+        </Modal>
       ) : null}
 
       {modalProfessoresAberto ? (

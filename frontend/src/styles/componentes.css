@@ -27,6 +27,35 @@
   gap: 0.375rem;
 }
 
+/* Lista de consequencias na confirmacao de Encerrar/Reabrir curso
+   (Coordenador) - icone alinhado ao topo porque o texto pode quebrar em
+   2 linhas, diferente de .linha-icone-texto (so 1 linha, centralizado). */
+.lista-consequencias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  list-style: none;
+  margin: var(--espaco-md) 0;
+  padding: 0;
+}
+
+.lista-consequencias__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+}
+
+.lista-consequencias__icone {
+  color: var(--cor-texto-suave);
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.lista-consequencias__texto {
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
 /* Linha de indicadores discretos (Total/Ativos/Inativos) no cabecalho das
    tabelas administrativas (Professores/Coordenadores) - so organiza os
    .insignia existentes em linha com wrap, sem estilo visual proprio. */

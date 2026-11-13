@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import PainelCursoGestao from "./PainelCursoGestao.jsx";
@@ -270,5 +270,114 @@ describe("PainelCursoGestao", () => {
     expect(screen.queryByRole("button", { name: /Atribuir coordenador/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Coordenador" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
+  });
+});
+
+describe("PainelCursoGestao - confirmacao ao encerrar e reabrir curso", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CURSO_GRATUITO_CONCLUIDO = { ...CURSO, modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+  const CURSO_ACOMPANHADO_CONCLUIDO = { ...CURSO, modeloCurso: 3, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+  const CURSO_GRATUITO_ENCERRADO = { ...CURSO_GRATUITO_CONCLUIDO, encerradoEm: "2026-02-01T12:00:00" };
+  const CURSO_ACOMPANHADO_ENCERRADO = { ...CURSO_ACOMPANHADO_CONCLUIDO, encerradoEm: "2026-02-01T12:00:00" };
+
+  test("Gratuito: abre a confirmacao com data, alunos e aviso de reabrir depois; Cancelar nao chama a API", async () => {
+    mockApi(DESEMPENHO);
+    const onEncerrarCurso = vi.fn();
+
+    renderPainel({ curso: CURSO_GRATUITO_CONCLUIDO, onEncerrarCurso });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Encerrar curso/ }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/10\/01/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/5 alunos matriculados continuam/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Admin é avisado/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/reabrir depois/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    expect(onEncerrarCurso).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  test("Gratuito: confirmar chama onEncerrarCurso uma vez e fecha a janela", async () => {
+    mockApi(DESEMPENHO);
+    const onEncerrarCurso = vi.fn().mockResolvedValue(undefined);
+
+    renderPainel({ curso: CURSO_GRATUITO_CONCLUIDO, onEncerrarCurso });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Encerrar curso/ }));
+
+    const dialog = screen.getByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Encerrar curso" }));
+
+    expect(onEncerrarCurso).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  test("Acompanhado: mostra certificado automatico, aviso de certificados nao desfeitos e botao 'Encerrar e emitir certificados'", async () => {
+    mockApi(DESEMPENHO);
+    const onEncerrarCurso = vi.fn().mockResolvedValue(undefined);
+
+    renderPainel({ curso: CURSO_ACOMPANHADO_CONCLUIDO, onEncerrarCurso });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Encerrar curso/ }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/recebem o certificado automaticamente/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/não são desfeitos/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Admin é avisado/)).not.toBeInTheDocument();
+
+    const botaoConfirmar = within(dialog).getByRole("button", { name: "Encerrar e emitir certificados" });
+    await userEvent.click(botaoConfirmar);
+
+    expect(onEncerrarCurso).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  test("Reabrir: abre confirmacao, Cancelar nao chama nada e confirmar chama onReabrirCurso uma vez", async () => {
+    mockApi(DESEMPENHO);
+    const onReabrirCurso = vi.fn().mockResolvedValue(undefined);
+
+    renderPainel({ curso: CURSO_GRATUITO_ENCERRADO, onReabrirCurso });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Reabrir curso/ }));
+
+    const dialogCancelar = screen.getByRole("dialog");
+    await userEvent.click(within(dialogCancelar).getByRole("button", { name: "Cancelar" }));
+
+    expect(onReabrirCurso).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Reabrir curso/ }));
+    const dialogConfirmar = screen.getByRole("dialog");
+    await userEvent.click(within(dialogConfirmar).getByRole("button", { name: "Reabrir curso" }));
+
+    expect(onReabrirCurso).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  test("Reabrir no Acompanhamento: mostra que os certificados ja emitidos continuam validos", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ curso: CURSO_ACOMPANHADO_ENCERRADO, onReabrirCurso: vi.fn() });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Reabrir curso/ }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/certificados já emitidos continuam válidos/)).toBeInTheDocument();
   });
 });
