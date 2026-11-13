@@ -1161,6 +1161,16 @@
   mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
 }
 
+/* Na tela do curso (.conteudos-aluno, flex em coluna), a nav e filha direta
+   e esticaria pra largura toda (align-items: stretch padrao). Em
+   Professores/Coordenadores/Meu perfil/cadastro a nav fica dentro de um
+   flex em linha (ou bloco) e ja tem o tamanho do conteudo - por isso o
+   ajuste e escopado so a esse container, sem precisar de align-self global
+   em .abas-matriculas. */
+.conteudos-aluno > .abas-matriculas {
+  align-self: flex-start;
+}
+
 .abas-matriculas__aba {
   align-items: center;
   background: transparent;
