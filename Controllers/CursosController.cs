@@ -75,30 +75,12 @@ public class CursosController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin,Coordenador")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AtualizarCurso(int id, [FromBody] AtualizarCursoDto dto)
     {
         if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
         {
             return MensagemAcessoNegado();
-        }
-
-        // Preco e modelo do curso sao responsabilidade exclusiva do Admin.
-        // Coordenador continua editando titulo/descricao normalmente; so
-        // bloqueia se o valor enviado realmente diverge do atual (nao ignora
-        // silenciosamente).
-        if (!User.IsInRole("Admin"))
-        {
-            var cursoAtual = await _cursoService.ObterCursoPorIdAsync(id);
-            if (dto.Preco != cursoAtual.Preco)
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Apenas administradores podem alterar o valor do curso." });
-            }
-
-            if (dto.ModeloCurso.HasValue && dto.ModeloCurso.Value != cursoAtual.ModeloCurso)
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, new { mensagem = "Apenas administradores podem alterar o modelo do curso." });
-            }
         }
 
         var curso = await _cursoService.AtualizarCursoAsync(id, dto);

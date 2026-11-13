@@ -9,9 +9,10 @@ using PlataformaEnsino.API.Models;
 namespace PlataformaEnsino.Tests.Integration;
 
 /// <summary>
-/// PUT /Cursos/{id} batendo no endpoint HTTP real - preco e modelo de curso
-/// sao exclusivos do Admin (prompt "Preco e modelo de curso exclusivos do
-/// Admin"). Ver ApiWebApplicationFactory para o porque desse padrao de teste.
+/// PUT /Cursos/{id} batendo no endpoint HTTP real - editar titulo e descricao
+/// e exclusivo do Admin (docs/fluxo-coordenador/partes/PARTE-2, a descricao
+/// virou o texto de venda na home, definido junto do preco/modelo). Ver
+/// ApiWebApplicationFactory para o porque desse padrao de teste.
 /// </summary>
 public class CursosControllerIntegrationTests : IClassFixture<ApiWebApplicationFactory>
 {
@@ -71,7 +72,7 @@ public class CursosControllerIntegrationTests : IClassFixture<ApiWebApplicationF
     }
 
     [Fact]
-    public async Task AtualizarCurso_CoordenadorSemEnviarModelo_SalvaTituloEDescricaoMantendoPrecoEModelo()
+    public async Task AtualizarCurso_CoordenadorEditandoSoTituloEDescricao_Retorna403ENaoAltera()
     {
         var (token, curso) = await SemearCoordenadorDonoDeCursoAsync($"coord.{Guid.NewGuid():N}@teste.local");
         using var client = _factory.CreateClient();
@@ -84,15 +85,13 @@ public class CursosControllerIntegrationTests : IClassFixture<ApiWebApplicationF
             preco = curso.Preco
         });
 
-        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
 
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<PlataformaContext>();
         var cursoAtualizado = await context.Cursos.AsNoTracking().FirstAsync(c => c.Id == curso.Id);
-        Assert.Equal("Titulo editado pelo coordenador", cursoAtualizado.Titulo);
-        Assert.Equal("Descricao editada pelo coordenador", cursoAtualizado.Descricao);
-        Assert.Equal(99.90m, cursoAtualizado.Preco);
-        Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
+        Assert.Equal("Curso Teste PUT", cursoAtualizado.Titulo);
+        Assert.Equal("Descricao original", cursoAtualizado.Descricao);
     }
 
     [Fact]

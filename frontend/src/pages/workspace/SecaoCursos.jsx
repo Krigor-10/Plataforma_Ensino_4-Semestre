@@ -385,7 +385,7 @@ export function SecaoCursos({
       return;
     }
 
-    if (ehAdmin && (!Number.isFinite(preco) || preco < 0)) {
+    if (!Number.isFinite(preco) || preco < 0) {
       setMensagemEdicao({ tone: "error", message: "Informe um preco valido." });
       return;
     }
@@ -400,7 +400,7 @@ export function SecaoCursos({
           titulo: dadosEdicaoCurso.titulo.trim(),
           descricao: dadosEdicaoCurso.descricao.trim(),
           preco,
-          ...(ehAdmin ? { modeloCurso: Number(dadosEdicaoCurso.modeloCurso) } : {})
+          modeloCurso: Number(dadosEdicaoCurso.modeloCurso)
         })
       });
 
@@ -627,22 +627,18 @@ export function SecaoCursos({
               <label className="campo__rotulo" htmlFor="curso-descricao">Descricao</label>
               <textarea className="campo__entrada" disabled={salvandoEdicao} id="curso-descricao" maxLength={1000} name="descricao" onChange={atualizarCampoEdicao} rows={4} value={dadosEdicaoCurso.descricao} />
             </div>
-            {ehAdmin ? (
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="curso-preco">Preco (R$) *</label>
-                <input className="campo__entrada" disabled={salvandoEdicao} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
-              </div>
-            ) : null}
-            {ehAdmin ? (
-              <div className="campo">
-                <label className="campo__rotulo" htmlFor="curso-modelo">Modelo de curso *</label>
-                <select className="campo__entrada" disabled={salvandoEdicao} id="curso-modelo" name="modeloCurso" onChange={atualizarCampoEdicao} value={dadosEdicaoCurso.modeloCurso}>
-                  <option value={1}>Gratuito (conteudo pronto)</option>
-                  <option value={2}>Pago (pacote pronto)</option>
-                  <option value={3}>Acompanhado (professor libera aos poucos)</option>
-                </select>
-              </div>
-            ) : null}
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-preco">Preco (R$) *</label>
+              <input className="campo__entrada" disabled={salvandoEdicao} id="curso-preco" inputMode="decimal" min={0} name="preco" onChange={atualizarCampoEdicao} step="0.01" type="number" value={dadosEdicaoCurso.preco} />
+            </div>
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="curso-modelo">Modelo de curso *</label>
+              <select className="campo__entrada" disabled={salvandoEdicao} id="curso-modelo" name="modeloCurso" onChange={atualizarCampoEdicao} value={dadosEdicaoCurso.modeloCurso}>
+                <option value={1}>Gratuito (conteudo pronto)</option>
+                <option value={2}>Pago (pacote pronto)</option>
+                <option value={3}>Acompanhado (professor libera aos poucos)</option>
+              </select>
+            </div>
 
             {mensagemEdicao.message ? <InlineMessage tone={mensagemEdicao.tone}>{mensagemEdicao.message}</InlineMessage> : null}
           </form>

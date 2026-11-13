@@ -59,8 +59,10 @@ function ordenarPorCriacao(moduloA, moduloB) {
    quando ha curso aberto - os modais de editar curso, foto de capa e
    atribuir coordenador continuam la (modaisComuns), SecaoCursos so passa os
    callbacks. `perfil`("Coordenador" default | "Admin") liga as acoes
-   exclusivas de cada papel: Admin ganha Foto de capa e atribuir Coordenador;
-   Encerrar/Reabrir continua so do Coordenador (regra de negocio, nao de UI).
+   exclusivas de cada papel: Admin ganha Editar curso, Foto de capa e
+   atribuir Coordenador (docs/fluxo-coordenador/partes/PARTE-2 - titulo e
+   descricao viram texto de venda, so o Admin define); Encerrar/Reabrir
+   continua so do Coordenador (regra de negocio, nao de UI).
    Admin NAO tem mais "Novo modulo" aqui (ajuste de responsabilidades - a
    trilha de modulos e so do Professor agora, ver
    docs/permissoes/PROMPT-agente-ajuste-responsabilidades-perfis.md); Admin e
@@ -292,9 +294,11 @@ export default function PainelCursoGestao({
           </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "var(--espaco-sm)", marginTop: "var(--espaco-sm)" }}>
-            <Botao onClick={onEditarCurso} tamanho="pequeno" variante="secundario">
-              <TbPencil aria-hidden="true" size={16} /> Editar curso
-            </Botao>
+            {ehAdmin ? (
+              <Botao onClick={onEditarCurso} tamanho="pequeno" variante="secundario">
+                <TbPencil aria-hidden="true" size={16} /> Editar curso
+              </Botao>
+            ) : null}
             {ehAdmin ? (
               <Botao onClick={onAlterarFotoCurso} tamanho="pequeno" variante="secundario">
                 <TbCamera aria-hidden="true" size={16} /> Foto de capa

@@ -238,6 +238,7 @@ describe("PainelCursoGestao", () => {
 
     expect(screen.getByRole("button", { name: /Foto de capa/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Coordenador" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Editar curso/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Encerrar curso/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Coordenacao: Coordenadora Teste/)).toBeInTheDocument();
@@ -270,6 +271,9 @@ describe("PainelCursoGestao", () => {
     expect(screen.queryByRole("button", { name: /Atribuir coordenador/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Coordenador" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
+    // docs/fluxo-coordenador/partes/PARTE-2: titulo/descricao viram texto de
+    // venda, editar curso agora e exclusivo do Admin.
+    expect(screen.queryByRole("button", { name: /Editar curso/ })).not.toBeInTheDocument();
   });
 });
 
