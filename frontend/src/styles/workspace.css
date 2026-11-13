@@ -3806,16 +3806,43 @@
   color: var(--cor-texto-forte);
 }
 
-/* Atalho de filtro "N sem curso" - um botao sem estilo proprio por baixo
-   da Insignia que ja carrega a aparencia (pilula neutra); ativo so troca a
-   cor da borda da propria Insignia (via style prop) pra --cor-borda-forte,
-   ja usada em destaques leves no resto do app. */
-.tela-coordenadores .indicador-filtro {
+/* Atalho de filtro "N sem curso"/"N sem coordenador" - um botao sem estilo
+   proprio por baixo da Insignia que ja carrega a aparencia (pilula); ativo
+   so troca a cor da borda da propria Insignia (via style prop) pra
+   --cor-borda-forte, ja usada em destaques leves no resto do app.
+   .tela-cursos reaproveita o mesmo padrao (docs/bugs/PROMPT-agente-
+   filtros-cursos-admin.md, atalho "N sem coordenador" na grade do Admin). */
+.tela-coordenadores .indicador-filtro,
+.tela-cursos .indicador-filtro {
   background: none;
   border: none;
   cursor: pointer;
   display: inline-flex;
   padding: 0;
+}
+
+/* Filtros de coordenador/modelo da grade de Cursos do Admin, na mesma
+   linha das abas (empurrados pra direita via margin-left: auto) em vez de
+   uma linha propria embaixo - docs/bugs/PROMPT-agente-filtros-cursos-
+   admin.md. Cada select usa so .campo__entrada (sem .barra-filtros__select,
+   que tem max-width fixo) pra acompanhar o texto sem cortar a opcao
+   escolhida. */
+.cursos-admin-filtros {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-md);
+  margin-left: auto;
+}
+
+.filtro-inline {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.filtro-inline .campo__rotulo {
+  white-space: nowrap;
 }
 
 .tela-coordenadores .celula-cursos {

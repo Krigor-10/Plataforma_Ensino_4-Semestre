@@ -191,6 +191,16 @@ export function SecaoCursos({
     return contagem;
   }, [cursos]);
 
+  // Atalho "N sem coordenador" (docs/bugs/PROMPT-agente-filtros-cursos-
+  // admin.md): conta so dentro da aba aberta, independente dos filtros de
+  // coordenador/modelo/busca - mesmo criterio do "N sem curso" ja usado em
+  // SecaoCoordenadores.jsx.
+  const totalSemCoordenadorNaAba = useMemo(
+    () => cursos.filter((curso) => categoriaCicloCurso(curso) === abaCurso && !curso.coordenadorId).length,
+    [abaCurso, cursos]
+  );
+  const mostrarFiltroModelo = abaCurso === "andamento" || abaCurso === "encerrados";
+
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
 
@@ -280,6 +290,16 @@ export function SecaoCursos({
 
   function selecionarAbaCurso(aba) {
     setAbaCurso(aba);
+
+    // A-venda/fora-da-venda so tem curso Pago - o filtro de modelo nao
+    // aparece nessas abas, entao reseta pra nao ficar aplicado escondido.
+    if (aba === "a-venda" || aba === "fora-da-venda") {
+      setFiltroModelo("todos");
+    }
+  }
+
+  function alternarFiltroSemCoordenador() {
+    setFiltroCoordenador((atual) => (atual === "aguardando" ? "todos" : "aguardando"));
   }
 
   function abrirModalCoordenadorCurso(curso) {
@@ -828,6 +848,63 @@ export function SecaoCursos({
               Fora da venda <span className="abas-matriculas__contagem">{contagemPorAbaCurso["fora-da-venda"]}</span>
             </button>
           </nav>
+
+          <div className="cursos-admin-filtros">
+            {totalSemCoordenadorNaAba > 0 ? (
+              <button
+                aria-pressed={filtroCoordenador === "aguardando"}
+                className="indicador-filtro"
+                onClick={alternarFiltroSemCoordenador}
+                type="button"
+              >
+                <Insignia
+                  style={filtroCoordenador === "aguardando" ? { borderColor: "var(--cor-borda-forte)" } : undefined}
+                  texto={`${totalSemCoordenadorNaAba} sem coordenador`}
+                  variante="aviso"
+                />
+              </button>
+            ) : null}
+
+            <div className="filtro-inline">
+              <label className="campo__rotulo" htmlFor="filtro-coordenador">Coordenador:</label>
+              <select
+                className="campo__entrada"
+                id="filtro-coordenador"
+                onChange={(event) => setFiltroCoordenador(event.target.value)}
+                value={filtroCoordenador}
+              >
+                <option value="todos">Todos</option>
+                <option value="aguardando">Sem coordenador</option>
+                {coordenadoresOrdenados.map((coordenador) => (
+                  <option key={coordenador.id} value={coordenador.id}>
+                    {coordenador.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {mostrarFiltroModelo ? (
+              <div className="filtro-inline">
+                <label className="campo__rotulo" htmlFor="filtro-modelo-curso">Modelo:</label>
+                <select
+                  className="campo__entrada"
+                  id="filtro-modelo-curso"
+                  onChange={(event) => setFiltroModelo(event.target.value)}
+                  value={filtroModelo}
+                >
+                  <option value="todos">Todos</option>
+                  <option value={MODELO_GRATUITO}>Grátis</option>
+                  <option value={MODELO_ACOMPANHADO}>Acompanhado</option>
+                </select>
+              </div>
+            ) : null}
+
+            {temFiltroAtivo ? (
+              <Botao onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+                Limpar filtros
+              </Botao>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -858,41 +935,6 @@ export function SecaoCursos({
               Encerrados <span className="abas-matriculas__contagem">{contagemPorAbaCoordenador.encerrados}</span>
             </button>
           </nav>
-        </div>
-      ) : null}
-
-      {ehAdmin ? (
-        <div className="barra-filtros">
-          <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
-          <select
-            className="campo__entrada barra-filtros__select"
-            id="filtro-coordenador"
-            onChange={(event) => setFiltroCoordenador(event.target.value)}
-            value={filtroCoordenador}
-          >
-            <option value="todos">Todos os coordenadores</option>
-            <option value="aguardando">Aguardando coordenador</option>
-            {coordenadoresOrdenados.map((coordenador) => (
-              <option key={coordenador.id} value={coordenador.id}>
-                {coordenador.nome}
-              </option>
-            ))}
-          </select>
-          <label className="visualmente-oculto" htmlFor="filtro-modelo-curso">Filtrar por modelo de curso</label>
-          <select
-            className="campo__entrada barra-filtros__select"
-            id="filtro-modelo-curso"
-            onChange={(event) => setFiltroModelo(event.target.value)}
-            value={filtroModelo}
-          >
-            <option value="todos">Todos os modelos</option>
-            <option value={MODELO_GRATUITO}>Gratuito</option>
-            <option value={MODELO_PAGO_PACOTE}>Pago</option>
-            <option value={MODELO_ACOMPANHADO}>Acompanhado</option>
-          </select>
-          <Botao disabled={!temFiltroAtivo} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
-            Limpar filtros
-          </Botao>
         </div>
       ) : null}
 
@@ -936,7 +978,12 @@ export function SecaoCursos({
                   <div className="catalogo-card__corpo">
                     <div className="meus-cursos__titulo-linha">
                       <strong className="catalogo-card__titulo">{curso.titulo}</strong>
-                      {ehAdmin ? <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} /> : null}
+                      {ehAdmin ? (
+                        <Insignia
+                          texto={coordenador || curso.coordenadorId ? "Coordenado" : "Sem coordenador"}
+                          variante={coordenador || curso.coordenadorId ? undefined : "aviso"}
+                        />
+                      ) : null}
                     </div>
                     {ehAdmin ? (
                       <p className="catalogo-card__data">{ROTULO_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}</p>
