@@ -7511,6 +7511,14 @@
   border-color: var(--cor-borda-forte);
 }
 
+/* Grade de Cursos do Coordenador (docs/fluxo-coordenador/partes/PARTE-1):
+   professor ja concluiu, aguardando o Coordenador encerrar - precisa se
+   destacar na lista antes dos demais cards. */
+.catalogo-card--aguardando,
+.catalogo-card--aguardando:hover {
+  border-color: var(--cor-aviso);
+}
+
 /* CodeRyse - melhorias administrativas (10/11): mesmo card de curso que o
    Professor ja usa (GradeCursosProfessor.jsx reaproveita a mesma
    .catalogo-card), so que ate agora so com sombra no hover - em repouso o

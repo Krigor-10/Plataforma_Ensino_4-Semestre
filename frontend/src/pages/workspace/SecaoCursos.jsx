@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { TbPlus, TbSearch, TbTag, TbX } from "react-icons/tb";
+import { TbAlertTriangle, TbLock, TbPlus, TbSearch, TbTag, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -58,6 +58,31 @@ function categoriaCicloCurso(curso) {
   return "andamento";
 }
 
+// Situacao do Coordenador (docs/fluxo-coordenador/partes/PARTE-1), eixo
+// independente da categorizacao de 4 abas do Admin acima - so dois estados,
+// e "encerrados" inclui o que ja virou pacote (so olha encerradoEm).
+function categoriaSituacaoCoordenador(curso) {
+  return curso.encerradoEm ? "encerrados" : "ativos";
+}
+
+function estaAguardandoEncerramento(curso) {
+  return Boolean(curso.concluidoPeloProfessorEm) && !curso.encerradoEm;
+}
+
+// Dentro da aba Ativos do Coordenador, quem esta aguardando encerramento
+// (professor ja concluiu) vem primeiro - e o que precisa de acao dele.
+function compararCursos(left, right, priorizarAguardando) {
+  if (priorizarAguardando) {
+    const prioridadeLeft = estaAguardandoEncerramento(left) ? 0 : 1;
+    const prioridadeRight = estaAguardandoEncerramento(right) ? 0 : 1;
+    if (prioridadeLeft !== prioridadeRight) {
+      return prioridadeLeft - prioridadeRight;
+    }
+  }
+
+  return String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR");
+}
+
 /* CURSOS — grade de cards (mesmo padrao catalogo-card/catalogo-grade usado em
    Progresso/Conteudos/Avaliacoes). Clicar num card abre a visao gerencial do
    curso (alunos matriculados, media geral, estrutura, acoes administrativas)
@@ -79,6 +104,7 @@ export function SecaoCursos({
   const [filtroCoordenador, setFiltroCoordenador] = useState("todos");
   const [filtroModelo, setFiltroModelo] = useState("todos");
   const [abaCurso, setAbaCurso] = useState("andamento");
+  const [abaCursoCoordenador, setAbaCursoCoordenador] = useState("ativos");
   const refAbasCursos = useRef(null);
   const abasCursosTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbasCursos);
   const [cursoParaPrepararVenda, setCursoParaPrepararVenda] = useState(null);
@@ -157,6 +183,14 @@ export function SecaoCursos({
     return contagem;
   }, [cursos]);
 
+  const contagemPorAbaCoordenador = useMemo(() => {
+    const contagem = { ativos: 0, encerrados: 0 };
+    cursos.forEach((curso) => {
+      contagem[categoriaSituacaoCoordenador(curso)] += 1;
+    });
+    return contagem;
+  }, [cursos]);
+
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
 
@@ -169,6 +203,10 @@ export function SecaoCursos({
       }
     }
 
+    if (ehCoordenador) {
+      proximosCursos = proximosCursos.filter((curso) => categoriaSituacaoCoordenador(curso) === abaCursoCoordenador);
+    }
+
     if (ehAdmin && filtroCoordenador === "aguardando") {
       proximosCursos = proximosCursos.filter((curso) => !curso.coordenadorId);
     } else if (ehAdmin && filtroCoordenador !== "todos") {
@@ -177,7 +215,7 @@ export function SecaoCursos({
     }
 
     if (!termoBusca) {
-      return [...proximosCursos].sort((left, right) => String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR"));
+      return [...proximosCursos].sort((left, right) => compararCursos(left, right, ehCoordenador));
     }
 
     return proximosCursos.filter((curso) => {
@@ -194,8 +232,8 @@ export function SecaoCursos({
       ];
 
       return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
-    }).sort((left, right) => String(left.titulo || "").localeCompare(String(right.titulo || ""), "pt-BR"));
-  }, [abaCurso, coordenadorPorId, cursos, ehAdmin, filtroCoordenador, filtroModelo, resumoPorCursoId, termoBusca]);
+    }).sort((left, right) => compararCursos(left, right, ehCoordenador));
+  }, [abaCurso, abaCursoCoordenador, coordenadorPorId, cursos, ehAdmin, ehCoordenador, filtroCoordenador, filtroModelo, resumoPorCursoId, termoBusca]);
   const temFiltroAtivo = Boolean(termoBusca || (ehAdmin && (filtroCoordenador !== "todos" || filtroModelo !== "todos")));
 
   const cursoSelecionado = useMemo(
@@ -715,7 +753,9 @@ export function SecaoCursos({
           <h2 className="cabecalho-pagina__titulo">Cursos</h2>
           <p className="cabecalho-pagina__subtitulo">
             {ehCoordenador
-              ? "Cursos ativos vinculados a sua coordenacao."
+              ? abaCursoCoordenador === "encerrados"
+                ? "Cursos que você encerrou."
+                : "Cursos ativos da sua coordenação."
               : ehAdmin
                 ? "Todos os cursos cadastrados na plataforma."
                 : "Catalogo academico reutilizado na home publica e no ambiente autenticado."}
@@ -795,6 +835,36 @@ export function SecaoCursos({
         </div>
       ) : null}
 
+      {ehCoordenador ? (
+        <div className="linha-abas-status">
+          <nav
+            aria-label="Situacao dos cursos"
+            className={`abas-matriculas${abasCursosTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+            ref={refAbasCursos}
+            role="tablist"
+          >
+            <button
+              aria-selected={abaCursoCoordenador === "ativos"}
+              className={`abas-matriculas__aba${abaCursoCoordenador === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => setAbaCursoCoordenador("ativos")}
+              role="tab"
+              type="button"
+            >
+              Ativos <span className="abas-matriculas__contagem">{contagemPorAbaCoordenador.ativos}</span>
+            </button>
+            <button
+              aria-selected={abaCursoCoordenador === "encerrados"}
+              className={`abas-matriculas__aba${abaCursoCoordenador === "encerrados" ? " abas-matriculas__aba--ativa" : ""}`}
+              onClick={() => setAbaCursoCoordenador("encerrados")}
+              role="tab"
+              type="button"
+            >
+              Encerrados <span className="abas-matriculas__contagem">{contagemPorAbaCoordenador.encerrados}</span>
+            </button>
+          </nav>
+        </div>
+      ) : null}
+
       {ehAdmin ? (
         <div className="barra-filtros">
           <label className="visualmente-oculto" htmlFor="filtro-coordenador">Filtrar por coordenador</label>
@@ -842,11 +912,18 @@ export function SecaoCursos({
             const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
 
             const mostrarBotaoPrepararVenda = ehAdmin && abaCurso === "encerrados" && Number(curso.modeloCurso) === MODELO_GRATUITO;
+            const situacaoCoordenador = !ehCoordenador
+              ? null
+              : estaAguardandoEncerramento(curso)
+                ? "aguardando"
+                : curso.encerradoEm
+                  ? "encerrado"
+                  : null;
 
             return (
               <li key={curso.id}>
                 <button
-                  className="catalogo-card catalogo-card--acionavel"
+                  className={`catalogo-card catalogo-card--acionavel${situacaoCoordenador === "aguardando" ? " catalogo-card--aguardando" : ""}`}
                   onClick={() => abrirDetalheCurso(curso)}
                   type="button"
                 >
@@ -863,7 +940,7 @@ export function SecaoCursos({
                   <div className="catalogo-card__corpo">
                     <div className="meus-cursos__titulo-linha">
                       <strong className="catalogo-card__titulo">{curso.titulo}</strong>
-                      <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} />
+                      {ehAdmin ? <Insignia texto={coordenador || curso.coordenadorId ? "Coordenado" : "Pendente"} /> : null}
                     </div>
                     {ehAdmin ? (
                       <p className="catalogo-card__data">{ROTULO_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}</p>
@@ -873,7 +950,27 @@ export function SecaoCursos({
                     </p>
                     <footer className="catalogo-card__rodape-aluno">
                       <span className="catalogo-card__codigo">{curso.codigoRegistro || "Sem codigo"}</span>
-                      <Insignia texto={`Media ${formatGrade(media)}`} />
+                      {ehAdmin ? (
+                        <Insignia texto={`Media ${formatGrade(media)}`} />
+                      ) : situacaoCoordenador === "aguardando" ? (
+                        <Insignia
+                          texto={
+                            <>
+                              <TbAlertTriangle aria-hidden="true" size={12} /> Aguardando você
+                            </>
+                          }
+                          variante="aviso"
+                        />
+                      ) : situacaoCoordenador === "encerrado" ? (
+                        <Insignia
+                          texto={
+                            <>
+                              <TbLock aria-hidden="true" size={12} /> Encerrado
+                            </>
+                          }
+                          variante="neutro"
+                        />
+                      ) : null}
                     </footer>
                   </div>
                 </button>
