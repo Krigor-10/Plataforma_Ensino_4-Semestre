@@ -17,19 +17,22 @@ public class CursosController : ControllerBase
     private readonly ICursoDesempenhoService _cursoDesempenhoService;
     private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
     private readonly ITaxaAdesaoService _taxaAdesaoService;
+    private readonly ICursoRevisaoConteudoService _cursoRevisaoConteudoService;
 
     public CursosController(
         ICursoService cursoService,
         IArmazenamentoArquivoService armazenamentoService,
         ICursoDesempenhoService cursoDesempenhoService,
         ICursoAutorizacaoService cursoAutorizacaoService,
-        ITaxaAdesaoService taxaAdesaoService)
+        ITaxaAdesaoService taxaAdesaoService,
+        ICursoRevisaoConteudoService cursoRevisaoConteudoService)
     {
         _cursoService = cursoService;
         _cursoDesempenhoService = cursoDesempenhoService;
         _armazenamentoService = armazenamentoService;
         _cursoAutorizacaoService = cursoAutorizacaoService;
         _taxaAdesaoService = taxaAdesaoService;
+        _cursoRevisaoConteudoService = cursoRevisaoConteudoService;
     }
 
     [HttpPost]
@@ -303,6 +306,23 @@ public class CursosController : ControllerBase
 
         var desempenho = await _cursoDesempenhoService.ObterDesempenhoPorCursoAsync(id, coordenadorId.Value);
         return Ok(desempenho);
+    }
+
+    // Parte 3/3 do fluxo-coordenador: visao de leitura do conteudo publicado
+    // (modulos, materiais, avaliacoes com gabarito), pra Coordenador e Admin
+    // acompanharem a qualidade do ensino antes de encerrar o curso. Nenhuma
+    // rota de escrita nova - ver CursoRevisaoConteudoService.
+    [HttpGet("{id:int}/revisao-conteudo")]
+    [Authorize(Roles = "Admin,Coordenador")]
+    public async Task<IActionResult> ObterRevisaoConteudo(int id)
+    {
+        if (!await _cursoAutorizacaoService.PodeGerenciarCursoAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
+        var revisao = await _cursoRevisaoConteudoService.ObterRevisaoConteudoAsync(id);
+        return Ok(revisao);
     }
 
     private int? ObterProfessorId() => User.ObterUsuarioId();

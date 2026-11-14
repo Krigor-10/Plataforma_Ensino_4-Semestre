@@ -33,7 +33,7 @@ public class ConteudosDidaticosController : ControllerBase
         }
 
         var conteudos = await _conteudoService.ListarConteudosPorProfessorAsync(professorId.Value);
-        return Ok(conteudos.Select(MapResponse));
+        return Ok(conteudos.Select(conteudo => conteudo.ParaResponseDto()));
     }
 
     [HttpGet("aluno/{alunoId:int}")]
@@ -46,7 +46,7 @@ public class ConteudosDidaticosController : ControllerBase
         }
 
         var conteudos = await _conteudoService.ListarConteudosPorAlunoAsync(alunoId);
-        return Ok(conteudos.Select(MapResponse));
+        return Ok(conteudos.Select(conteudo => conteudo.ParaResponseDto()));
     }
 
     [HttpGet("{id:int}")]
@@ -60,7 +60,7 @@ public class ConteudosDidaticosController : ControllerBase
         }
 
         var conteudo = await _conteudoService.ObterConteudoPorProfessorAsync(id, professorId.Value);
-        return Ok(MapResponse(conteudo));
+        return Ok(conteudo.ParaResponseDto());
     }
 
     [HttpPost("arquivo")]
@@ -96,7 +96,7 @@ public class ConteudosDidaticosController : ControllerBase
         }
 
         var conteudo = await _conteudoService.CriarConteudoAsync(professorId.Value, dto);
-        return CreatedAtAction(nameof(ObterConteudoPorId), new { id = conteudo.Id }, MapResponse(conteudo));
+        return CreatedAtAction(nameof(ObterConteudoPorId), new { id = conteudo.Id }, conteudo.ParaResponseDto());
     }
 
     [HttpPut("{id:int}")]
@@ -115,7 +115,7 @@ public class ConteudosDidaticosController : ControllerBase
         }
 
         var conteudo = await _conteudoService.AtualizarConteudoAsync(id, professorId.Value, dto);
-        return Ok(MapResponse(conteudo));
+        return Ok(conteudo.ParaResponseDto());
     }
 
     [HttpDelete("{id:int}")]
@@ -144,31 +144,4 @@ public class ConteudosDidaticosController : ControllerBase
     private int? ObterProfessorId() => User.ObterUsuarioId();
 
     private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
-
-    private static ConteudoDidaticoResponseDto MapResponse(ConteudoDidatico conteudo)
-    {
-        return new ConteudoDidaticoResponseDto
-        {
-            Id = conteudo.Id,
-            Titulo = conteudo.Titulo,
-            Descricao = conteudo.Descricao,
-            TipoConteudo = conteudo.TipoConteudo,
-            CorpoTexto = conteudo.CorpoTexto,
-            ArquivoUrl = conteudo.ArquivoUrl,
-            LinkUrl = conteudo.LinkUrl,
-            ProfessorAutorId = conteudo.ProfessorAutorId,
-            TurmaId = conteudo.TurmaId,
-            TurmaNome = conteudo.Turma?.NomeTurma ?? string.Empty,
-            CursoId = conteudo.CursoId,
-            CursoTitulo = conteudo.Modulo?.Curso?.Titulo ?? string.Empty,
-            ModuloId = conteudo.ModuloId,
-            ModuloTitulo = conteudo.Modulo?.Titulo ?? string.Empty,
-            StatusPublicacao = conteudo.StatusPublicacao,
-            OrdemExibicao = conteudo.OrdemExibicao,
-            PesoProgresso = conteudo.PesoProgresso,
-            PublicadoEm = conteudo.PublicadoEm,
-            CriadoEm = conteudo.CriadoEm,
-            AtualizadoEm = conteudo.AtualizadoEm
-        };
-    }
 }

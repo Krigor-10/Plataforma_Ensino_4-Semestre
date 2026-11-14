@@ -23,6 +23,7 @@ import Insignia from "../../components/Insignia.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
+import PreviaTrilhaAluno from "../../components/PreviaTrilhaAluno.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
@@ -30,8 +31,7 @@ import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { normalizeContentType, normalizePublicationStatus } from "../../lib/format.js";
 import {
   montarNomesExibicaoQuizzesVinculados,
-  temDescricaoPropria,
-  tituloQuizEhGenerico
+  temDescricaoPropria
 } from "../../lib/trilhaConteudos.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
@@ -2023,146 +2023,6 @@ function TrilhaConteudosProfessor({
         setDadosFormulario={modaisModulo.setDadosFormulario}
       />
     </div>
-  );
-}
-
-/* Pre-visualizacao estrutural de como o aluno ve a trilha: reaproveita as MESMAS classes
-   CSS atividades-curso__ / conteudos-modulo__ pra ficar visualmente identica ao que o
-   aluno realmente ve, mas sem tocar no componente SlideConteudosCurso (SecoesAluno.jsx) -
-   evita qualquer risco de regressao na experiencia real do aluno. Deliberadamente sem
-   progresso/bloqueio de modulo e sem acoes (Concluir/Fazer quiz), so a estrutura de
-   modulos/conteudos/quizzes JA PUBLICADOS (rascunho fica de fora, igual o aluno ve). */
-function PreviaTrilhaAluno({ conteudosPorModuloId, cursoTitulo, modulosDoCurso, onFechar, quizPorConteudoId, quizzesPorModuloId }) {
-  const modulosVisiveis = useMemo(() => {
-    return modulosDoCurso
-      .map((modulo, indice) => {
-        const itens = (conteudosPorModuloId.get(modulo.id) || []).filter(
-          (conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO
-        );
-        const quizzesDoModulo = (quizzesPorModuloId.get(modulo.id) || []).filter(
-          (quiz) => Number(quiz.statusPublicacao) === STATUS_PUBLICADO
-        );
-        return { indice, itens, modulo, quizzesDoModulo };
-      })
-      .filter(({ itens, quizzesDoModulo }) => itens.length > 0 || quizzesDoModulo.length > 0);
-  }, [conteudosPorModuloId, modulosDoCurso, quizzesPorModuloId]);
-
-  return (
-    <Modal
-      className="modal-caixa--avaliacao"
-      onFechar={onFechar}
-      titulo="Visualizar como aluno"
-      rodape={
-        <footer className="modal-rodape">
-          <Botao onClick={onFechar} variante="perigo">
-            <TbX aria-hidden="true" size={15} /> Fechar
-          </Botao>
-        </footer>
-      }
-    >
-      <div className="conteudos-aluno trilha-conteudos">
-        <InlineMessage tone="info">
-          Pré-visualização estrutural: mostra só o conteúdo publicado, sem dados de progresso de nenhum aluno.
-        </InlineMessage>
-
-        <header className="atividades-curso__cabecalho">
-          <h2 className="atividades-curso__titulo">{cursoTitulo}</h2>
-        </header>
-
-        {modulosVisiveis.length === 0 ? (
-          <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
-        ) : (
-          <div className="atividades-curso__lista-modulos">
-            {modulosVisiveis.map(({ indice, itens, modulo, quizzesDoModulo }) => (
-              <section className="conteudos-modulo conteudos-modulo--cartao" key={modulo.id}>
-                <header className="conteudos-modulo__cabecalho">
-                  <div className="conteudos-modulo__cabecalho-wrapper">
-                    <div className="conteudos-modulo__info">
-                      <span className="conteudos-modulo__icone conteudos-modulo__numero">
-                        <span className="visualmente-oculto">Módulo</span>{" "}
-                        <span>{String(indice + 1).padStart(2, "0")}</span>
-                      </span>
-                      <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
-                      <span className="conteudos-modulo__contagem">{itens.length} conteúdo{itens.length === 1 ? "" : "s"}</span>
-                    </div>
-                  </div>
-                </header>
-
-                <ul aria-label={`Conteúdos de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
-                  {itens.map((conteudo) => {
-                    const quizVinculado = quizPorConteudoId.get(conteudo.id) || null;
-                    const tituloQuizVinculado =
-                      quizVinculado && tituloQuizEhGenerico(quizVinculado.titulo, conteudo.titulo)
-                        ? "Quiz do conteúdo"
-                        : quizVinculado?.titulo;
-
-                    return (
-                      <li className="atividades-curso__item" key={conteudo.id}>
-                        <div className="atividades-curso__item-aberto">
-                          <div className="atividades-curso__linha">
-                            <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
-                              {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
-                            </span>
-                            <div className="atividades-curso__corpo">
-                              <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
-                              <p className="atividades-curso__meta">
-                                <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {quizVinculado ? (
-                          <ul aria-label={`Quiz de ${conteudo.titulo}`} className="atividades-curso__quizzes" role="list">
-                            <li className="atividades-curso__item atividades-curso__item--quiz">
-                              <div className="atividades-curso__linha">
-                                <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                  <TbTrophy aria-hidden="true" size="1.75rem" />
-                                </span>
-                                <div className="atividades-curso__corpo">
-                                  <strong className="atividades-curso__item-titulo" title={quizVinculado.titulo}>
-                                    {tituloQuizVinculado}
-                                  </strong>
-                                </div>
-                              </div>
-                            </li>
-                          </ul>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-
-                {quizzesDoModulo.length > 0 ? (
-                  <div className="atividades-curso__quizzes-modulo">
-                    <h4 className="atividades-curso__quizzes-modulo-titulo">
-                      <TbTrophy aria-hidden="true" size="1rem" /> Quizzes do módulo
-                    </h4>
-                    <ul aria-label={`Quizzes de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
-                      {quizzesDoModulo.map((quiz) => (
-                        <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-modulo-${quiz.id}`}>
-                          <div className="atividades-curso__linha">
-                            <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                              <TbTrophy aria-hidden="true" size="1.75rem" />
-                            </span>
-                            <div className="atividades-curso__corpo">
-                              <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
-                              <p className="atividades-curso__meta">
-                                <span>{quiz.totalQuestoes || 0} questão{quiz.totalQuestoes === 1 ? "" : "ões"}</span>
-                              </p>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
-    </Modal>
   );
 }
 

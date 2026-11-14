@@ -77,10 +77,44 @@ function renderPainel(props = {}) {
   );
 }
 
-function mockApi(desempenho, professoresDoCurso = []) {
+// Fluxo-coordenador Parte 3/3 ("Ver conteudo"): payload de GET
+// /Cursos/{id}/revisao-conteudo - so o que e Publicado, questoes com gabarito.
+const REVISAO_CONTEUDO = {
+  cursoId: 10,
+  cursoTitulo: "Curso Teste",
+  modulos: [
+    {
+      id: 1,
+      titulo: "Modulo A",
+      conteudos: [
+        { id: 1, titulo: "Material revisado", tipoConteudo: 1, statusPublicacao: 2, corpoTexto: "Texto do material", arquivoUrl: "", linkUrl: "" }
+      ],
+      avaliacoes: [
+        {
+          avaliacao: { id: 101, titulo: "Quiz publicado", statusPublicacao: 2, conteudoDidaticoId: null, totalQuestoes: 1 },
+          questoes: [
+            {
+              id: 1,
+              enunciado: "Qual a resposta certa?",
+              alternativas: [
+                { id: 1, letra: "A", texto: "Alternativa errada", ehCorreta: false },
+                { id: 2, letra: "B", texto: "Alternativa certa", ehCorreta: true }
+              ],
+              afirmativas: []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  avaliacoesSemModulo: []
+};
+
+function mockApi(desempenho, professoresDoCurso = [], revisaoConteudo = REVISAO_CONTEUDO) {
   apiRequest.mockImplementation((url) => {
     if (url === "/Cursos/10/desempenho") return Promise.resolve(desempenho);
     if (url === "/Cursos/10/professores") return Promise.resolve(professoresDoCurso);
+    if (url === "/Cursos/10/revisao-conteudo") return Promise.resolve(revisaoConteudo);
     return Promise.resolve([]);
   });
 }
@@ -383,5 +417,65 @@ describe("PainelCursoGestao - confirmacao ao encerrar e reabrir curso", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/certificados já emitidos continuam válidos/)).toBeInTheDocument();
+  });
+});
+
+describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("botao 'Ver conteudo' abre a previa Somente leitura, sem nenhum botao de editar/publicar/excluir", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel();
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    expect(within(dialog).getByText("Somente leitura")).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByText("Material revisado")).toBeInTheDocument());
+
+    expect(within(dialog).queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument();
+  });
+
+  test("botao 'Ver conteudo' mostra o gabarito do quiz com a alternativa correta marcada", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel();
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    await waitFor(() => expect(within(dialog).getByText("Qual a resposta certa?")).toBeInTheDocument());
+
+    const itemAlternativaCerta = within(dialog).getByText(
+      (_, element) =>
+        element.tagName === "LI" &&
+        element.className.includes("revisao-alternativas__item") &&
+        element.textContent.includes("Alternativa certa")
+    );
+    expect(itemAlternativaCerta).toHaveClass("revisao-alternativas__item--correta");
+  });
+
+  test("link 'Revisar conteudo antes de encerrar' troca a confirmacao pela previa", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ curso: { ...CURSO, modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" } });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+    await userEvent.click(screen.getByRole("button", { name: /Encerrar curso/ }));
+
+    const dialogEncerrar = screen.getByRole("dialog", { name: /Encerrar/ });
+    await userEvent.click(within(dialogEncerrar).getByRole("button", { name: /Revisar conteúdo antes de encerrar/ }));
+
+    expect(screen.queryByRole("dialog", { name: /Encerrar/ })).not.toBeInTheDocument();
+    const dialogPrevia = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    expect(within(dialogPrevia).getByText("Somente leitura")).toBeInTheDocument();
   });
 });

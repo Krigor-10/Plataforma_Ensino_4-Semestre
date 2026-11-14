@@ -11,4 +11,11 @@ namespace PlataformaEnsino.API.Interfaces;
 public interface IUploadAutorizacaoService
 {
     Task<bool> AlunoPodeAcessarArquivoAsync(string subpasta, string nomeArquivo, int alunoId);
+
+    /// <summary>
+    /// Mesmo gate, mas pro Coordenador: so pode baixar arquivo de conteudo/anexo
+    /// de questao de um curso que ele proprio coordena (Curso.CoordenadorId),
+    /// sem abrir para os demais cursos da plataforma.
+    /// </summary>
+    Task<bool> CoordenadorPodeAcessarArquivoAsync(string subpasta, string nomeArquivo, int coordenadorId);
 }

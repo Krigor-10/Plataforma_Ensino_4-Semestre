@@ -10,6 +10,7 @@ import {
   TbChevronDown,
   TbCircleCheck,
   TbDotsVertical,
+  TbEye,
   TbInfoCircle,
   TbLock,
   TbLockOpen,
@@ -31,6 +32,7 @@ import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
+import PreviaTrilhaAluno from "../../components/PreviaTrilhaAluno.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
@@ -97,6 +99,9 @@ export default function PainelCursoGestao({
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
   const [modalPrepararVendaAberto, setModalPrepararVendaAberto] = useState(false);
+  const [previaConteudoAberta, setPreviaConteudoAberta] = useState(false);
+  const [revisaoConteudo, setRevisaoConteudo] = useState(null);
+  const [erroRevisaoConteudo, setErroRevisaoConteudo] = useState("");
   const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
   const [confirmandoReabrir, setConfirmandoReabrir] = useState(false);
   const [processandoConfirmacaoCiclo, setProcessandoConfirmacaoCiclo] = useState(false);
@@ -184,6 +189,72 @@ export default function PainelCursoGestao({
 
   const professoresCurso = useProfessoresCurso({ cursoId: curso.id, mostrarToast, onRefresh, onSessionExpired, professores });
 
+  // Fluxo-coordenador Parte 3/3 ("Ver conteudo"): abre a mesma previa
+  // estrutural que o Professor usa ("Visualizar como aluno" em
+  // SecaoConteudosProfessor.jsx), so leitura, alimentada por
+  // GET /Cursos/{id}/revisao-conteudo (so traz o que esta Publicado).
+  function abrirPreviaConteudo() {
+    setPreviaConteudoAberta(true);
+    setRevisaoConteudo(null);
+    setErroRevisaoConteudo("");
+
+    apiRequest(`/Cursos/${curso.id}/revisao-conteudo`)
+      .then((dados) => setRevisaoConteudo(dados))
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+          return;
+        }
+
+        setErroRevisaoConteudo(err.message || "Nao foi possivel carregar o conteudo do curso agora.");
+      });
+  }
+
+  function fecharPreviaConteudo() {
+    setPreviaConteudoAberta(false);
+  }
+
+  const estadoPreviaConteudo = useMemo(() => {
+    if (!revisaoConteudo) {
+      return null;
+    }
+
+    const conteudosPorModuloId = new Map();
+    const quizPorConteudoId = new Map();
+    const quizzesPorModuloId = new Map();
+    const questoesPorAvaliacaoId = new Map();
+
+    revisaoConteudo.modulos.forEach((modulo) => {
+      conteudosPorModuloId.set(modulo.id, modulo.conteudos);
+
+      const quizzesSoltosDoModulo = [];
+      modulo.avaliacoes.forEach((item) => {
+        const quizResumo = {
+          id: item.avaliacao.id,
+          titulo: item.avaliacao.titulo,
+          statusPublicacao: item.avaliacao.statusPublicacao,
+          totalQuestoes: item.avaliacao.totalQuestoes
+        };
+        questoesPorAvaliacaoId.set(item.avaliacao.id, item.questoes);
+
+        if (item.avaliacao.conteudoDidaticoId) {
+          quizPorConteudoId.set(item.avaliacao.conteudoDidaticoId, quizResumo);
+        } else {
+          quizzesSoltosDoModulo.push(quizResumo);
+        }
+      });
+      quizzesPorModuloId.set(modulo.id, quizzesSoltosDoModulo);
+    });
+
+    return {
+      conteudosPorModuloId,
+      modulosDoCurso: revisaoConteudo.modulos.map((modulo) => ({ id: modulo.id, titulo: modulo.titulo })),
+      quizPorConteudoId,
+      quizzesPorModuloId,
+      questoesPorAvaliacaoId
+    };
+  }, [revisaoConteudo]);
+
   useEffect(() => {
     if (menuAbertoId === null) {
       return undefined;
@@ -235,6 +306,15 @@ export default function PainelCursoGestao({
     await onReabrirCurso();
     setProcessandoConfirmacaoCiclo(false);
     setConfirmandoReabrir(false);
+  }
+
+  // Link "Revisar conteudo antes de encerrar" (fluxo-coordenador Parte 3/3):
+  // troca a confirmacao de encerramento pela previa, em vez de abrir os dois
+  // modais ao mesmo tempo (Modal.jsx usa id fixo "modal-titulo" e um unico
+  // focus-trap/Escape por instancia - dois abertos juntos colidiriam).
+  function revisarConteudoAntesDeEncerrar() {
+    setConfirmandoEncerrar(false);
+    abrirPreviaConteudo();
   }
 
   function fecharConfirmacaoEncerrar() {
@@ -306,6 +386,9 @@ export default function PainelCursoGestao({
             ) : null}
             <Botao onClick={() => setModalProfessoresAberto(true)} tamanho="pequeno" variante="secundario">
               <TbUsers aria-hidden="true" size={16} /> Professores ({professoresCurso.professoresDoCurso.length})
+            </Botao>
+            <Botao onClick={abrirPreviaConteudo} tamanho="pequeno" variante="secundario">
+              <TbEye aria-hidden="true" size={16} /> Ver conteúdo
             </Botao>
             {ehAdmin ? (
               <Botao onClick={onAtribuirCoordenador} tamanho="pequeno" variante={coordenadorDoCurso ? "secundario" : "primario"}>
@@ -571,6 +654,30 @@ export default function PainelCursoGestao({
         </div>
       )}
 
+      {previaConteudoAberta ? (
+        estadoPreviaConteudo ? (
+          <PreviaTrilhaAluno
+            conteudosPorModuloId={estadoPreviaConteudo.conteudosPorModuloId}
+            cursoTitulo={curso.titulo}
+            modulosDoCurso={estadoPreviaConteudo.modulosDoCurso}
+            onFechar={fecharPreviaConteudo}
+            permitirAbrirArquivo
+            questoesPorAvaliacaoId={estadoPreviaConteudo.questoesPorAvaliacaoId}
+            quizPorConteudoId={estadoPreviaConteudo.quizPorConteudoId}
+            quizzesPorModuloId={estadoPreviaConteudo.quizzesPorModuloId}
+            seloSomenteLeitura
+          />
+        ) : (
+          <Modal onFechar={fecharPreviaConteudo} titulo="Ver conteúdo">
+            {erroRevisaoConteudo ? (
+              <InlineMessage tone="error">{erroRevisaoConteudo}</InlineMessage>
+            ) : (
+              <p className="texto-vazio" role="status">Carregando conteúdo do curso...</p>
+            )}
+          </Modal>
+        )
+      ) : null}
+
       {modalPrepararVendaAberto ? (
         <ModalPrepararVenda
           curso={curso}
@@ -654,6 +761,12 @@ export default function PainelCursoGestao({
               </li>
             ) : null}
           </ul>
+
+          <p style={{ marginTop: 0 }}>
+            <button className="link-botao linha-icone-texto" onClick={revisarConteudoAntesDeEncerrar} type="button">
+              <TbEye aria-hidden="true" size={15} /> Revisar conteúdo antes de encerrar
+            </button>
+          </p>
 
           {ehAcompanhado ? (
             <InlineMessage tone="error">

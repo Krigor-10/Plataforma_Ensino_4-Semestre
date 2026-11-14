@@ -31,7 +31,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var avaliacoes = await _avaliacaoService.ListarAvaliacoesPorProfessorAsync(professorId.Value);
-        return Ok(avaliacoes.Select(MapResponse));
+        return Ok(avaliacoes.Select(avaliacao => avaliacao.ParaResponseDto()));
     }
 
     [HttpGet("aluno/{alunoId:int}")]
@@ -58,7 +58,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var avaliacao = await _avaliacaoService.ObterAvaliacaoPorProfessorAsync(id, professorId.Value);
-        return Ok(MapResponse(avaliacao));
+        return Ok(avaliacao.ParaResponseDto());
     }
 
     [HttpPost]
@@ -77,7 +77,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var avaliacao = await _avaliacaoService.CriarAvaliacaoAsync(professorId.Value, dto);
-        return CreatedAtAction(nameof(ObterAvaliacaoPorId), new { id = avaliacao.Id }, MapResponse(avaliacao));
+        return CreatedAtAction(nameof(ObterAvaliacaoPorId), new { id = avaliacao.Id }, avaliacao.ParaResponseDto());
     }
 
     [HttpPut("{id:int}")]
@@ -96,7 +96,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var avaliacao = await _avaliacaoService.AtualizarAvaliacaoAsync(id, professorId.Value, dto);
-        return Ok(MapResponse(avaliacao));
+        return Ok(avaliacao.ParaResponseDto());
     }
 
     [HttpDelete("{id:int}")]
@@ -133,7 +133,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var questoes = await _avaliacaoService.ListarQuestoesAsync(id, professorId.Value);
-        return Ok(questoes.Select(MapQuestaoResponse));
+        return Ok(questoes.Select(questao => questao.ParaResponseDto()));
     }
 
     [HttpGet("{id:int}/aluno/questoes")]
@@ -166,7 +166,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var questao = await _avaliacaoService.AdicionarQuestaoAsync(id, professorId.Value, dto);
-        return CreatedAtAction(nameof(ListarQuestoes), new { id }, MapQuestaoResponse(questao));
+        return CreatedAtAction(nameof(ListarQuestoes), new { id }, questao.ParaResponseDto());
     }
 
     // Uso principal: confirmar de uma vez as questoes revisadas no fluxo de geracao
@@ -187,7 +187,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var questoes = await _avaliacaoService.AdicionarQuestoesEmLoteAsync(id, professorId.Value, dto);
-        return CreatedAtAction(nameof(ListarQuestoes), new { id }, questoes.Select(MapQuestaoResponse));
+        return CreatedAtAction(nameof(ListarQuestoes), new { id }, questoes.Select(questao => questao.ParaResponseDto()));
     }
 
     [HttpPut("{id:int}/questoes/{questaoId:int}")]
@@ -206,7 +206,7 @@ public class AvaliacoesController : ControllerBase
         }
 
         var questao = await _avaliacaoService.AtualizarQuestaoAsync(id, questaoId, professorId.Value, dto);
-        return Ok(MapQuestaoResponse(questao));
+        return Ok(questao.ParaResponseDto());
     }
 
     [HttpPut("{id:int}/questoes/ordem")]
@@ -443,92 +443,4 @@ public class AvaliacoesController : ControllerBase
     private int? ObterAlunoId() => User.ObterUsuarioId();
 
     private bool UsuarioAtualPodeAcessarAluno(int alunoId) => User.PodeAcessarAluno(alunoId);
-
-    private static AvaliacaoResponseDto MapResponse(Avaliacao avaliacao)
-    {
-        return new AvaliacaoResponseDto
-        {
-            Id = avaliacao.Id,
-            Titulo = avaliacao.Titulo,
-            Descricao = avaliacao.Descricao,
-            ProfessorAutorId = avaliacao.ProfessorAutorId,
-            TurmaId = avaliacao.TurmaId,
-            TurmaNome = avaliacao.Turma?.NomeTurma ?? string.Empty,
-            CursoId = avaliacao.CursoId,
-            CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
-            ModuloId = avaliacao.ModuloId,
-            ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,
-            ConteudoDidaticoId = avaliacao.ConteudoDidaticoId,
-            ConteudoDidaticoTitulo = avaliacao.ConteudoDidatico?.Titulo ?? string.Empty,
-            TipoAvaliacao = avaliacao.TipoAvaliacao,
-            StatusPublicacao = avaliacao.StatusPublicacao,
-            DataAbertura = avaliacao.DataAbertura,
-            DataFechamento = avaliacao.DataFechamento,
-            TentativasPermitidas = avaliacao.TentativasPermitidas,
-            TempoLimiteMinutos = avaliacao.TempoLimiteMinutos,
-            NotaMaxima = avaliacao.NotaMaxima,
-            PesoNota = avaliacao.PesoNota,
-            PesoProgresso = avaliacao.PesoProgresso,
-            TotalQuestoes = avaliacao.Questoes?.Count ?? 0,
-            PublicadoEm = avaliacao.PublicadoEm,
-            CriadoEm = avaliacao.CriadoEm,
-            AtualizadoEm = avaliacao.AtualizadoEm
-        };
-    }
-
-    private static QuestaoAvaliacaoResponseDto MapQuestaoResponse(QuestaoPublicada questao)
-    {
-        return new QuestaoAvaliacaoResponseDto
-        {
-            Id = questao.Id,
-            AvaliacaoId = questao.AvaliacaoId,
-            QuestaoBancoId = questao.QuestaoBancoId,
-            Ordem = questao.Ordem,
-            TituloInterno = questao.QuestaoBanco?.TituloInterno ?? string.Empty,
-            Tema = questao.QuestaoBanco?.Tema ?? string.Empty,
-            Subtema = questao.QuestaoBanco?.Subtema ?? string.Empty,
-            Dificuldade = questao.QuestaoBanco?.Dificuldade ?? 1,
-            Contexto = questao.ContextoSnapshot,
-            Enunciado = questao.EnunciadoSnapshot,
-            TipoQuestao = questao.TipoQuestao,
-            Explicacao = questao.ExplicacaoSnapshot,
-            ReferenciasBibliograficas = questao.ReferenciasBibliograficasSnapshot,
-            Pontos = questao.Pontos,
-            Anexos = (questao.QuestaoBanco?.Anexos ?? new List<AnexoQuestaoBanco>())
-                .OrderBy(anexo => anexo.Ordem)
-                .Select(anexo => new AnexoQuestaoBancoResponseDto
-                {
-                    Id = anexo.Id,
-                    Titulo = anexo.Titulo,
-                    TipoAnexo = anexo.TipoAnexo,
-                    ArquivoUrl = anexo.ArquivoUrl,
-                    Ordem = anexo.Ordem
-                })
-                .ToList(),
-            Alternativas = questao.Alternativas
-                .OrderBy(alternativa => alternativa.Ordem)
-                .Select(alternativa => new AlternativaAvaliacaoResponseDto
-                {
-                    Id = alternativa.Id,
-                    Letra = alternativa.Letra,
-                    Texto = alternativa.Texto,
-                    EhCorreta = alternativa.EhCorreta,
-                    Justificativa = alternativa.JustificativaSnapshot,
-                    Ordem = alternativa.Ordem
-                })
-                .ToList(),
-            Afirmativas = questao.Afirmativas
-                .OrderBy(afirmativa => afirmativa.Ordem)
-                .Select(afirmativa => new AfirmativaQuestaoResponseDto
-                {
-                    Id = afirmativa.Id,
-                    Numero = afirmativa.Numero,
-                    Texto = afirmativa.Texto,
-                    EhCorreta = afirmativa.EhCorreta,
-                    Justificativa = afirmativa.JustificativaSnapshot,
-                    Ordem = afirmativa.Ordem
-                })
-                .ToList()
-        };
-    }
 }

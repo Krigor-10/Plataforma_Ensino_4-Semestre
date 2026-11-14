@@ -75,6 +75,7 @@ builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
+builder.Services.AddScoped<ICursoRevisaoConteudoService, CursoRevisaoConteudoService>();
 builder.Services.AddScoped<ITaxaAdesaoService, TaxaAdesaoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IExtratorTextoMaterialService, ExtratorTextoMaterialService>();
@@ -347,13 +348,25 @@ app.MapGet("/uploads/{subpasta}/{nomeArquivo}", async (
     IArmazenamentoArquivoService armazenamento,
     IUploadAutorizacaoService uploadAutorizacao) =>
 {
-    // So checa posse de pagamento pra Aluno baixando material pago -
-    // staff (Admin/Coordenador/Professor) so precisa estar autenticado,
-    // igual ao comportamento anterior, pra nao travar edicao/preview.
+    // So checa posse de pagamento pra Aluno baixando material pago. Admin e
+    // Professor continuam so precisando estar autenticados (comportamento
+    // anterior, pra nao travar edicao/preview - Professor acessa arquivo de
+    // qualquer curso, fora do escopo desta checagem). Coordenador (Parte 3/3
+    // do fluxo-coordenador: "Ver conteudo") passa a ficar restrito ao curso
+    // que ele proprio coordena, nunca aos demais.
     if ((subpasta == "conteudos" || subpasta == "questoes") && http.User.IsInRole("Aluno"))
     {
         var alunoId = http.User.ObterUsuarioId();
         if (alunoId is null || !await uploadAutorizacao.AlunoPodeAcessarArquivoAsync(subpasta, nomeArquivo, alunoId.Value))
+        {
+            return Results.Forbid();
+        }
+    }
+
+    if ((subpasta == "conteudos" || subpasta == "questoes") && http.User.IsInRole("Coordenador"))
+    {
+        var coordenadorId = http.User.ObterUsuarioId();
+        if (coordenadorId is null || !await uploadAutorizacao.CoordenadorPodeAcessarArquivoAsync(subpasta, nomeArquivo, coordenadorId.Value))
         {
             return Results.Forbid();
         }

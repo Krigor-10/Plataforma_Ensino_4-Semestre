@@ -57,8 +57,24 @@ public class UploadAutorizacaoServiceTests
         return aluno;
     }
 
-    private static Curso CriarCurso(PlataformaContext context, decimal preco = 0) =>
-        Salvar(context, new Curso { Titulo = "Curso Teste", CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..9], Preco = preco });
+    private static Curso CriarCurso(PlataformaContext context, decimal preco = 0, int? coordenadorId = null) =>
+        Salvar(context, new Curso { Titulo = "Curso Teste", CodigoRegistro = $"CUR-{Guid.NewGuid():N}"[..9], Preco = preco, CoordenadorId = coordenadorId });
+
+    private static Coordenador CriarCoordenador(PlataformaContext context)
+    {
+        var coordenador = new Coordenador
+        {
+            Nome = "Coordenador Teste",
+            Email = $"{Guid.NewGuid():N}@teste.local",
+            Cpf = "33344455566",
+            CodigoRegistro = $"COORD-{Guid.NewGuid():N}"[..10]
+        };
+        coordenador.ConfigurarAcesso("Coordenador", "hash-fake");
+
+        context.Coordenadores.Add(coordenador);
+        context.SaveChanges();
+        return coordenador;
+    }
 
     private static Turma CriarTurma(PlataformaContext context, int cursoId, int professorId) =>
         Salvar(context, new Turma { NomeTurma = "Turma Teste", CodigoRegistro = $"TUR-{Guid.NewGuid():N}"[..9], CursoId = cursoId, ProfessorId = professorId });
@@ -276,5 +292,73 @@ public class UploadAutorizacaoServiceTests
         Assert.False(await service.AlunoPodeAcessarArquivoAsync("conteudos", "inexistente.pdf", aluno.Id));
         Assert.False(await service.AlunoPodeAcessarArquivoAsync("questoes", "inexistente.jpg", aluno.Id));
         Assert.False(await service.AlunoPodeAcessarArquivoAsync("cursos", "capa.jpg", aluno.Id));
+    }
+
+    // ---------- CoordenadorPodeAcessarArquivoAsync (fluxo-coordenador Parte 3/3 - "Ver conteudo") ----------
+
+    [Fact]
+    public async Task CoordenadorPodeAcessarArquivoAsync_ConteudoDoCursoQueCoordena_RetornaTrue()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, coordenadorId: coordenador.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-coordenador-1.pdf");
+
+        var service = CriarService(context);
+        var resultado = await service.CoordenadorPodeAcessarArquivoAsync("conteudos", "arquivo-coordenador-1.pdf", coordenador.Id);
+
+        Assert.True(resultado);
+    }
+
+    [Fact]
+    public async Task CoordenadorPodeAcessarArquivoAsync_ConteudoDeOutroCurso_RetornaFalse()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var coordenadorDono = CriarCoordenador(context);
+        var coordenadorDeOutroCurso = CriarCoordenador(context);
+        var curso = CriarCurso(context, coordenadorId: coordenadorDono.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarConteudo(context, professor.Id, turma.Id, modulo.Id, curso.Id, "/uploads/conteudos/arquivo-coordenador-2.pdf");
+
+        var service = CriarService(context);
+        var resultado = await service.CoordenadorPodeAcessarArquivoAsync("conteudos", "arquivo-coordenador-2.pdf", coordenadorDeOutroCurso.Id);
+
+        Assert.False(resultado);
+    }
+
+    [Fact]
+    public async Task CoordenadorPodeAcessarArquivoAsync_AnexoDeQuestaoDoCursoQueCoordena_RetornaTrue()
+    {
+        var context = TestContextFactory.Criar();
+        var professor = CriarProfessor(context);
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, coordenadorId: coordenador.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = CriarAvaliacao(context, professor.Id, turma.Id, curso.Id);
+        var (banco, _) = CriarQuestaoComAnexo(context, professor.Id, "/uploads/questoes/anexo-coordenador-1.jpg");
+        PublicarQuestao(context, banco.Id, avaliacao.Id);
+
+        var service = CriarService(context);
+        var resultado = await service.CoordenadorPodeAcessarArquivoAsync("questoes", "anexo-coordenador-1.jpg", coordenador.Id);
+
+        Assert.True(resultado);
+    }
+
+    [Fact]
+    public async Task CoordenadorPodeAcessarArquivoAsync_ArquivoNaoEncontradoEmNenhumaTabela_RetornaFalse()
+    {
+        var context = TestContextFactory.Criar();
+        var coordenador = CriarCoordenador(context);
+
+        var service = CriarService(context);
+
+        Assert.False(await service.CoordenadorPodeAcessarArquivoAsync("conteudos", "inexistente.pdf", coordenador.Id));
+        Assert.False(await service.CoordenadorPodeAcessarArquivoAsync("questoes", "inexistente.jpg", coordenador.Id));
+        Assert.False(await service.CoordenadorPodeAcessarArquivoAsync("cursos", "capa.jpg", coordenador.Id));
     }
 }
