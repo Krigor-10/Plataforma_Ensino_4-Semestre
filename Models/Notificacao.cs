@@ -14,7 +14,10 @@ public enum TipoNotificacao
     ConteudoPublicado = 3,
     PagamentoConfirmado = 4,
     CursoConcluidoPeloProfessor = 5,
-    CursoEncerrado = 6
+    CursoEncerrado = 6,
+    ChamadoNovo = 7,
+    ChamadoNovaMensagem = 8,
+    ChatbotTetoAtingido = 9
 }
 
 public class Notificacao

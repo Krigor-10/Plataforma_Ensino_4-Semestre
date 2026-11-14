@@ -76,6 +76,10 @@ builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
 builder.Services.AddScoped<ICursoRevisaoConteudoService, CursoRevisaoConteudoService>();
+builder.Services.AddScoped<IChatbotFerramentasService, ChatbotFerramentasService>();
+builder.Services.AddScoped<IChatbotIAService, ChatbotIAService>();
+builder.Services.AddScoped<IChatbotService, ChatbotService>();
+builder.Services.AddScoped<IChamadoSuporteService, ChamadoSuporteService>();
 builder.Services.AddScoped<ITaxaAdesaoService, TaxaAdesaoService>();
 builder.Services.AddScoped<IAvaliacaoService, AvaliacaoService>();
 builder.Services.AddScoped<IExtratorTextoMaterialService, ExtratorTextoMaterialService>();
@@ -107,6 +111,15 @@ builder.Services.AddHttpClient(GeminiAvaliacaoIAService.NomeHttpClient, cliente 
 {
     cliente.BaseAddress = new Uri("https://generativelanguage.googleapis.com/");
     cliente.Timeout = TimeSpan.FromSeconds(90);
+});
+// Fluxo-chatbot Fase 1: cliente proprio (nao reaproveita o de AvaliacaoIAService)
+// porque o chat usa esforco "medium"/max_tokens baixo (~1024) com streaming -
+// nao precisa dos 180s que a geracao de quiz (esforco "high", nao-streaming)
+// exige. Mesmo host (api.anthropic.com).
+builder.Services.AddHttpClient(ChatbotIAService.NomeHttpClient, cliente =>
+{
+    cliente.BaseAddress = new Uri("https://api.anthropic.com/");
+    cliente.Timeout = TimeSpan.FromSeconds(60);
 });
 // Azure App Service/Container Apps tem disco efemero e nao compartilhado entre
 // instancias - fora de Development, upload so e confiavel em Blob Storage.
@@ -141,6 +154,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
+builder.Services.AddHostedService<ChatbotExpurgoService>();
 
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("banco-de-dados");
@@ -228,6 +242,20 @@ builder.Services.AddRateLimiter(options =>
             _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 10,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0
+            }));
+
+    // Assistente CodeRyse (fluxo-chatbot Fase 1): 30 perguntas/hora por aluno
+    // autenticado. O limite de 100/dia e checado a parte, dentro de
+    // ChatbotService (janela de 24h por aluno via banco, sem equivalente
+    // pronto no RateLimiter).
+    options.AddPolicy("chatbot", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirst("usuarioId")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
                 Window = TimeSpan.FromHours(1),
                 QueueLimit = 0
             }));

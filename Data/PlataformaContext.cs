@@ -37,6 +37,11 @@ public class PlataformaContext : DbContext
     public DbSet<ProgressoCursoAluno> ProgressosCursosAlunos { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Notificacao> Notificacoes { get; set; }
+    public DbSet<ConversaChatbot> ConversasChatbot { get; set; }
+    public DbSet<MensagemChatbot> MensagensChatbot { get; set; }
+    public DbSet<ChamadoSuporte> ChamadosSuporte { get; set; }
+    public DbSet<MensagemChamado> MensagensChamado { get; set; }
+    public DbSet<ConfiguracaoChatbot> ConfiguracoesChatbot { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

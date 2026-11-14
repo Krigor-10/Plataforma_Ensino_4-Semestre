@@ -297,6 +297,81 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.ToTable("Avaliacoes");
                 });
 
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ChamadoSuporte", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlunoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ConversaId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CoordenadorDestinoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CursoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResolvidoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Resumo")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlunoId");
+
+                    b.HasIndex("ConversaId");
+
+                    b.HasIndex("CursoId");
+
+                    b.HasIndex("ResolvidoEm");
+
+                    b.HasIndex("CoordenadorDestinoId", "Status");
+
+                    b.ToTable("ChamadosSuporte", (string)null);
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ConfiguracaoChatbot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TetoMensalUsd")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UltimoAvisoTetoEm")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConfiguracaoChatbot", (string)null);
+                });
+
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
                 {
                     b.Property<int>("Id")
@@ -377,6 +452,30 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.HasIndex("TurmaId");
 
                     b.ToTable("ConteudosDidaticos");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ConversaChatbot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AlunoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlunoId", "AtualizadaEm");
+
+                    b.ToTable("ConversasChatbot", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
@@ -578,6 +677,98 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasFilter("[Status] = 1");
 
                     b.ToTable("Matriculas");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.MensagemChamado", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChamadoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("ChamadoId", "CriadoEm");
+
+                    b.ToTable("MensagensChamado", (string)null);
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.MensagemChatbot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AcoesJson")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ConversaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CustoUsd")
+                        .HasPrecision(10, 6)
+                        .HasColumnType("decimal(10,6)");
+
+                    b.Property<string>("FerramentasUsadasJson")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Papel")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SemResposta")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("TokensCacheEscrita")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TokensCacheLeitura")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TokensEntrada")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TokensSaida")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("Util")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CriadoEm");
+
+                    b.HasIndex("ConversaId", "CriadoEm");
+
+                    b.ToTable("MensagensChatbot", (string)null);
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Modulo", b =>
@@ -1390,6 +1581,36 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("Turma");
                 });
 
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ChamadoSuporte", b =>
+                {
+                    b.HasOne("PlataformaEnsino.API.Models.Aluno", "Aluno")
+                        .WithMany()
+                        .HasForeignKey("AlunoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PlataformaEnsino.API.Models.ConversaChatbot", null)
+                        .WithMany()
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PlataformaEnsino.API.Models.Coordenador", "CoordenadorDestino")
+                        .WithMany()
+                        .HasForeignKey("CoordenadorDestinoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PlataformaEnsino.API.Models.Curso", "Curso")
+                        .WithMany()
+                        .HasForeignKey("CursoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Aluno");
+
+                    b.Navigation("CoordenadorDestino");
+
+                    b.Navigation("Curso");
+                });
+
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
                 {
                     b.HasOne("PlataformaEnsino.API.Models.Curso", null)
@@ -1420,6 +1641,17 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("ProfessorAutor");
 
                     b.Navigation("Turma");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ConversaChatbot", b =>
+                {
+                    b.HasOne("PlataformaEnsino.API.Models.Aluno", "Aluno")
+                        .WithMany()
+                        .HasForeignKey("AlunoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Aluno");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
@@ -1518,6 +1750,36 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("Curso");
 
                     b.Navigation("Turma");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.MensagemChamado", b =>
+                {
+                    b.HasOne("PlataformaEnsino.API.Models.Usuario", "Autor")
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PlataformaEnsino.API.Models.ChamadoSuporte", "Chamado")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("ChamadoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Autor");
+
+                    b.Navigation("Chamado");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.MensagemChatbot", b =>
+                {
+                    b.HasOne("PlataformaEnsino.API.Models.ConversaChatbot", "Conversa")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversa");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Modulo", b =>
@@ -1787,9 +2049,19 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Navigation("Tentativas");
                 });
 
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ChamadoSuporte", b =>
+                {
+                    b.Navigation("Mensagens");
+                });
+
             modelBuilder.Entity("PlataformaEnsino.API.Models.ConteudoDidatico", b =>
                 {
                     b.Navigation("ProgressosAlunos");
+                });
+
+            modelBuilder.Entity("PlataformaEnsino.API.Models.ConversaChatbot", b =>
+                {
+                    b.Navigation("Mensagens");
                 });
 
             modelBuilder.Entity("PlataformaEnsino.API.Models.Curso", b =>
