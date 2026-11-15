@@ -147,7 +147,7 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .HasForeignKey(m => m.AlunoId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // O indice unico IX_Matriculas_AlunoId_TurmaId_Aprovada (abaixo) e filtrado
+        // O indice unico IX_Matriculas_AlunoId_CursoId_Aprovada (abaixo) e filtrado
         // (Status = 1), entao nao serve pra consultas gerais "todas as matriculas
         // do aluno X" sem esse filtro — esse indice cobre esse caso.
         builder
@@ -177,22 +177,18 @@ public sealed class MatriculaConfiguration : IEntityTypeConfiguration<Matricula>
             .IsUnique();
 
         // Impede, no nivel do banco, que o mesmo aluno fique com duas
-        // matriculas Aprovada (Status = 1) na mesma turma ao mesmo tempo —
-        // a checagem em memoria em MatriculaService (ObterMatriculaAprovadaNaTurmaAsync)
-        // sozinha nao protege contra duas aprovacoes simultaneas da mesma
-        // pendencia (ex: duplo clique, dois admins aprovando ao mesmo tempo).
-        builder
-            .HasIndex(m => new { m.AlunoId, m.TurmaId })
-            .IsUnique()
-            .HasFilter("[Status] = 1")
-            .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada");
-
-        // Substitui o indice acima como a protecao real de "aluno nao pode ter
-        // duas matriculas Aprovada no mesmo curso": o fluxo atual nao depende
-        // mais de turma, entao TurmaId fica sempre nulo pra matriculas novas e
-        // o indice por TurmaId perde efeito (SQL Server permite varios NULL
-        // num indice unico). Mantido junto do antigo (nao removido) ate a
-        // migracao final de remocao de Turma.
+        // matriculas Aprovada (Status = 1) no mesmo curso ao mesmo tempo —
+        // a checagem em memoria em MatriculaService sozinha nao protege
+        // contra duas aprovacoes simultaneas da mesma pendencia (ex: duplo
+        // clique, dois admins aprovando ao mesmo tempo).
+        //
+        // Existiu antes um indice equivalente por (AlunoId, TurmaId) - removido
+        // na migracao RemoverIndiceUnicoMatriculaPorTurma porque TurmaId e
+        // sempre nulo desde a remocao de Turma do fluxo de matricula (Fase B),
+        // e o SQL Server NAO trata multiplos NULL como distintos num indice
+        // composto: duas matriculas Aprovada do MESMO aluno em CURSOS
+        // DIFERENTES (TurmaId nulo nas duas) colidiam nesse indice, impedindo
+        // na pratica qualquer aluno de se matricular em mais de um curso.
         builder
             .HasIndex(m => new { m.AlunoId, m.CursoId })
             .IsUnique()

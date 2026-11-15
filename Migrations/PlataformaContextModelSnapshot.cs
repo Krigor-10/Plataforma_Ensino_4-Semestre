@@ -671,11 +671,6 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasDatabaseName("IX_Matriculas_AlunoId_CursoId_Aprovada")
                         .HasFilter("[Status] = 1");
 
-                    b.HasIndex("AlunoId", "TurmaId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Matriculas_AlunoId_TurmaId_Aprovada")
-                        .HasFilter("[Status] = 1");
-
                     b.ToTable("Matriculas");
                 });
 

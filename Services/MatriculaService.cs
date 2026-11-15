@@ -185,7 +185,7 @@ public class MatriculaService : IMatriculaService
 
     /// <summary>
     /// Salva as alteracoes traduzindo uma violacao do indice unico
-    /// IX_Matriculas_AlunoId_TurmaId_Aprovada (duas aprovacoes simultaneas da
+    /// IX_Matriculas_AlunoId_CursoId_Aprovada (duas aprovacoes simultaneas da
     /// mesma pendencia) num erro de negocio claro, em vez do 500 generico que
     /// o middleware daria pra uma DbUpdateException nao mapeada.
     /// </summary>
