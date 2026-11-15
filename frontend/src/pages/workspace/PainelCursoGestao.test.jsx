@@ -434,9 +434,9 @@ describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () =>
 
     await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
 
-    const dialog = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    const dialog = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
     expect(within(dialog).getByText("Somente leitura")).toBeInTheDocument();
-    await waitFor(() => expect(within(dialog).getByText("Material revisado")).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByRole("heading", { name: "Material revisado" })).toBeInTheDocument());
 
     expect(within(dialog).queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
     expect(within(dialog).queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
@@ -451,7 +451,15 @@ describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () =>
     await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
     await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
 
-    const dialog = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    const dialog = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
+    await waitFor(() => expect(within(dialog).getByRole("heading", { name: "Material revisado" })).toBeInTheDocument());
+
+    // "Quiz publicado" nao esta vinculado a nenhum material (conteudoDidaticoId
+    // null) - e o 2o item do indice, nao abre sozinho ao carregar a janela.
+    // Escopado no indice (nav) porque o rodape "Proximo: Quiz publicado" tem
+    // o mesmo texto no botao de navegacao.
+    const indice = within(dialog).getByRole("navigation", { name: "Índice do conteúdo" });
+    await userEvent.click(within(indice).getByRole("button", { name: /Quiz publicado/ }));
     await waitFor(() => expect(within(dialog).getByText("Qual a resposta certa?")).toBeInTheDocument());
 
     const itemAlternativaCerta = within(dialog).getByText(
@@ -475,7 +483,7 @@ describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () =>
     await userEvent.click(within(dialogEncerrar).getByRole("button", { name: /Revisar conteúdo antes de encerrar/ }));
 
     expect(screen.queryByRole("dialog", { name: /Encerrar/ })).not.toBeInTheDocument();
-    const dialogPrevia = await screen.findByRole("dialog", { name: /Visualizar como aluno/ });
+    const dialogPrevia = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
     expect(within(dialogPrevia).getByText("Somente leitura")).toBeInTheDocument();
   });
 });

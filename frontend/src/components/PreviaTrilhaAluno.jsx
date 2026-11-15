@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import {
-  TbCheck,
   TbExternalLink,
   TbFile,
   TbFileText,
@@ -10,27 +9,37 @@ import {
   TbX
 } from "react-icons/tb";
 import Botao from "./Botao.jsx";
+import GabaritoQuestoes from "./GabaritoQuestoes.jsx";
 import Insignia from "./Insignia.jsx";
 import Modal from "./Modal.jsx";
 import { InlineMessage } from "./Primitives.jsx";
 import { resolverUrlArquivo } from "../lib/api.js";
 import { normalizeContentType } from "../lib/format.js";
-import { tituloQuizEhGenerico } from "../lib/trilhaConteudos.js";
+import { montarModulosPublicados, tituloQuizEhGenerico } from "../lib/trilhaConteudos.js";
 
-const STATUS_PUBLICADO = 2;
-
-const ICONE_TIPO_CONTEUDO_LINHA = {
-  1: <TbFileText aria-hidden="true" size="1.75rem" />,
-  2: <TbFile aria-hidden="true" size="1.75rem" />,
-  3: <TbPlayerPlay aria-hidden="true" size="1.75rem" />,
-  4: <TbExternalLink aria-hidden="true" size="1.75rem" />,
-  5: <TbPhoto aria-hidden="true" size="1.75rem" />
-};
+// Reaproveitado por RevisaoConteudoCurso.jsx (indice da tela "Revisar
+// conteudo") - tamanho do icone fica a cargo de quem chama, ja que o indice
+// usa um tamanho menor que o card desta previa.
+export function obterIconeTipoConteudo(tipoConteudo, tamanho = "1.75rem") {
+  switch (Number(tipoConteudo)) {
+    case 2:
+      return <TbFile aria-hidden="true" size={tamanho} />;
+    case 3:
+      return <TbPlayerPlay aria-hidden="true" size={tamanho} />;
+    case 4:
+      return <TbExternalLink aria-hidden="true" size={tamanho} />;
+    case 5:
+      return <TbPhoto aria-hidden="true" size={tamanho} />;
+    default:
+      return <TbFileText aria-hidden="true" size={tamanho} />;
+  }
+}
 
 // Mesma regra de SecoesAluno.jsx (obterAcaoConteudoAluno): so ganha link quem
 // tem arquivo/link de verdade. Aqui so abre em nova aba (sem o visualizador
-// inline do aluno) - suficiente pro Coordenador conferir o material.
-function obterLinkArquivoConteudo(conteudo) {
+// inline do aluno) - suficiente pro Coordenador conferir o material. Tambem
+// reaproveitado por RevisaoConteudoCurso.jsx.
+export function obterLinkArquivoConteudo(conteudo) {
   const tipo = Number(conteudo.tipoConteudo);
 
   if ((tipo === 2 || tipo === 3 || tipo === 5) && conteudo.arquivoUrl) {
@@ -42,76 +51,6 @@ function obterLinkArquivoConteudo(conteudo) {
   }
 
   return null;
-}
-
-function GabaritoQuestoes({ questoes }) {
-  return (
-    <div className="revisao-avaliacao revisao-avaliacao--gabarito">
-      {questoes.map((questao, indice) => (
-        <section className="revisao-questao" key={questao.id}>
-          <header className="revisao-questao__cabecalho">
-            <span className="revisao-questao__numero">Questão {indice + 1}</span>
-          </header>
-
-          <p className="revisao-questao__enunciado">{questao.enunciado}</p>
-
-          {questao.afirmativas?.length > 0 ? (
-            <div className="revisao-questao__bloco">
-              <p className="revisao-questao__rotulo">Afirmativas avaliadas</p>
-              <ol className="revisao-afirmativas">
-                {questao.afirmativas.map((afirmativa) => (
-                  <li className="revisao-afirmativas__item" key={afirmativa.numero}>
-                    <div className="revisao-afirmativas__cabecalho">
-                      <strong>{afirmativa.numero}.</strong> {afirmativa.texto}
-                      {afirmativa.ehCorreta ? (
-                        <span className="revisao-afirmativas__marca revisao-afirmativas__marca--certo">
-                          <TbCheck aria-hidden="true" size={13} /> Correta
-                        </span>
-                      ) : (
-                        <span className="revisao-afirmativas__marca revisao-afirmativas__marca--errado">
-                          <TbX aria-hidden="true" size={13} /> Incorreta
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ) : null}
-
-          {questao.alternativas?.length > 0 ? (
-            <div className="revisao-questao__bloco">
-              <p className="revisao-questao__rotulo">Alternativas</p>
-              <ul className="revisao-alternativas" role="list">
-                {questao.alternativas.map((alternativa) => (
-                  <li
-                    className={`revisao-alternativas__item${alternativa.ehCorreta ? " revisao-alternativas__item--correta" : ""}`}
-                    key={alternativa.id}
-                  >
-                    <div className="revisao-alternativas__cabecalho">
-                      <strong>{alternativa.letra}</strong> {alternativa.texto}
-                      {alternativa.ehCorreta ? (
-                        <span className="revisao-alternativas__marca revisao-alternativas__marca--certo">
-                          <TbCheck aria-hidden="true" size={13} /> Correta
-                        </span>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {questao.explicacao ? (
-            <div className="revisao-questao__bloco">
-              <p className="revisao-questao__rotulo">Explicação</p>
-              <p className="revisao-questao__explicacao">{questao.explicacao}</p>
-            </div>
-          ) : null}
-        </section>
-      ))}
-    </div>
-  );
 }
 
 /* Pre-visualizacao estrutural de como o aluno ve a trilha: reaproveita as MESMAS classes
@@ -136,19 +75,10 @@ export default function PreviaTrilhaAluno({
   questoesPorAvaliacaoId = null,
   seloSomenteLeitura = false
 }) {
-  const modulosVisiveis = useMemo(() => {
-    return modulosDoCurso
-      .map((modulo, indice) => {
-        const itens = (conteudosPorModuloId.get(modulo.id) || []).filter(
-          (conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO
-        );
-        const quizzesDoModulo = (quizzesPorModuloId.get(modulo.id) || []).filter(
-          (quiz) => Number(quiz.statusPublicacao) === STATUS_PUBLICADO
-        );
-        return { indice, itens, modulo, quizzesDoModulo };
-      })
-      .filter(({ itens, quizzesDoModulo }) => itens.length > 0 || quizzesDoModulo.length > 0);
-  }, [conteudosPorModuloId, modulosDoCurso, quizzesPorModuloId]);
+  const modulosVisiveis = useMemo(
+    () => montarModulosPublicados(modulosDoCurso, conteudosPorModuloId, quizzesPorModuloId),
+    [conteudosPorModuloId, modulosDoCurso, quizzesPorModuloId]
+  );
 
   function renderizarGabaritoDoQuiz(quizId) {
     const questoes = questoesPorAvaliacaoId?.get(quizId);
@@ -215,7 +145,7 @@ export default function PreviaTrilhaAluno({
                         <div className="atividades-curso__item-aberto">
                           <div className="atividades-curso__linha">
                             <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
-                              {ICONE_TIPO_CONTEUDO_LINHA[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
+                              {obterIconeTipoConteudo(conteudo.tipoConteudo)}
                             </span>
                             <div className="atividades-curso__corpo">
                               <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>

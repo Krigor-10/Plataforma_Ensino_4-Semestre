@@ -34,6 +34,26 @@ export function tituloQuizEhGenerico(tituloQuiz, tituloConteudo) {
   return [`quiz - ${conteudoNormalizado}`, `quiz – ${conteudoNormalizado}`, `quiz: ${conteudoNormalizado}`].includes(quizNormalizado);
 }
 
+const STATUS_PUBLICADO_CONTEUDO = 2;
+
+// Filtra modulos/conteudos/quizzes pro que esta Publicado e descarta modulo
+// vazio - usado tanto pela previa "Visualizar como aluno" (PreviaTrilhaAluno)
+// quanto por "Revisar conteudo" (RevisaoConteudoCurso), que consomem os
+// mesmos dados de GET /Cursos/{id}/revisao-conteudo.
+export function montarModulosPublicados(modulosDoCurso, conteudosPorModuloId, quizzesPorModuloId) {
+  return modulosDoCurso
+    .map((modulo, indice) => {
+      const itens = (conteudosPorModuloId.get(modulo.id) || []).filter(
+        (conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO_CONTEUDO
+      );
+      const quizzesDoModulo = (quizzesPorModuloId.get(modulo.id) || []).filter(
+        (quiz) => Number(quiz.statusPublicacao) === STATUS_PUBLICADO_CONTEUDO
+      );
+      return { indice, itens, modulo, quizzesDoModulo };
+    })
+    .filter(({ itens, quizzesDoModulo }) => itens.length > 0 || quizzesDoModulo.length > 0);
+}
+
 export function montarNomesExibicaoQuizzesVinculados(quizzes, tituloConteudo) {
   const genericos = quizzes.filter((quiz) => tituloQuizEhGenerico(quiz.titulo, tituloConteudo));
   const usarNomeGenerico = genericos.length === 1;

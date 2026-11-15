@@ -32,7 +32,7 @@ import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
-import PreviaTrilhaAluno from "../../components/PreviaTrilhaAluno.jsx";
+import RevisaoConteudoCurso from "../../components/RevisaoConteudoCurso.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
@@ -656,16 +656,14 @@ export default function PainelCursoGestao({
 
       {previaConteudoAberta ? (
         estadoPreviaConteudo ? (
-          <PreviaTrilhaAluno
+          <RevisaoConteudoCurso
             conteudosPorModuloId={estadoPreviaConteudo.conteudosPorModuloId}
             cursoTitulo={curso.titulo}
             modulosDoCurso={estadoPreviaConteudo.modulosDoCurso}
             onFechar={fecharPreviaConteudo}
-            permitirAbrirArquivo
             questoesPorAvaliacaoId={estadoPreviaConteudo.questoesPorAvaliacaoId}
             quizPorConteudoId={estadoPreviaConteudo.quizPorConteudoId}
             quizzesPorModuloId={estadoPreviaConteudo.quizzesPorModuloId}
-            seloSomenteLeitura
           />
         ) : (
           <Modal onFechar={fecharPreviaConteudo} titulo="Ver conteúdo">
