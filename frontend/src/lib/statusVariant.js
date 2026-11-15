@@ -18,7 +18,10 @@ const VARIANTE_POR_TEXTO = {
   "Não iniciado": "neutro",
   "Concluída": "neutro",
   Disponivel: "sucesso",
-  "Sem pendencias": "neutro"
+  "Sem pendencias": "neutro",
+  Aberto: "aviso",
+  Respondido: "info",
+  Resolvido: "sucesso"
 };
 
 const TOM_POR_VARIANTE = {

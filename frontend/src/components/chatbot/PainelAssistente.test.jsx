@@ -2,12 +2,22 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import PainelAssistente from "./PainelAssistente.jsx";
+import { ToastProvider } from "../../hooks/useToast.jsx";
 import { enviarFeedbackMensagemChatbot, enviarMensagemChatbotStream, obterConversaAtualChatbot } from "../../lib/chatbotApi.js";
+import { abrirChamado, listarMeusChamados } from "../../lib/chamadosApi.js";
 
 vi.mock("../../lib/chatbotApi.js", () => ({
   obterConversaAtualChatbot: vi.fn(),
   enviarMensagemChatbotStream: vi.fn(),
   enviarFeedbackMensagemChatbot: vi.fn()
+}));
+
+vi.mock("../../lib/chamadosApi.js", () => ({
+  abrirChamado: vi.fn(),
+  listarMeusChamados: vi.fn(),
+  obterChamado: vi.fn(),
+  responderChamado: vi.fn(),
+  reabrirChamado: vi.fn()
 }));
 
 const CONTEXTO_PADRAO = { tela: "dashboard", cursoId: null, cursoTitulo: null };
@@ -16,7 +26,9 @@ function renderPainel(props = {}) {
   const onFechar = vi.fn();
   const onNavigate = vi.fn();
   const resultado = render(
-    <PainelAssistente aberto contexto={CONTEXTO_PADRAO} onFechar={onFechar} onNavigate={onNavigate} {...props} />
+    <ToastProvider>
+      <PainelAssistente aberto contexto={CONTEXTO_PADRAO} onFechar={onFechar} onNavigate={onNavigate} {...props} />
+    </ToastProvider>
   );
   return { ...resultado, onFechar, onNavigate };
 }
@@ -25,10 +37,15 @@ describe("PainelAssistente", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     obterConversaAtualChatbot.mockResolvedValue(null);
+    listarMeusChamados.mockResolvedValue([]);
   });
 
   test("nao renderiza nada quando aberto=false", () => {
-    render(<PainelAssistente aberto={false} contexto={CONTEXTO_PADRAO} onFechar={vi.fn()} onNavigate={vi.fn()} />);
+    render(
+      <ToastProvider>
+        <PainelAssistente aberto={false} contexto={CONTEXTO_PADRAO} onFechar={vi.fn()} onNavigate={vi.fn()} />
+      </ToastProvider>
+    );
     expect(screen.queryByRole("dialog", { name: "Assistente CodeRyse" })).not.toBeInTheDocument();
   });
 
@@ -150,5 +167,82 @@ describe("PainelAssistente", () => {
 
     await userEvent.setup().keyboard("{Escape}");
     expect(onFechar).toHaveBeenCalled();
+  });
+
+  test("aba 'Meus chamados' troca a view, saindo da Conversa", async () => {
+    renderPainel();
+    await waitFor(() => expect(screen.queryByText(/Carregando conversa/)).not.toBeInTheDocument());
+
+    await userEvent.setup().click(screen.getByRole("tab", { name: "Meus chamados" }));
+
+    expect(await screen.findByText(/ainda não abriu nenhum chamado/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Pergunta para o Assistente CodeRyse")).not.toBeInTheDocument();
+  });
+
+  test("'Falar com o suporte' abre o formulario pre-preenchido com a ultima pergunta", async () => {
+    enviarMensagemChatbotStream.mockImplementation(async (_payload, callbacks) => {
+      callbacks.onTexto?.("Resposta.");
+      callbacks.onFim?.({ conversaId: 1, mensagemId: 1 });
+    });
+
+    renderPainel();
+    await waitFor(() => expect(screen.queryByText(/Carregando conversa/)).not.toBeInTheDocument());
+
+    const usuario = userEvent.setup();
+    await usuario.type(screen.getByLabelText("Pergunta para o Assistente CodeRyse"), "Como tiro meu certificado?");
+    await usuario.click(screen.getByRole("button", { name: "Enviar pergunta" }));
+    await waitFor(() => expect(screen.getByText("Resposta.")).toBeInTheDocument());
+
+    await usuario.click(screen.getByRole("button", { name: "Falar com o suporte" }));
+
+    expect(screen.getByLabelText("Descreva sua dúvida ou problema")).toHaveValue("Como tiro meu certificado?");
+  });
+
+  test("criar um chamado troca pra 'Meus chamados' e mostra o toast de confirmacao", async () => {
+    abrirChamado.mockResolvedValue({ id: 5, resumo: "Duvida qualquer" });
+    listarMeusChamados.mockResolvedValue([
+      {
+        id: 5,
+        cursoId: null,
+        cursoTitulo: null,
+        status: 1,
+        resumo: "Duvida qualquer",
+        atualizadoEm: "2026-11-15T10:00:00Z",
+        resolvidoEm: null,
+        mensagens: [{ id: 1, autorId: 1, autorNome: "Aluno", texto: "Preciso de ajuda com uma duvida.", criadoEm: "2026-11-15T10:00:00Z" }]
+      }
+    ]);
+
+    renderPainel({ usuarioId: 1 });
+    await waitFor(() => expect(screen.queryByText(/Carregando conversa/)).not.toBeInTheDocument());
+
+    const usuario = userEvent.setup();
+    await usuario.click(screen.getByRole("button", { name: "Falar com o suporte" }));
+    await usuario.type(screen.getByLabelText("Descreva sua dúvida ou problema"), "Duvida qualquer");
+    await usuario.click(screen.getByRole("button", { name: "Abrir chamado" }));
+
+    expect(await screen.findByText("Chamado aberto. A equipe responde em até 2 dias úteis, pelo sino de notificações.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Meus chamados", selected: true })).toBeInTheDocument();
+    expect(await screen.findByText("Preciso de ajuda com uma duvida.")).toBeInTheDocument();
+  });
+
+  test("chamadoInicialId abre o painel ja na aba Meus chamados", async () => {
+    listarMeusChamados.mockResolvedValue([
+      {
+        id: 8,
+        cursoId: null,
+        cursoTitulo: null,
+        status: 1,
+        resumo: "Chamado vindo de notificacao",
+        atualizadoEm: "2026-11-15T10:00:00Z",
+        resolvidoEm: null,
+        mensagens: [{ id: 1, autorId: 1, autorNome: "Aluno", texto: "Texto original", criadoEm: "2026-11-15T10:00:00Z" }]
+      }
+    ]);
+
+    renderPainel({ usuarioId: 1, chamadoInicialId: 8 });
+
+    expect(await screen.findByText("Texto original")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Meus chamados", selected: true })).toBeInTheDocument();
   });
 });

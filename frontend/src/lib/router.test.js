@@ -13,4 +13,8 @@ describe("readRoute", () => {
   test("redefinir-senha continua lendo o token do segmento (regressao)", () => {
     expect(readRoute("/redefinir-senha/abc123")).toEqual({ kind: "redefinir-senha", token: "abc123" });
   });
+
+  test("link de notificacao de chamado de suporte le o id do segmento", () => {
+    expect(readRoute("/chamados/42")).toEqual({ kind: "chamado", chamadoId: "42" });
+  });
 });

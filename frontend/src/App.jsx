@@ -27,6 +27,7 @@ export default function App() {
   const [sessionReady, setSessionReady] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(() => readDemoMode());
   const canDisableDemoMode = !isDemoModeLocked();
+  const [chamadoParaAbrirId, setChamadoParaAbrirId] = useState(null);
 
   useEffect(() => {
     readSession().then((sessaoSalva) => {
@@ -67,6 +68,24 @@ export default function App() {
   function handleNavigate(path, options) {
     navigate(path, setRoute, options);
   }
+
+  // Notificacao de chamado ("/chamados/:id", sino). Aluno so tem onde mostrar
+  // isso no painel do Assistente CodeRyse (ver AssistenteChatbotProvider), por
+  // isso normaliza pro dashboard e guarda o id num estado separado pra
+  // sobreviver a essa troca de rota. Admin/Coordenador tem uma tela de
+  // verdade (SecaoChamados, em /app/chamados/:id).
+  useEffect(() => {
+    if (route.kind !== "chamado") return;
+
+    if (session.user?.tipoUsuario === "Aluno") {
+      setChamadoParaAbrirId(Number(route.chamadoId));
+      navigate("/app", setRoute, { replace: true });
+    } else if (session.user?.tipoUsuario === "Admin" || session.user?.tipoUsuario === "Coordenador") {
+      navigate(`/app/chamados/${route.chamadoId}`, setRoute, { replace: true });
+    } else {
+      navigate("/app", setRoute, { replace: true });
+    }
+  }, [route, session.user]);
 
   function handleSessionStart(nextSession) {
     persistSession(nextSession);
@@ -166,6 +185,8 @@ export default function App() {
         onUsuarioAtualizado={handleUsuarioAtualizado}
       />
     );
+  } else if (route.kind === "chamado") {
+    content = <RouteGate title="Abrindo chamado" text="Levando você até o chamado de suporte." />;
   } else if (route.kind === "notfound") {
     content = <NotFoundScreen onNavigate={handleNavigate} />;
   } else {
@@ -180,7 +201,14 @@ export default function App() {
 
   return (
     <ToastProvider temAssistenteAtivo={mostrarAssistente}>
-      <AssistenteChatbotProvider ativo={mostrarAssistente} contexto={contextoAssistente} onNavigate={handleNavigate}>
+      <AssistenteChatbotProvider
+        ativo={mostrarAssistente}
+        contexto={contextoAssistente}
+        onNavigate={handleNavigate}
+        usuarioId={session.user?.id ?? null}
+        chamadoInicialId={chamadoParaAbrirId}
+        onChamadoInicialConsumido={() => setChamadoParaAbrirId(null)}
+      >
         <ErrorBoundary key={chaveLimite}>{content}</ErrorBoundary>
         <TooltipGlobal />
       </AssistenteChatbotProvider>

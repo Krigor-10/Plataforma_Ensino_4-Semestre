@@ -8,6 +8,7 @@ export const APP_SECTIONS = [
   { key: "professores", label: "Professores", roles: ["Admin"] },
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
+  { key: "chamados", label: "Chamados", roles: ["Admin", "Coordenador"] },
   { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Aluno"] },
@@ -150,6 +151,13 @@ export function getSectionMeta(section, role) {
     turmas: {
       title: "Progresso",
       description: "Acompanhe o desempenho dos seus cursos e avaliacoes."
+    },
+    chamados: {
+      title: "Chamados de suporte",
+      description:
+        role === "Coordenador"
+          ? "Chamados do Assistente CodeRyse encaminhados para os cursos que voce coordena."
+          : "Todos os chamados abertos pelos alunos pelo Assistente CodeRyse."
     },
     certificados: {
       title: "Meus certificados",

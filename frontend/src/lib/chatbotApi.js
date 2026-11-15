@@ -13,6 +13,22 @@ export async function enviarFeedbackMensagemChatbot(mensagemId, util) {
   });
 }
 
+// Cartao "Assistente" (Admin, topo da tela de Chamados).
+export async function obterConfiguracaoChatbot() {
+  return apiRequest("/Chatbot/configuracao");
+}
+
+export async function atualizarConfiguracaoChatbot({ ativo, tetoMensalUsd }) {
+  return apiRequest("/Chatbot/configuracao", {
+    method: "PUT",
+    body: JSON.stringify({ ativo, tetoMensalUsd })
+  });
+}
+
+export async function obterUsoChatbot() {
+  return apiRequest("/Chatbot/uso");
+}
+
 /**
  * Envia uma pergunta ao Assistente CodeRyse em streaming (SSE). apiRequest
  * normal nao serve aqui porque le a resposta inteira como JSON de uma vez;

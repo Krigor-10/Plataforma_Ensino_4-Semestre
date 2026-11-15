@@ -20,6 +20,7 @@ export default function LayoutWorkspace({
   onAbrirPerfil,
   onLogoutClick,
   xpAluno = null,
+  contadorChamadosAbertos = 0,
   children,
 }) {
   const [sidebarAberta, setSidebarAberta] = useState(false);
@@ -39,6 +40,7 @@ export default function LayoutWorkspace({
         onNavigate={onNavigate}
         onAbrirPerfil={onAbrirPerfil}
         onLogoutClick={onLogoutClick}
+        contadorChamadosAbertos={contadorChamadosAbertos}
       />
 
       <div className="layout-conteudo">

@@ -1906,11 +1906,17 @@
 
 .assistente-painel__cabecalho {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--espaco-md) var(--espaco-lg);
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-md) var(--espaco-lg) 0;
   border-bottom: 1px solid var(--cor-borda);
   flex-shrink: 0;
+}
+
+.assistente-painel__cabecalho-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .assistente-painel__cabecalho h2 {
@@ -1934,6 +1940,52 @@
   color: var(--cor-texto-forte);
 }
 
+.assistente-painel__abas {
+  display: flex;
+  gap: var(--espaco-lg);
+}
+
+.assistente-painel__aba {
+  background: none;
+  border: none;
+  padding: var(--espaco-sm) 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.assistente-painel__aba--ativa {
+  color: var(--cor-marca-clara);
+  border-bottom-color: var(--cor-marca);
+}
+
+.assistente-painel__rodape-suporte {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-xs);
+  padding: var(--espaco-xs) var(--espaco-lg);
+  font-size: 0.75rem;
+  color: var(--cor-texto-mudo);
+  flex-shrink: 0;
+}
+
+.assistente-painel__rodape-suporte button {
+  background: none;
+  border: none;
+  color: var(--cor-marca-clara);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.assistente-painel__rodape-suporte button:hover {
+  text-decoration: underline;
+}
+
 .assistente-painel__mensagens {
   flex: 1;
   overflow-y: auto;
@@ -1941,6 +1993,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--espaco-md);
+}
+
+.assistente-painel__mensagens--chamados {
+  gap: 0;
 }
 
 .assistente-painel__estado {
@@ -2113,6 +2169,264 @@
 }
 
 .assistente-painel__enviar:not(:disabled):hover {
+  background: var(--cor-marca-clara);
+}
+
+/* Formulario "Falar com o suporte" (abre dentro da aba Conversa). */
+.formulario-chamado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-md) 0;
+}
+
+.formulario-chamado__intro {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+}
+
+.formulario-chamado__curso {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-forte);
+}
+
+.formulario-chamado label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.formulario-chamado textarea {
+  resize: vertical;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  color: var(--cor-texto-forte);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.formulario-chamado__contador {
+  align-self: flex-end;
+  font-size: 0.6875rem;
+  color: var(--cor-texto-mudo);
+  margin-top: -0.4rem;
+}
+
+.formulario-chamado__contador--limite {
+  color: var(--cor-erro);
+}
+
+.formulario-chamado__erro {
+  font-size: 0.8125rem;
+  color: var(--cor-erro);
+}
+
+.formulario-chamado__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espaco-sm);
+  margin-top: var(--espaco-xs);
+}
+
+/* Aba "Meus chamados" - lista e detalhe (um substitui o outro). */
+.meus-chamados {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.meus-chamados__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.meus-chamados__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida);
+}
+
+.meus-chamados__item:hover {
+  border-color: var(--cor-marca);
+}
+
+.meus-chamados__item-assunto {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--cor-texto-forte);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meus-chamados__item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  font-size: 0.75rem;
+  color: var(--cor-texto-suave);
+}
+
+.meus-chamados__item-data {
+  font-size: 0.6875rem;
+  color: var(--cor-texto-mudo);
+}
+
+.meus-chamados--detalhe {
+  gap: var(--espaco-sm);
+}
+
+.meus-chamados__voltar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.meus-chamados__voltar:hover {
+  color: var(--cor-texto-forte);
+}
+
+.meus-chamados__detalhe-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  font-size: 0.8125rem;
+  color: var(--cor-texto-forte);
+  padding-bottom: var(--espaco-sm);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.meus-chamados__conversa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--espaco-sm) 0;
+}
+
+.chamado-mensagem {
+  max-width: 85%;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--raio-md);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.chamado-mensagem--eu {
+  align-self: flex-end;
+  background: var(--cor-marca);
+  color: #fff;
+}
+
+.chamado-mensagem--equipe {
+  align-self: flex-start;
+  background: var(--cor-fundo-alt);
+  color: var(--cor-texto-forte);
+  border: 1px solid var(--cor-borda);
+}
+
+.chamado-mensagem__autor {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--cor-texto-mudo);
+  margin-bottom: 2px;
+}
+
+.meus-chamados__aviso-prazo {
+  font-size: 0.75rem;
+  color: var(--cor-texto-mudo);
+  text-align: center;
+  padding: var(--espaco-sm) 0;
+}
+
+.meus-chamados__reabrir {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espaco-xs);
+  align-self: center;
+  background: var(--cor-marca);
+  color: #fff;
+  border: none;
+  border-radius: var(--raio-md);
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: var(--espaco-xs);
+}
+
+.meus-chamados__reabrir:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.meus-chamados__responder {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espaco-sm);
+  padding-top: var(--espaco-sm);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.meus-chamados__responder textarea {
+  flex: 1;
+  resize: none;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  color: var(--cor-texto-forte);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  max-height: 6rem;
+}
+
+.meus-chamados__enviar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--raio-circular);
+  border: none;
+  background: var(--cor-marca);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transicao-rapida);
+}
+
+.meus-chamados__enviar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.meus-chamados__enviar:not(:disabled):hover {
   background: var(--cor-marca-clara);
 }
 
@@ -2545,5 +2859,293 @@
 
   .grade-estatisticas {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ------------------------------------------------------------
+   CHAMADOS (Admin/Coordenador) — lista + detalhe lado a lado
+   ------------------------------------------------------------ */
+.tela-chamados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-lg);
+}
+
+.tela-chamados > .cabecalho-pagina {
+  margin-bottom: 0;
+}
+
+.tela-chamados__corpo {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  min-height: 28rem;
+  overflow: hidden;
+}
+
+.tela-chamados__lista {
+  border-right: 1px solid var(--cor-borda);
+  overflow-y: auto;
+  padding: var(--espaco-md);
+}
+
+.tela-chamados__itens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.tela-chamados__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida);
+}
+
+.tela-chamados__item:hover {
+  border-color: var(--cor-marca);
+}
+
+.tela-chamados__item--ativo {
+  border-color: var(--cor-marca);
+  background: var(--cor-fundo-elevado);
+}
+
+.tela-chamados__item-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  font-size: 0.8125rem;
+  color: var(--cor-texto-forte);
+}
+
+.tela-chamados__item-data {
+  font-size: 0.6875rem;
+  color: var(--cor-texto-mudo);
+  flex-shrink: 0;
+}
+
+.tela-chamados__item-assunto {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tela-chamados__item-curso {
+  font-size: 0.75rem;
+  color: var(--cor-texto-mudo);
+}
+
+.tela-chamados__detalhe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  padding: var(--espaco-lg);
+  overflow-y: auto;
+}
+
+.tela-chamados__detalhe-vazio {
+  margin: auto;
+}
+
+.tela-chamados__voltar-mobile {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tela-chamados__detalhe-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  padding-bottom: var(--espaco-md);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.tela-chamados__detalhe-cabecalho h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.tela-chamados__detalhe-cabecalho p {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+}
+
+.tela-chamados__destino {
+  font-size: 0.8125rem;
+  color: var(--cor-texto-mudo);
+  font-style: italic;
+}
+
+.tela-chamados__resumo h4,
+.tela-chamados__conversa h4 {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+  margin-bottom: var(--espaco-xs);
+}
+
+.tela-chamados__resumo p {
+  font-size: 0.875rem;
+  color: var(--cor-texto-suave);
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--espaco-sm) var(--espaco-md);
+}
+
+.tela-chamados__mensagens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.tela-chamados__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  padding-top: var(--espaco-md);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.tela-chamados__responder {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--espaco-sm);
+}
+
+.tela-chamados__responder textarea {
+  flex: 1;
+  resize: vertical;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  color: var(--cor-texto-forte);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.cartao-assistente-admin {
+  padding: var(--espaco-md) var(--espaco-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+}
+
+.cartao-assistente-admin__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  flex-wrap: wrap;
+}
+
+.cartao-assistente-admin__cabecalho h3 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.cartao-assistente-admin__interruptor {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-xs);
+  font-size: 0.8125rem;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.cartao-assistente-admin__corpo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--espaco-xl);
+}
+
+.cartao-assistente-admin__teto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-xs);
+}
+
+.cartao-assistente-admin__teto label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cor-texto-suave);
+}
+
+.cartao-assistente-admin__teto-campo {
+  display: flex;
+  gap: var(--espaco-sm);
+}
+
+.cartao-assistente-admin__teto-campo input {
+  width: 7rem;
+  background: var(--cor-fundo-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  color: var(--cor-texto-forte);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.875rem;
+}
+
+.cartao-assistente-admin__estatisticas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-xl);
+}
+
+.cartao-assistente-admin__estatisticas dt {
+  font-size: 0.6875rem;
+  color: var(--cor-texto-mudo);
+}
+
+.cartao-assistente-admin__estatisticas dd {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+@media (max-width: 900px) {
+  .tela-chamados__corpo {
+    grid-template-columns: 1fr;
+  }
+
+  .tela-chamados__lista {
+    border-right: none;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  .tela-chamados__corpo--detalhe-ativa .tela-chamados__lista {
+    display: none;
+  }
+
+  .tela-chamados__corpo:not(.tela-chamados__corpo--detalhe-ativa) .tela-chamados__detalhe {
+    display: none;
+  }
+
+  .tela-chamados__voltar-mobile {
+    display: flex;
   }
 }

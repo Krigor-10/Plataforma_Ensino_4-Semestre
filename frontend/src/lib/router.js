@@ -28,6 +28,12 @@ export function readRoute(pathname = window.location.pathname) {
     return { kind: "verificar", codigo: segments[1] || "" };
   }
 
+  // Link das notificacoes de chamado de suporte (sino) - hoje so o Aluno tem
+  // onde mostrar isso (painel do Assistente CodeRyse); ver App.jsx.
+  if (segments[0] === "chamados") {
+    return { kind: "chamado", chamadoId: segments[1] || null };
+  }
+
   if (segments[0] === "app") {
     return {
       kind: "app",

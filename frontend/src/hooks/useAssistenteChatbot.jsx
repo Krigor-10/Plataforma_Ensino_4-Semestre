@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import BotaoAssistente from "../components/chatbot/BotaoAssistente.jsx";
 import PainelAssistente from "../components/chatbot/PainelAssistente.jsx";
 
@@ -11,7 +11,15 @@ const AssistenteChatbotContext = createContext(null);
  * useAssistenteChatbot() direto, sem precisar receber callback por prop
  * descendo por WorkspaceScreen/LayoutWorkspace.
  */
-export function AssistenteChatbotProvider({ children, ativo, contexto, onNavigate }) {
+export function AssistenteChatbotProvider({
+  children,
+  ativo,
+  contexto,
+  onNavigate,
+  usuarioId = null,
+  chamadoInicialId = null,
+  onChamadoInicialConsumido
+}) {
   const [aberto, setAberto] = useState(false);
   const [perguntaInicial, setPerguntaInicial] = useState(null);
 
@@ -19,6 +27,13 @@ export function AssistenteChatbotProvider({ children, ativo, contexto, onNavigat
     setAberto(true);
     setPerguntaInicial({ texto, chave: Date.now() });
   }, []);
+
+  // Notificacao de chamado ("/chamados/:id", ver App.jsx) chega aqui como
+  // prop (fora da arvore de quem chama perguntarAoAssistente) - abre o
+  // painel sozinha, sem precisar de um clique do aluno.
+  useEffect(() => {
+    if (chamadoInicialId) setAberto(true);
+  }, [chamadoInicialId]);
 
   const valorContexto = useMemo(() => ({ perguntarAoAssistente }), [perguntarAoAssistente]);
 
@@ -34,6 +49,9 @@ export function AssistenteChatbotProvider({ children, ativo, contexto, onNavigat
             contexto={contexto}
             onNavigate={onNavigate}
             perguntaInicial={perguntaInicial}
+            usuarioId={usuarioId}
+            chamadoInicialId={chamadoInicialId}
+            onChamadoInicialConsumido={onChamadoInicialConsumido}
           />
         </>
       ) : null}

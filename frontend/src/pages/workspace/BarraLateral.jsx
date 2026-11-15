@@ -7,7 +7,7 @@
    ============================================================ */
 import { useState, useEffect } from "react";
 import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
-import { TbBook, TbUserFilled } from "react-icons/tb";
+import { TbBook, TbHeadset, TbUserFilled } from "react-icons/tb";
 import {
   MdDashboard,
   MdSchool,
@@ -39,6 +39,7 @@ const ICONES_SECAO = {
   professores: <MdCastForEducation size={18} />,
   coordenadores: <MdManageAccounts size={18} />,
   cursos: <TbBook size={18} />,
+  chamados: <TbHeadset size={18} />,
   turmas: <MdGroups size={18} />,
   matriculas: <MdAssignment size={18} />,
   avaliacoes: <MdAssignmentTurnedIn size={18} />,
@@ -75,6 +76,7 @@ export default function BarraLateral({
   onNavigate,
   onAbrirPerfil,
   onLogoutClick,
+  contadorChamadosAbertos = 0,
 }) {
   function irPara(chave) {
     onNavigate(chave === "dashboard" ? "/app" : `/app/${chave}`);
@@ -236,6 +238,9 @@ export default function BarraLateral({
                   >
                     <span className="sidebar__item-icone" aria-hidden="true">
                       {ICONES_SECAO[item.key]}
+                      {item.key === "chamados" && contadorChamadosAbertos > 0 ? (
+                        <span className="sidebar__badge">{contadorChamadosAbertos > 99 ? "99+" : contadorChamadosAbertos}</span>
+                      ) : null}
                     </span>
                     <span className="sidebar__item-rotulo">{item.label}</span>
                   </button>

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { AssistenteChatbotProvider, useAssistenteChatbot } from "./useAssistenteChatbot.jsx";
+import { ToastProvider } from "./useToast.jsx";
 import { enviarMensagemChatbotStream, obterConversaAtualChatbot } from "../lib/chatbotApi.js";
 
 vi.mock("../lib/chatbotApi.js", () => ({
@@ -57,13 +58,15 @@ describe("AssistenteChatbotProvider / useAssistenteChatbot", () => {
     });
 
     render(
-      <AssistenteChatbotProvider
-        ativo
-        contexto={{ tela: "avaliacoes", cursoId: 10, cursoTitulo: null }}
-        onNavigate={vi.fn()}
-      >
-        <ConsumidorComPergunta pergunta="Por que não consigo fazer a Prova final?" />
-      </AssistenteChatbotProvider>
+      <ToastProvider>
+        <AssistenteChatbotProvider
+          ativo
+          contexto={{ tela: "avaliacoes", cursoId: 10, cursoTitulo: null }}
+          onNavigate={vi.fn()}
+        >
+          <ConsumidorComPergunta pergunta="Por que não consigo fazer a Prova final?" />
+        </AssistenteChatbotProvider>
+      </ToastProvider>
     );
 
     await userEvent.setup().click(screen.getByRole("button", { name: "Perguntar" }));

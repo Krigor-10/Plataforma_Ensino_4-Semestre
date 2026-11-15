@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { TbAlertTriangle, TbSend2, TbThumbDown, TbThumbDownFilled, TbThumbUp, TbThumbUpFilled, TbX } from "react-icons/tb";
 import Botao from "../Botao.jsx";
+import AbaMeusChamados from "./AbaMeusChamados.jsx";
+import FormularioChamado from "./FormularioChamado.jsx";
+import { useToast } from "../../hooks/useToast.jsx";
 import { enviarFeedbackMensagemChatbot, enviarMensagemChatbotStream, obterConversaAtualChatbot } from "../../lib/chatbotApi.js";
 
 const LIMITE_CARACTERES_PERGUNTA = 1000;
@@ -26,7 +29,16 @@ function renderizarTextoComNegrito(texto) {
   );
 }
 
-export default function PainelAssistente({ aberto, onFechar, contexto, onNavigate, perguntaInicial = null }) {
+export default function PainelAssistente({
+  aberto,
+  onFechar,
+  contexto,
+  onNavigate,
+  perguntaInicial = null,
+  usuarioId = null,
+  chamadoInicialId = null,
+  onChamadoInicialConsumido
+}) {
   const [mensagens, setMensagens] = useState([]);
   const [conversaId, setConversaId] = useState(null);
   const [carregandoHistorico, setCarregandoHistorico] = useState(true);
@@ -35,9 +47,13 @@ export default function PainelAssistente({ aberto, onFechar, contexto, onNavigat
   const [enviando, setEnviando] = useState(false);
   const [erroEnvio, setErroEnvio] = useState(null);
   const [indisponibilidade, setIndisponibilidade] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState("conversa");
+  const [mostrandoFormularioChamado, setMostrandoFormularioChamado] = useState(false);
+  const [chamadoParaFocar, setChamadoParaFocar] = useState(null);
   const refListaMensagens = useRef(null);
   const refUltimaPerguntaComErro = useRef("");
   const refUltimaChaveAutoEnviada = useRef(null);
+  const { mostrarToast } = useToast();
 
   useEffect(() => {
     if (!aberto || jaCarregouHistorico) return;
@@ -78,6 +94,25 @@ export default function PainelAssistente({ aberto, onFechar, contexto, onNavigat
     enviarPergunta(perguntaInicial.texto);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [perguntaInicial, jaCarregouHistorico]);
+
+  // Notificacao de chamado ("/chamados/:id") abre o painel direto na aba e
+  // no chamado certos - ver App.jsx/useAssistenteChatbot.jsx.
+  useEffect(() => {
+    if (!chamadoInicialId) return;
+
+    setAbaAtiva("chamados");
+    setMostrandoFormularioChamado(false);
+    setChamadoParaFocar(chamadoInicialId);
+    onChamadoInicialConsumido?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chamadoInicialId]);
+
+  function lidarComChamadoCriado(chamado) {
+    setMostrandoFormularioChamado(false);
+    setAbaAtiva("chamados");
+    setChamadoParaFocar(chamado.id);
+    mostrarToast("Chamado aberto. A equipe responde em até 2 dias úteis, pelo sino de notificações.", "sucesso");
+  }
 
   useEffect(() => {
     if (!aberto) return;
@@ -174,21 +209,61 @@ export default function PainelAssistente({ aberto, onFechar, contexto, onNavigat
 
   const mostrarBoasVindas = !carregandoHistorico && !conversaId && mensagens.length === 0;
   const restamCaracteres = LIMITE_CARACTERES_PERGUNTA - textoInput.length;
+  const ultimaPerguntaDoAluno = [...mensagens].reverse().find((mensagem) => mensagem.papel === PAPEL_USUARIO)?.texto || "";
 
   return (
     <aside className="assistente-painel" role="dialog" aria-label="Assistente CodeRyse">
       <header className="assistente-painel__cabecalho">
-        <h2>Assistente CodeRyse</h2>
-        <button
-          type="button"
-          className="assistente-painel__fechar"
-          onClick={onFechar}
-          aria-label="Fechar"
-        >
-          <TbX aria-hidden="true" size={20} />
-        </button>
+        <div className="assistente-painel__cabecalho-topo">
+          <h2>Assistente CodeRyse</h2>
+          <button
+            type="button"
+            className="assistente-painel__fechar"
+            onClick={onFechar}
+            aria-label="Fechar"
+          >
+            <TbX aria-hidden="true" size={20} />
+          </button>
+        </div>
+
+        <div className="assistente-painel__abas" role="tablist" aria-label="Seções do Assistente CodeRyse">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaAtiva === "conversa"}
+            className={`assistente-painel__aba${abaAtiva === "conversa" ? " assistente-painel__aba--ativa" : ""}`}
+            onClick={() => setAbaAtiva("conversa")}
+          >
+            Conversa
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={abaAtiva === "chamados"}
+            className={`assistente-painel__aba${abaAtiva === "chamados" ? " assistente-painel__aba--ativa" : ""}`}
+            onClick={() => setAbaAtiva("chamados")}
+          >
+            Meus chamados
+          </button>
+        </div>
       </header>
 
+      {abaAtiva === "chamados" ? (
+        <div className="assistente-painel__mensagens assistente-painel__mensagens--chamados">
+          <AbaMeusChamados usuarioId={usuarioId} chamadoInicialId={chamadoParaFocar} />
+        </div>
+      ) : mostrandoFormularioChamado ? (
+        <div className="assistente-painel__mensagens">
+          <FormularioChamado
+            contexto={contexto}
+            conversaId={conversaId}
+            textoInicial={ultimaPerguntaDoAluno}
+            onCancelar={() => setMostrandoFormularioChamado(false)}
+            onCriado={lidarComChamadoCriado}
+          />
+        </div>
+      ) : (
+      <>
       <div className="assistente-painel__mensagens" ref={refListaMensagens} aria-live="polite">
         {carregandoHistorico ? (
           <p className="assistente-painel__estado">Carregando conversa...</p>
@@ -275,6 +350,13 @@ export default function PainelAssistente({ aberto, onFechar, contexto, onNavigat
         ) : null}
       </div>
 
+      <div className="assistente-painel__rodape-suporte">
+        <span>Não resolveu?</span>
+        <button type="button" onClick={() => setMostrandoFormularioChamado(true)}>
+          Falar com o suporte
+        </button>
+      </div>
+
       <form
         className="assistente-painel__form"
         onSubmit={(evento) => {
@@ -312,6 +394,8 @@ export default function PainelAssistente({ aberto, onFechar, contexto, onNavigat
           <TbSend2 aria-hidden="true" size={18} />
         </button>
       </form>
+      </>
+      )}
     </aside>
   );
 }

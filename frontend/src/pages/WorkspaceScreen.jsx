@@ -10,6 +10,7 @@ import LayoutWorkspace from "./workspace/LayoutWorkspace.jsx";
 import { SecaoAlunos } from "./workspace/SecaoAlunos.jsx";
 import { SecaoAvaliacoesProfessor } from "./workspace/SecaoAvaliacoesProfessor.jsx";
 import { SecaoConteudosProfessor } from "./workspace/SecaoConteudosProfessor.jsx";
+import { SecaoChamados } from "./workspace/SecaoChamados.jsx";
 import { SecaoCoordenadores } from "./workspace/SecaoCoordenadores.jsx";
 import { SecaoCursos } from "./workspace/SecaoCursos.jsx";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./workspace/SecoesAluno.jsx";
@@ -23,6 +24,7 @@ import { DashboardCoordenador } from "./workspace/DashboardCoordenador.jsx";
 import { DashboardProfessor } from "./workspace/DashboardProfessor.jsx";
 import { SecaoCertificados } from "./workspace/SecaoCertificados.jsx";
 import { APP_SECTIONS, getSectionMeta, MANAGER_ROLES, EMPTY_SNAPSHOT } from "../data/appConfig.js";
+import { listarChamadosParaStaff } from "../lib/chamadosApi.js";
 import { hasSnapshotData, loadWorkspaceSnapshot, mapById } from "../lib/dashboard.js";
 import { ApiError } from "../lib/api.js";
 import { formatDate, formatGrade, maskCpf, normalizeStatus, timestampFromApiDate } from "../lib/format.js";
@@ -51,6 +53,25 @@ export default function WorkspaceScreen({
   const isManager = MANAGER_ROLES.has(role);
   const isProfessor = role === "Professor";
   const isStudent = role === "Aluno";
+
+  const [contadorChamadosAbertos, setContadorChamadosAbertos] = useState(0);
+
+  // Independente da secao atual - o contador no menu lateral precisa
+  // atualizar mesmo quando o Admin/Coordenador esta em outra tela.
+  useEffect(() => {
+    if (!isManager) return undefined;
+
+    let ignore = false;
+    listarChamadosParaStaff(1)
+      .then((lista) => {
+        if (!ignore) setContadorChamadosAbertos(lista.length);
+      })
+      .catch(() => {});
+
+    return () => {
+      ignore = true;
+    };
+  }, [isManager, refreshKey]);
 
   const sections = useMemo(
     () =>
@@ -90,7 +111,8 @@ export default function WorkspaceScreen({
     "professores",
     "coordenadores",
     "matriculas",
-    "cursos-matriculados"
+    "cursos-matriculados",
+    "chamados"
   ];
   const ocultarHeroGenerico =
     (isStudent && (activeSection === "conteudos" || activeSection === "avaliacoes" || activeSection === "meus-cursos") && Boolean(route.param)) ||
@@ -545,6 +567,7 @@ export default function WorkspaceScreen({
         onAbrirPerfil={() => setIsProfileOpen(true)}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
         xpAluno={xpAluno}
+        contadorChamadosAbertos={contadorChamadosAbertos}
       >
         {!isDashboard && !ocultarHeroGenerico ? (
           <header className="workspace-hero">
@@ -686,6 +709,17 @@ export default function WorkspaceScreen({
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
                 professores={snapshot.professores}
+              />
+            ) : null}
+
+            {activeSection === "chamados" ? (
+              <SecaoChamados
+                usuario={usuario}
+                ehAdmin={role === "Admin"}
+                coordenadores={snapshot.coordenadores}
+                chamadoIdSelecionado={route.param ? Number(route.param) : null}
+                onRefresh={() => setRefreshKey((current) => current + 1)}
+                onSessionExpired={onSessionExpired}
               />
             ) : null}
 

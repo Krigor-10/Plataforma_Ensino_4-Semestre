@@ -11,6 +11,7 @@ import {
   TbFileText,
   TbCertificate,
   TbTrendingUp,
+  TbHeadset,
 } from "react-icons/tb";
 import { GRUPOS_DEF, FILHO_PARA_GRUPO } from "./BarraLateral.jsx";
 
@@ -20,6 +21,7 @@ const ICONE_COMP = {
   professores: TbChalkboard,
   coordenadores: TbUserCog,
   cursos: TbBook,
+  chamados: TbHeadset,
   modulos: TbStack2,
   turmas: TbUsersGroup,
   matriculas: TbClipboardList,
