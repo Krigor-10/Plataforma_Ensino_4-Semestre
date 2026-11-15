@@ -4,7 +4,7 @@ import { createApiClient, ApiError } from "../../../shared/apiClient.js";
 import { TOKEN_KEY } from "../../../shared/sessionKeys.js";
 import { webStorage } from "./webStorage.js";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "/api/v1").replace(/\/$/, "");
 
 const { apiRequest: apiRequestReal } = createApiClient({ baseUrl: API_BASE_URL, storage: webStorage });
 

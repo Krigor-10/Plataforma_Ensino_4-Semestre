@@ -6,11 +6,15 @@ const ICONE_POR_TIPO = {
   aviso: TbAlertTriangle
 };
 
-export default function Toast({ toasts, onFechar }) {
+export default function Toast({ toasts, onFechar, acimaDoAssistente = false }) {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="toast-container" aria-live="polite" aria-atomic="false">
+    <div
+      className={`toast-container${acimaDoAssistente ? " toast-container--acima-assistente" : ""}`}
+      aria-live="polite"
+      aria-atomic="false"
+    >
       {toasts.map((t) => {
         const Icone = ICONE_POR_TIPO[t.tipo] || TbInfoCircle;
 

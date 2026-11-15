@@ -27,6 +27,7 @@ import {
   TbTrophy,
   TbX
 } from "react-icons/tb";
+import AtalhoAssistente from "../../components/chatbot/AtalhoAssistente.jsx";
 import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -1495,7 +1496,12 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                         {emAndamento ? "Continuar avaliacao" : "Iniciar avaliacao"}
                       </Botao>
                     ) : (
-                      <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
+                      <>
+                        <span className="cartao-avaliacao__bloqueado-info">{disponibilidade.mensagem}</span>
+                        <AtalhoAssistente
+                          pergunta={`Por que não consigo fazer ${avaliacao.titulo}${avaliacao.cursoTitulo ? ` de ${avaliacao.cursoTitulo}` : ""}?`}
+                        />
+                      </>
                     )}
                   </div>
                 </motion.div>

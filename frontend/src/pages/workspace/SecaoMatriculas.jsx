@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TbArrowRight, TbClock, TbCreditCard, TbSearch } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
+import AtalhoAssistente from "../../components/chatbot/AtalhoAssistente.jsx";
 import Botao from "../../components/Botao.jsx";
 import ConfirmacaoCompraModal from "../../components/ConfirmacaoCompraModal.jsx";
 import Insignia from "../../components/Insignia.jsx";
@@ -91,9 +92,12 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
               </p>
             ) : null}
             {temPagamentoPendente ? (
-              <InlineMessage tone="warning">
-                Compra pendente: {formatMoney(matricula.pagamentoValor)}.
-              </InlineMessage>
+              <>
+                <InlineMessage tone="warning">
+                  Compra pendente: {formatMoney(matricula.pagamentoValor)}.
+                </InlineMessage>
+                <AtalhoAssistente pergunta={`Meu pagamento de ${curso.titulo} foi confirmado?`} />
+              </>
             ) : null}
             {compacto && matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
             <footer className="catalogo-card__rodape-aluno">

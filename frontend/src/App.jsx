@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { RouteGate } from "./components/Primitives.jsx";
 import TooltipGlobal from "./components/TooltipGlobal.jsx";
+import { AssistenteChatbotProvider } from "./hooks/useAssistenteChatbot.jsx";
 import { ToastProvider } from "./hooks/useToast.jsx";
 import CadastroScreen from "./pages/CadastroScreen.jsx";
 import EsqueciSenhaScreen from "./pages/EsqueciSenhaScreen.jsx";
@@ -17,6 +18,8 @@ import { apiRequest } from "./lib/api.js";
 import { applyPageMetadata } from "./lib/pageMetadata.js";
 import { navigate, readRoute } from "./lib/router.js";
 import { clearSession, persistSession, readSession } from "./lib/session.js";
+
+const SECOES_COM_CURSO_ABERTO_PARA_ASSISTENTE = new Set(["conteudos", "avaliacoes", "meus-cursos"]);
 
 export default function App() {
   const [route, setRoute] = useState(() => readRoute());
@@ -111,6 +114,15 @@ export default function App() {
 
   const handleSessionExpired = useCallback(() => handleLogout("/login"), [handleLogout]);
 
+  const mostrarAssistente = !isDemoMode && route.kind === "app" && session.user?.tipoUsuario === "Aluno";
+  const contextoAssistente = mostrarAssistente
+    ? {
+        tela: route.section || "dashboard",
+        cursoId: SECOES_COM_CURSO_ABERTO_PARA_ASSISTENTE.has(route.section) && route.param ? Number(route.param) : null,
+        cursoTitulo: null
+      }
+    : null;
+
   let content;
 
   if (!sessionReady && route.kind === "app") {
@@ -167,9 +179,11 @@ export default function App() {
   const chaveLimite = route.kind;
 
   return (
-    <ToastProvider>
-      <ErrorBoundary key={chaveLimite}>{content}</ErrorBoundary>
-      <TooltipGlobal />
+    <ToastProvider temAssistenteAtivo={mostrarAssistente}>
+      <AssistenteChatbotProvider ativo={mostrarAssistente} contexto={contextoAssistente} onNavigate={handleNavigate}>
+        <ErrorBoundary key={chaveLimite}>{content}</ErrorBoundary>
+        <TooltipGlobal />
+      </AssistenteChatbotProvider>
     </ToastProvider>
   );
 }

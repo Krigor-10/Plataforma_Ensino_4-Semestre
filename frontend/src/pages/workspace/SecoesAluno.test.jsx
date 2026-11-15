@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./SecoesAluno.jsx";
+import { AssistenteChatbotProvider } from "../../hooks/useAssistenteChatbot.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
 import { apiRequest } from "../../lib/api.js";
 
@@ -206,14 +207,16 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
   function renderAvaliacoesAluno(avaliacoes) {
     return render(
       <ToastProvider>
-        <SecaoAvaliacoesAluno
-          avaliacoes={avaliacoes}
-          cursoIdSelecionado={CURSO_ID}
-          cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
-          onNavigate={vi.fn()}
-          onRefresh={vi.fn()}
-          onSessionExpired={vi.fn()}
-        />
+        <AssistenteChatbotProvider ativo={false} contexto={null} onNavigate={vi.fn()}>
+          <SecaoAvaliacoesAluno
+            avaliacoes={avaliacoes}
+            cursoIdSelecionado={CURSO_ID}
+            cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
+            onNavigate={vi.fn()}
+            onRefresh={vi.fn()}
+            onSessionExpired={vi.fn()}
+          />
+        </AssistenteChatbotProvider>
       </ToastProvider>
     );
   }
@@ -272,6 +275,7 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
     expect(screen.queryByText("Última nota")).not.toBeInTheDocument();
     expect(screen.getByText(/Conclua todos os conteudos e quizzes do curso/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Iniciar avaliacao/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Por quê\? Pergunte ao assistente/ })).toBeInTheDocument();
   });
 });
 

@@ -13,6 +13,12 @@ namespace PlataformaEnsino.API.Controllers;
 [Authorize]
 public class ChatbotController : ControllerBase
 {
+    // JsonSerializer.Serialize(obj) direto (abaixo) nao usa os JsonOptions
+    // configurados pelo pipeline do MVC (so Response.WriteAsJsonAsync/Ok(...)
+    // usam) - sem isso, os eventos SSE saiam em PascalCase (ex.: "Rota" em vez
+    // de "rota"), inconsistente com o resto da API.
+    private static readonly JsonSerializerOptions OpcoesJsonSse = new(JsonSerializerDefaults.Web);
+
     private readonly IChatbotService _chatbotService;
 
     public ChatbotController(IChatbotService chatbotService)
@@ -107,7 +113,7 @@ public class ChatbotController : ControllerBase
 
     private async Task EscreverEventoSseAsync(string evento, object dados, CancellationToken cancellationToken)
     {
-        await Response.WriteAsync($"event: {evento}\ndata: {JsonSerializer.Serialize(dados)}\n\n", cancellationToken);
+        await Response.WriteAsync($"event: {evento}\ndata: {JsonSerializer.Serialize(dados, OpcoesJsonSse)}\n\n", cancellationToken);
         await Response.Body.FlushAsync(cancellationToken);
     }
 

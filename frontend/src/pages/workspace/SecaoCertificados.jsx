@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { TbAward, TbCertificate, TbDownload, TbEye, TbLock, TbTrophy } from "react-icons/tb";
+import AtalhoAssistente from "../../components/chatbot/AtalhoAssistente.jsx";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
@@ -241,6 +242,7 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                   <span className="item-certificado__nota" style={{ color: "var(--cor-texto-mudo)" }}>
                     {certificado.pendencia || `${formatPercent(certificado.percentual)} concluido`}
                   </span>
+                  <AtalhoAssistente pergunta={`O que falta para eu tirar o certificado de ${certificado.curso}?`} />
                 </div>
               )}
 

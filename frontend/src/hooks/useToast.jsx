@@ -4,7 +4,7 @@ import Toast from "../components/Toast.jsx";
 const ToastContext = createContext(null);
 const DURACAO_PADRAO_MS = 4000;
 
-export function ToastProvider({ children }) {
+export function ToastProvider({ children, temAssistenteAtivo = false }) {
   const [toasts, setToasts] = useState([]);
   const proximoId = useRef(0);
 
@@ -31,7 +31,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={valorContexto}>
       {children}
-      <Toast toasts={toasts} onFechar={fecharToast} />
+      <Toast toasts={toasts} onFechar={fecharToast} acimaDoAssistente={temAssistenteAtivo} />
     </ToastContext.Provider>
   );
 }
