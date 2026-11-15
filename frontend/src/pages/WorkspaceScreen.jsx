@@ -130,14 +130,23 @@ export default function WorkspaceScreen({
       return;
     }
 
+    // Tela do modulo (Admin/Coordenador, docs/fluxo-coordenador/PROMPT-agente-
+    // modulo-tela-propria.md): /app/cursos/:id/modulos/:moduloId e o unico
+    // caso valido de subsecao/subparam hoje - qualquer outra combinacao
+    // continua cortada pro canonico so com section/param, como antes.
+    const temModuloNaRota =
+      activeSection === "cursos" && Boolean(route.param) && route.subsecao === "modulos" && Boolean(route.subparam);
+
     const canonicalPath =
-      activeSection === "dashboard" ? "/app" : `/app/${activeSection}${route.param ? `/${route.param}` : ""}`;
+      activeSection === "dashboard"
+        ? "/app"
+        : `/app/${activeSection}${route.param ? `/${route.param}` : ""}${temModuloNaRota ? `/modulos/${route.subparam}` : ""}`;
     const currentPath = window.location.pathname || "/app";
 
     if (normalizePath(currentPath) !== canonicalPath) {
       onNavigate(canonicalPath, { replace: true });
     }
-  }, [activeSection, onNavigate, role, route.param, route.section]);
+  }, [activeSection, onNavigate, role, route.param, route.section, route.subparam, route.subsecao]);
 
   useBloqueioScroll(Boolean(confirmacaoSessao));
 
