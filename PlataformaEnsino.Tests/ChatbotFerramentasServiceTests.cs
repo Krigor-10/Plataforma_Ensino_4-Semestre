@@ -68,6 +68,29 @@ public class ChatbotFerramentasServiceTests
         return modulo;
     }
 
+    private static ConteudoDidatico CriarConteudoPublicado(PlataformaContext context, int cursoId, int moduloId, string titulo)
+    {
+        var conteudo = new ConteudoDidatico { Titulo = titulo, ModuloId = moduloId, CorpoTexto = "Conteudo de teste." };
+        conteudo.DefinirCurso(cursoId);
+        conteudo.DefinirStatusPublicacao(StatusPublicacao.Publicado);
+        context.ConteudosDidaticos.Add(conteudo);
+        context.SaveChanges();
+        return conteudo;
+    }
+
+    private static void ConcluirConteudo(PlataformaContext context, int matriculaId, ConteudoDidatico conteudo)
+    {
+        context.ProgressosConteudosAlunos.Add(new ProgressoConteudoAluno
+        {
+            MatriculaId = matriculaId,
+            ConteudoDidaticoId = conteudo.Id,
+            ModuloId = conteudo.ModuloId,
+            StatusProgresso = StatusProgressoAprendizagem.Concluido,
+            PercentualConclusao = 100
+        });
+        context.SaveChanges();
+    }
+
     [Fact]
     public async Task ObterMeusCursosAsync_DevolveSoCursosDoAlunoDoToken()
     {
@@ -144,11 +167,9 @@ public class ChatbotFerramentasServiceTests
         var moduloUm = CriarModulo(context, curso.Id, "Modulo 1", new DateTime(2026, 1, 1));
         var moduloDois = CriarModulo(context, curso.Id, "Modulo 2", new DateTime(2026, 1, 2));
 
-        context.ProgressosModulosAlunos.Add(new ProgressoModuloAluno
-        {
-            MatriculaId = matricula.Id, ModuloId = moduloUm.Id, ConteudosConcluidos = 1, TotalConteudos = 2, PercentualConclusao = 50
-        });
-        context.SaveChanges();
+        var conteudoUm = CriarConteudoPublicado(context, curso.Id, moduloUm.Id, "Aula 1");
+        CriarConteudoPublicado(context, curso.Id, moduloUm.Id, "Aula 2");
+        ConcluirConteudo(context, matricula.Id, conteudoUm);
 
         var matriculas = new MatriculaServiceFake(context);
         var service = CriarService(context, matriculas, new AvaliacaoServiceFake());
@@ -158,6 +179,81 @@ public class ChatbotFerramentasServiceTests
         Assert.Equal(2, resultado.Modulos.Count);
         Assert.True(resultado.Modulos[0].Liberado, "O primeiro modulo deve estar sempre liberado.");
         Assert.False(resultado.Modulos[1].Liberado, "O segundo modulo nao deveria liberar com o primeiro so 50% concluido.");
+        Assert.Equal(1, resultado.Modulos[0].ConteudosConcluidos);
+        Assert.Equal(2, resultado.Modulos[0].TotalConteudos);
+        Assert.Equal(new List<string> { "Aula 2" }, resultado.Modulos[0].ConteudosPendentes);
+    }
+
+    [Fact]
+    public async Task ObterProgressoDoCursoAsync_ModuloLiberadoMasNuncaTocado_DevolveTotalRealEmVezDeZero()
+    {
+        // Achado da Rodada 1 da validacao do chatbot: ProgressoModuloAluno so e
+        // criado/recalculado na 1a conclusao de um conteudo daquele modulo - um
+        // modulo liberado (o anterior esta 100%) mas ainda sem nenhuma conclusao
+        // aparecia como "0 de 0" em vez do total real de conteudos publicados.
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context, "A");
+        var curso = CriarCurso(context, "Curso com modulo nunca tocado");
+        var matricula = CriarMatriculaAprovada(context, aluno.Id, curso.Id);
+        var moduloUm = CriarModulo(context, curso.Id, "Modulo 1", new DateTime(2026, 1, 1));
+        var moduloDois = CriarModulo(context, curso.Id, "Modulo 2 - APIs e Autenticacao", new DateTime(2026, 1, 2));
+
+        var conteudoUm = CriarConteudoPublicado(context, curso.Id, moduloUm.Id, "Aula 1");
+        ConcluirConteudo(context, matricula.Id, conteudoUm);
+
+        CriarConteudoPublicado(context, curso.Id, moduloDois.Id, "APIs REST");
+        CriarConteudoPublicado(context, curso.Id, moduloDois.Id, "Autenticacao");
+        // Nenhum ProgressoConteudoAluno criado pro Modulo 2 - aluno nunca tocou nele.
+
+        var matriculas = new MatriculaServiceFake(context);
+        var service = CriarService(context, matriculas, new AvaliacaoServiceFake());
+
+        var resultado = await service.ObterProgressoDoCursoAsync(aluno.Id, curso.Id);
+
+        var moduloDoisDto = resultado.Modulos.Single(modulo => modulo.ModuloId == moduloDois.Id);
+        Assert.True(moduloDoisDto.Liberado, "Modulo 1 esta 100% concluido, Modulo 2 deveria estar liberado.");
+        Assert.Equal(2, moduloDoisDto.TotalConteudos);
+        Assert.Equal(0, moduloDoisDto.ConteudosConcluidos);
+        Assert.Equal(new List<string> { "APIs REST", "Autenticacao" }, moduloDoisDto.ConteudosPendentes);
+    }
+
+    [Fact]
+    public async Task ObterSituacaoAvaliacoesAsync_AvaliacaoBloqueadaPorModulo_ListaConteudosPendentesPeloNome()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context, "A");
+        var curso = CriarCurso(context, "Curso com prova bloqueada");
+        var matricula = CriarMatriculaAprovada(context, aluno.Id, curso.Id);
+        var modulo = CriarModulo(context, curso.Id, "Modulo 3 - APIs e Autenticacao", new DateTime(2026, 1, 1));
+
+        CriarConteudoPublicado(context, curso.Id, modulo.Id, "APIs REST");
+        CriarConteudoPublicado(context, curso.Id, modulo.Id, "Autenticacao");
+        // Nenhum concluido - avaliacao de modulo fica bloqueada.
+
+        var avaliacoesFake = new AvaliacaoServiceFake();
+        avaliacoesFake.Avaliacoes.Add(new AvaliacaoAlunoResponseDto
+        {
+            Id = 10,
+            MatriculaId = matricula.Id,
+            Titulo = "Quiz do Modulo 3",
+            CursoId = curso.Id,
+            ModuloId = modulo.Id,
+            ModuloTitulo = modulo.Titulo,
+            TipoAvaliacao = TipoAvaliacao.Quiz,
+            TentativasPermitidas = 1,
+            ProgressoLiberado = false
+        });
+
+        var matriculas = new MatriculaServiceFake(context);
+        var service = CriarService(context, matriculas, avaliacoesFake);
+
+        var resultado = await service.ObterSituacaoAvaliacoesAsync(aluno.Id, curso.Id);
+
+        var situacao = Assert.Single(resultado);
+        Assert.False(situacao.Liberada);
+        Assert.Equal(new List<string> { "APIs REST", "Autenticacao" }, situacao.ConteudosPendentes);
+        Assert.Contains("APIs REST", situacao.Motivo);
+        Assert.Contains("Autenticacao", situacao.Motivo);
     }
 
     [Fact]

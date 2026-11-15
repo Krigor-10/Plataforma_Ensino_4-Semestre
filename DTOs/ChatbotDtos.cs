@@ -97,6 +97,7 @@ public class ModuloProgressoFerramentaDto
     public decimal PercentualConclusao { get; set; }
     public int ConteudosConcluidos { get; set; }
     public int TotalConteudos { get; set; }
+    public List<string> ConteudosPendentes { get; set; } = new();
 }
 
 public class ProgressoDoCursoFerramentaDto
@@ -112,6 +113,7 @@ public class SituacaoAvaliacaoFerramentaDto
     public string Titulo { get; set; } = string.Empty;
     public bool Liberada { get; set; }
     public string? Motivo { get; set; }
+    public List<string> ConteudosPendentes { get; set; } = new();
     public int TentativasPermitidas { get; set; }
     public int TentativasRealizadas { get; set; }
     public int TentativasRestantes { get; set; }

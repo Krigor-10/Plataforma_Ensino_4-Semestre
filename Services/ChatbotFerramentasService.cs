@@ -96,27 +96,48 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
             .Select(modulo => new { modulo.Id, modulo.Titulo })
             .ToListAsync();
 
-        var progressoModulosPorModuloId = (await _progressoAlunoService.ObterSnapshotAsync(alunoId))
-            .Modulos
-            .Where(progresso => progresso.MatriculaId == matricula.Id)
-            .ToDictionary(progresso => progresso.ModuloId);
+        // Conteudos reais do curso (nao a linha agregada ProgressoModuloAluno,
+        // que so e criada/recalculada na 1a conclusao de um conteudo daquele
+        // modulo - um modulo liberado mas nunca tocado aparecia como "0 de 0"
+        // em vez do total real).
+        var conteudosPorModulo = (await _context.ConteudosDidaticos
+            .AsNoTracking()
+            .Where(conteudo =>
+                conteudo.CursoId == cursoId &&
+                conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
+                conteudo.ExcluidoEm == null)
+            .Select(conteudo => new { conteudo.Id, conteudo.ModuloId, conteudo.Titulo })
+            .ToListAsync())
+            .ToLookup(conteudo => conteudo.ModuloId);
+
+        var concluidosIds = (await _context.ProgressosConteudosAlunos
+            .AsNoTracking()
+            .Where(progresso =>
+                progresso.MatriculaId == matricula.Id &&
+                progresso.StatusProgresso == StatusProgressoAprendizagem.Concluido)
+            .Select(progresso => progresso.ConteudoDidaticoId)
+            .ToListAsync())
+            .ToHashSet();
 
         var modulosDto = new List<ModuloProgressoFerramentaDto>();
         var moduloAnteriorConcluido = true;
         foreach (var modulo in modulosDoCurso)
         {
-            var progresso = progressoModulosPorModuloId.GetValueOrDefault(modulo.Id);
-            var concluidos = progresso?.ConteudosConcluidos ?? 0;
-            var total = progresso?.TotalConteudos ?? 0;
+            var conteudosModulo = conteudosPorModulo[modulo.Id].ToList();
+            var pendentes = conteudosModulo.Where(conteudo => !concluidosIds.Contains(conteudo.Id)).Select(conteudo => conteudo.Titulo).ToList();
+            var total = conteudosModulo.Count;
+            var concluidos = total - pendentes.Count;
+            var percentual = total > 0 ? decimal.Round((decimal)concluidos / total * 100, 2, MidpointRounding.AwayFromZero) : 0;
 
             modulosDto.Add(new ModuloProgressoFerramentaDto
             {
                 ModuloId = modulo.Id,
                 Titulo = modulo.Titulo,
                 Liberado = moduloAnteriorConcluido,
-                PercentualConclusao = progresso?.PercentualConclusao ?? 0,
+                PercentualConclusao = percentual,
                 ConteudosConcluidos = concluidos,
-                TotalConteudos = total
+                TotalConteudos = total,
+                ConteudosPendentes = pendentes
             });
 
             // Mesma regra sequencial de SecoesAluno.jsx: so libera o proximo
@@ -135,32 +156,87 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
 
     public async Task<IReadOnlyList<SituacaoAvaliacaoFerramentaDto>> ObterSituacaoAvaliacoesAsync(int alunoId, int cursoId)
     {
-        await ObterMatriculaDoAlunoNoCursoAsync(alunoId, cursoId);
+        var matricula = await ObterMatriculaDoAlunoNoCursoAsync(alunoId, cursoId);
 
         var avaliacoes = await _avaliacaoService.ListarAvaliacoesPorAlunoAsync(alunoId);
+        var avaliacoesDoCurso = avaliacoes.Where(avaliacao => avaliacao.CursoId == cursoId).ToList();
 
-        return avaliacoes
-            .Where(avaliacao => avaliacao.CursoId == cursoId)
-            .Select(avaliacao => new SituacaoAvaliacaoFerramentaDto
+        var resultado = new List<SituacaoAvaliacaoFerramentaDto>();
+        foreach (var avaliacao in avaliacoesDoCurso)
+        {
+            var pendentes = avaliacao.ProgressoLiberado
+                ? new List<string>()
+                : await ObterTitulosConteudosPendentesAsync(matricula.Id, cursoId, avaliacao.ModuloId);
+
+            resultado.Add(new SituacaoAvaliacaoFerramentaDto
             {
                 AvaliacaoId = avaliacao.Id,
                 Titulo = avaliacao.Titulo,
                 Liberada = avaliacao.ProgressoLiberado,
-                Motivo = avaliacao.ProgressoLiberado ? null : MontarMotivoBloqueio(avaliacao.ModuloId, avaliacao.ModuloTitulo),
+                Motivo = avaliacao.ProgressoLiberado ? null : MontarMotivoBloqueio(avaliacao.ModuloId, avaliacao.ModuloTitulo, pendentes),
+                ConteudosPendentes = pendentes,
                 TentativasPermitidas = avaliacao.TentativasPermitidas,
                 TentativasRealizadas = avaliacao.TentativasRealizadas,
                 TentativasRestantes = avaliacao.TentativasRestantes,
                 Prazo = avaliacao.DataFechamento,
                 UltimaNota = avaliacao.UltimaNota
-            })
-            .ToList();
+            });
+        }
+
+        return resultado;
     }
 
-    private static string MontarMotivoBloqueio(int? moduloId, string moduloTitulo)
+    private static string MontarMotivoBloqueio(int? moduloId, string moduloTitulo, List<string> conteudosPendentes)
     {
+        var listaPendentes = conteudosPendentes.Count > 0 ? $" Falta concluir: {string.Join(", ", conteudosPendentes)}." : string.Empty;
+
         return moduloId.HasValue
-            ? $"Conclua 100% dos conteudos do modulo \"{moduloTitulo}\" para liberar esta avaliacao."
-            : "Conclua 100% dos conteudos do curso e todos os quizzes de modulo para liberar esta avaliacao.";
+            ? $"Conclua 100% dos conteudos do modulo \"{moduloTitulo}\" para liberar esta avaliacao.{listaPendentes}"
+            : $"Conclua 100% dos conteudos do curso e todos os quizzes de modulo para liberar esta avaliacao.{listaPendentes}";
+    }
+
+    /// <summary>
+    /// Titulos dos conteudos publicados ainda nao concluidos pelo aluno - do
+    /// modulo especifico (avaliacao de modulo) ou do curso inteiro (prova/
+    /// exercicio final, moduloId nulo). Usado so quando a avaliacao esta
+    /// bloqueada, pra o assistente poder citar os conteudos pendentes pelo
+    /// nome em vez de so uma contagem agregada.
+    /// </summary>
+    private async Task<List<string>> ObterTitulosConteudosPendentesAsync(int matriculaId, int cursoId, int? moduloId)
+    {
+        var consulta = _context.ConteudosDidaticos
+            .AsNoTracking()
+            .Where(conteudo =>
+                conteudo.CursoId == cursoId &&
+                conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
+                conteudo.ExcluidoEm == null);
+
+        if (moduloId.HasValue)
+        {
+            consulta = consulta.Where(conteudo => conteudo.ModuloId == moduloId.Value);
+        }
+
+        var conteudos = await consulta.Select(conteudo => new { conteudo.Id, conteudo.Titulo }).ToListAsync();
+        if (conteudos.Count == 0)
+        {
+            return new List<string>();
+        }
+
+        var conteudoIds = conteudos.Select(conteudo => conteudo.Id).ToList();
+        var concluidosIds = (await _context.ProgressosConteudosAlunos
+            .AsNoTracking()
+            .Where(progresso =>
+                progresso.MatriculaId == matriculaId &&
+                conteudoIds.Contains(progresso.ConteudoDidaticoId) &&
+                progresso.StatusProgresso == StatusProgressoAprendizagem.Concluido)
+            .Select(progresso => progresso.ConteudoDidaticoId)
+            .ToListAsync())
+            .ToHashSet();
+
+        return conteudos
+            .Where(conteudo => !concluidosIds.Contains(conteudo.Id))
+            .Select(conteudo => conteudo.Titulo)
+            .ToList();
     }
 
     public async Task<SituacaoCertificadoFerramentaDto> ObterSituacaoCertificadoAsync(int alunoId, int cursoId)
