@@ -37,9 +37,8 @@ export function tituloQuizEhGenerico(tituloQuiz, tituloConteudo) {
 const STATUS_PUBLICADO_CONTEUDO = 2;
 
 // Filtra modulos/conteudos/quizzes pro que esta Publicado e descarta modulo
-// vazio - usado tanto pela previa "Visualizar como aluno" (PreviaTrilhaAluno)
-// quanto por "Revisar conteudo" (RevisaoConteudoCurso), que consomem os
-// mesmos dados de GET /Cursos/{id}/revisao-conteudo.
+// vazio - usado pela previa "Visualizar como aluno" (PreviaTrilhaAluno), que
+// consome os mesmos dados de GET /Cursos/{id}/revisao-conteudo.
 export function montarModulosPublicados(modulosDoCurso, conteudosPorModuloId, quizzesPorModuloId) {
   return modulosDoCurso
     .map((modulo, indice) => {

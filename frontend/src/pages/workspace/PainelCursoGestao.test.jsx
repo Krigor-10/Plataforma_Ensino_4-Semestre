@@ -65,6 +65,7 @@ function renderPainel(props = {}) {
         modulos={MODULOS_SNAPSHOT}
         onEditarCurso={vi.fn()}
         onEncerrarCurso={vi.fn()}
+        onNavigate={vi.fn()}
         onReabrirCurso={vi.fn()}
         onRefresh={vi.fn()}
         onSessionExpired={vi.fn()}
@@ -91,7 +92,7 @@ const REVISAO_CONTEUDO = {
       ],
       avaliacoes: [
         {
-          avaliacao: { id: 101, titulo: "Quiz publicado", statusPublicacao: 2, conteudoDidaticoId: null, totalQuestoes: 1 },
+          avaliacao: { id: 101, titulo: "Quiz publicado", tipoAvaliacao: 1, statusPublicacao: 2, conteudoDidaticoId: null, totalQuestoes: 1 },
           questoes: [
             {
               id: 1,
@@ -144,9 +145,10 @@ describe("PainelCursoGestao", () => {
     expect(screen.queryByText("Concluiram")).not.toBeInTheDocument();
   });
 
-  test("modulo conta e lista so quiz nao arquivado - prova vinculada vai pra aba Avaliacoes do curso", async () => {
+  test("modulo conta so quiz nao arquivado e navega pra tela do modulo ao clicar - prova vinculada vai pra aba Avaliacoes do curso", async () => {
     mockApi(DESEMPENHO);
-    const { container } = renderPainel();
+    const onNavigate = vi.fn();
+    const { container } = renderPainel({ onNavigate });
 
     await waitFor(() => expect(container.textContent).toContain("1 conteudo · 1 quiz"));
 
@@ -154,11 +156,7 @@ describe("PainelCursoGestao", () => {
     expect(screen.queryByText("Prova do modulo A")).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Modulo A"));
-
-    await waitFor(() => expect(container.textContent).toContain("Quiz publicado"));
-    expect(screen.getByText("Desempenho medio")).toBeInTheDocument();
-    expect(screen.queryByText("Quiz arquivado")).not.toBeInTheDocument();
-    expect(screen.queryByText("Prova do modulo A")).not.toBeInTheDocument();
+    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/modulos/1");
 
     await userEvent.click(screen.getByRole("tab", { name: /Avaliacoes do curso/ }));
 
@@ -420,49 +418,67 @@ describe("PainelCursoGestao - confirmacao ao encerrar e reabrir curso", () => {
   });
 });
 
-describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () => {
+describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-propria.md)", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  test("botao 'Ver conteudo' abre a previa Somente leitura, sem nenhum botao de editar/publicar/excluir", async () => {
+  test("nao existe mais botao 'Ver conteudo' no topo do curso", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel();
 
     await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
 
-    await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
-
-    const dialog = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
-    expect(within(dialog).getByText("Somente leitura")).toBeInTheDocument();
-    await waitFor(() => expect(within(dialog).getByRole("heading", { name: "Material revisado" })).toBeInTheDocument());
-
-    expect(within(dialog).queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ver conteúdo/ })).not.toBeInTheDocument();
   });
 
-  test("botao 'Ver conteudo' mostra o gabarito do quiz com a alternativa correta marcada", async () => {
+  test("migalha, titulo, KPIs e secoes Conteudos/Quizzes com as metricas do modulo", async () => {
     mockApi(DESEMPENHO);
 
-    renderPainel();
+    renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
-    await userEvent.click(screen.getByRole("button", { name: /Ver conteúdo/ }));
+    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
 
-    const dialog = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
-    await waitFor(() => expect(within(dialog).getByRole("heading", { name: "Material revisado" })).toBeInTheDocument());
+    const migalha = screen.getByRole("navigation", { name: "Caminho até o módulo" });
+    expect(within(migalha).getByRole("button", { name: "Cursos" })).toBeInTheDocument();
+    expect(within(migalha).getByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
+    expect(within(migalha).getByText("Modulo A")).toBeInTheDocument();
 
-    // "Quiz publicado" nao esta vinculado a nenhum material (conteudoDidaticoId
-    // null) - e o 2o item do indice, nao abre sozinho ao carregar a janela.
-    // Escopado no indice (nav) porque o rodape "Proximo: Quiz publicado" tem
-    // o mesmo texto no botao de navegacao.
-    const indice = within(dialog).getByRole("navigation", { name: "Índice do conteúdo" });
-    await userEvent.click(within(indice).getByRole("button", { name: /Quiz publicado/ }));
-    await waitFor(() => expect(within(dialog).getByText("Qual a resposta certa?")).toBeInTheDocument());
+    expect(screen.getByText("Conteúdos (1)")).toBeInTheDocument();
+    expect(screen.getByText("Quizzes (1)")).toBeInTheDocument();
+    expect(screen.getByText("Quiz publicado")).toBeInTheDocument();
+    expect(screen.getByText(/2 alunos concluiram · 50%/)).toBeInTheDocument();
+    expect(screen.getByText(/1 participante · Média -/)).toBeInTheDocument();
+    expect(screen.getByText("60%")).toBeInTheDocument();
+    expect(screen.getByText("Escolha um conteúdo ou quiz para ver aqui.")).toBeInTheDocument();
+  });
 
-    const itemAlternativaCerta = within(dialog).getByText(
+  test("abrir um material mostra Somente leitura, sem nenhum botao de editar/publicar/excluir (Admin e Coordenador)", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ moduloIdSelecionado: 1, perfil: "Admin" });
+
+    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Material revisado"));
+
+    expect(await screen.findByText("Somente leitura")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument();
+  });
+
+  test("abrir o quiz mostra o gabarito com a alternativa correta marcada", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ moduloIdSelecionado: 1 });
+
+    await waitFor(() => expect(screen.getByText("Quiz publicado")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Quiz publicado"));
+
+    await waitFor(() => expect(screen.getByText("Qual a resposta certa?")).toBeInTheDocument());
+
+    const itemAlternativaCerta = screen.getByText(
       (_, element) =>
         element.tagName === "LI" &&
         element.className.includes("revisao-alternativas__item") &&
@@ -471,19 +487,59 @@ describe("PainelCursoGestao - Ver conteudo (fluxo-coordenador Parte 3/3)", () =>
     expect(itemAlternativaCerta).toHaveClass("revisao-alternativas__item--correta");
   });
 
-  test("link 'Revisar conteudo antes de encerrar' troca a confirmacao pela previa", async () => {
+  test("item anterior/proximo andam dentro do modulo, ficam desativados nas pontas, e X fecha o painel", async () => {
     mockApi(DESEMPENHO);
 
-    renderPainel({ curso: { ...CURSO, modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" } });
+    renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
-    await userEvent.click(screen.getByRole("button", { name: /Encerrar curso/ }));
+    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
+    await userEvent.click(screen.getByText("Material revisado"));
 
-    const dialogEncerrar = screen.getByRole("dialog", { name: /Encerrar/ });
-    await userEvent.click(within(dialogEncerrar).getByRole("button", { name: /Revisar conteúdo antes de encerrar/ }));
+    await screen.findByText("Somente leitura");
+    expect(screen.getByRole("button", { name: /Item anterior/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Próximo item/ })).not.toBeDisabled();
 
-    expect(screen.queryByRole("dialog", { name: /Encerrar/ })).not.toBeInTheDocument();
-    const dialogPrevia = await screen.findByRole("dialog", { name: /Revisar conteúdo/ });
-    expect(within(dialogPrevia).getByText("Somente leitura")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Próximo item/ }));
+    expect(await screen.findByRole("heading", { name: "Quiz publicado" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Item anterior/ })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: /Próximo item/ })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(screen.getByText("Escolha um conteúdo ou quiz para ver aqui.")).toBeInTheDocument();
+  });
+
+  test("modulo sem nada publicado mostra o aviso e o rodape de modulo anterior/proximo navega", async () => {
+    mockApi(DESEMPENHO);
+    const onNavigate = vi.fn();
+
+    renderPainel({ moduloIdSelecionado: 2, onNavigate });
+
+    expect(await screen.findByText("Este módulo ainda não tem conteúdo publicado.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Módulo anterior/ })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /Próximo módulo: Modulo A/ }));
+    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/modulos/1");
+  });
+
+  test("moduloId que nao pertence ao curso volta pra lista de modulos (replace)", async () => {
+    mockApi(DESEMPENHO);
+    const onNavigate = vi.fn();
+
+    renderPainel({ moduloIdSelecionado: 999, onNavigate });
+
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10", { replace: true }));
+  });
+
+  test("erro ao carregar o modulo mostra mensagem com 'Tentar de novo'", async () => {
+    apiRequest.mockImplementation((url) => {
+      if (url === "/Cursos/10/desempenho") return Promise.resolve(DESEMPENHO);
+      if (url === "/Cursos/10/revisao-conteudo") return Promise.reject(new Error("Falha ao carregar modulo"));
+      return Promise.resolve([]);
+    });
+
+    renderPainel({ moduloIdSelecionado: 1 });
+
+    expect(await screen.findByText("Falha ao carregar modulo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
   });
 });

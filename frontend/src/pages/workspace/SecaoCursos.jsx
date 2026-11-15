@@ -94,6 +94,7 @@ export function SecaoCursos({
   ehAdmin,
   ehCoordenador,
   matriculas = [],
+  moduloIdSelecionado = null,
   modulos = [],
   onNavigate,
   onRefresh,
@@ -744,11 +745,13 @@ export function SecaoCursos({
         <PainelCursoGestao
           coordenadores={coordenadoresOrdenados}
           curso={cursoSelecionado}
+          moduloIdSelecionado={moduloIdSelecionado}
           modulos={modulos}
           onAlterarFotoCurso={() => abrirModalImagem(cursoSelecionado)}
           onAtribuirCoordenador={() => abrirModalCoordenadorCurso(cursoSelecionado)}
           onEditarCurso={() => abrirModalEdicao(cursoSelecionado)}
           onEncerrarCurso={() => encerrarCurso(cursoSelecionado)}
+          onNavigate={onNavigate}
           onReabrirCurso={() => reabrirCurso(cursoSelecionado)}
           onRefresh={onRefresh}
           onSessionExpired={onSessionExpired}

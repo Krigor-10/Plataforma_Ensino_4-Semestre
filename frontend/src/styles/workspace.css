@@ -8741,255 +8741,238 @@
 }
 
 /* ------------------------------------------------------------
-   REVISAR CONTEÚDO (Admin/Coordenador) — índice + leitura de um
-   item por vez (Opção B aprovada, docs/fluxo-coordenador/
-   revisao-conteudo-opcao-b.png). Mobile first: por padrão (abaixo
-   de 768px) o índice vira um <select> no topo; a partir de 768px
-   vira a coluna fixa à esquerda com rolagem própria.
+   TELA DO MODULO (Admin/Coordenador) — migalha + KPIs + secoes
+   "Conteudos"/"Quizzes" do modulo, com o item aberto num painel ao
+   lado (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-propria.md,
+   fluxo-modulos-drilldown.png - substitui a janela "Revisar
+   conteudo"). Mobile first: abaixo de 900px a lista ocupa a tela
+   inteira e abrir um item troca pro painel em tela cheia; a partir
+   de 900px os dois ficam lado a lado, cada um com rolagem propria.
    ------------------------------------------------------------ */
-.modal-caixa--revisao-conteudo {
-  width: min(640px, 94vw);
-  max-width: min(640px, 94vw);
-}
-
-.revisao-conteudo__resumo {
-  font-size: 0.8rem;
-  color: var(--cor-texto-suave);
-  white-space: nowrap;
-}
-
-.revisao-conteudo__filtro-quizzes {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-shrink: 0;
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--raio-circular);
-  border: 1px solid var(--cor-borda);
-  background: var(--cor-fundo-alt);
-  color: var(--cor-texto-suave);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.revisao-conteudo__filtro-quizzes--ativo {
-  border-color: var(--cor-marca);
-  color: var(--cor-marca-clara);
-  background: color-mix(in srgb, var(--cor-marca) 12%, transparent);
-}
-
-.revisao-conteudo__corpo {
+.modulo-gestao {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-lg);
 }
 
-.revisao-conteudo__indice {
-  display: none;
-}
-
-.revisao-conteudo__indice-mobile select {
-  width: 100%;
-  background: var(--cor-fundo-alt);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  color: var(--cor-texto-forte);
-  padding: 0.6rem 0.75rem;
-  font-size: 0.9rem;
-}
-
-.revisao-conteudo__grupo-modulo {
+.modulo-gestao__migalha {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--cor-texto-mudo);
 }
 
-.revisao-conteudo__modulo-titulo {
+.modulo-gestao__migalha button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--cor-marca-clara);
+  cursor: pointer;
+}
+
+.modulo-gestao__migalha button:hover {
+  text-decoration: underline;
+}
+
+.modulo-gestao__migalha [aria-current="page"] {
+  color: var(--cor-texto-forte);
+  font-weight: 600;
+}
+
+.modulo-gestao__titulo {
   display: flex;
   align-items: center;
-  gap: var(--espaco-xs);
-  margin: var(--espaco-sm) 0 var(--espaco-xs);
-  font-size: 0.75rem;
+  gap: var(--espaco-sm);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__secao-titulo {
+  margin: var(--espaco-md) 0 var(--espaco-xs);
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--cor-texto-mudo);
 }
 
-.revisao-conteudo__grupo-modulo:first-child .revisao-conteudo__modulo-titulo {
-  margin-top: 0;
-}
-
-.revisao-conteudo__modulo-numero {
-  flex-shrink: 0;
-}
-
-.revisao-conteudo__item-indice {
+.modulo-gestao__corpo {
   display: flex;
-  align-items: center;
-  gap: var(--espaco-sm);
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: var(--raio-md);
-  padding: 0.5rem 0.65rem;
-  cursor: pointer;
-  color: var(--cor-texto-suave);
+  flex-direction: column;
+  gap: var(--espaco-lg);
 }
 
-.revisao-conteudo__item-indice:hover {
+.modulo-gestao__lista {
+  display: block;
+  min-width: 0;
+}
+
+.modulo-gestao__painel {
+  display: none;
+  min-width: 0;
+  padding: var(--espaco-md);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
   background: var(--cor-fundo-alt);
 }
 
-.revisao-conteudo__item-indice--ativo {
-  background: color-mix(in srgb, var(--cor-marca) 14%, transparent);
-  border-color: var(--cor-marca);
-  color: var(--cor-texto-forte);
-  font-weight: 600;
+.modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
+  display: none;
 }
 
-.revisao-conteudo__item-indice-icone {
+.modulo-gestao__corpo--item-aberto .modulo-gestao__painel {
+  display: block;
+}
+
+.modulo-gestao__painel-topo {
   display: flex;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-sm);
 }
 
-.revisao-conteudo__item-indice-titulo {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.modulo-gestao__voltar-painel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cor-marca-clara);
+  cursor: pointer;
 }
 
-.revisao-conteudo__item-indice-contagem {
+.modulo-gestao__fechar-painel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   flex-shrink: 0;
-  font-size: 0.7rem;
-  color: var(--cor-texto-mudo);
+  margin-left: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
 }
 
-.revisao-conteudo__leitura {
+.modulo-gestao__fechar-painel:hover {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.modulo-gestao__painel-rodape {
+  justify-content: space-between !important;
+  width: 100%;
+  margin-top: var(--espaco-md);
+}
+
+.modulo-gestao__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+@media (min-width: 900px) {
+  .modulo-gestao__corpo {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .modulo-gestao__lista,
+  .modulo-gestao__painel {
+    flex: 1;
+    min-width: 0;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
+    display: block;
+  }
+
+  .modulo-gestao__voltar-painel {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------
+   LEITURA DE UM ITEM (material ou quiz) — components/
+   LeituraItemConteudo.jsx, reaproveitado pelo painel lateral da
+   tela do modulo acima.
+   ------------------------------------------------------------ */
+.leitura-item {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-sm);
 }
 
-.revisao-conteudo__trilha {
+.leitura-item__trilha {
   font-size: 0.75rem;
   color: var(--cor-texto-mudo);
 }
 
-.revisao-conteudo__titulo-item {
+.leitura-item__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.leitura-item__titulo {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
 }
 
-.revisao-conteudo__material {
+.leitura-item__material {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-xs);
 }
 
-.revisao-conteudo__material-tipo {
+.leitura-item__material-tipo {
   font-size: 0.78rem;
   color: var(--cor-texto-mudo);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.revisao-conteudo__material-descricao {
+.leitura-item__material-descricao {
   font-size: 0.9rem;
   color: var(--cor-texto-suave);
   line-height: 1.6;
 }
 
-.revisao-conteudo__abrir-arquivo {
+.leitura-item__abrir-arquivo {
   align-self: flex-start;
   margin-top: var(--espaco-xs);
   padding: 0.5rem 1rem;
   border-radius: var(--raio-md);
   border: 1px solid var(--cor-borda);
-  background: var(--cor-fundo-alt);
+  background: var(--cor-fundo-elevado);
   color: var(--cor-texto-forte);
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
 }
 
-.revisao-conteudo__abrir-arquivo:hover {
+.leitura-item__abrir-arquivo:hover {
   border-color: var(--cor-marca);
   color: var(--cor-marca-clara);
 }
 
-.revisao-conteudo__quiz-cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
-  flex-wrap: wrap;
-}
-
-.revisao-conteudo__quiz-contagem {
-  flex-shrink: 0;
+.leitura-item__quiz-contagem {
   font-size: 0.8rem;
   color: var(--cor-texto-mudo);
-}
-
-.revisao-conteudo__rodape {
-  justify-content: space-between !important;
-  width: 100%;
-}
-
-.revisao-conteudo__botao-navegacao {
-  max-width: 48%;
-}
-
-.revisao-conteudo__botao-navegacao-texto {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-@media (max-width: 480px) {
-  .revisao-conteudo__resumo {
-    display: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .modal-caixa--revisao-conteudo {
-    width: min(1200px, 94vw);
-    max-width: min(1200px, 94vw);
-    height: min(88vh, 90dvh);
-    max-height: min(88vh, 90dvh);
-  }
-
-  .revisao-conteudo__corpo {
-    flex-direction: row;
-    height: 100%;
-    overflow: hidden;
-  }
-
-  .revisao-conteudo__indice {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    padding-right: var(--espaco-md);
-    border-right: 1px solid var(--cor-borda);
-  }
-
-  .revisao-conteudo__indice-mobile {
-    display: none;
-  }
-
-  .revisao-conteudo__leitura {
-    flex: 1;
-    overflow-y: auto;
-    padding-left: var(--espaco-lg);
-  }
 }

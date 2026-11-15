@@ -1,3 +1,5 @@
+> **SUBSTITUÍDO em 2026-11-15.** Este prompt foi aplicado no commit `b02021c`. Depois, o usuário aprovou outro fluxo, o módulo em tela própria com a leitura num painel ao lado (`fluxo-modulos-drilldown.png`), que tira o "Ver conteúdo". Usar `PROMPT-agente-modulo-tela-propria.md`.
+
 # Prompt — "Ver conteúdo" (Admin/Coordenador): índice lateral e leitura de um item por vez (só frontend web)
 
 ## Contexto

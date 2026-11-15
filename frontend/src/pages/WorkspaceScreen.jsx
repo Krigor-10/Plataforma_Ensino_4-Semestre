@@ -704,6 +704,7 @@ export default function WorkspaceScreen({
                 ehAdmin={role === "Admin"}
                 ehCoordenador={role === "Coordenador"}
                 matriculas={snapshot.matriculas}
+                moduloIdSelecionado={route.subsecao === "modulos" && route.subparam ? Number(route.subparam) : null}
                 modulos={snapshot.modulos}
                 onNavigate={onNavigate}
                 onRefresh={() => setRefreshKey((current) => current + 1)}

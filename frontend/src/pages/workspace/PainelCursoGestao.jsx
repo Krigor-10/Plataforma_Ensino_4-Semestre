@@ -8,9 +8,9 @@ import {
   TbCertificate,
   TbChartBar,
   TbChevronDown,
+  TbChevronRight,
   TbCircleCheck,
   TbDotsVertical,
-  TbEye,
   TbInfoCircle,
   TbLock,
   TbLockOpen,
@@ -26,14 +26,13 @@ import BlocoProfessoresCurso from "../../components/BlocoProfessoresCurso.jsx";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
-import DetalheModuloDesempenho from "../../components/DetalheModuloDesempenho.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
-import RevisaoConteudoCurso from "../../components/RevisaoConteudoCurso.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import TelaModuloGestao from "./TelaModuloGestao.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useProfessoresCurso } from "../../hooks/useProfessoresCurso.js";
@@ -74,11 +73,13 @@ function ordenarPorCriacao(moduloA, moduloB) {
 export default function PainelCursoGestao({
   coordenadores = [],
   curso,
+  moduloIdSelecionado = null,
   modulos,
   onAlterarFotoCurso,
   onAtribuirCoordenador,
   onEditarCurso,
   onEncerrarCurso,
+  onNavigate,
   onReabrirCurso,
   onRefresh,
   onSessionExpired,
@@ -90,17 +91,15 @@ export default function PainelCursoGestao({
   const ehAdmin = perfil === "Admin";
   const { mostrarToast } = useToast();
   const [desempenho, setDesempenho] = useState(null);
-  const [carregandoDesempenho, setCarregandoDesempenho] = useState(true);
   const [erroDesempenho, setErroDesempenho] = useState("");
   const [tentativaRecarga, setTentativaRecarga] = useState(0);
-  const [moduloAbertoId, setModuloAbertoId] = useState(null);
   const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
   const [modalPrepararVendaAberto, setModalPrepararVendaAberto] = useState(false);
-  const [previaConteudoAberta, setPreviaConteudoAberta] = useState(false);
   const [revisaoConteudo, setRevisaoConteudo] = useState(null);
+  const [carregandoRevisaoConteudo, setCarregandoRevisaoConteudo] = useState(false);
   const [erroRevisaoConteudo, setErroRevisaoConteudo] = useState("");
   const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
   const [confirmandoReabrir, setConfirmandoReabrir] = useState(false);
@@ -110,7 +109,6 @@ export default function PainelCursoGestao({
 
   useEffect(() => {
     let ativo = true;
-    setCarregandoDesempenho(true);
     setErroDesempenho("");
 
     apiRequest(`/Cursos/${curso.id}/desempenho`)
@@ -130,11 +128,6 @@ export default function PainelCursoGestao({
         }
 
         setErroDesempenho(err.message || "Nao foi possivel carregar o desempenho do curso agora.");
-      })
-      .finally(() => {
-        if (ativo) {
-          setCarregandoDesempenho(false);
-        }
       });
 
     return () => {
@@ -189,13 +182,14 @@ export default function PainelCursoGestao({
 
   const professoresCurso = useProfessoresCurso({ cursoId: curso.id, mostrarToast, onRefresh, onSessionExpired, professores });
 
-  // Fluxo-coordenador Parte 3/3 ("Ver conteudo"): abre a mesma previa
-  // estrutural que o Professor usa ("Visualizar como aluno" em
-  // SecaoConteudosProfessor.jsx), so leitura, alimentada por
-  // GET /Cursos/{id}/revisao-conteudo (so traz o que esta Publicado).
-  function abrirPreviaConteudo() {
-    setPreviaConteudoAberta(true);
-    setRevisaoConteudo(null);
+  // Tela do modulo (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-propria.md):
+  // a lista de conteudos/quizzes de cada modulo vem de GET /Cursos/{id}/
+  // revisao-conteudo (so traz o que esta Publicado, ja com as questoes pro
+  // gabarito) - carregada so quando o Admin/Coordenador entra num modulo pela
+  // primeira vez (nao no curso inteiro) e reaproveitada enquanto o curso
+  // continuar aberto, mesmo trocando de modulo.
+  function carregarRevisaoConteudo() {
+    setCarregandoRevisaoConteudo(true);
     setErroRevisaoConteudo("");
 
     apiRequest(`/Cursos/${curso.id}/revisao-conteudo`)
@@ -206,54 +200,40 @@ export default function PainelCursoGestao({
           return;
         }
 
-        setErroRevisaoConteudo(err.message || "Nao foi possivel carregar o conteudo do curso agora.");
-      });
+        setErroRevisaoConteudo(err.message || "Nao foi possivel carregar o conteudo do modulo agora.");
+      })
+      .finally(() => setCarregandoRevisaoConteudo(false));
   }
 
-  function fecharPreviaConteudo() {
-    setPreviaConteudoAberta(false);
-  }
+  useEffect(() => {
+    setRevisaoConteudo(null);
+    setErroRevisaoConteudo("");
+    setCarregandoRevisaoConteudo(false);
+  }, [curso.id]);
 
-  const estadoPreviaConteudo = useMemo(() => {
-    if (!revisaoConteudo) {
-      return null;
+  useEffect(() => {
+    if (!moduloIdSelecionado || revisaoConteudo || carregandoRevisaoConteudo || erroRevisaoConteudo) {
+      return;
     }
 
-    const conteudosPorModuloId = new Map();
-    const quizPorConteudoId = new Map();
-    const quizzesPorModuloId = new Map();
-    const questoesPorAvaliacaoId = new Map();
+    carregarRevisaoConteudo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduloIdSelecionado, revisaoConteudo, carregandoRevisaoConteudo, erroRevisaoConteudo]);
 
-    revisaoConteudo.modulos.forEach((modulo) => {
-      conteudosPorModuloId.set(modulo.id, modulo.conteudos);
+  // moduloId que nao pertence a este curso (ou nao existe mais): volta pra
+  // lista de modulos, igual ja acontece com um cursoId invalido em
+  // SecaoCursos.jsx.
+  useEffect(() => {
+    if (!moduloIdSelecionado) {
+      return;
+    }
 
-      const quizzesSoltosDoModulo = [];
-      modulo.avaliacoes.forEach((item) => {
-        const quizResumo = {
-          id: item.avaliacao.id,
-          titulo: item.avaliacao.titulo,
-          statusPublicacao: item.avaliacao.statusPublicacao,
-          totalQuestoes: item.avaliacao.totalQuestoes
-        };
-        questoesPorAvaliacaoId.set(item.avaliacao.id, item.questoes);
+    if (modulosOrdenados.some((modulo) => modulo.id === moduloIdSelecionado)) {
+      return;
+    }
 
-        if (item.avaliacao.conteudoDidaticoId) {
-          quizPorConteudoId.set(item.avaliacao.conteudoDidaticoId, quizResumo);
-        } else {
-          quizzesSoltosDoModulo.push(quizResumo);
-        }
-      });
-      quizzesPorModuloId.set(modulo.id, quizzesSoltosDoModulo);
-    });
-
-    return {
-      conteudosPorModuloId,
-      modulosDoCurso: revisaoConteudo.modulos.map((modulo) => ({ id: modulo.id, titulo: modulo.titulo })),
-      quizPorConteudoId,
-      quizzesPorModuloId,
-      questoesPorAvaliacaoId
-    };
-  }, [revisaoConteudo]);
+    onNavigate?.(`/app/cursos/${curso.id}`, { replace: true });
+  }, [curso.id, moduloIdSelecionado, modulosOrdenados, onNavigate]);
 
   useEffect(() => {
     if (menuAbertoId === null) {
@@ -275,10 +255,6 @@ export default function PainelCursoGestao({
       document.removeEventListener("keydown", fechar);
     };
   }, [menuAbertoId]);
-
-  function alternarModulo(moduloId) {
-    setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
-  }
 
   function alternarAvaliacaoDoCurso(avaliacaoId) {
     setAvaliacaoAbertaId((atual) => (atual === avaliacaoId ? null : avaliacaoId));
@@ -306,15 +282,6 @@ export default function PainelCursoGestao({
     await onReabrirCurso();
     setProcessandoConfirmacaoCiclo(false);
     setConfirmandoReabrir(false);
-  }
-
-  // Link "Revisar conteudo antes de encerrar" (fluxo-coordenador Parte 3/3):
-  // troca a confirmacao de encerramento pela previa, em vez de abrir os dois
-  // modais ao mesmo tempo (Modal.jsx usa id fixo "modal-titulo" e um unico
-  // focus-trap/Escape por instancia - dois abertos juntos colidiriam).
-  function revisarConteudoAntesDeEncerrar() {
-    setConfirmandoEncerrar(false);
-    abrirPreviaConteudo();
   }
 
   function fecharConfirmacaoEncerrar() {
@@ -349,6 +316,29 @@ export default function PainelCursoGestao({
   const podeGerenciarVenda = ehAdmin && (ehPagoPacote || (ehGratuito && Boolean(curso.encerradoEm)));
   const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
   const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
+
+  // Tela do modulo (Admin/Coordenador) substitui o conteudo normal do curso
+  // enquanto houver moduloIdSelecionado - se o id nao pertencer a este curso,
+  // o useEffect acima ja disparou a navegacao de volta pra lista de modulos.
+  if (moduloIdSelecionado) {
+    if (!modulosOrdenados.some((modulo) => modulo.id === moduloIdSelecionado)) {
+      return null;
+    }
+
+    return (
+      <TelaModuloGestao
+        curso={curso}
+        desempenho={desempenho}
+        erroRevisaoConteudo={erroRevisaoConteudo}
+        moduloId={moduloIdSelecionado}
+        modulosOrdenados={modulosOrdenados}
+        onNavigate={onNavigate}
+        onTentarNovamenteRevisaoConteudo={carregarRevisaoConteudo}
+        revisaoConteudo={revisaoConteudo}
+        revisaoConteudoCarregando={carregandoRevisaoConteudo}
+      />
+    );
+  }
 
   return (
     <div className="conteudos-aluno">
@@ -386,9 +376,6 @@ export default function PainelCursoGestao({
             ) : null}
             <Botao onClick={() => setModalProfessoresAberto(true)} tamanho="pequeno" variante="secundario">
               <TbUsers aria-hidden="true" size={16} /> Professores ({professoresCurso.professoresDoCurso.length})
-            </Botao>
-            <Botao onClick={abrirPreviaConteudo} tamanho="pequeno" variante="secundario">
-              <TbEye aria-hidden="true" size={16} /> Ver conteúdo
             </Botao>
             {ehAdmin ? (
               <Botao onClick={onAtribuirCoordenador} tamanho="pequeno" variante={coordenadorDoCurso ? "secundario" : "primario"}>
@@ -469,8 +456,6 @@ export default function PainelCursoGestao({
           ) : (
             <div className="atividades-curso__lista-modulos">
               {modulosOrdenados.map((modulo, indice) => {
-                const aberto = moduloAbertoId === modulo.id;
-                const idDetalhe = `modulo-coordenador-detalhe-${modulo.id}`;
                 const desempenhoModulo = modulosComQuizFiltrado.get(modulo.id) || null;
                 const totalConteudos = desempenhoModulo ? desempenhoModulo.materiais.length : modulo.totalConteudos ?? 0;
                 const totalQuizzes = desempenhoModulo ? desempenhoModulo.avaliacoes.length : modulo.totalAvaliacoes ?? 0;
@@ -480,10 +465,8 @@ export default function PainelCursoGestao({
                     <header className="conteudos-modulo__cabecalho">
                       <h3 className="conteudos-modulo__cabecalho-wrapper">
                         <button
-                          aria-controls={idDetalhe}
-                          aria-expanded={aberto}
                           className="conteudos-modulo__toggle"
-                          onClick={() => alternarModulo(modulo.id)}
+                          onClick={() => onNavigate?.(`/app/cursos/${curso.id}/modulos/${modulo.id}`)}
                           type="button"
                         >
                           <div className="conteudos-modulo__info">
@@ -496,11 +479,7 @@ export default function PainelCursoGestao({
                           <div className="conteudos-modulo__progresso-wrapper" style={{ minWidth: "8rem" }}>
                             {desempenhoModulo ? <BarraProgresso percentual={desempenhoModulo.progressoMedio} /> : <span className="texto-vazio">—</span>}
                           </div>
-                          <TbChevronDown
-                            aria-hidden="true"
-                            className={`conteudos-modulo__chevron${aberto ? " conteudos-modulo__chevron--aberto" : ""}`}
-                            size="1.1rem"
-                          />
+                          <TbChevronRight aria-hidden="true" className="conteudos-modulo__chevron" size="1.1rem" />
                         </button>
                       </h3>
 
@@ -534,29 +513,6 @@ export default function PainelCursoGestao({
                         ) : null}
                       </div>
                     </header>
-
-                    <AnimatePresence initial={false}>
-                      {aberto ? (
-                        <motion.div
-                          animate={{ height: "auto", opacity: 1 }}
-                          className="conteudos-modulo__corpo"
-                          exit={{ height: 0, opacity: 0 }}
-                          id={idDetalhe}
-                          initial={{ height: 0, opacity: 0 }}
-                          key={`detalhe-modulo-coordenador-${modulo.id}`}
-                          style={{ overflow: "hidden" }}
-                          transition={{ duration: 0.24, ease: "easeInOut" }}
-                        >
-                          {desempenhoModulo ? (
-                            <DetalheModuloDesempenho contextoCoordenador modulo={desempenhoModulo} separarGrupos />
-                          ) : (
-                            <p className="texto-vazio" role="status">
-                              {carregandoDesempenho ? "Carregando desempenho do modulo..." : "Nao foi possivel carregar o desempenho deste modulo agora."}
-                            </p>
-                          )}
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
                   </section>
                 );
               })}
@@ -654,28 +610,6 @@ export default function PainelCursoGestao({
         </div>
       )}
 
-      {previaConteudoAberta ? (
-        estadoPreviaConteudo ? (
-          <RevisaoConteudoCurso
-            conteudosPorModuloId={estadoPreviaConteudo.conteudosPorModuloId}
-            cursoTitulo={curso.titulo}
-            modulosDoCurso={estadoPreviaConteudo.modulosDoCurso}
-            onFechar={fecharPreviaConteudo}
-            questoesPorAvaliacaoId={estadoPreviaConteudo.questoesPorAvaliacaoId}
-            quizPorConteudoId={estadoPreviaConteudo.quizPorConteudoId}
-            quizzesPorModuloId={estadoPreviaConteudo.quizzesPorModuloId}
-          />
-        ) : (
-          <Modal onFechar={fecharPreviaConteudo} titulo="Ver conteúdo">
-            {erroRevisaoConteudo ? (
-              <InlineMessage tone="error">{erroRevisaoConteudo}</InlineMessage>
-            ) : (
-              <p className="texto-vazio" role="status">Carregando conteúdo do curso...</p>
-            )}
-          </Modal>
-        )
-      ) : null}
-
       {modalPrepararVendaAberto ? (
         <ModalPrepararVenda
           curso={curso}
@@ -759,12 +693,6 @@ export default function PainelCursoGestao({
               </li>
             ) : null}
           </ul>
-
-          <p style={{ marginTop: 0 }}>
-            <button className="link-botao linha-icone-texto" onClick={revisarConteudoAntesDeEncerrar} type="button">
-              <TbEye aria-hidden="true" size={15} /> Revisar conteúdo antes de encerrar
-            </button>
-          </p>
 
           {ehAcompanhado ? (
             <InlineMessage tone="error">

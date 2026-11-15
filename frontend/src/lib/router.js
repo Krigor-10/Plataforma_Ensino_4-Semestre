@@ -38,7 +38,9 @@ export function readRoute(pathname = window.location.pathname) {
     return {
       kind: "app",
       section: segments[1] || "dashboard",
-      param: segments[2] || null
+      param: segments[2] || null,
+      subsecao: segments[3] || null,
+      subparam: segments[4] || null
     };
   }
 

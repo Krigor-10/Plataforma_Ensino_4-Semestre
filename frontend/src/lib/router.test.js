@@ -17,4 +17,18 @@ describe("readRoute", () => {
   test("link de notificacao de chamado de suporte le o id do segmento", () => {
     expect(readRoute("/chamados/42")).toEqual({ kind: "chamado", chamadoId: "42" });
   });
+
+  test("curso sem modulo selecionado nao traz subsecao/subparam", () => {
+    expect(readRoute("/app/cursos/12")).toEqual({ kind: "app", section: "cursos", param: "12", subsecao: null, subparam: null });
+  });
+
+  test("tela do modulo (Admin/Coordenador) le subsecao e subparam do segmento", () => {
+    expect(readRoute("/app/cursos/12/modulos/34")).toEqual({
+      kind: "app",
+      section: "cursos",
+      param: "12",
+      subsecao: "modulos",
+      subparam: "34"
+    });
+  });
 });
