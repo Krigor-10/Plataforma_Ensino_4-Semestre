@@ -22,12 +22,9 @@ function LeituraMaterial({ conteudo }) {
   );
 }
 
-function LeituraQuiz({ questoes, totalQuestoes }) {
+function LeituraQuiz({ questoes }) {
   return (
     <div className="leitura-item__quiz">
-      <p className="leitura-item__quiz-contagem">
-        {totalQuestoes} {totalQuestoes === 1 ? "questão" : "questões"}
-      </p>
       {questoes && questoes.length > 0 ? <GabaritoQuestoes questoes={questoes} /> : null}
     </div>
   );
@@ -39,7 +36,7 @@ function LeituraQuiz({ questoes, totalQuestoes }) {
    a janela "Revisar conteudo" (docs/fluxo-coordenador/PROMPT-agente-modulo-
    tela-propria.md). `item` segue o mesmo formato de entrada usado la: { tipo:
    "material"|"quiz", titulo, conteudo?, quiz? }. */
-export default function LeituraItemConteudo({ item, moduloIndice, moduloTitulo, questoes }) {
+export default function LeituraItemConteudo({ item, meta, moduloIndice, moduloTitulo, questoes }) {
   return (
     <div className="leitura-item">
       <p className="leitura-item__trilha">
@@ -47,15 +44,14 @@ export default function LeituraItemConteudo({ item, moduloIndice, moduloTitulo, 
       </p>
 
       <div className="leitura-item__cabecalho">
-        <h3 className="leitura-item__titulo">{item.titulo}</h3>
+        <div className="leitura-item__cabecalho-texto">
+          <h3 className="leitura-item__titulo">{item.titulo}</h3>
+          {meta ? <p className="leitura-item__meta">{meta}</p> : null}
+        </div>
         <Insignia texto="Somente leitura" variante="info" />
       </div>
 
-      {item.tipo === "material" ? (
-        <LeituraMaterial conteudo={item.conteudo} />
-      ) : (
-        <LeituraQuiz questoes={questoes} totalQuestoes={item.quiz.totalQuestoes || 0} />
-      )}
+      {item.tipo === "material" ? <LeituraMaterial conteudo={item.conteudo} /> : <LeituraQuiz questoes={questoes} />}
     </div>
   );
 }

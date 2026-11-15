@@ -57,8 +57,8 @@ const DESEMPENHO = {
   ]
 };
 
-function renderPainel(props = {}) {
-  return render(
+function painelJsx(props = {}) {
+  return (
     <ToastProvider>
       <PainelCursoGestao
         curso={CURSO}
@@ -76,6 +76,10 @@ function renderPainel(props = {}) {
       />
     </ToastProvider>
   );
+}
+
+function renderPainel(props = {}) {
+  return render(painelJsx(props));
 }
 
 // Fluxo-coordenador Parte 3/3 ("Ver conteudo"): payload de GET
@@ -433,34 +437,33 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(screen.queryByRole("button", { name: /Ver conteúdo/ })).not.toBeInTheDocument();
   });
 
-  test("migalha, titulo, KPIs e secoes Conteudos/Quizzes com as metricas do modulo", async () => {
+  test("migalha, titulo, KPIs e secoes Conteudos/Quizzes com as metricas do modulo (singular/plural, sem Media no quiz)", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
-
-    const migalha = screen.getByRole("navigation", { name: "Caminho até o módulo" });
+    const migalha = await screen.findByRole("navigation", { name: "Caminho até o módulo" });
     expect(within(migalha).getByRole("button", { name: "Cursos" })).toBeInTheDocument();
     expect(within(migalha).getByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
     expect(within(migalha).getByText("Modulo A")).toBeInTheDocument();
 
-    expect(screen.getByText("Conteúdos (1)")).toBeInTheDocument();
-    expect(screen.getByText("Quizzes (1)")).toBeInTheDocument();
-    expect(screen.getByText("Quiz publicado")).toBeInTheDocument();
-    expect(screen.getByText(/2 alunos concluiram · 50%/)).toBeInTheDocument();
-    expect(screen.getByText(/1 participante · Média -/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();
+    expect(screen.getByText(/2 alunos concluíram · 50%/)).toBeInTheDocument();
+    expect(screen.getByText("1 participante")).toBeInTheDocument();
+    expect(screen.queryByText(/Média/)).not.toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
-    expect(screen.getByText("Escolha um conteúdo ou quiz para ver aqui.")).toBeInTheDocument();
+
+    // Desktop (jsdom default >= 768px): o 1o item (Material revisado) ja
+    // abre sozinho, sem precisar clicar - prompt-agente-modulo-tela-
+    // melhorias.md, item 5.
+    expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
   });
 
   test("abrir um material mostra Somente leitura, sem nenhum botao de editar/publicar/excluir (Admin e Coordenador)", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1, perfil: "Admin" });
-
-    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
-    await userEvent.click(screen.getByText("Material revisado"));
 
     expect(await screen.findByText("Somente leitura")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
@@ -473,7 +476,7 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Quiz publicado")).toBeInTheDocument());
+    await screen.findByRole("heading", { name: "Material revisado" });
     await userEvent.click(screen.getByText("Quiz publicado"));
 
     await waitFor(() => expect(screen.getByText("Qual a resposta certa?")).toBeInTheDocument());
@@ -487,25 +490,54 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(itemAlternativaCerta).toHaveClass("revisao-alternativas__item--correta");
   });
 
-  test("item anterior/proximo andam dentro do modulo, ficam desativados nas pontas, e X fecha o painel", async () => {
+  test("desktop: item anterior/proximo andam dentro do modulo e ficam desativados nas pontas", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
-    await userEvent.click(screen.getByText("Material revisado"));
-
-    await screen.findByText("Somente leitura");
+    expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Item anterior/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Próximo item/ })).not.toBeDisabled();
+    expect(screen.getByText("Item 1 de 2")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /Próximo item/ }));
     expect(await screen.findByRole("heading", { name: "Quiz publicado" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Item anterior/ })).not.toBeDisabled();
     expect(screen.getByRole("button", { name: /Próximo item/ })).toBeDisabled();
+    expect(screen.getByText("Item 2 de 2")).toBeInTheDocument();
+  });
+
+  test("desktop: trocar de modulo abre o 1o item do novo modulo", async () => {
+    mockApi(DESEMPENHO);
+    const { rerender } = renderPainel({ moduloIdSelecionado: 2 });
+
+    expect(await screen.findByText("Este módulo ainda não tem conteúdo publicado.")).toBeInTheDocument();
+
+    rerender(painelJsx({ moduloIdSelecionado: 1 }));
+
+    expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
+  });
+
+  test("celular (< 768px): nenhum item abre sozinho, e Fechar fecha sem reabrir", async () => {
+    const larguraOriginal = window.innerWidth;
+    window.innerWidth = 480;
+    window.dispatchEvent(new Event("resize"));
+
+    mockApi(DESEMPENHO);
+    renderPainel({ moduloIdSelecionado: 1 });
+
+    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
+    expect(screen.queryByText("Somente leitura")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Material revisado"));
+    expect(await screen.findByText("Somente leitura")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+    expect(screen.queryByText("Somente leitura")).not.toBeInTheDocument();
     expect(screen.getByText("Escolha um conteúdo ou quiz para ver aqui.")).toBeInTheDocument();
+
+    window.innerWidth = larguraOriginal;
+    window.dispatchEvent(new Event("resize"));
   });
 
   test("modulo sem nada publicado mostra o aviso e o rodape de modulo anterior/proximo navega", async () => {

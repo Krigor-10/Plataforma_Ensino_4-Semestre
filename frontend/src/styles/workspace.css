@@ -8741,13 +8741,15 @@
 }
 
 /* ------------------------------------------------------------
-   TELA DO MODULO (Admin/Coordenador) — migalha + KPIs + secoes
-   "Conteudos"/"Quizzes" do modulo, com o item aberto num painel ao
-   lado (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-propria.md,
-   fluxo-modulos-drilldown.png - substitui a janela "Revisar
-   conteudo"). Mobile first: abaixo de 900px a lista ocupa a tela
-   inteira e abrir um item troca pro painel em tela cheia; a partir
-   de 900px os dois ficam lado a lado, cada um com rolagem propria.
+   TELA DO MODULO (Admin/Coordenador) — migalha + titulo/resumo +
+   KPIs + secoes "Conteudos"/"Quizzes" em cartoes com relevo, leitura
+   do item ao lado (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-
+   propria.md + PROMPT-agente-modulo-tela-melhorias.md - substitui a
+   antiga janela "Revisar conteudo"). Mobile first: abaixo de 768px a
+   lista ocupa a tela inteira e abrir um item troca pra leitura em
+   tela cheia; a partir de 768px lista (largura fixa) e leitura
+   (resto da largura) ficam lado a lado, cada um com rolagem propria
+   e a altura da area visivel - a pagina em si nao rola.
    ------------------------------------------------------------ */
 .modulo-gestao {
   display: flex;
@@ -8762,6 +8764,26 @@
   gap: 0.4rem;
   font-size: 0.85rem;
   color: var(--cor-texto-mudo);
+}
+
+.modulo-gestao__migalha-voltar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  margin-right: 0.1rem;
+  border: none;
+  border-radius: var(--raio-circular);
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.modulo-gestao__migalha-voltar:hover {
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-marca-clara);
 }
 
 .modulo-gestao__migalha button {
@@ -8782,22 +8804,116 @@
   font-weight: 600;
 }
 
+.modulo-gestao__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+}
+
+.modulo-gestao__cabecalho-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 14rem;
+  flex: 1 1 18rem;
+}
+
 .modulo-gestao__titulo {
   display: flex;
   align-items: center;
   gap: var(--espaco-sm);
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--cor-texto-forte);
 }
 
+.modulo-gestao__resumo {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+/* 3 colunas sempre (desktop e celular) - reaproveita o encolhimento visual
+   de .atividades-curso__kpis-compactos (icone/valor/rotulo menores), so
+   troca a grade de 2 pra 3 colunas pra nao sobrar 1 KPI sozinho embaixo. */
+.modulo-gestao__kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .modulo-gestao__kpis .cartao-estatistica {
+    padding: 0.5rem 0.4rem;
+    gap: 0.3rem;
+  }
+
+  .modulo-gestao__kpis .cartao-estatistica__valor {
+    font-size: 0.95rem;
+  }
+
+  .modulo-gestao__kpis .cartao-estatistica__rotulo {
+    font-size: 0.65rem;
+  }
+}
+
 .modulo-gestao__secao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: var(--espaco-md) 0 var(--espaco-xs);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--cor-texto-mudo);
+}
+
+.modulo-gestao__secao-contagem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.4rem;
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-suave);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Cada conteudo/quiz vira um cartao com o mesmo relevo dos cartoes de
+   modulo (--cor-card-modulo/--borda-card-modulo/--relevo-card-*, ver
+   .conteudos-modulo--cartao em base.css) - sem herdar o separador fino de
+   .atividades-curso__item (lista "lisa" das outras telas). */
+.modulo-gestao__item-cartao {
+  border-bottom: none;
+  background: var(--cor-card-modulo);
+  border: 1px solid var(--borda-card-modulo);
+  border-radius: var(--raio-md);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
+  padding: 0;
+  overflow: hidden;
+}
+
+.modulo-gestao__item-cartao .atividades-curso__linha--acionavel {
+  padding: var(--espaco-sm) var(--espaco-md);
+}
+
+.modulo-gestao__item-metrica {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--cor-texto-mudo);
+}
+
+/* Item aberto ganha contorno roxo, igual ao pedido do usuario - soma ao
+   relevo em vez de substituir (duas sombras, ver acima). */
+.modulo-gestao__item-cartao:has(.atividades-curso__linha--acionavel[aria-current="true"]) {
+  border-color: var(--cor-marca-clara);
+  box-shadow: 0 0 0 1px var(--cor-marca-clara), var(--relevo-card-topo), var(--relevo-card-base);
 }
 
 .modulo-gestao__corpo {
@@ -8807,17 +8923,29 @@
 }
 
 .modulo-gestao__lista {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-lg);
   min-width: 0;
+}
+
+.modulo-gestao__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
 }
 
 .modulo-gestao__painel {
   display: none;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   padding: var(--espaco-md);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-lg);
   background: var(--cor-fundo-alt);
+  container-type: inline-size;
 }
 
 .modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
@@ -8825,7 +8953,20 @@
 }
 
 .modulo-gestao__corpo--item-aberto .modulo-gestao__painel {
-  display: block;
+  display: flex;
+}
+
+/* Abaixo de 768px o item aberto vira tela cheia por cima de tudo (sidebar e
+   topbar inclusive) - "Voltar ao modulo"/Esc fecham, ver TelaModuloGestao.jsx
+   (useLarguraJanela). Acima disso a leitura e uma coluna fixa, nunca some. */
+@media (max-width: 767.98px) {
+  .modulo-gestao__corpo--item-aberto .modulo-gestao__painel {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    border: none;
+    border-radius: 0;
+  }
 }
 
 .modulo-gestao__painel-topo {
@@ -8833,6 +8974,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espaco-sm);
+  flex-shrink: 0;
   margin-bottom: var(--espaco-sm);
 }
 
@@ -8870,50 +9012,102 @@
 }
 
 .modulo-gestao__painel-rodape {
+  display: flex;
+  align-items: center;
   justify-content: space-between !important;
+  gap: var(--espaco-sm);
   width: 100%;
+  flex-shrink: 0;
   margin-top: var(--espaco-md);
 }
 
-.modulo-gestao__rodape {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
+.modulo-gestao__painel-rodape-texto {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (min-width: 900px) {
-  .modulo-gestao__corpo {
-    flex-direction: row;
-    align-items: flex-start;
+.modulo-gestao__painel-rodape-contador {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .modulo-gestao__painel-rodape-texto {
+    max-width: 4.5rem;
   }
 
-  .modulo-gestao__lista,
-  .modulo-gestao__painel {
+  .modulo-gestao__painel-rodape-contador {
+    font-size: 0.72rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .modulo-gestao {
+    height: calc(100dvh - var(--altura-topbar) - (var(--espaco-xl) * 2));
+  }
+
+  .modulo-gestao__corpo {
+    flex-direction: row;
+    align-items: stretch;
     flex: 1;
-    min-width: 0;
-    max-height: 70vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .modulo-gestao__lista {
+    width: 320px;
+    flex-shrink: 0;
     overflow-y: auto;
+    padding-right: var(--espaco-xs);
+  }
+
+  .modulo-gestao__rodape {
+    margin-top: auto;
+    padding-top: var(--espaco-md);
+  }
+
+  .modulo-gestao__painel {
+    display: flex;
+    flex: 1;
   }
 
   .modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
-    display: block;
+    display: flex;
   }
 
-  .modulo-gestao__voltar-painel {
+  .modulo-gestao__painel-topo {
     display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .modulo-gestao__lista {
+    width: 400px;
   }
 }
 
 /* ------------------------------------------------------------
    LEITURA DE UM ITEM (material ou quiz) — components/
    LeituraItemConteudo.jsx, reaproveitado pelo painel lateral da
-   tela do modulo acima.
+   tela do modulo acima. Cabecalho (trilha/titulo/meta/selo) e rodape
+   ficam fixos; so o corpo (material ou gabarito do quiz) rola -
+   ver .modulo-gestao__painel-rodape acima, que e o rodape de verdade.
    ------------------------------------------------------------ */
 .leitura-item {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: var(--espaco-sm);
+}
+
+.leitura-item__trilha,
+.leitura-item__cabecalho {
+  flex-shrink: 0;
 }
 
 .leitura-item__trilha {
@@ -8924,15 +9118,35 @@
 .leitura-item__cabecalho {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--espaco-sm);
+}
+
+.leitura-item__cabecalho-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .leitura-item__titulo {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
+}
+
+.leitura-item__meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+}
+
+.leitura-item__material,
+.leitura-item__quiz {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .leitura-item__material {
@@ -8972,7 +9186,16 @@
   color: var(--cor-marca-clara);
 }
 
-.leitura-item__quiz-contagem {
-  font-size: 0.8rem;
-  color: var(--cor-texto-mudo);
+/* Questoes do gabarito em 2 colunas quando a LEITURA (nao a janela) tiver
+   largura confortavel - container query em .modulo-gestao__painel (acima),
+   escopado so aqui pra nao alterar GabaritoQuestoes.jsx nem as outras telas
+   que reaproveitam .revisao-avaliacao--gabarito (tentativa do aluno, previa
+   do professor). */
+@container (min-width: 900px) {
+  .modulo-gestao__painel .revisao-avaliacao--gabarito {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: var(--espaco-lg);
+  }
 }
