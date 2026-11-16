@@ -3,3 +3,5 @@
 Pasta dos diagramas UML do projeto (Astah `.asta`).
 
 > Arquivo de teste: verificando o envio pela branch `diagramas-uml`.
+
+> Segundo teste de commit: 16/11/2026 10:13.
