@@ -8840,33 +8840,26 @@
   gap: var(--espaco-lg);
 }
 
+/* O "← Voltar" (BotaoVoltar.jsx) vira o padrao de todas as telas de
+   detalhe - sem margem sobrando ele fica no fluxo, acima do caminho; em
+   tela larga sai pra margem esquerda sozinho (regra ja existente em
+   .atividades-curso__navegacao, nao duplicada aqui). O gap uniforme de
+   --espaco-lg do .modulo-gestao fica grande demais so entre esses 2
+   primeiros itens (botao->caminho->titulo) - margin-bottom negativo "come"
+   parte do gap so nesses 2 casos, docs/fluxo-coordenador/PROMPT-agente-
+   modulo-caminho-e-voltar.md. */
+.modulo-gestao > .atividades-curso__navegacao {
+  margin-bottom: calc(var(--espaco-sm) - var(--espaco-lg));
+}
+
 .modulo-gestao__migalha {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--cor-texto-mudo);
-}
-
-.modulo-gestao__migalha-voltar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  margin-right: 0.1rem;
-  border: none;
-  border-radius: var(--raio-circular);
-  background: none;
-  color: var(--cor-texto-suave);
-  cursor: pointer;
-}
-
-.modulo-gestao__migalha-voltar:hover {
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-marca-clara);
+  margin-bottom: calc(var(--espaco-md) - var(--espaco-lg));
 }
 
 .modulo-gestao__migalha button {
@@ -8874,17 +8867,31 @@
   border: none;
   padding: 0;
   font: inherit;
-  color: var(--cor-marca-clara);
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-suave);
   cursor: pointer;
+  border-radius: var(--raio-sm);
 }
 
-.modulo-gestao__migalha button:hover {
+.modulo-gestao__migalha button:hover,
+.modulo-gestao__migalha button:focus-visible {
+  color: var(--cor-texto-forte);
   text-decoration: underline;
+  text-decoration-color: var(--cor-marca-clara);
+  text-underline-offset: 3px;
+}
+
+.modulo-gestao__migalha button:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
 }
 
 .modulo-gestao__migalha [aria-current="page"] {
   color: var(--cor-texto-forte);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .modulo-gestao__cabecalho {

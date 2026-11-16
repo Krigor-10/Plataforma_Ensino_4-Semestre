@@ -442,10 +442,16 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     renderPainel({ moduloIdSelecionado: 1 });
 
+    // "← Voltar" pelo componente padrao (BotaoVoltar.jsx), nao mais um botao
+    // so com seta dentro do caminho - docs/fluxo-coordenador/PROMPT-agente-
+    // modulo-caminho-e-voltar.md.
+    expect(screen.getByRole("button", { name: "Voltar para Módulos" })).toBeInTheDocument();
+
     const migalha = await screen.findByRole("navigation", { name: "Caminho até o módulo" });
     expect(within(migalha).getByRole("button", { name: "Cursos" })).toBeInTheDocument();
     expect(within(migalha).getByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
     expect(within(migalha).getByText("Modulo A")).toBeInTheDocument();
+    expect(within(migalha).getAllByRole("button")).toHaveLength(2);
 
     expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();

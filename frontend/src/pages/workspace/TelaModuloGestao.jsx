@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { TbArrowLeft, TbArrowRight, TbAward, TbChartBar, TbChevronRight, TbCircleCheck, TbTrophy, TbX } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import { obterIconeTipoConteudo } from "../../components/PreviaTrilhaAluno.jsx";
 import LeituraItemConteudo from "../../components/LeituraItemConteudo.jsx";
@@ -200,15 +201,14 @@ export default function TelaModuloGestao({
 
   return (
     <div className="modulo-gestao">
+      <BotaoVoltar destino="Módulos" onClick={voltarParaModulos} />
+
       <nav aria-label="Caminho até o módulo" className="modulo-gestao__migalha">
-        <button aria-label="Voltar para Módulos" className="modulo-gestao__migalha-voltar" onClick={voltarParaModulos} type="button">
-          <TbArrowLeft aria-hidden="true" size={16} />
-        </button>
         <button onClick={() => onNavigate("/app/cursos")} type="button">
           Cursos
         </button>
         <span aria-hidden="true">›</span>
-        <button onClick={voltarParaModulos} type="button">
+        <button onClick={voltarParaModulos} title={curso.titulo} type="button">
           {curso.titulo}
         </button>
         <span aria-hidden="true">›</span>
