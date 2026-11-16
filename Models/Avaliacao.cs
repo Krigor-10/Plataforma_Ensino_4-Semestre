@@ -108,7 +108,10 @@ public class Avaliacao
     public void VoltarParaRascunho(DateTime? atualizadoEm = null)
     {
         StatusPublicacao = StatusPublicacao.Rascunho;
-        PublicadoEm = null;
+        // PublicadoEm NAO zera aqui - vira um marcador historico de "ja esteve
+        // publicada alguma vez", usado pela janela de graca do envio do aluno
+        // quando a avaliacao e despublicada no meio de uma resposta (ver
+        // AvaliacaoService.EnviarRespostasAlunoAsync/ValidarJanelaDeGraca).
         AtualizadoEm = atualizadoEm ?? DateTime.UtcNow;
     }
 

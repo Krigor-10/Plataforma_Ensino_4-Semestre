@@ -20,6 +20,11 @@ public class ApiExceptionMiddleware
         {
             await _next(context);
         }
+        catch (ErroEnvioAvaliacaoException ex)
+        {
+            _logger.LogWarning(ex, "Envio de avaliacao rejeitado ({Codigo}).", ex.Codigo);
+            await WriteErrorAsync(context, ex.StatusCode, ex.Message, ex.Codigo);
+        }
         catch (KeyNotFoundException ex)
         {
             _logger.LogWarning(ex, "Recurso nao encontrado.");
@@ -47,7 +52,7 @@ public class ApiExceptionMiddleware
         }
     }
 
-    private static async Task WriteErrorAsync(HttpContext context, HttpStatusCode statusCode, string message)
+    private static async Task WriteErrorAsync(HttpContext context, HttpStatusCode statusCode, string message, string? codigo = null)
     {
         context.Response.StatusCode = (int)statusCode;
         context.Response.ContentType = "application/json";
@@ -55,6 +60,7 @@ public class ApiExceptionMiddleware
         var payload = JsonSerializer.Serialize(new
         {
             erro = message,
+            codigo,
             status = (int)statusCode,
             correlationId = context.Items.TryGetValue(RequestLoggingMiddleware.ChaveCorrelationId, out var valor) ? valor as string : null
         });

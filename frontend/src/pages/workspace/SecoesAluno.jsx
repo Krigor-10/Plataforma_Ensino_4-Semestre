@@ -583,6 +583,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
   const [revisaoAberta, setRevisaoAberta] = useState(false);
   const [revisaoDireta, setRevisaoDireta] = useState(null);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  // Momento em que o aluno abriu a avaliacao (mandado no envio) e o codigo
+  // do ultimo erro de envio, usado so pra mostrar "Abrir de novo" quando o
+  // professor mudou as questoes - docs/bugs/PROMPT-agente-envio-avaliacao-
+  // alterada-durante-resposta.md.
+  const [iniciadaEm, setIniciadaEm] = useState(null);
+  const [erroEnvioCodigo, setErroEnvioCodigo] = useState(null);
   const tempoRestanteRef = useRef(null);
   tempoRestanteRef.current = tempoRestanteSegundos;
 
@@ -599,12 +605,13 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     salvarRascunhoAvaliacao(avaliacaoEmExecucao.id, {
       indiceAtual,
       respostas,
+      iniciadaEm,
       tentativasRealizadasNoMomento: avaliacaoEmExecucao.tentativasRealizadas || 0,
       prazoFinal: tempoRestanteRef.current !== null ? Date.now() + tempoRestanteRef.current * 1000 : null,
       salvoEm: Date.now()
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [avaliacaoEmExecucao, resultadoTentativa, carregandoQuestoes, questoes, indiceAtual, respostas]);
+  }, [avaliacaoEmExecucao, resultadoTentativa, carregandoQuestoes, questoes, indiceAtual, respostas, iniciadaEm]);
 
   useBloqueioScroll(Boolean(avaliacaoEmExecucao));
 
@@ -671,6 +678,8 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     setApoioAberto(true);
     setResultadoTentativa(null);
     setRevisaoAberta(false);
+    setErroEnvioCodigo(null);
+    setIniciadaEm(rascunho?.iniciadaEm || new Date().toISOString());
 
     if (rascunho?.prazoFinal) {
       setTempoRestanteSegundos(Math.max(0, Math.round((rascunho.prazoFinal - Date.now()) / 1000)));
@@ -722,6 +731,8 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     setRevisaoAberta(false);
     setTempoRestanteSegundos(null);
     setConfirmandoSaida(false);
+    setIniciadaEm(null);
+    setErroEnvioCodigo(null);
   }
 
   // Fechar (X, Esc ou botao "Sair") enquanto a tentativa esta em andamento
@@ -827,6 +838,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     }
 
     const payload = {
+      iniciadaEm,
       respostas: questoes.map((questao) => {
         const resposta = respostas[questao.id];
 
@@ -839,6 +851,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
     };
 
     setEnviandoRespostas(true);
+    setErroEnvioCodigo(null);
     setMensagem(
       porTempoEsgotado
         ? { tone: "warning", message: "Tempo esgotado. Enviando suas respostas automaticamente." }
@@ -860,7 +873,20 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
         return;
       }
 
-      setMensagem({ tone: "error", message: err.message || "Nao foi possivel enviar a avaliacao agora." });
+      // O professor arquivou/despublicou/excluiu a avaliacao ou trocou as
+      // questoes enquanto o aluno respondia - as respostas continuam no
+      // rascunho local (so apagado no envio com sucesso, acima) pra nao se
+      // perderem - docs/bugs/PROMPT-agente-envio-avaliacao-alterada-durante-
+      // resposta.md.
+      const codigo = err instanceof ApiError ? err.codigo : null;
+      const mensagemPorCodigo = {
+        AVALIACAO_REMOVIDA: "O professor removeu esta avaliação enquanto você respondia. Suas respostas não puderam ser enviadas e não contam como tentativa.",
+        AVALIACAO_INDISPONIVEL: "Esta avaliação foi retirada do ar pelo professor e não aceita mais envios. Suas respostas não contam como tentativa.",
+        AVALIACAO_ALTERADA: "O professor alterou as questões desta avaliação enquanto você respondia. Abra a avaliação de novo para ver a versão atual."
+      };
+
+      setErroEnvioCodigo(codigo || null);
+      setMensagem({ tone: "error", message: mensagemPorCodigo[codigo] || err.message || "Nao foi possivel enviar a avaliacao agora." });
     } finally {
       setEnviandoRespostas(false);
     }
@@ -1111,6 +1137,12 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
               </header>
 
               {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+
+              {erroEnvioCodigo === "AVALIACAO_ALTERADA" ? (
+                <Botao onClick={() => abrirExecucaoAvaliacao(avaliacaoEmExecucao)} tamanho="pequeno" type="button" variante="secundario">
+                  <TbRefresh aria-hidden="true" size={15} /> Abrir de novo
+                </Botao>
+              ) : null}
 
               {questaoAtual ? (
                 <form className="quiz-corpo" id="quiz-form-execucao" onSubmit={enviarRespostas}>

@@ -54,10 +54,11 @@ function obterExpiracaoDoToken(token) {
 }
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, codigo) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.codigo = codigo;
   }
 }
 
@@ -183,7 +184,7 @@ async function lerRespostaOuFalhar(response) {
 
   if (!response.ok) {
     const message = data?.mensagem || data?.erro || "Nao foi possivel concluir a operacao.";
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, data?.codigo);
   }
 
   return data;

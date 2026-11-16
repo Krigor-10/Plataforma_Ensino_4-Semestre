@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { SecaoAvaliacoesAluno, SecaoConteudosAluno, SecaoCursosAluno } from "./SecoesAluno.jsx";
 import { AssistenteChatbotProvider } from "../../hooks/useAssistenteChatbot.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
-import { apiRequest } from "../../lib/api.js";
+import { apiRequest, ApiError } from "../../lib/api.js";
 
 vi.mock("../../lib/api.js", async () => {
   const real = await vi.importActual("../../lib/api.js");
@@ -492,5 +492,149 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     });
 
     expect(screen.queryByText("Quizzes do módulo")).not.toBeInTheDocument();
+  });
+});
+
+// docs/bugs/PROMPT-agente-envio-avaliacao-alterada-durante-resposta.md: o
+// envio manda iniciadaEm e, quando o professor mexeu na avaliacao durante a
+// resposta, mostra a mensagem certa por codigo sem fechar a tela nem perder
+// o rascunho local.
+describe("SecaoConteudosAluno - envio de avaliacao alterada durante a resposta", () => {
+  const CURSO_ID = 10;
+  const TURMA_ID = 77;
+  const MATRICULA_ID = 5;
+  const MODULO_ID = 100;
+  const AVALIACAO_ID = 200;
+
+  const QUESTAO = {
+    id: 1,
+    ordem: 1,
+    enunciado: "Pergunta de teste",
+    tipoQuestao: 2,
+    pontos: 5,
+    contexto: "",
+    alternativas: [
+      { id: 1, letra: "A", texto: "Resposta A" },
+      { id: 2, letra: "B", texto: "Resposta B" }
+    ],
+    afirmativas: []
+  };
+
+  beforeEach(() => {
+    window.sessionStorage.setItem("usuarioLogado", JSON.stringify({ id: 1 }));
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    window.sessionStorage.clear();
+    window.localStorage.clear();
+  });
+
+  function renderComQuiz() {
+    return render(
+      <ToastProvider>
+        <SecaoConteudosAluno
+          avaliacoes={[
+            {
+              id: AVALIACAO_ID,
+              cursoId: CURSO_ID,
+              moduloId: MODULO_ID,
+              conteudoDidaticoId: null,
+              tipoAvaliacao: 1,
+              titulo: "Quiz do módulo",
+              totalQuestoes: 1,
+              tentativasRestantes: 1,
+              tentativasPermitidas: 1
+            }
+          ]}
+          conteudos={[]}
+          cursoIdSelecionado={CURSO_ID}
+          cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
+          matriculas={[{ id: MATRICULA_ID, cursoId: CURSO_ID, turmaId: TURMA_ID, status: "Aprovada" }]}
+          modulos={[{ id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" }]}
+          onNavigate={vi.fn()}
+          onRefresh={vi.fn()}
+          onSessionExpired={vi.fn()}
+          progressos={{ conteudos: [], modulos: [], cursos: [] }}
+          turmas={[{ id: TURMA_ID, cursoId: CURSO_ID, nomeTurma: "Turma A" }]}
+        />
+      </ToastProvider>
+    );
+  }
+
+  async function abrirEResponderQuiz(usuario) {
+    await usuario.click(screen.getByRole("button", { name: "Iniciar quiz" }));
+    await usuario.click(screen.getByRole("button", { name: "Iniciar" }));
+    await screen.findByText("Pergunta de teste");
+    await usuario.click(screen.getByText("Resposta A").closest("button"));
+    await usuario.click(screen.getByRole("button", { name: /Confirmar|Enviar avaliacao/ }));
+  }
+
+  test("envia iniciadaEm junto com as respostas", async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((endpoint) => {
+      if (endpoint.endsWith("/aluno/questoes")) {
+        return Promise.resolve([QUESTAO]);
+      }
+      if (endpoint.endsWith("/aluno/respostas")) {
+        return Promise.resolve({ id: 1, statusTentativa: 3 });
+      }
+      return Promise.resolve({});
+    });
+
+    renderComQuiz();
+    await abrirEResponderQuiz(usuario);
+
+    const chamadaEnvio = apiRequest.mock.calls.find(([endpoint]) => endpoint.endsWith("/aluno/respostas"));
+    expect(chamadaEnvio).toBeDefined();
+    const corpo = JSON.parse(chamadaEnvio[1].body);
+    expect(typeof corpo.iniciadaEm).toBe("string");
+  });
+
+  test("AVALIACAO_ALTERADA: mostra o aviso, oferece 'Abrir de novo' e nao fecha a tela", async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((endpoint) => {
+      if (endpoint.endsWith("/aluno/questoes")) {
+        return Promise.resolve([QUESTAO]);
+      }
+      if (endpoint.endsWith("/aluno/respostas")) {
+        return Promise.reject(new ApiError("O professor alterou as questoes.", 409, "AVALIACAO_ALTERADA"));
+      }
+      return Promise.resolve({});
+    });
+
+    renderComQuiz();
+    await abrirEResponderQuiz(usuario);
+
+    const dialog = screen.getByRole("dialog", { name: "Quiz do módulo" });
+    expect(await within(dialog).findByText(/O professor alterou as questões desta avaliação/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Abrir de novo/ })).toBeInTheDocument();
+    // a tela continua aberta, com a questao e a resposta ainda visiveis
+    expect(within(dialog).getByText("Pergunta de teste")).toBeInTheDocument();
+  });
+
+  test("AVALIACAO_REMOVIDA: mostra o aviso sem 'Abrir de novo', e o rascunho local nao e apagado", async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((endpoint) => {
+      if (endpoint.endsWith("/aluno/questoes")) {
+        return Promise.resolve([QUESTAO]);
+      }
+      if (endpoint.endsWith("/aluno/respostas")) {
+        return Promise.reject(new ApiError("O professor removeu esta avaliacao.", 404, "AVALIACAO_REMOVIDA"));
+      }
+      return Promise.resolve({});
+    });
+
+    renderComQuiz();
+    await abrirEResponderQuiz(usuario);
+
+    const dialog = screen.getByRole("dialog", { name: "Quiz do módulo" });
+    expect(await within(dialog).findByText(/O professor removeu esta avaliação enquanto você respondia/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /Abrir de novo/ })).not.toBeInTheDocument();
+
+    const chaveRascunho = `edtech.rascunhoAvaliacao.1.${AVALIACAO_ID}`;
+    const rascunho = JSON.parse(window.localStorage.getItem(chaveRascunho));
+    expect(rascunho.respostas[QUESTAO.id].alternativaId).toBe(1);
   });
 });

@@ -1,5 +1,7 @@
+using System.Net;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
@@ -626,7 +628,7 @@ public class AvaliacaoService : IAvaliacaoService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var (avaliacao, matricula) = await ObterAvaliacaoPublicadaDoAlunoAsync(avaliacaoId, alunoId);
+        var (avaliacao, matricula) = await ObterAvaliacaoParaEnvioDoAlunoAsync(avaliacaoId, alunoId, dto.IniciadaEm);
         ValidarPeriodoAvaliacao(avaliacao);
 
         var questoes = avaliacao.Questoes.OrderBy(questao => questao.Ordem).ToList();
@@ -645,9 +647,22 @@ public class AvaliacaoService : IAvaliacaoService
         var respostasDuplicadas = respostasDto
             .GroupBy(resposta => resposta.QuestaoId)
             .Any(grupo => grupo.Count() > 1);
-        if (respostasDuplicadas || respostasDto.Any(resposta => !questaoIds.Contains(resposta.QuestaoId)) || respostasDto.Count != questoes.Count)
+        if (respostasDuplicadas || respostasDto.Count != questoes.Count)
         {
             throw new ArgumentException("Responda exatamente uma vez cada questao publicada.");
+        }
+
+        // Com a mesma quantidade de respostas e questoes (checado acima), so
+        // sobra um jeito de uma resposta apontar pra uma questao que nao
+        // esta mais no conjunto atual: o professor trocou/removeu e adicionou
+        // outra questao depois que o aluno abriu a avaliacao - o cliente
+        // nunca monta uma resposta com um QuestaoId que nao recebeu.
+        if (respostasDto.Any(resposta => !questaoIds.Contains(resposta.QuestaoId)))
+        {
+            throw new ErroEnvioAvaliacaoException(
+                HttpStatusCode.Conflict,
+                "AVALIACAO_ALTERADA",
+                "O professor alterou as questoes desta avaliacao enquanto voce respondia.");
         }
 
         var tentativasRealizadas = await _context.TentativasAvaliacao
@@ -891,6 +906,129 @@ public class AvaliacaoService : IAvaliacaoService
         }
 
         return (avaliacao, matricula);
+    }
+
+    /// <summary>
+    /// Busca a avaliacao pra aceitar o ENVIO do aluno, tolerando que ela
+    /// tenha saido do ar (arquivada/despublicada) depois que o aluno abriu -
+    /// ao contrario de ObterAvaliacaoPublicadaDoAlunoAsync (usado so pra
+    /// ABRIR a avaliacao, que continua exigindo Publicado sempre - um aluno
+    /// nao pode comecar a responder algo ja arquivado). Ver docs/bugs/
+    /// PROMPT-agente-envio-avaliacao-alterada-durante-resposta.md.
+    /// </summary>
+    private async Task<(Avaliacao Avaliacao, Matricula Matricula)> ObterAvaliacaoParaEnvioDoAlunoAsync(int avaliacaoId, int alunoId, DateTime? iniciadaEm)
+    {
+        await ValidarAlunoAsync(alunoId);
+
+        var avaliacao = await _context.Avaliacoes
+            .AsNoTracking()
+            .Where(item => item.Id == avaliacaoId)
+            .Include(item => item.Turma)
+            .Include(item => item.Modulo)
+                .ThenInclude(modulo => modulo!.Curso)
+            .Include(item => item.ConteudoDidatico)
+            .Include(item => item.Questoes)
+                .ThenInclude(questao => questao.Alternativas)
+            .Include(item => item.Questoes)
+                .ThenInclude(questao => questao.Afirmativas)
+            .Include(item => item.Questoes)
+                .ThenInclude(questao => questao.QuestaoBanco)
+                    .ThenInclude(banco => banco!.Anexos)
+            .FirstOrDefaultAsync()
+            ?? throw new ErroEnvioAvaliacaoException(
+                HttpStatusCode.NotFound,
+                "AVALIACAO_REMOVIDA",
+                "O professor removeu esta avaliacao enquanto voce respondia.");
+
+        ValidarIniciadaEm(iniciadaEm, avaliacao);
+
+        if (avaliacao.StatusPublicacao != StatusPublicacao.Publicado)
+        {
+            ValidarJanelaDeGraca(avaliacao, iniciadaEm);
+        }
+
+        var matricula = await _context.Matriculas
+            .AsNoTracking()
+            .Include(item => item.Curso)
+            .FirstOrDefaultAsync(item =>
+                item.AlunoId == alunoId &&
+                item.Status == StatusMatricula.Aprovada &&
+                item.CursoId == avaliacao.CursoId)
+            ?? throw new InvalidOperationException("Esta avaliacao nao esta liberada para a matricula do aluno.");
+
+        if (!await _acessoAcademicoService.TemAcessoLiberadoAsync(matricula))
+        {
+            throw new InvalidOperationException("O pagamento deste curso ainda nao foi confirmado.");
+        }
+
+        if (!await AvaliacaoLiberadaPorProgressoAsync(avaliacao, matricula.Id))
+        {
+            throw new InvalidOperationException(
+                avaliacao.ModuloId.HasValue
+                    ? "Conclua todos os conteudos deste modulo para liberar esta avaliacao."
+                    : "Conclua todos os conteudos e quizzes do curso para liberar a avaliacao final.");
+        }
+
+        return (avaliacao, matricula);
+    }
+
+    /// <summary>
+    /// IniciadaEm vem do cliente, sem forma de autenticar - por isso so serve
+    /// pra abrir uma janela de tolerancia curta (ValidarJanelaDeGraca), nunca
+    /// pra liberar acesso por si so. Rejeita datas implausiveis: no futuro
+    /// (com uma folga pro relogio do cliente) ou anteriores a 1a publicacao
+    /// da avaliacao.
+    /// </summary>
+    private static void ValidarIniciadaEm(DateTime? iniciadaEm, Avaliacao avaliacao)
+    {
+        if (!iniciadaEm.HasValue)
+        {
+            return;
+        }
+
+        if (iniciadaEm.Value > DateTime.UtcNow.AddMinutes(5))
+        {
+            throw new ArgumentException("Data de inicio da avaliacao invalida.");
+        }
+
+        if (avaliacao.PublicadoEm.HasValue && iniciadaEm.Value < avaliacao.PublicadoEm.Value)
+        {
+            throw new ArgumentException("Data de inicio da avaliacao invalida.");
+        }
+    }
+
+    /// <summary>
+    /// Avaliacao arquivada ou despublicada (Rascunho) so aceita o envio se:
+    /// ja esteve publicada (PublicadoEm - nao zera mais ao despublicar, ver
+    /// Avaliacao.VoltarParaRascunho), o aluno abriu antes da mudanca
+    /// (IniciadaEm anterior ao AtualizadoEm) e a mudanca foi ha pouco tempo
+    /// (TempoLimiteMinutos + 30min de folga, ou 3h quando nao ha limite de
+    /// tempo).
+    /// </summary>
+    private static void ValidarJanelaDeGraca(Avaliacao avaliacao, DateTime? iniciadaEm)
+    {
+        var foraDaJanela =
+            !avaliacao.PublicadoEm.HasValue ||
+            !iniciadaEm.HasValue ||
+            !avaliacao.AtualizadoEm.HasValue ||
+            iniciadaEm.Value >= avaliacao.AtualizadoEm.Value;
+
+        if (!foraDaJanela)
+        {
+            var janelaDeGraca = avaliacao.TempoLimiteMinutos.HasValue
+                ? TimeSpan.FromMinutes(avaliacao.TempoLimiteMinutos.Value + 30)
+                : TimeSpan.FromHours(3);
+
+            foraDaJanela = DateTime.UtcNow > avaliacao.AtualizadoEm!.Value + janelaDeGraca;
+        }
+
+        if (foraDaJanela)
+        {
+            throw new ErroEnvioAvaliacaoException(
+                HttpStatusCode.Conflict,
+                "AVALIACAO_INDISPONIVEL",
+                "Esta avaliacao foi retirada do ar pelo professor e nao aceita mais envios.");
+        }
     }
 
     /// <summary>

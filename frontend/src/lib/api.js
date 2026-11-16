@@ -16,7 +16,7 @@ export async function apiRequest(endpoint, options = {}) {
       return await demoRequest(endpoint, options);
     } catch (error) {
       if (error instanceof DemoApiError) {
-        throw new ApiError(error.message, error.status);
+        throw new ApiError(error.message, error.status, error.codigo);
       }
 
       throw error;

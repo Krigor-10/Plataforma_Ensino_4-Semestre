@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
@@ -1309,6 +1310,187 @@ public class AvaliacaoServiceTests
 
         var progressoModulo = context.ProgressosModulosAlunos.Single(p => p.ModuloId == modulo.Id);
         Assert.Equal(100m, progressoModulo.PercentualConclusao);
+    }
+
+    // ---------- EnviarRespostasAlunoAsync: avaliacao alterada durante a
+    // resposta (docs/bugs/PROMPT-agente-envio-avaliacao-alterada-durante-
+    // resposta.md) ----------
+
+    [Theory]
+    [InlineData(StatusPublicacao.Arquivado)]
+    [InlineData(StatusPublicacao.Rascunho)]
+    public async Task EnviarRespostasAlunoAsync_StatusMudouDepoisQueAlunoAbriuDentroDaJanela_AceitaEnvio(StatusPublicacao novoStatus)
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+
+        // Publicacao "backdated" pra nao colidir com IniciadaEm no passado -
+        // sem isso, PublicadoEm fica quase igual a "agora" (criado ha poucos
+        // ms) e qualquer IniciadaEm anterior cairia na rejeicao "antes da
+        // primeira publicacao".
+        avaliacao.Publicar(DateTime.UtcNow.AddHours(-6));
+        context.SaveChanges();
+
+        var iniciadaEm = DateTime.UtcNow.AddMinutes(-10);
+        var momentoMudanca = DateTime.UtcNow.AddMinutes(-5);
+        if (novoStatus == StatusPublicacao.Arquivado)
+        {
+            avaliacao.Arquivar(momentoMudanca);
+        }
+        else
+        {
+            avaliacao.VoltarParaRascunho(momentoMudanca);
+        }
+        context.SaveChanges();
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = iniciadaEm,
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id } }
+        };
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
+        Assert.Equal(7m, resultado.NotaBruta);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_ArquivadaForaDaJanelaDeGraca_LancaErroEnvioAvaliacaoIndisponivel()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        avaliacao.Publicar(DateTime.UtcNow.AddHours(-6));
+        var iniciadaEm = DateTime.UtcNow.AddHours(-5);
+        avaliacao.Arquivar(DateTime.UtcNow.AddHours(-4)); // ha mais de 3h (sem TempoLimiteMinutos)
+        context.SaveChanges();
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = iniciadaEm,
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        var excecao = await Assert.ThrowsAsync<ErroEnvioAvaliacaoException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+        Assert.Equal("AVALIACAO_INDISPONIVEL", excecao.Codigo);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_DespublicadaSemIniciadaEm_LancaErroEnvioAvaliacaoIndisponivel()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        avaliacao.VoltarParaRascunho();
+        context.SaveChanges();
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        var excecao = await Assert.ThrowsAsync<ErroEnvioAvaliacaoException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+        Assert.Equal("AVALIACAO_INDISPONIVEL", excecao.Codigo);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_ExcluidaDeVerdadeSemTentativas_LancaErroEnvioAvaliacaoRemovida()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        await service.ExcluirAvaliacaoAsync(avaliacao.Id, professor.Id);
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = DateTime.UtcNow.AddMinutes(-5),
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        var excecao = await Assert.ThrowsAsync<ErroEnvioAvaliacaoException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+        Assert.Equal("AVALIACAO_REMOVIDA", excecao.Codigo);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_QuestaoTrocadaDepoisDeAbrir_LancaErroEnvioAvaliacaoAlterada()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questaoAntiga = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        // Aluno abriu a avaliacao e guardou a resposta pra questaoAntiga...
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = DateTime.UtcNow,
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoAntiga.Id, AlternativaId = questaoAntiga.Alternativas.First().Id } }
+        };
+
+        // ...mas o professor trocou a questao antes do envio chegar.
+        await service.ExcluirQuestaoAsync(avaliacao.Id, questaoAntiga.Id, professor.Id);
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var excecao = await Assert.ThrowsAsync<ErroEnvioAvaliacaoException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+        Assert.Equal("AVALIACAO_ALTERADA", excecao.Codigo);
+    }
+
+    [Fact]
+    public async Task ListarQuestoesPorAlunoAsync_AvaliacaoArquivada_ContinuaSemAcesso()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao.Arquivar();
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => service.ListarQuestoesPorAlunoAsync(avaliacao.Id, aluno.Id));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_IniciadaEmNoFuturo_LancaArgumentException()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = DateTime.UtcNow.AddHours(1),
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_IniciadaEmAntesDaPrimeiraPublicacao_LancaArgumentException()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = avaliacao.PublicadoEm!.Value.AddMinutes(-10),
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_PublicadaComIniciadaEmValido_FuncionaNormalmente()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            IniciadaEm = DateTime.UtcNow,
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id } }
+        };
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        Assert.Equal(7m, resultado.NotaBruta);
     }
 
     // ---------- ListarAvaliacoesPorAlunoAsync ----------

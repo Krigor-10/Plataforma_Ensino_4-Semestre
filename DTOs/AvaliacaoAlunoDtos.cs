@@ -84,6 +84,16 @@ public class EnviarAvaliacaoAlunoDto
 {
     [MinLength(1)]
     public List<RespostaAvaliacaoAlunoDto> Respostas { get; set; } = new();
+
+    /// <summary>
+    /// Momento (UTC) em que o aluno abriu a avaliacao no cliente - usado so
+    /// pra aceitar o envio quando o professor arquiva/despublica a avaliacao
+    /// depois que o aluno ja comecou a responder (ver AvaliacaoService.
+    /// EnviarRespostasAlunoAsync). Opcional pra nao quebrar um cliente antigo
+    /// que ainda nao manda esse campo - nesse caso, so o envio pra avaliacao
+    /// ainda Publicada continua aceito, como sempre foi.
+    /// </summary>
+    public DateTime? IniciadaEm { get; set; }
 }
 
 public class TentativaAvaliacaoAlunoResponseDto
