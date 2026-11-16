@@ -168,36 +168,25 @@ describe("PainelCursoGestao", () => {
     expect(screen.getByText("Prova solta do curso")).toBeInTheDocument();
   });
 
-  test("aba Avaliacoes do curso: card fechado nao mostra metricas, abre com as 5 metricas e so um fica aberto por vez (aria-expanded)", async () => {
+  // A aba parou de ser acordeao - cada cartao navega pra tela propria da
+  // avaliacao (docs/fluxo-coordenador/PROMPT-agente-avaliacao-tela-propria.md).
+  test("aba Avaliacoes do curso: cartao nao abre acordeao, navega pra tela da avaliacao ao clicar", async () => {
     mockApi(DESEMPENHO);
-    renderPainel();
+    const onNavigate = vi.fn();
+    renderPainel({ onNavigate });
 
     await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
     await userEvent.click(screen.getByRole("tab", { name: /Avaliacoes do curso/ }));
 
     expect(screen.queryByText("Participantes")).not.toBeInTheDocument();
 
-    const botaoModuloA = screen.getByRole("button", { name: /Prova do modulo A/ });
     const botaoProvaSolta = screen.getByRole("button", { name: /Prova solta do curso/ });
-
-    await userEvent.click(botaoModuloA);
-
-    expect(botaoModuloA).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Participantes")).toBeInTheDocument();
-    expect(screen.getByText("Nota média")).toBeInTheDocument();
-    expect(screen.getByText("Nota máxima")).toBeInTheDocument();
-    expect(screen.getByText("Conclusão")).toBeInTheDocument();
-    expect(screen.getByText("Aproveitamento")).toBeInTheDocument();
-    expect(screen.getByText("5,0")).toBeInTheDocument();
+    expect(botaoProvaSolta).not.toHaveAttribute("aria-expanded");
 
     await userEvent.click(botaoProvaSolta);
 
-    expect(botaoProvaSolta).toHaveAttribute("aria-expanded", "true");
-    expect(botaoModuloA).toHaveAttribute("aria-expanded", "false");
-
-    await userEvent.click(botaoProvaSolta);
-
-    expect(botaoProvaSolta).toHaveAttribute("aria-expanded", "false");
+    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/avaliacoes/200");
+    expect(screen.queryByText("Participantes")).not.toBeInTheDocument();
   });
 
   test("botao Professores abre modal com carregamento antes da lista", async () => {
@@ -453,6 +442,10 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(within(migalha).getByText("Modulo A")).toBeInTheDocument();
     expect(within(migalha).getAllByRole("button")).toHaveLength(2);
 
+    // O caminho entrou pro header (alinha com os KPIs, docs/fluxo-
+    // coordenador/PROMPT-agente-avaliacao-tela-limpa.md, item 1).
+    expect(migalha.closest("header")).toHaveClass("modulo-gestao__cabecalho");
+
     expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
@@ -589,5 +582,239 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     expect(await screen.findByText("Falha ao carregar modulo")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
+  });
+});
+
+// Fluxo-coordenador: avaliacoes do curso em tela propria (docs/fluxo-
+// coordenador/PROMPT-agente-avaliacao-tela-propria.md) - mesmo fluxo da
+// tela do modulo acima, so que pra "Prova Completa"/"Prova Rascunho".
+// "Prova Rascunho" (501) propositalmente so existe em DESEMPENHO_AVALIACOES
+// (numeros) e nao em REVISAO_AVALIACOES (questoes) - simula uma avaliacao
+// que esta na lista mas ainda nao foi publicada.
+const DESEMPENHO_AVALIACOES = {
+  cursoId: 10,
+  cursoTitulo: "Curso Teste",
+  totalAlunos: 3,
+  alunosAtivos: 3,
+  progressoMedio: 0,
+  percentualConclusao: 0,
+  desempenhoMedio: 0,
+  certificadosEmitidos: 0,
+  modulos: [],
+  avaliacoesSemModulo: [
+    {
+      avaliacaoId: 500,
+      titulo: "Prova Completa",
+      tipoAvaliacao: 2,
+      totalParticipantes: 3,
+      mediaNota: 7,
+      notaMaxima: 10,
+      percentualConclusao: 80,
+      percentualAproveitamento: 70
+    },
+    {
+      avaliacaoId: 501,
+      titulo: "Prova Rascunho",
+      tipoAvaliacao: 2,
+      totalParticipantes: 0,
+      mediaNota: 0,
+      notaMaxima: 10,
+      percentualConclusao: 0,
+      percentualAproveitamento: 0
+    }
+  ]
+};
+
+const REVISAO_AVALIACOES = {
+  cursoId: 10,
+  cursoTitulo: "Curso Teste",
+  modulos: [],
+  avaliacoesSemModulo: [
+    {
+      avaliacao: {
+        id: 500,
+        titulo: "Prova Completa",
+        descricao: "Descricao da prova",
+        notaMaxima: 10,
+        tempoLimiteMinutos: 30,
+        tentativasPermitidas: 2,
+        dataAbertura: null,
+        dataFechamento: null,
+        moduloId: null,
+        moduloTitulo: "",
+        totalQuestoes: 2
+      },
+      questoes: [
+        {
+          id: 1,
+          ordem: 1,
+          enunciado: "Primeira pergunta",
+          pontos: 1,
+          dificuldade: 1,
+          contexto: "",
+          alternativas: [
+            { id: 1, letra: "A", texto: "Errada", ehCorreta: false },
+            { id: 2, letra: "B", texto: "Certa", ehCorreta: true }
+          ],
+          afirmativas: [],
+          anexos: []
+        },
+        {
+          id: 2,
+          ordem: 2,
+          enunciado: "Segunda pergunta",
+          pontos: 1,
+          dificuldade: 3,
+          contexto: "",
+          alternativas: [{ id: 3, letra: "A", texto: "Certa 2", ehCorreta: true }],
+          afirmativas: [],
+          anexos: []
+        }
+      ]
+    }
+  ]
+};
+
+function mockApiAvaliacoes() {
+  apiRequest.mockImplementation((url) => {
+    if (url === "/Cursos/10/desempenho") return Promise.resolve(DESEMPENHO_AVALIACOES);
+    if (url === "/Cursos/10/revisao-conteudo") return Promise.resolve(REVISAO_AVALIACOES);
+    return Promise.resolve([]);
+  });
+}
+
+describe("PainelCursoGestao - tela da avaliacao (docs/fluxo-coordenador/PROMPT-agente-avaliacao-tela-propria.md)", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // docs/fluxo-coordenador/PROMPT-agente-avaliacao-tela-limpa.md: caminho
+  // entrou pro header (alinha com os KPIs), sem "Somente leitura" no
+  // titulo, resumo numa linha so (sem pilulas nem "avaliacao X de Y").
+  test("caminho dentro do header, sem 'Somente leitura' no titulo, resumo numa linha so e descricao", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 500 });
+
+    expect(await screen.findByRole("button", { name: "Voltar para Avaliações" })).toBeInTheDocument();
+
+    const cabecalho = screen.getByRole("heading", { name: "Prova Completa" }).closest("header");
+    const migalha = within(cabecalho).getByRole("navigation", { name: "Caminho até a avaliação" });
+    expect(within(migalha).getByRole("button", { name: "Avaliações" })).toBeInTheDocument();
+    expect(within(migalha).getByText("Avaliação 01")).toBeInTheDocument();
+
+    expect(screen.queryByText("Somente leitura")).not.toBeInTheDocument();
+    expect(screen.queryByText(/avaliação \d+ de \d+/i)).not.toBeInTheDocument();
+
+    expect(screen.getByText("Tempo 30 min")).toBeInTheDocument();
+    expect(screen.getByText("2 tentativas")).toBeInTheDocument();
+    expect(screen.getByText("Descricao da prova")).toBeInTheDocument();
+
+    expect(await screen.findByText("Primeira pergunta")).toBeInTheDocument();
+  });
+
+  test("sem participantes mostra a faixa; com participantes mostra os 4 KPIs", async () => {
+    mockApiAvaliacoes();
+    const { rerender } = renderPainel({ avaliacaoIdSelecionada: 501 });
+
+    expect(await screen.findByText("Nenhum aluno fez esta prova ainda.")).toBeInTheDocument();
+    expect(screen.queryByText("Participantes")).not.toBeInTheDocument();
+
+    rerender(painelJsx({ avaliacaoIdSelecionada: 500 }));
+
+    expect(await screen.findByText("Participantes")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhum aluno fez esta prova ainda.")).not.toBeInTheDocument();
+  });
+
+  // jsdom nao calcula layout (flex/largura real) - este teste so garante a
+  // estrutura/classe que o CSS depende pra nao espremer a questao
+  // (docs/bugs/PROMPT-agente-avaliacao-questao-espremida.md); a largura em
+  // si foi conferida visualmente no app real.
+  test("indice e a questao ficam lado a lado dentro do corpo, cada um com a classe que o CSS usa pro layout", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 500 });
+
+    const indice = await screen.findByRole("navigation", { name: "Questões" });
+    const questao = screen.getByText("Primeira pergunta").closest(".avaliacao-gestao__questao");
+
+    expect(questao).not.toBeNull();
+    expect(indice.parentElement).toHaveClass("avaliacao-gestao__corpo");
+    expect(questao.parentElement).toBe(indice.parentElement);
+  });
+
+  test("sem nenhum botao de editar/publicar/excluir/arquivar (Admin e Coordenador)", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 500, perfil: "Admin" });
+
+    await screen.findByText("Primeira pergunta");
+    expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Arquivar/ })).not.toBeInTheDocument();
+  });
+
+  test("indice e anterior/proximo da questao andam e ficam desativados nas pontas", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 500 });
+
+    expect(await screen.findByText("Primeira pergunta")).toBeInTheDocument();
+    expect(screen.getByText("Questão 1 de 2")).toBeInTheDocument();
+
+    const indiceNav = screen.getByRole("navigation", { name: "Questões" });
+    const rodapeQuestao = screen.getByText("Questão 1 de 2").closest("footer");
+
+    expect(within(indiceNav).getByRole("button", { name: "Questão 1" })).toHaveAttribute("aria-current", "true");
+    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 0/ })).toBeDisabled();
+    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 2/ })).not.toBeDisabled();
+
+    await userEvent.click(within(indiceNav).getByRole("button", { name: "Questão 2" }));
+
+    expect(await screen.findByText("Segunda pergunta")).toBeInTheDocument();
+    expect(screen.getByText("Questão 2 de 2")).toBeInTheDocument();
+    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 3/ })).toBeDisabled();
+
+    await userEvent.click(within(rodapeQuestao).getByRole("button", { name: /Questão 1/ }));
+    expect(await screen.findByText("Primeira pergunta")).toBeInTheDocument();
+  });
+
+  test("avaliacao que esta na lista mas ainda nao foi publicada mostra o aviso em vez das questoes", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 501 });
+
+    expect(
+      await screen.findByText("Esta avaliação ainda não foi publicada. As questões aparecem aqui depois da publicação.")
+    ).toBeInTheDocument();
+  });
+
+  test("rodape troca de avaliacao e fica desativado nas pontas", async () => {
+    mockApiAvaliacoes();
+    const onNavigate = vi.fn();
+    renderPainel({ avaliacaoIdSelecionada: 500, onNavigate });
+
+    await screen.findByText("Primeira pergunta");
+    expect(screen.getByRole("button", { name: /Avaliação anterior/ })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: /Próxima avaliação: Prova Rascunho/ }));
+    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/avaliacoes/501");
+  });
+
+  test("avaliacaoId que nao pertence ao curso volta pro curso (replace)", async () => {
+    mockApiAvaliacoes();
+    const onNavigate = vi.fn();
+    renderPainel({ avaliacaoIdSelecionada: 999, onNavigate });
+
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10", { replace: true }));
+  });
+
+  test("ao voltar da avaliacao (inclusive apos F5 direto na URL), a aba Avaliacoes do curso fica selecionada", async () => {
+    mockApiAvaliacoes();
+    const { rerender } = renderPainel({ avaliacaoIdSelecionada: 500 });
+
+    await screen.findByText("Primeira pergunta");
+
+    rerender(painelJsx({ avaliacaoIdSelecionada: null }));
+
+    const abaAvaliacoes = await screen.findByRole("tab", { name: /Avaliacoes do curso/ });
+    expect(abaAvaliacoes).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: /^Modulos/ })).toHaveAttribute("aria-selected", "false");
   });
 });

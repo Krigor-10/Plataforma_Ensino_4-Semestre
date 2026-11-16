@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   TbAlertTriangle,
   TbAward,
@@ -7,7 +6,6 @@ import {
   TbCamera,
   TbCertificate,
   TbChartBar,
-  TbChevronDown,
   TbChevronRight,
   TbCircleCheck,
   TbDotsVertical,
@@ -16,7 +14,6 @@ import {
   TbLockOpen,
   TbPencil,
   TbTag,
-  TbTarget,
   TbTrophy,
   TbUserCheck,
   TbUsers
@@ -32,6 +29,7 @@ import Modal from "../../components/Modal.jsx";
 import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import TelaAvaliacaoGestao from "./TelaAvaliacaoGestao.jsx";
 import TelaModuloGestao from "./TelaModuloGestao.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { useModaisModulo } from "../../hooks/useModaisModulo.js";
@@ -71,6 +69,7 @@ function ordenarPorCriacao(moduloA, moduloB) {
    desempenho do curso aqui dentro (GET /Cursos/{id}/desempenho),
    independente do snapshot global. */
 export default function PainelCursoGestao({
+  avaliacaoIdSelecionada = null,
   coordenadores = [],
   curso,
   moduloIdSelecionado = null,
@@ -93,7 +92,6 @@ export default function PainelCursoGestao({
   const [desempenho, setDesempenho] = useState(null);
   const [erroDesempenho, setErroDesempenho] = useState("");
   const [tentativaRecarga, setTentativaRecarga] = useState(0);
-  const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("modulos");
   const [modalProfessoresAberto, setModalProfessoresAberto] = useState(false);
@@ -212,13 +210,13 @@ export default function PainelCursoGestao({
   }, [curso.id]);
 
   useEffect(() => {
-    if (!moduloIdSelecionado || revisaoConteudo || carregandoRevisaoConteudo || erroRevisaoConteudo) {
+    if ((!moduloIdSelecionado && !avaliacaoIdSelecionada) || revisaoConteudo || carregandoRevisaoConteudo || erroRevisaoConteudo) {
       return;
     }
 
     carregarRevisaoConteudo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduloIdSelecionado, revisaoConteudo, carregandoRevisaoConteudo, erroRevisaoConteudo]);
+  }, [moduloIdSelecionado, avaliacaoIdSelecionada, revisaoConteudo, carregandoRevisaoConteudo, erroRevisaoConteudo]);
 
   // moduloId que nao pertence a este curso (ou nao existe mais): volta pra
   // lista de modulos, igual ja acontece com um cursoId invalido em
@@ -234,6 +232,33 @@ export default function PainelCursoGestao({
 
     onNavigate?.(`/app/cursos/${curso.id}`, { replace: true });
   }, [curso.id, moduloIdSelecionado, modulosOrdenados, onNavigate]);
+
+  // avaliacaoId que nao pertence a este curso (ou nao existe mais): volta
+  // pro curso, mesma ideia do moduloId acima. So decide depois que o
+  // desempenho (fonte de avaliacoesDoCurso) terminou de carregar, senao
+  // redireciona sozinho antes da lista chegar.
+  useEffect(() => {
+    if (!avaliacaoIdSelecionada || !desempenho) {
+      return;
+    }
+
+    if (avaliacoesDoCurso.some((avaliacao) => avaliacao.avaliacaoId === avaliacaoIdSelecionada)) {
+      return;
+    }
+
+    onNavigate?.(`/app/cursos/${curso.id}`, { replace: true });
+  }, [curso.id, avaliacaoIdSelecionada, avaliacoesDoCurso, desempenho, onNavigate]);
+
+  // Ao entrar na tela da avaliacao, a aba "Avaliacoes do curso" ja fica
+  // selecionada no estado - assim, quando o usuario voltar (inclusive apos
+  // F5 direto na URL da avaliacao), o curso reaparece com essa aba ativa em
+  // vez de "Modulos" (docs/fluxo-coordenador/PROMPT-agente-avaliacao-tela-
+  // propria.md, item 2).
+  useEffect(() => {
+    if (avaliacaoIdSelecionada) {
+      setAbaAtiva("avaliacoes");
+    }
+  }, [avaliacaoIdSelecionada]);
 
   useEffect(() => {
     if (menuAbertoId === null) {
@@ -255,10 +280,6 @@ export default function PainelCursoGestao({
       document.removeEventListener("keydown", fechar);
     };
   }, [menuAbertoId]);
-
-  function alternarAvaliacaoDoCurso(avaliacaoId) {
-    setAvaliacaoAbertaId((atual) => (atual === avaliacaoId ? null : avaliacaoId));
-  }
 
   function abrirExclusaoModulo(modulo) {
     modais.abrirExclusaoModulo(modulo);
@@ -332,6 +353,29 @@ export default function PainelCursoGestao({
         erroRevisaoConteudo={erroRevisaoConteudo}
         moduloId={moduloIdSelecionado}
         modulosOrdenados={modulosOrdenados}
+        onNavigate={onNavigate}
+        onTentarNovamenteRevisaoConteudo={carregarRevisaoConteudo}
+        revisaoConteudo={revisaoConteudo}
+        revisaoConteudoCarregando={carregandoRevisaoConteudo}
+      />
+    );
+  }
+
+  // Tela da avaliacao (Admin/Coordenador) substitui o conteudo normal do
+  // curso enquanto houver avaliacaoIdSelecionada - mesma ideia da tela do
+  // modulo acima; o useEffect ja disparou a navegacao de volta se o id nao
+  // pertencer a este curso (so depois do desempenho carregar).
+  if (avaliacaoIdSelecionada) {
+    if (desempenho && !avaliacoesDoCurso.some((avaliacao) => avaliacao.avaliacaoId === avaliacaoIdSelecionada)) {
+      return null;
+    }
+
+    return (
+      <TelaAvaliacaoGestao
+        avaliacaoId={avaliacaoIdSelecionada}
+        avaliacoesDoCurso={avaliacoesDoCurso}
+        curso={curso}
+        erroRevisaoConteudo={erroRevisaoConteudo}
         onNavigate={onNavigate}
         onTentarNovamenteRevisaoConteudo={carregarRevisaoConteudo}
         revisaoConteudo={revisaoConteudo}
@@ -522,90 +566,31 @@ export default function PainelCursoGestao({
       ) : (
         <div aria-label="Avaliacoes do curso" role="tabpanel">
           <div className="atividades-curso__lista-modulos">
-            {avaliacoesDoCurso.map((avaliacao, indice) => {
-              const avaliacaoAberta = avaliacaoAbertaId === avaliacao.avaliacaoId;
-              const idDetalheAvaliacao = `avaliacao-curso-detalhe-${avaliacao.avaliacaoId}`;
-              const ehQuizDoCurso = Number(avaliacao.tipoAvaliacao) === TIPO_AVALIACAO_QUIZ;
-
-              return (
-                <section className="conteudos-modulo conteudos-modulo--cartao" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
-                  <header className="conteudos-modulo__cabecalho">
-                    <h3 className="conteudos-modulo__cabecalho-wrapper">
-                      <button
-                        aria-controls={idDetalheAvaliacao}
-                        aria-expanded={avaliacaoAberta}
-                        className="conteudos-modulo__toggle"
-                        onClick={() => alternarAvaliacaoDoCurso(avaliacao.avaliacaoId)}
-                        type="button"
-                      >
-                        <div className="conteudos-modulo__info">
-                          <span aria-hidden="true" className="conteudos-modulo__icone conteudos-modulo__icone--caixa">
-                            <TbTrophy size="1.15rem" />
-                          </span>
-                          <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
-                          <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
-                        </div>
-                        <span className="atividades-curso__metrica">
-                          {normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)} · {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"}
+            {avaliacoesDoCurso.map((avaliacao, indice) => (
+              <section className="conteudos-modulo conteudos-modulo--cartao" key={`avaliacao-curso-${avaliacao.avaliacaoId}`}>
+                <header className="conteudos-modulo__cabecalho">
+                  <h3 className="conteudos-modulo__cabecalho-wrapper">
+                    <button
+                      className="conteudos-modulo__toggle"
+                      onClick={() => onNavigate?.(`/app/cursos/${curso.id}/avaliacoes/${avaliacao.avaliacaoId}`)}
+                      type="button"
+                    >
+                      <div className="conteudos-modulo__info">
+                        <span aria-hidden="true" className="conteudos-modulo__icone conteudos-modulo__icone--caixa">
+                          <TbTrophy size="1.15rem" />
                         </span>
-                        <TbChevronDown
-                          aria-hidden="true"
-                          className={`conteudos-modulo__chevron${avaliacaoAberta ? " conteudos-modulo__chevron--aberto" : ""}`}
-                          size="1.1rem"
-                        />
-                      </button>
-                    </h3>
-                  </header>
-
-                  <AnimatePresence initial={false}>
-                    {avaliacaoAberta ? (
-                      <motion.div
-                        animate={{ height: "auto", opacity: 1 }}
-                        className="conteudos-modulo__corpo"
-                        exit={{ height: 0, opacity: 0 }}
-                        id={idDetalheAvaliacao}
-                        initial={{ height: 0, opacity: 0 }}
-                        key={`detalhe-avaliacao-curso-${avaliacao.avaliacaoId}`}
-                        style={{ overflow: "hidden" }}
-                        transition={{ duration: 0.24, ease: "easeInOut" }}
-                      >
-                        <dl className="conteudos-modulo__lista lista-detalhes lista-detalhes--inline lista-detalhes--metricas">
-                          <div className="lista-detalhes__item">
-                            <dt><TbUsers aria-hidden="true" size={15} /> Participantes</dt>
-                            <dd>{avaliacao.totalParticipantes || 0}</dd>
-                          </div>
-                          {ehQuizDoCurso ? (
-                            <div className="lista-detalhes__item">
-                              <dt><TbTrophy aria-hidden="true" size={15} /> Tipo</dt>
-                              <dd>Quiz - formativo, sem nota</dd>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="lista-detalhes__item">
-                                <dt><TbAward aria-hidden="true" size={15} /> Nota média</dt>
-                                <dd>{formatGrade(avaliacao.mediaNota)}</dd>
-                              </div>
-                              <div className="lista-detalhes__item">
-                                <dt><TbTarget aria-hidden="true" size={15} /> Nota máxima</dt>
-                                <dd>{formatGrade(avaliacao.notaMaxima)}</dd>
-                              </div>
-                            </>
-                          )}
-                          <div className="lista-detalhes__item">
-                            <dt><TbCircleCheck aria-hidden="true" size={15} /> Conclusão</dt>
-                            <dd>{formatPercent(avaliacao.percentualConclusao)}</dd>
-                          </div>
-                          <div className="lista-detalhes__item">
-                            <dt><TbChartBar aria-hidden="true" size={15} /> Aproveitamento</dt>
-                            <dd>{formatPercent(avaliacao.percentualAproveitamento)}</dd>
-                          </div>
-                        </dl>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </section>
-              );
-            })}
+                        <span className="conteudos-modulo__eyebrow">Avaliacao {String(indice + 1).padStart(2, "0")}</span>
+                        <span className="conteudos-modulo__titulo">{avaliacao.titulo}</span>
+                      </div>
+                      <span className="atividades-curso__metrica">
+                        {normalizeTipoAvaliacao(avaliacao.tipoAvaliacao)} · {avaliacao.totalParticipantes} participante{avaliacao.totalParticipantes === 1 ? "" : "s"}
+                      </span>
+                      <TbChevronRight aria-hidden="true" className="conteudos-modulo__chevron" size="1.1rem" />
+                    </button>
+                  </h3>
+                </header>
+              </section>
+            ))}
           </div>
         </div>
       )}

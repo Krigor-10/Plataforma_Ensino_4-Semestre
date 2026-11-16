@@ -25,7 +25,7 @@ function LeituraMaterial({ conteudo }) {
 function LeituraQuiz({ questoes }) {
   return (
     <div className="leitura-item__quiz">
-      {questoes && questoes.length > 0 ? <GabaritoQuestoes questoes={questoes} /> : null}
+      {questoes && questoes.length > 0 ? <GabaritoQuestoes compacto questoes={questoes} /> : null}
     </div>
   );
 }
@@ -35,14 +35,12 @@ function LeituraQuiz({ questoes }) {
    pelo painel lateral da tela do modulo (TelaModuloGestao.jsx), que substituiu
    a janela "Revisar conteudo" (docs/fluxo-coordenador/PROMPT-agente-modulo-
    tela-propria.md). `item` segue o mesmo formato de entrada usado la: { tipo:
-   "material"|"quiz", titulo, conteudo?, quiz? }. */
-export default function LeituraItemConteudo({ item, meta, moduloIndice, moduloTitulo, questoes }) {
+   "material"|"quiz", titulo, conteudo?, quiz? }. Sem a trilha "Modulo N ›
+   titulo › Quiz/Material": o modulo ja esta no titulo da pagina (docs/fluxo-
+   coordenador/PROMPT-agente-modulo-leitura-compacta.md, item 2). */
+export default function LeituraItemConteudo({ item, meta, questoes }) {
   return (
     <div className="leitura-item">
-      <p className="leitura-item__trilha">
-        Módulo {String(moduloIndice + 1).padStart(2, "0")} › {moduloTitulo} › {item.tipo === "quiz" ? "Quiz" : "Material"}
-      </p>
-
       <div className="leitura-item__cabecalho">
         <div className="leitura-item__cabecalho-texto">
           <h3 className="leitura-item__titulo">{item.titulo}</h3>

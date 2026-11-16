@@ -88,6 +88,7 @@ function compararCursos(left, right, priorizarAguardando) {
    curso (alunos matriculados, media geral, estrutura, acoes administrativas)
    em vez de um menu de contexto solto no card. */
 export function SecaoCursos({
+  avaliacaoIdSelecionada = null,
   coordenadores = [],
   cursoIdSelecionado = null,
   cursos,
@@ -761,6 +762,7 @@ export function SecaoCursos({
     return (
       <div className="tela-cursos">
         <PainelCursoGestao
+          avaliacaoIdSelecionada={avaliacaoIdSelecionada}
           coordenadores={coordenadoresOrdenados}
           curso={cursoSelecionado}
           moduloIdSelecionado={moduloIdSelecionado}

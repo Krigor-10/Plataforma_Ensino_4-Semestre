@@ -188,20 +188,20 @@ export default function TelaModuloGestao({
     <div className="modulo-gestao">
       <BotaoVoltar destino="Módulos" onClick={voltarParaModulos} />
 
-      <nav aria-label="Caminho até o módulo" className="modulo-gestao__migalha">
-        <button onClick={() => onNavigate("/app/cursos")} type="button">
-          Cursos
-        </button>
-        <span aria-hidden="true">›</span>
-        <button onClick={voltarParaModulos} title={curso.titulo} type="button">
-          {curso.titulo}
-        </button>
-        <span aria-hidden="true">›</span>
-        <span aria-current="page">{moduloAtual.titulo}</span>
-      </nav>
-
       <header className="modulo-gestao__cabecalho">
         <div className="modulo-gestao__cabecalho-principal">
+          <nav aria-label="Caminho até o módulo" className="modulo-gestao__migalha">
+            <button onClick={() => onNavigate("/app/cursos")} type="button">
+              Cursos
+            </button>
+            <span aria-hidden="true">›</span>
+            <button onClick={voltarParaModulos} title={curso.titulo} type="button">
+              {curso.titulo}
+            </button>
+            <span aria-hidden="true">›</span>
+            <span aria-current="page">{moduloAtual.titulo}</span>
+          </nav>
+
           <h2 className="modulo-gestao__titulo">
             <NumeroModulo indice={indiceModuloAtual} /> {moduloAtual.titulo}
           </h2>
@@ -246,7 +246,9 @@ export default function TelaModuloGestao({
             {conteudos.length > 0 ? (
               <section aria-label={`Conteúdos (${conteudos.length})`}>
                 <h3 className="modulo-gestao__secao-titulo">
-                  Conteúdos <span className="modulo-gestao__secao-contagem">{conteudos.length}</span>
+                  Conteúdos
+                  <span className="modulo-gestao__secao-contagem">{conteudos.length}</span>
+                  <span aria-hidden="true" className="modulo-gestao__secao-linha" />
                 </h3>
                 <ul className="atividades-curso__lista" role="list">
                   {conteudos.map((item) => (
@@ -275,9 +277,11 @@ export default function TelaModuloGestao({
             ) : null}
 
             {quizzes.length > 0 ? (
-              <section aria-label={`Quizzes (${quizzes.length})`}>
+              <section aria-label={`Quizzes (${quizzes.length})`} className="modulo-gestao__secao--quizzes">
                 <h3 className="modulo-gestao__secao-titulo">
-                  Quizzes <span className="modulo-gestao__secao-contagem">{quizzes.length}</span>
+                  Quizzes
+                  <span className="modulo-gestao__secao-contagem">{quizzes.length}</span>
+                  <span aria-hidden="true" className="modulo-gestao__secao-linha" />
                 </h3>
                 <ul className="atividades-curso__lista" role="list">
                   {quizzes.map((item) => (
@@ -327,8 +331,6 @@ export default function TelaModuloGestao({
                       ? `Quiz · ${itemAberto.quiz.totalQuestoes || 0} ${itemAberto.quiz.totalQuestoes === 1 ? "questão" : "questões"} · ${metricaQuiz(metricaQuizPorId, itemAberto.quiz)}`
                       : undefined
                   }
-                  moduloIndice={indiceModuloAtual}
-                  moduloTitulo={moduloAtual.titulo}
                   questoes={itemAberto.questoes}
                 />
 

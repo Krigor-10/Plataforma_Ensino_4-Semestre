@@ -130,17 +130,26 @@ export default function WorkspaceScreen({
       return;
     }
 
-    // Tela do modulo (Admin/Coordenador, docs/fluxo-coordenador/PROMPT-agente-
-    // modulo-tela-propria.md): /app/cursos/:id/modulos/:moduloId e o unico
-    // caso valido de subsecao/subparam hoje - qualquer outra combinacao
-    // continua cortada pro canonico so com section/param, como antes.
+    // Tela do modulo e tela da avaliacao (Admin/Coordenador, docs/fluxo-
+    // coordenador/PROMPT-agente-modulo-tela-propria.md e ...-avaliacao-tela-
+    // propria.md): /app/cursos/:id/modulos/:moduloId e /app/cursos/:id/
+    // avaliacoes/:avaliacaoId sao os unicos casos validos de subsecao/subparam
+    // hoje - qualquer outra combinacao continua cortada pro canonico so com
+    // section/param, como antes.
     const temModuloNaRota =
       activeSection === "cursos" && Boolean(route.param) && route.subsecao === "modulos" && Boolean(route.subparam);
+    const temAvaliacaoNaRota =
+      activeSection === "cursos" && Boolean(route.param) && route.subsecao === "avaliacoes" && Boolean(route.subparam);
+    const subsecaoNaRota = temModuloNaRota
+      ? `/modulos/${route.subparam}`
+      : temAvaliacaoNaRota
+        ? `/avaliacoes/${route.subparam}`
+        : "";
 
     const canonicalPath =
       activeSection === "dashboard"
         ? "/app"
-        : `/app/${activeSection}${route.param ? `/${route.param}` : ""}${temModuloNaRota ? `/modulos/${route.subparam}` : ""}`;
+        : `/app/${activeSection}${route.param ? `/${route.param}` : ""}${subsecaoNaRota}`;
     const currentPath = window.location.pathname || "/app";
 
     if (normalizePath(currentPath) !== canonicalPath) {
@@ -707,6 +716,7 @@ export default function WorkspaceScreen({
 
             {activeSection === "cursos" ? (
               <SecaoCursos
+                avaliacaoIdSelecionada={route.subsecao === "avaliacoes" && route.subparam ? Number(route.subparam) : null}
                 coordenadores={snapshot.coordenadores}
                 cursoIdSelecionado={route.param ? Number(route.param) : null}
                 cursos={cursosDaSecaoCursos}

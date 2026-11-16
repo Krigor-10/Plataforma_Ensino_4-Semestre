@@ -8596,6 +8596,45 @@
   background: color-mix(in srgb, var(--cor-texto-mudo) 12%, transparent);
 }
 
+/* Contexto de apoio da questao (so quando `mostrarFicha`, ver
+   GabaritoQuestoes.jsx) - discreto, sem fundo nem italico, so uma borda
+   esquerda fina (docs/fluxo-coordenador/PROMPT-agente-avaliacao-tela-
+   limpa.md, item 7, e ...-avaliacao-figura-layout.md, item 4). A citacao
+   bibliografica do professor, se houver, ja vem dentro do proprio
+   `contexto`, digitada por ele - as `referenciasBibliograficas` do banco de
+   questoes (campo separado) viram o <details> "Referencias bibliograficas"
+   no fim da questao (`.revisao-questao__referencias` abaixo), pra nao
+   repetir a citacao duas vezes. */
+.revisao-questao__contexto {
+  margin: 0;
+  padding-left: var(--espaco-sm);
+  border-left: 2px solid var(--cor-borda);
+}
+
+.revisao-questao__contexto p {
+  margin: 0;
+  color: var(--cor-texto-suave);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.revisao-questao__referencias {
+  color: var(--cor-texto-mudo);
+  font-size: 0.75rem;
+}
+
+.revisao-questao__referencias summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.revisao-questao__referencias p {
+  margin: var(--espaco-xs) 0 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .revisao-questao__enunciado {
   margin: 0;
   color: var(--cor-texto-forte);
@@ -8671,14 +8710,29 @@
   background: color-mix(in srgb, var(--cor-erro) 8%, var(--cor-fundo-elevado));
 }
 
+/* Grade auto 1fr auto (letra/numero | texto | marca "Correta/Incorreta")
+   em vez de flex-wrap: um texto longo nao deixa a letra sozinha na linha de
+   cima - docs/fluxo-coordenador/PROMPT-agente-modulo-leitura-compacta.md,
+   item 3. Vale tambem pra previa do Professor (PreviaTrilhaAluno.jsx), que
+   reaproveita o mesmo GabaritoQuestoes sem a variante compacta. */
 .revisao-afirmativas__cabecalho,
 .revisao-alternativas__cabecalho {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
   gap: 0.4rem;
   font-size: 0.9rem;
   color: var(--cor-texto-forte);
+}
+
+.revisao-afirmativas__letra,
+.revisao-alternativas__letra {
+  font-weight: 700;
+}
+
+.revisao-afirmativas__texto,
+.revisao-alternativas__texto {
+  min-width: 0;
 }
 
 .revisao-afirmativas__justificativa,
@@ -8834,7 +8888,8 @@
    (resto da largura) ficam lado a lado, cada um com rolagem propria
    e a altura da area visivel - a pagina em si nao rola.
    ------------------------------------------------------------ */
-.modulo-gestao {
+.modulo-gestao,
+.avaliacao-gestao {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-lg);
@@ -8844,11 +8899,13 @@
    detalhe - sem margem sobrando ele fica no fluxo, acima do caminho; em
    tela larga sai pra margem esquerda sozinho (regra ja existente em
    .atividades-curso__navegacao, nao duplicada aqui). O gap uniforme de
-   --espaco-lg do .modulo-gestao fica grande demais so entre esses 2
-   primeiros itens (botao->caminho->titulo) - margin-bottom negativo "come"
-   parte do gap so nesses 2 casos, docs/fluxo-coordenador/PROMPT-agente-
-   modulo-caminho-e-voltar.md. */
-.modulo-gestao > .atividades-curso__navegacao {
+   --espaco-lg do .modulo-gestao/.avaliacao-gestao fica grande demais so
+   entre esses 2 primeiros itens (botao->caminho->titulo) - margin-bottom
+   negativo "come" parte do gap so nesses 2 casos, docs/fluxo-coordenador/
+   PROMPT-agente-modulo-caminho-e-voltar.md (e ...-avaliacao-tela-propria.md,
+   que reaproveita o mesmo caminho). */
+.modulo-gestao > .atividades-curso__navegacao,
+.avaliacao-gestao > .atividades-curso__navegacao {
   margin-bottom: calc(var(--espaco-sm) - var(--espaco-lg));
 }
 
@@ -8859,7 +8916,6 @@
   gap: 0.4rem;
   font-size: 0.82rem;
   color: var(--cor-texto-mudo);
-  margin-bottom: calc(var(--espaco-md) - var(--espaco-lg));
 }
 
 .modulo-gestao__migalha button {
@@ -8951,13 +9007,18 @@
 .modulo-gestao__secao-titulo {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  margin: var(--espaco-md) 0 var(--espaco-xs);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cor-texto-mudo);
+  gap: 0.5rem;
+  margin: 0 0 var(--espaco-sm);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--cor-texto-forte);
+}
+
+/* "Quizzes" ganha mais respiro que o espaco entre os cartoes (0.5rem,
+   .atividades-curso__lista) - o gap de --espaco-lg do .modulo-gestao__lista
+   ja separa as 2 secoes; essa margem soma um pouco mais so na 2a. */
+.modulo-gestao__secao--quizzes {
+  margin-top: var(--espaco-sm);
 }
 
 .modulo-gestao__secao-contagem {
@@ -8968,11 +9029,17 @@
   height: 1.3rem;
   padding: 0 0.4rem;
   border-radius: var(--raio-circular);
-  background: var(--cor-fundo-elevado);
-  border: 1px solid var(--cor-borda);
-  color: var(--cor-texto-suave);
+  background: color-mix(in srgb, var(--cor-marca) 16%, transparent);
+  color: var(--cor-marca-clara);
   font-size: 0.7rem;
   font-weight: 700;
+}
+
+.modulo-gestao__secao-linha {
+  flex: 1;
+  height: 1px;
+  min-width: 1rem;
+  background: var(--cor-borda);
 }
 
 /* Cada conteudo/quiz vira um cartao com o mesmo relevo dos cartoes de
@@ -9186,7 +9253,7 @@
 /* ------------------------------------------------------------
    LEITURA DE UM ITEM (material ou quiz) — components/
    LeituraItemConteudo.jsx, reaproveitado pelo painel lateral da
-   tela do modulo acima. Cabecalho (trilha/titulo/meta/selo) e rodape
+   tela do modulo acima. Cabecalho (titulo/meta/selo) e rodape
    ficam fixos; so o corpo (material ou gabarito do quiz) rola -
    ver .modulo-gestao__painel-rodape acima, que e o rodape de verdade.
    ------------------------------------------------------------ */
@@ -9198,20 +9265,11 @@
   gap: var(--espaco-sm);
 }
 
-.leitura-item__trilha,
-.leitura-item__cabecalho {
-  flex-shrink: 0;
-}
-
-.leitura-item__trilha {
-  font-size: 0.75rem;
-  color: var(--cor-texto-mudo);
-}
-
 .leitura-item__cabecalho {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  flex-shrink: 0;
+  align-items: center;
   justify-content: space-between;
   gap: var(--espaco-sm);
 }
@@ -9283,12 +9341,350 @@
    largura confortavel - container query em .modulo-gestao__painel (acima),
    escopado so aqui pra nao alterar GabaritoQuestoes.jsx nem as outras telas
    que reaproveitam .revisao-avaliacao--gabarito (tentativa do aluno, previa
-   do professor). */
-@container (min-width: 900px) {
+   do professor). Formato compacto (mais denso) permite entrar em 2 colunas
+   mais cedo, 760px em vez de 900px - PROMPT-agente-modulo-leitura-
+   compacta.md, item 5. */
+@container (min-width: 760px) {
   .modulo-gestao__painel .revisao-avaliacao--gabarito {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: var(--espaco-lg);
+  }
+}
+
+/* ------------------------------------------------------------
+   GABARITO COMPACTO — components/GabaritoQuestoes.jsx com
+   `compacto`, usado so pela leitura do modulo (LeituraItemConteudo).
+   Cabecalho "QUESTAO N" + pilula "Resposta: X", sem os rotulos
+   "Alternativas"/"Explicacao" em cima, letra em circulo e menos
+   espaco por questao - docs/fluxo-coordenador/PROMPT-agente-modulo-
+   leitura-compacta.md, item 4. A previa do Professor (PreviaTrilhaAluno)
+   nao usa essa variante.
+   ------------------------------------------------------------ */
+.revisao-avaliacao--compacta .revisao-questao {
+  padding: 0.75rem 0.875rem;
+  gap: var(--espaco-xs);
+}
+
+.revisao-avaliacao--compacta .revisao-questao__cabecalho {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.revisao-avaliacao--compacta .revisao-questao__numero {
+  font-size: 0.72rem;
+}
+
+.revisao-questao__resposta-pilula {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--raio-circular);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cor-sucesso);
+  background: color-mix(in srgb, var(--cor-sucesso) 14%, transparent);
+}
+
+.revisao-avaliacao--compacta .revisao-questao__enunciado {
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.revisao-avaliacao--compacta .revisao-afirmativas,
+.revisao-avaliacao--compacta .revisao-alternativas {
+  gap: 0.3rem;
+}
+
+.revisao-avaliacao--compacta .revisao-afirmativas__item,
+.revisao-avaliacao--compacta .revisao-alternativas__item {
+  padding: 6px 9px;
+  gap: 5px;
+}
+
+.revisao-avaliacao--compacta .revisao-afirmativas__cabecalho,
+.revisao-avaliacao--compacta .revisao-alternativas__cabecalho {
+  font-size: 0.8rem;
+}
+
+.revisao-avaliacao--compacta .revisao-alternativas__letra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--raio-circular);
+  border: 1px solid var(--cor-borda);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.revisao-avaliacao--compacta .revisao-alternativas__item--correta .revisao-alternativas__letra {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso);
+  color: var(--cor-fundo-elevado);
+}
+
+.revisao-questao__explicacao--compacta {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-left: 3px solid var(--cor-marca-clara);
+  background: color-mix(in srgb, var(--cor-marca) 6%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-questao__explicacao--compacta strong {
+  color: var(--cor-texto-forte);
+}
+
+/* ------------------------------------------------------------
+   TELA DA AVALIACAO (Admin/Coordenador) — pages/workspace/
+   TelaAvaliacaoGestao.jsx, docs/fluxo-coordenador/PROMPT-agente-
+   avaliacao-tela-propria.md (fluxo original) + ...-avaliacao-tela-
+   limpa.md (caminho dentro do header, resumo numa linha so, faixa sem
+   participantes). Reaproveita o "← Voltar"/cabecalho/rodape da tela do
+   modulo (.modulo-gestao__migalha/__cabecalho/__cabecalho-principal/
+   __titulo/__resumo/__rodape, ver bloco "TELA DO MODULO" acima e a
+   regra .modulo-gestao/.avaliacao-gestao compartilhada) - so o que e
+   proprio desta tela (4 KPIs/faixa sem participantes, indice de
+   questoes) ganha classe nova. Mobile first: abaixo de 768px o indice
+   vira uma linha rolavel na horizontal acima da questao; a partir dai,
+   indice (coluna fixa) e questao ficam lado a lado.
+   ------------------------------------------------------------ */
+.avaliacao-gestao .modulo-gestao__titulo {
+  flex-wrap: wrap;
+}
+
+.avaliacao-gestao__resumo-separador {
+  color: var(--cor-texto-mudo);
+}
+
+.avaliacao-gestao__kpis-area {
+  flex-shrink: 0;
+  min-width: 16rem;
+  max-width: 100%;
+}
+
+.avaliacao-gestao__kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 560px) {
+  .avaliacao-gestao__kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.avaliacao-gestao__sem-participantes {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  height: 100%;
+  margin: 0;
+  padding: var(--espaco-md) var(--espaco-lg);
+  border: 1px dashed var(--cor-borda);
+  border-radius: var(--raio-lg);
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+}
+
+.avaliacao-gestao__descricao {
+  margin: 0;
+  max-width: 47.5rem;
+  color: var(--cor-texto-mudo);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.avaliacao-gestao__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.avaliacao-gestao__indice {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 0.4rem;
+  padding-bottom: 0.2rem;
+}
+
+.avaliacao-gestao__indice-item {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--raio-md);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.avaliacao-gestao__indice-item:hover {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-texto-forte);
+}
+
+.avaliacao-gestao__indice-item[aria-current="true"] {
+  border-color: var(--cor-marca-clara);
+  background: color-mix(in srgb, var(--cor-marca) 14%, var(--cor-fundo-elevado));
+  color: var(--cor-texto-forte);
+}
+
+.avaliacao-gestao__questao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+/* Em >= 768px (.avaliacao-gestao__corpo em linha, ver abaixo) a questao e
+   item flex ao lado do indice (180px fixos). `container-type: inline-size`
+   faz o navegador ignorar o conteudo pra calcular a largura "natural" do
+   item (vira 0); sem `flex: 1` ele encolhia pro minimo, uma coluna fina de
+   ~150px com o cabecalho e o enunciado quebrando palavra por palavra -
+   docs/bugs/PROMPT-agente-avaliacao-questao-espremida.md. */
+@media (min-width: 768px) {
+  .avaliacao-gestao__questao {
+    flex: 1 1 0;
+  }
+}
+
+/* Figura ao lado do texto - so quando a questao tem anexo de imagem
+   (components/GabaritoQuestoes.jsx com `mostrarFicha` monta
+   `.revisao-questao__corpo-figura` > (`.revisao-questao__coluna-texto`,
+   `.revisao-questao__coluna-figura`) nesse caso - sem isso, a marcacao
+   fica igual a de antes). Mobile first: uma coluna so, com a coluna de
+   texto "achatada" (`display: contents`) pra que `order` reposicione a
+   figura logo depois do enunciado, sem duplicar nada no DOM (o truque
+   anterior com `:has()`+`grid-row: 2 / -1` tirava o cabecalho da 1a linha
+   da grade porque "-1" conta so linhas definidas em `grid-template-rows`,
+   que esse grid nao tem - docs/bugs/PROMPT-agente-avaliacao-figura-
+   layout.md). A partir de 900px (container da area da questao, acima),
+   vira grade de 2 colunas de verdade: coluna de texto deixa de ser
+   `contents` e a figura fica sticky ao lado, alinhada no topo com o
+   cabecalho. */
+.revisao-questao__corpo-figura {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.revisao-questao__corpo-figura .revisao-questao__coluna-texto {
+  display: contents;
+}
+
+.revisao-questao__corpo-figura .revisao-questao__contexto {
+  order: 1;
+}
+
+.revisao-questao__corpo-figura .revisao-questao__enunciado {
+  order: 2;
+}
+
+.revisao-questao__corpo-figura .revisao-questao__coluna-figura {
+  order: 3;
+}
+
+.revisao-questao__corpo-figura .quiz-anexos--arquivos {
+  order: 4;
+}
+
+.revisao-questao__corpo-figura .revisao-questao__bloco {
+  order: 5;
+}
+
+.revisao-questao__corpo-figura .revisao-questao__explicacao,
+.revisao-questao__corpo-figura .revisao-questao__explicacao--compacta {
+  order: 6;
+}
+
+@container (min-width: 900px) {
+  .revisao-questao__corpo-figura {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: var(--espaco-lg);
+    align-items: start;
+  }
+
+  .revisao-questao__corpo-figura .revisao-questao__coluna-texto {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espaco-sm);
+    min-width: 0;
+  }
+
+  .revisao-questao__corpo-figura .revisao-questao__coluna-figura {
+    position: sticky;
+    top: var(--espaco-md);
+  }
+}
+
+.revisao-avaliacao--compacta .quiz-anexos--imagens {
+  gap: var(--espaco-sm);
+}
+
+.revisao-avaliacao--compacta .quiz-anexo-imagem {
+  margin: 0;
+  padding: var(--espaco-sm);
+}
+
+.revisao-avaliacao--compacta .quiz-anexo-imagem a {
+  display: block;
+}
+
+.revisao-avaliacao--compacta .quiz-anexo-imagem img {
+  max-height: 420px;
+  width: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+}
+
+.revisao-avaliacao--compacta .quiz-anexo-imagem figcaption {
+  font-size: 0.72rem;
+}
+
+.avaliacao-gestao__questao-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.avaliacao-gestao__questao-contador {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .avaliacao-gestao__corpo {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--espaco-lg);
+  }
+
+  .avaliacao-gestao__indice {
+    flex-direction: column;
+    flex-wrap: wrap;
+    width: 180px;
+    flex-shrink: 0;
+    overflow-x: visible;
+    position: sticky;
+    top: var(--espaco-md);
+  }
+
+  .avaliacao-gestao__indice-item {
+    text-align: left;
   }
 }
