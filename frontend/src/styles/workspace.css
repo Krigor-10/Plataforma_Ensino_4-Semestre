@@ -3806,14 +3806,14 @@
   color: var(--cor-texto-forte);
 }
 
-/* Atalho de filtro "N sem curso"/"N sem coordenador" - um botao sem estilo
-   proprio por baixo da Insignia que ja carrega a aparencia (pilula); ativo
-   so troca a cor da borda da propria Insignia (via style prop) pra
-   --cor-borda-forte, ja usada em destaques leves no resto do app.
-   .tela-cursos reaproveita o mesmo padrao (docs/bugs/PROMPT-agente-
-   filtros-cursos-admin.md, atalho "N sem coordenador" na grade do Admin). */
-.tela-coordenadores .indicador-filtro,
-.tela-cursos .indicador-filtro {
+/* Atalho de filtro "N sem curso" (SecaoCoordenadores.jsx) - um botao sem
+   estilo proprio por baixo da Insignia que ja carrega a aparencia (pilula);
+   ativo so troca a cor da borda da propria Insignia (via style prop) pra
+   --cor-borda-forte, ja usada em destaques leves no resto do app. O
+   equivalente em Cursos do Admin ("N sem coordenador") virou opcao do
+   proprio select de Coordenador na rodada 2 (docs/bugs/PROMPT-agente-
+   filtros-cursos-admin-rodada2.md), sem chip solto. */
+.tela-coordenadores .indicador-filtro {
   background: none;
   border: none;
   cursor: pointer;
@@ -3821,28 +3821,89 @@
   padding: 0;
 }
 
-/* Filtros de coordenador/modelo da grade de Cursos do Admin, na mesma
-   linha das abas (empurrados pra direita via margin-left: auto) em vez de
-   uma linha propria embaixo - docs/bugs/PROMPT-agente-filtros-cursos-
-   admin.md. Cada select usa so .campo__entrada (sem .barra-filtros__select,
-   que tem max-width fixo) pra acompanhar o texto sem cortar a opcao
-   escolhida. */
+/* Abas + filtros de Cursos do Admin numa linha so, estavel - rodada 2
+   (docs/bugs/PROMPT-agente-filtros-cursos-admin-rodada2.md): a rodada 1
+   (margin-left:auto, acima) deixava o grupo pular de lugar porque os itens
+   apareciam/sumiam e mudavam de largura (chip "N sem coordenador", filtro
+   de Modelo escondido nas abas de venda, "Limpar filtros" so com filtro
+   ativo). Agora sao sempre os mesmos 3 itens de largura fixa (Coordenador/
+   Modelo/Limpar), so ativam ou desativam - nunca aparecem nem somem. Sem
+   quebra no desktop; abaixo de ~900px o grupo desce inteiro pra baixo das
+   abas (ver media query no fim do arquivo). */
+.cursos-admin-linha-abas {
+  flex-wrap: nowrap;
+}
+
 .cursos-admin-filtros {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--espaco-md);
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  gap: var(--espaco-sm);
   margin-left: auto;
+  overflow-x: auto;
 }
 
-.filtro-inline {
-  align-items: center;
-  display: flex;
-  gap: 0.35rem;
-}
-
-.filtro-inline .campo__rotulo {
+.filtro-largura-fixa {
+  appearance: none;
+  background-image: none;
+  border-radius: var(--raio-circular);
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  padding: 0.5rem 1.1rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.filtro-largura-fixa--coordenador {
+  width: 230px;
+}
+
+.filtro-largura-fixa--modelo {
+  width: 150px;
+}
+
+.filtro-largura-fixa--ativo {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.filtro-largura-fixa:disabled {
+  color: var(--cor-texto-mudo);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filtro-botao-limpar {
+  align-items: center;
+  background: var(--cor-fundo-elevado);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-circular);
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.filtro-botao-limpar:hover:not(:disabled) {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.filtro-botao-limpar:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (max-width: 899.98px) {
+  .cursos-admin-linha-abas {
+    flex-wrap: wrap;
+  }
 }
 
 .tela-coordenadores .celula-cursos {
@@ -5213,6 +5274,7 @@
 
 .catalogo-card--acionavel {
   width: 100%;
+  flex: 1;
   text-align: left;
   cursor: pointer;
   font: inherit;
@@ -7521,6 +7583,20 @@
   padding: 0;
 }
 
+/* Cards da mesma linha com a mesma altura (bug: titulo longo + "Sem
+   coordenador" quebrando em 2 linhas deixava um card mais alto que o
+   vizinho, docs/bugs/PROMPT-agente-cards-cursos-altura-desigual.md). O <li>
+   ja estica ate a altura da linha (comportamento padrao do grid), mas o
+   .catalogo-card (ou o botao .catalogo-card--acionavel dentro dele, abaixo)
+   so tinha a altura do proprio conteudo - sem isso o margin-top:auto do
+   .catalogo-card__rodape-aluno nao tinha o que empurrar. Em
+   SecaoMatriculas.jsx o <li> E o .catalogo-card (ja esticava sozinho); aqui
+   so garante o mesmo pro caso comum (<li> generico > botao do card). */
+.catalogo-grade > li {
+  display: flex;
+  flex-direction: column;
+}
+
 .catalogo-card {
   position: relative;
   background: var(--cor-cartao);
@@ -7593,6 +7669,13 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--espaco-sm);
+}
+
+/* Reticencias entram no titulo, nunca no selo ao lado (ver .insignia em
+   componentes.css pro flex-shrink/nowrap do selo em si). */
+.meus-cursos__titulo-linha .catalogo-card__titulo {
+  flex: 1;
+  min-width: 0;
 }
 
 .catalogo-card__corpo {

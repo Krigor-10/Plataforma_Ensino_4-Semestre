@@ -268,12 +268,14 @@
 .insignia {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 4px;
   padding: 0.2rem 0.6rem;
   border-radius: var(--raio-circular);
   font-size: var(--texto-xs);
   font-weight: 600;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .insignia--sucesso {

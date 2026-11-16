@@ -1196,6 +1196,15 @@
   }
 }
 
+/* Abas mais compactas so na grade de Cursos do Admin (rodada 2, docs/bugs/
+   PROMPT-agente-filtros-cursos-admin-rodada2.md) - sobra espaco pro grupo
+   de filtros de largura fixa ficar na mesma linha. Mesmo visual (cores e
+   destaque da aba ativa inalterados), so fonte e padding menores. */
+.abas-matriculas--compacta .abas-matriculas__aba {
+  font-size: 0.82rem;
+  padding: 7px 13px;
+}
+
 .abas-matriculas__aba:hover:not(.abas-matriculas__aba--ativa) {
   background: rgba(185, 153, 255, 0.08);
   color: var(--cor-texto-suave);

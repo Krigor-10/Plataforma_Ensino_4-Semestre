@@ -200,7 +200,29 @@ export function SecaoCursos({
     () => cursos.filter((curso) => categoriaCicloCurso(curso) === abaCurso && !curso.coordenadorId).length,
     [abaCurso, cursos]
   );
-  const mostrarFiltroModelo = abaCurso === "andamento" || abaCurso === "encerrados";
+  // Abas "A venda"/"Fora da venda" so tem curso Pago - o filtro de Modelo
+  // fica desativado nelas, mostrando "Modelo: Pago" em vez de sumir (rodada
+  // 2, docs/bugs/PROMPT-agente-filtros-cursos-admin-rodada2.md).
+  const modeloDesativadoNaAba = abaCurso === "a-venda" || abaCurso === "fora-da-venda";
+
+  const rotuloFiltroCoordenador = useMemo(() => {
+    if (filtroCoordenador === "todos") {
+      return "Coordenador: Todos";
+    }
+    if (filtroCoordenador === "aguardando") {
+      return `Coordenador: Sem coordenador (${totalSemCoordenadorNaAba})`;
+    }
+    const coordenador = coordenadorPorId.get(Number(filtroCoordenador));
+    return `Coordenador: ${coordenador?.nome || "—"}`;
+  }, [coordenadorPorId, filtroCoordenador, totalSemCoordenadorNaAba]);
+
+  const rotuloFiltroModelo = modeloDesativadoNaAba
+    ? "Modelo: Pago"
+    : filtroModelo === "todos"
+      ? "Modelo: Todos"
+      : Number(filtroModelo) === MODELO_GRATUITO
+        ? "Modelo: Grátis"
+        : "Modelo: Acompanhado";
 
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
@@ -297,10 +319,6 @@ export function SecaoCursos({
     if (aba === "a-venda" || aba === "fora-da-venda") {
       setFiltroModelo("todos");
     }
-  }
-
-  function alternarFiltroSemCoordenador() {
-    setFiltroCoordenador((atual) => (atual === "aguardando" ? "todos" : "aguardando"));
   }
 
   function abrirModalCoordenadorCurso(curso) {
@@ -807,10 +825,10 @@ export function SecaoCursos({
       </header>
 
       {ehAdmin ? (
-        <div className="linha-abas-status">
+        <div className="linha-abas-status cursos-admin-linha-abas">
           <nav
             aria-label="Status dos cursos"
-            className={`abas-matriculas${abasCursosTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+            className={`abas-matriculas abas-matriculas--compacta${abasCursosTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
             ref={refAbasCursos}
             role="tablist"
           >
@@ -853,60 +871,53 @@ export function SecaoCursos({
           </nav>
 
           <div className="cursos-admin-filtros">
-            {totalSemCoordenadorNaAba > 0 ? (
-              <button
-                aria-pressed={filtroCoordenador === "aguardando"}
-                className="indicador-filtro"
-                onClick={alternarFiltroSemCoordenador}
-                type="button"
-              >
-                <Insignia
-                  style={filtroCoordenador === "aguardando" ? { borderColor: "var(--cor-borda-forte)" } : undefined}
-                  texto={`${totalSemCoordenadorNaAba} sem coordenador`}
-                  variante="aviso"
-                />
-              </button>
-            ) : null}
+            <label className="visualmente-oculto" htmlFor="filtro-coordenador">Coordenador</label>
+            <select
+              className={`campo__entrada filtro-largura-fixa filtro-largura-fixa--coordenador${filtroCoordenador !== "todos" ? " filtro-largura-fixa--ativo" : ""}`}
+              id="filtro-coordenador"
+              onChange={(event) => setFiltroCoordenador(event.target.value)}
+              title={rotuloFiltroCoordenador}
+              value={filtroCoordenador}
+            >
+              <option value="todos">Coordenador: Todos</option>
+              <option value="aguardando">Coordenador: Sem coordenador ({totalSemCoordenadorNaAba})</option>
+              {coordenadoresOrdenados.map((coordenador) => (
+                <option key={coordenador.id} value={coordenador.id}>
+                  Coordenador: {coordenador.nome}
+                </option>
+              ))}
+            </select>
 
-            <div className="filtro-inline">
-              <label className="campo__rotulo" htmlFor="filtro-coordenador">Coordenador:</label>
-              <select
-                className="campo__entrada"
-                id="filtro-coordenador"
-                onChange={(event) => setFiltroCoordenador(event.target.value)}
-                value={filtroCoordenador}
-              >
-                <option value="todos">Todos</option>
-                <option value="aguardando">Sem coordenador</option>
-                {coordenadoresOrdenados.map((coordenador) => (
-                  <option key={coordenador.id} value={coordenador.id}>
-                    {coordenador.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label className="visualmente-oculto" htmlFor="filtro-modelo-curso">Modelo</label>
+            <select
+              className={`campo__entrada filtro-largura-fixa filtro-largura-fixa--modelo${filtroModelo !== "todos" && !modeloDesativadoNaAba ? " filtro-largura-fixa--ativo" : ""}`}
+              disabled={modeloDesativadoNaAba}
+              id="filtro-modelo-curso"
+              onChange={(event) => setFiltroModelo(event.target.value)}
+              title={rotuloFiltroModelo}
+              value={modeloDesativadoNaAba ? "pago" : filtroModelo}
+            >
+              {modeloDesativadoNaAba ? (
+                <option value="pago">Modelo: Pago</option>
+              ) : (
+                <>
+                  <option value="todos">Modelo: Todos</option>
+                  <option value={MODELO_GRATUITO}>Modelo: Grátis</option>
+                  <option value={MODELO_ACOMPANHADO}>Modelo: Acompanhado</option>
+                </>
+              )}
+            </select>
 
-            {mostrarFiltroModelo ? (
-              <div className="filtro-inline">
-                <label className="campo__rotulo" htmlFor="filtro-modelo-curso">Modelo:</label>
-                <select
-                  className="campo__entrada"
-                  id="filtro-modelo-curso"
-                  onChange={(event) => setFiltroModelo(event.target.value)}
-                  value={filtroModelo}
-                >
-                  <option value="todos">Todos</option>
-                  <option value={MODELO_GRATUITO}>Grátis</option>
-                  <option value={MODELO_ACOMPANHADO}>Acompanhado</option>
-                </select>
-              </div>
-            ) : null}
-
-            {temFiltroAtivo ? (
-              <Botao onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
-                Limpar filtros
-              </Botao>
-            ) : null}
+            <button
+              aria-label="Limpar filtros"
+              className="filtro-botao-limpar"
+              disabled={!temFiltroAtivo}
+              onClick={limparFiltros}
+              title="Limpar filtros"
+              type="button"
+            >
+              <TbX aria-hidden="true" size={16} />
+            </button>
           </div>
         </div>
       ) : null}
@@ -980,7 +991,7 @@ export function SecaoCursos({
                   />
                   <div className="catalogo-card__corpo">
                     <div className="meus-cursos__titulo-linha">
-                      <strong className="catalogo-card__titulo">{curso.titulo}</strong>
+                      <strong className="catalogo-card__titulo" title={curso.titulo}>{curso.titulo}</strong>
                       {ehAdmin ? (
                         <Insignia
                           texto={coordenador || curso.coordenadorId ? "Coordenado" : "Sem coordenador"}

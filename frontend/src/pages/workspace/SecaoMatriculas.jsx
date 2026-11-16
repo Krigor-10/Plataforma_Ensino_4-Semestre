@@ -73,7 +73,7 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
       />
       <div className="catalogo-card__corpo">
         <div className="meus-cursos__titulo-linha">
-          <h3 className="catalogo-card__titulo">{curso.titulo}</h3>
+          <h3 className="catalogo-card__titulo" title={curso.titulo}>{curso.titulo}</h3>
           {matricula && !compacto ? <Insignia texto={matricula.status} /> : null}
         </div>
         {!compacto ? <p className="catalogo-card__turma">{curso.descricao}</p> : null}

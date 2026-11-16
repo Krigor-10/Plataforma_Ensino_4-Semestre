@@ -32,7 +32,7 @@ export default function GradeCursosProfessor({ cursos, mensagemVazia, onSelecion
               }}
             />
             <div className="catalogo-card__corpo">
-              <strong className="catalogo-card__titulo">{curso.titulo}</strong>
+              <strong className="catalogo-card__titulo" title={curso.titulo}>{curso.titulo}</strong>
               <p className="catalogo-card__data">{resumo}</p>
               {percentual !== undefined ? <BarraProgresso percentual={percentual} /> : null}
               <footer className="catalogo-card__rodape-aluno">
