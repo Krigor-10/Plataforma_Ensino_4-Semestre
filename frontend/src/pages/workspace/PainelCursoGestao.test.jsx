@@ -499,20 +499,33 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(itemAlternativaCerta).toHaveClass("revisao-alternativas__item--correta");
   });
 
-  test("desktop: item anterior/proximo andam dentro do modulo e ficam desativados nas pontas", async () => {
+  // docs/bugs/PROMPT-agente-modulo-botoes-anterior-proximo.md: textos
+  // curtos e fixos ("Anterior"/"Próximo") no lugar de "Item anterior:
+  // <titulo completo>", que ficava cortado - o nome do item vizinho vai
+  // pro `title` (dica do mouse) em vez do texto visivel.
+  test("desktop: item anterior/proximo andam dentro do modulo, com texto fixo e o vizinho no title, desativados nas pontas", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1 });
 
     expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Item anterior/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Próximo item/ })).not.toBeDisabled();
+
+    const botaoAnterior = screen.getByRole("button", { name: "Item anterior" });
+    const botaoProximo = screen.getByRole("button", { name: "Próximo item" });
+
+    expect(botaoAnterior).toHaveTextContent("Anterior");
+    expect(botaoProximo).toHaveTextContent("Próximo");
+    expect(botaoAnterior).toBeDisabled();
+    expect(botaoAnterior).not.toHaveAttribute("title");
+    expect(botaoProximo).not.toBeDisabled();
+    expect(botaoProximo).toHaveAttribute("title", "Quiz publicado");
     expect(screen.getByText("Item 1 de 2")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Próximo item/ }));
+    await userEvent.click(botaoProximo);
     expect(await screen.findByRole("heading", { name: "Quiz publicado" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Item anterior/ })).not.toBeDisabled();
-    expect(screen.getByRole("button", { name: /Próximo item/ })).toBeDisabled();
+    expect(botaoAnterior).not.toBeDisabled();
+    expect(botaoAnterior).toHaveAttribute("title", "Material revisado");
+    expect(botaoProximo).toBeDisabled();
     expect(screen.getByText("Item 2 de 2")).toBeInTheDocument();
   });
 
@@ -763,17 +776,42 @@ describe("PainelCursoGestao - tela da avaliacao (docs/fluxo-coordenador/PROMPT-a
     const rodapeQuestao = screen.getByText("Questão 1 de 2").closest("footer");
 
     expect(within(indiceNav).getByRole("button", { name: "Questão 1" })).toHaveAttribute("aria-current", "true");
-    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 0/ })).toBeDisabled();
-    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 2/ })).not.toBeDisabled();
+    expect(within(rodapeQuestao).getByRole("button", { name: "Questão anterior" })).toBeDisabled();
+    expect(within(rodapeQuestao).getByRole("button", { name: "Próxima questão" })).not.toBeDisabled();
+    expect(within(rodapeQuestao).queryByText(/Questão 0/)).not.toBeInTheDocument();
 
     await userEvent.click(within(indiceNav).getByRole("button", { name: "Questão 2" }));
 
     expect(await screen.findByText("Segunda pergunta")).toBeInTheDocument();
     expect(screen.getByText("Questão 2 de 2")).toBeInTheDocument();
-    expect(within(rodapeQuestao).getByRole("button", { name: /Questão 3/ })).toBeDisabled();
+    expect(within(rodapeQuestao).getByRole("button", { name: "Próxima questão" })).toBeDisabled();
+    expect(within(rodapeQuestao).getByRole("button", { name: "Questão anterior" })).not.toBeDisabled();
 
-    await userEvent.click(within(rodapeQuestao).getByRole("button", { name: /Questão 1/ }));
+    await userEvent.click(within(rodapeQuestao).getByRole("button", { name: "Questão anterior" }));
     expect(await screen.findByText("Primeira pergunta")).toBeInTheDocument();
+  });
+
+  // docs/bugs/PROMPT-agente-avaliacao-botoes-anterior-proxima.md: so a
+  // questao aberta (aria-current) fica destacada no indice, mesmo depois
+  // de clicar numa questao e voltar pra outra pelo rodape.
+  test("so a questao aberta fica com aria-current, mesmo depois de ir e voltar entre questoes", async () => {
+    mockApiAvaliacoes();
+    renderPainel({ avaliacaoIdSelecionada: 500 });
+
+    expect(await screen.findByText("Primeira pergunta")).toBeInTheDocument();
+    const indiceNav = screen.getByRole("navigation", { name: "Questões" });
+
+    await userEvent.click(within(indiceNav).getByRole("button", { name: "Questão 2" }));
+    await screen.findByText("Segunda pergunta");
+
+    const rodapeQuestao = screen.getByText("Questão 2 de 2").closest("footer");
+    await userEvent.click(within(rodapeQuestao).getByRole("button", { name: "Questão anterior" }));
+    await screen.findByText("Primeira pergunta");
+
+    const botoesIndice = within(indiceNav).getAllByRole("button");
+    const comAriaCurrent = botoesIndice.filter((botao) => botao.getAttribute("aria-current") === "true");
+    expect(comAriaCurrent).toHaveLength(1);
+    expect(comAriaCurrent[0]).toHaveTextContent("Questão 1");
   });
 
   test("avaliacao que esta na lista mas ainda nao foi publicada mostra o aviso em vez das questoes", async () => {

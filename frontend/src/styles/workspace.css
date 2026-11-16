@@ -9181,13 +9181,6 @@
   margin-top: var(--espaco-md);
 }
 
-.modulo-gestao__painel-rodape-texto {
-  max-width: 10rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .modulo-gestao__painel-rodape-contador {
   flex-shrink: 0;
   font-size: 0.8rem;
@@ -9196,10 +9189,6 @@
 }
 
 @media (max-width: 480px) {
-  .modulo-gestao__painel-rodape-texto {
-    max-width: 4.5rem;
-  }
-
   .modulo-gestao__painel-rodape-contador {
     font-size: 0.72rem;
   }

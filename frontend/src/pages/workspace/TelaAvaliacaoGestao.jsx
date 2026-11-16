@@ -247,23 +247,25 @@ export default function TelaAvaliacaoGestao({
 
             <footer className="avaliacao-gestao__questao-rodape">
               <Botao
+                aria-label="Questão anterior"
                 disabled={questaoAtualIndice === 0}
                 onClick={() => irParaQuestao(questaoAtualIndice - 1)}
                 type="button"
                 variante="secundario"
               >
-                <TbArrowLeft aria-hidden="true" size={16} /> Questão {questaoAtualIndice}
+                <TbArrowLeft aria-hidden="true" size={16} /> Anterior
               </Botao>
               <span className="avaliacao-gestao__questao-contador">
                 Questão {questaoAtualIndice + 1} de {questoes.length}
               </span>
               <Botao
+                aria-label="Próxima questão"
                 disabled={questaoAtualIndice === questoes.length - 1}
                 onClick={() => irParaQuestao(questaoAtualIndice + 1)}
                 type="button"
                 variante="primario"
               >
-                Questão {questaoAtualIndice + 2} <TbArrowRight aria-hidden="true" size={16} />
+                Próxima <TbArrowRight aria-hidden="true" size={16} />
               </Botao>
             </footer>
           </div>

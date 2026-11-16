@@ -336,29 +336,27 @@ export default function TelaModuloGestao({
 
                 <footer className="modal-rodape modulo-gestao__painel-rodape">
                   <Botao
+                    aria-label="Item anterior"
                     disabled={!itemAnterior}
                     onClick={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
+                    title={itemAnterior?.titulo}
                     type="button"
                     variante="secundario"
                   >
-                    <TbArrowLeft aria-hidden="true" size={16} />
-                    <span className="modulo-gestao__painel-rodape-texto">
-                      {itemAnterior ? `Item anterior: ${itemAnterior.titulo}` : "Item anterior"}
-                    </span>
+                    <TbArrowLeft aria-hidden="true" size={16} /> Anterior
                   </Botao>
                   <span className="modulo-gestao__painel-rodape-contador">
                     Item {indiceItemAberto + 1} de {itensOrdenados.length}
                   </span>
                   <Botao
+                    aria-label="Próximo item"
                     disabled={!itemProximo}
                     onClick={() => itemProximo && setItemAbertoId(itemProximo.id)}
+                    title={itemProximo?.titulo}
                     type="button"
                     variante="primario"
                   >
-                    <span className="modulo-gestao__painel-rodape-texto">
-                      {itemProximo ? `Próximo item: ${itemProximo.titulo}` : "Próximo item"}
-                    </span>
-                    <TbArrowRight aria-hidden="true" size={16} />
+                    Próximo <TbArrowRight aria-hidden="true" size={16} />
                   </Botao>
                 </footer>
               </>
