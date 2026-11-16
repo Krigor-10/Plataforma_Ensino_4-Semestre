@@ -28,7 +28,13 @@ import { ROUTES } from "../../lib/routes.js";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
+import RevisaoQuizModal from "../../components/RevisaoQuizModal.jsx";
 import VisualizadorConteudo from "../../components/VisualizadorConteudo.jsx";
+
+// Tentativa ja corrigida (StatusTentativaAvaliacao, mesmo valor do backend
+// - ver QuizModal.jsx:corrigida) - so nesse caso a revisao tem o que
+// mostrar.
+const STATUS_TENTATIVA_CORRIGIDA = 3;
 
 const PAGAMENTO_PENDENTE = 1;
 // Tipos abertos dentro do app (modal) com conclusao automatica - ver
@@ -79,6 +85,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [mensagem, setMensagem] = useState(null);
   const [quizSelecionado, setQuizSelecionado] = useState(null);
+  const [quizParaRevisar, setQuizParaRevisar] = useState(null);
   const [cursoParaComprar, setCursoParaComprar] = useState(null);
   const [valorPagamentoPendenteParaComprar, setValorPagamentoPendenteParaComprar] = useState(null);
   const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
@@ -237,6 +244,22 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
       }
       return proximo;
     });
+  }
+
+  // Quiz ja concluido (tentativas esgotadas) abre a revisao (gabarito) em
+  // vez do dialogo "Antes de comecar" de QuizModal.jsx - antes, reabrir um
+  // quiz ja respondido so travava num aviso de limite de tentativas, sem
+  // nenhum acesso as respostas antigas.
+  function abrirQuizOuRevisao(quiz) {
+    const disponibilidade = obterDisponibilidadeAvaliacao(quiz);
+    const concluido = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
+
+    if (concluido && quiz.ultimaTentativaId && Number(quiz.ultimoStatusTentativa) === STATUS_TENTATIVA_CORRIGIDA) {
+      setQuizParaRevisar(quiz);
+      return;
+    }
+
+    setQuizSelecionado(quiz);
   }
 
   async function marcarConcluido(conteudoId) {
@@ -487,7 +510,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                       linha={linha}
                       marcarConcluido={marcarConcluido}
                       mostrarDivisor={indice > 0 && !linha.recuado}
-                      onAbrirQuiz={setQuizSelecionado}
+                      onAbrirQuiz={abrirQuizOuRevisao}
                     />
                   ))}
 
@@ -505,6 +528,14 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         onFechar={() => setQuizSelecionado(null)}
         onSessionExpired={onSessionExpired}
         visivel={Boolean(quizSelecionado)}
+      />
+
+      <RevisaoQuizModal
+        avaliacaoId={quizParaRevisar?.id}
+        onFechar={() => setQuizParaRevisar(null)}
+        onSessionExpired={onSessionExpired}
+        tentativaId={quizParaRevisar?.ultimaTentativaId}
+        visivel={Boolean(quizParaRevisar)}
       />
 
       <VisualizadorConteudo
@@ -669,6 +700,8 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   const disponibilidade = obterDisponibilidadeAvaliacao(quiz);
   const concluidoQuiz = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
   const tocavel = disponibilidade.podeRealizar || concluidoQuiz;
+  const temRevisaoDisponivel =
+    concluidoQuiz && Boolean(quiz.ultimaTentativaId) && Number(quiz.ultimoStatusTentativa) === STATUS_TENTATIVA_CORRIGIDA;
 
   const corpoQuiz = (
     <>
@@ -690,7 +723,12 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
           <Text style={estilos.botaoContornoTexto}>Responder</Text>
         </TouchableOpacity>
       ) : concluidoQuiz ? (
-        <View accessibilityHint="Indica que este quiz já foi concluído" accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso]}>
+        <View
+          accessibilityHint={temRevisaoDisponivel ? "Toque na linha para ver a revisão" : "Indica que este quiz já foi concluído"}
+          accessibilityLabel="Concluído"
+          accessible
+          style={[estilos.statusPill, estilos.statusPillSucesso]}
+        >
           <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
           <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
         </View>
@@ -703,7 +741,8 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   if (tocavel) {
     return (
       <TouchableOpacity
-        accessibilityLabel={`Abrir quiz ${quiz.titulo}`}
+        accessibilityHint={temRevisaoDisponivel ? "Mostra a revisão com o gabarito do quiz" : undefined}
+        accessibilityLabel={temRevisaoDisponivel ? `Ver revisão do quiz ${quiz.titulo}` : `Abrir quiz ${quiz.titulo}`}
         accessibilityRole="button"
         onPress={() => onAbrirQuiz(quiz)}
         style={estiloLinha}

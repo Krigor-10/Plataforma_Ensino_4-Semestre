@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StatusBar, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { DarkTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import LoginScreen from "./src/screens/LoginScreen.jsx";
@@ -13,6 +13,25 @@ import { envolverComSentry, inicializarSentry } from "./src/lib/sentry.js";
 import { cores } from "./src/lib/theme.js";
 
 const RootStack = createNativeStackNavigator();
+
+// NavigationContainer sem `theme` usa o DefaultTheme (fundo branco). Nesse
+// app sempre escuro, qualquer vao entre telas - o fade do TelaComTransicao.jsx
+// na troca de aba, ou o slide nativo do native-stack ao empilhar/voltar -
+// revelava esse branco por baixo antes do conteudo da tela cobrir tudo: a
+// causa do "flash branco" na navegacao. Corrigido dando ao container o
+// mesmo fundo do app, igual pra toda tela/transicao (pendencia-mobile-
+// transicoes-flash-telas).
+const temaNavegacao = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: cores.fundo,
+    card: cores.fundoCartao,
+    border: cores.bordaCartao,
+    primary: cores.destaque,
+    text: cores.texto
+  }
+};
 
 inicializarSentry();
 
@@ -63,7 +82,7 @@ function App() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
-      <NavigationContainer>
+      <NavigationContainer theme={temaNavegacao}>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           {!session.user ? (
             <RootStack.Screen name={ROUTES.AUTH}>
