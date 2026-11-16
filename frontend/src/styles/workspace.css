@@ -8993,10 +8993,13 @@
   padding: var(--espaco-sm) var(--espaco-md);
 }
 
-.modulo-gestao__item-metrica {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--cor-texto-mudo);
+/* A metrica do topo do modulo (Progresso/Conclusao) ja repete essa info -
+   so a seta ("›") fica centralizada na altura do cartao, que agora tem so
+   2 linhas (titulo + tipo/contagem) - docs/fluxo-coordenador/PROMPT-agente-
+   modulo-cartao-seta-e-metrica.md. .atividades-curso__linha (regra geral,
+   outras telas) nao muda. */
+.modulo-gestao__item-cartao .atividades-curso__chevron {
+  align-self: center;
 }
 
 /* Item aberto ganha contorno roxo, igual ao pedido do usuario - soma ao

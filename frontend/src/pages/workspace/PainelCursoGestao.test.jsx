@@ -455,10 +455,15 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();
-    expect(screen.getByText(/2 alunos concluíram · 50%/)).toBeInTheDocument();
-    expect(screen.getByText("1 participante")).toBeInTheDocument();
-    expect(screen.queryByText(/Média/)).not.toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
+
+    // Cartoes do modulo (docs/fluxo-coordenador/PROMPT-agente-modulo-
+    // cartao-seta-e-metrica.md): sem a linha de concluintes/participantes,
+    // ja repetida pelos KPIs do topo (Progresso/Conclusao).
+    expect(screen.queryByText(/alunos? conclu[ií]u?ram?/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/participante/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Média/)).not.toBeInTheDocument();
+    expect(screen.getByText("Quiz · 1 questão")).toBeInTheDocument();
 
     // Desktop (jsdom default >= 768px): o 1o item (Material revisado) ja
     // abre sozinho, sem precisar clicar - prompt-agente-modulo-tela-
@@ -486,6 +491,11 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     await userEvent.click(screen.getByText("Quiz publicado"));
 
     await waitFor(() => expect(screen.getByText("Qual a resposta certa?")).toBeInTheDocument());
+
+    // O cartao da lista nao mostra mais "participante", mas o cabecalho da
+    // leitura continua mostrando (docs/bugs/PROMPT-agente-modulo-cartao-
+    // seta-e-metrica.md, item 3).
+    expect(screen.getByText(/Quiz · 1 questão · 1 participante/)).toBeInTheDocument();
 
     const itemAlternativaCerta = screen.getByText(
       (_, element) =>

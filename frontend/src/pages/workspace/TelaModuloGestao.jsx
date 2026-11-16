@@ -68,17 +68,6 @@ function montarItensDoModulo(moduloRevisao) {
   return { conteudos, quizzes };
 }
 
-function metricaMaterial(metricaMaterialPorId, conteudo) {
-  const metrica = metricaMaterialPorId.get(conteudo.id);
-  if (!metrica) {
-    return "—";
-  }
-
-  const total = metrica.alunosConcluiram || 0;
-  const verbo = total === 1 ? "aluno concluiu" : "alunos concluíram";
-  return `${total} ${verbo} · ${formatPercent(metrica.percentualConclusao)}`;
-}
-
 // Quiz e de fixacao, sem nota - nao faz sentido mostrar "Media" (prompt
 // modulo-tela-melhorias.md, achado 5).
 function metricaQuiz(metricaQuizPorId, quiz) {
@@ -149,10 +138,6 @@ export default function TelaModuloGestao({
     [desempenho, moduloId]
   );
 
-  const metricaMaterialPorId = useMemo(
-    () => new Map((desempenhoModulo?.materiais || []).map((material) => [material.conteudoDidaticoId, material])),
-    [desempenhoModulo]
-  );
   const metricaQuizPorId = useMemo(
     () => new Map((desempenhoModulo?.avaliacoes || []).map((avaliacao) => [avaliacao.avaliacaoId, avaliacao])),
     [desempenhoModulo]
@@ -280,9 +265,6 @@ export default function TelaModuloGestao({
                           <p className="atividades-curso__meta">
                             <span>{normalizeContentType(item.conteudo.tipoConteudo)}</span>
                           </p>
-                          <p className="atividades-curso__metrica modulo-gestao__item-metrica">
-                            {metricaMaterial(metricaMaterialPorId, item.conteudo)}
-                          </p>
                         </div>
                         <TbChevronRight aria-hidden="true" className="atividades-curso__chevron" size="1.1rem" />
                       </button>
@@ -315,9 +297,6 @@ export default function TelaModuloGestao({
                             <span>
                               Quiz · {item.quiz.totalQuestoes || 0} {item.quiz.totalQuestoes === 1 ? "questão" : "questões"}
                             </span>
-                          </p>
-                          <p className="atividades-curso__metrica modulo-gestao__item-metrica">
-                            {metricaQuiz(metricaQuizPorId, item.quiz)}
                           </p>
                         </div>
                         <TbChevronRight aria-hidden="true" className="atividades-curso__chevron" size="1.1rem" />
