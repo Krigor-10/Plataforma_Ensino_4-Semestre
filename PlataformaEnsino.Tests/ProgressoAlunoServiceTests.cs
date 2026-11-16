@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Services;
@@ -284,5 +285,189 @@ public class ProgressoAlunoServiceTests
         Assert.Empty(snapshot.Conteudos);
         Assert.Empty(snapshot.Modulos);
         Assert.Empty(snapshot.Cursos);
+    }
+
+    // PROMPT-agente-progresso-e-trava-ao-concluir.md, Parte B: o professor
+    // publica conteudo novo depois do aluno ja estar em 100% - o progresso
+    // precisa cair na hora, sem o aluno fazer nada.
+    [Fact]
+    public async Task RecalcularProgressoDoCursoAsync_ConteudoNovoPublicadoDepoisDe100Porcento_FazPercentualCair()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
+
+        // Professor publica um segundo conteudo - simula o caminho que
+        // ConteudoDidaticoService.CriarConteudoAsync chama depois de salvar.
+        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2 (nova)");
+
+        await service.RecalcularProgressoDoCursoAsync(cenario.Curso.Id);
+
+        var snapshot = await service.ObterSnapshotAsync(cenario.Aluno.Id);
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(50m, cursoProgresso.PercentualConclusao);
+    }
+
+    [Fact]
+    public async Task RecalcularProgressoDoCursoAsync_CursoEncerrado_NaoRecalcula()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
+
+        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2 (nova)");
+        cenario.Curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await service.RecalcularProgressoDoCursoAsync(cenario.Curso.Id);
+
+        var snapshot = await service.ObterSnapshotAsync(cenario.Aluno.Id);
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(100m, cursoProgresso.PercentualConclusao);
+    }
+
+    [Fact]
+    public async Task RecalcularProgressoDoCursoAsync_CursoConcluidoPeloProfessorAguardandoEncerramento_NaoRecalcula()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        cenario.Curso.ModeloCurso = ModeloCurso.Gratuito;
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
+
+        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2 (nova)");
+        cenario.Curso.ConcluirPeloProfessor(professorId: 1);
+        context.SaveChanges();
+
+        await service.RecalcularProgressoDoCursoAsync(cenario.Curso.Id);
+
+        var snapshot = await service.ObterSnapshotAsync(cenario.Aluno.Id);
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(100m, cursoProgresso.PercentualConclusao);
+    }
+
+    [Fact]
+    public async Task RecalcularProgressoDoCursoAsync_CertificadoJaEmitido_ContinuaPreservado()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo1 = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo1.Id);
+        cenario.Matricula.EmitirCertificado();
+        context.SaveChanges();
+        var certificadoEmitidoEm = cenario.Matricula.CertificadoEmitidoEm;
+
+        CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 2 (nova)");
+        await service.RecalcularProgressoDoCursoAsync(cenario.Curso.Id);
+
+        var matriculaAtualizada = context.Matriculas.Single(m => m.Id == cenario.Matricula.Id);
+        Assert.Equal(certificadoEmitidoEm, matriculaAtualizada.CertificadoEmitidoEm);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
+    // Migracao de dados: roda em curso concluido-pelo-professor-aguardando
+    // (excecao deliberada, so pra esta correcao historica), mas nao em
+    // curso encerrado.
+    [Fact]
+    public async Task RecalcularProgressoDeCursosNaoEncerradosAsync_CorrigeConcluidoAguardandoMasIgnoraEncerrado()
+    {
+        var (service, context) = CriarService();
+
+        var cenarioAguardando = CriarCenarioAprovado(context);
+        cenarioAguardando.Curso.ModeloCurso = ModeloCurso.Gratuito;
+        var conteudoAguardando1 = CriarConteudoPublicado(context, cenarioAguardando.Turma.Id, cenarioAguardando.Modulo.Id, cenarioAguardando.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenarioAguardando.Aluno.Id, conteudoAguardando1.Id);
+        CriarConteudoPublicado(context, cenarioAguardando.Turma.Id, cenarioAguardando.Modulo.Id, cenarioAguardando.Curso.Id, "Aula 2 (nova)");
+        cenarioAguardando.Curso.ConcluirPeloProfessor(professorId: 1);
+
+        var cenarioEncerrado = CriarCenarioAprovado(context);
+        var conteudoEncerrado1 = CriarConteudoPublicado(context, cenarioEncerrado.Turma.Id, cenarioEncerrado.Modulo.Id, cenarioEncerrado.Curso.Id, "Aula 1");
+        await service.MarcarConteudoConcluidoAsync(cenarioEncerrado.Aluno.Id, conteudoEncerrado1.Id);
+        CriarConteudoPublicado(context, cenarioEncerrado.Turma.Id, cenarioEncerrado.Modulo.Id, cenarioEncerrado.Curso.Id, "Aula 2 (nova)");
+        cenarioEncerrado.Curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+
+        await service.RecalcularProgressoDeCursosNaoEncerradosAsync();
+
+        var progressoAguardando = context.ProgressosCursosAlunos.Single(p => p.MatriculaId == cenarioAguardando.Matricula.Id);
+        Assert.Equal(50m, progressoAguardando.PercentualConclusao);
+
+        var progressoEncerrado = context.ProgressosCursosAlunos.Single(p => p.MatriculaId == cenarioEncerrado.Matricula.Id);
+        Assert.Equal(100m, progressoEncerrado.PercentualConclusao);
+    }
+
+    // Modulo so com quiz (sem nenhum conteudo) precisa contar em
+    // TotalModulos/ModulosConcluidos - antes so agrupava pelos conteudos.
+    [Fact]
+    public async Task RecalcularProgressoDoCursoAsync_ModuloSoComQuiz_ContaEmTotalModulosQuandoQuizConcluido()
+    {
+        var (service, context) = CriarService();
+        var cenario = CriarCenarioAprovado(context);
+
+        var avaliacaoService = new AvaliacaoService(
+            context,
+            service,
+            new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance),
+            new AcessoAcademicoService(context),
+            null!,
+            null!,
+            null!,
+            new CursoService(
+                context,
+                new PlataformaEnsino.API.Repositories.GenericRepository<Curso>(context),
+                new PlataformaEnsino.API.Repositories.GenericRepository<Coordenador>(context),
+                new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance),
+                new CertificadoService(context, new AcessoAcademicoService(context))));
+
+        var professor = new Professor { Nome = "Professor Teste", Email = $"{Guid.NewGuid():N}@teste.local", Cpf = "22233344455", CodigoRegistro = "PRF-0001" };
+        professor.ConfigurarAcesso("Professor", "hash-fake");
+        context.Professores.Add(professor);
+        context.SaveChanges();
+        context.ProfessoresCursos.Add(new ProfessorCurso { CursoId = cenario.Curso.Id, ProfessorId = professor.Id });
+        context.SaveChanges();
+
+        var quiz = await avaliacaoService.CriarAvaliacaoAsync(professor.Id, new PlataformaEnsino.API.DTOs.CriarAvaliacaoDto
+        {
+            Titulo = "Quiz do modulo",
+            CursoId = cenario.Curso.Id,
+            ModuloId = cenario.Modulo.Id,
+            TipoAvaliacao = TipoAvaliacao.Quiz,
+            StatusPublicacao = StatusPublicacao.Rascunho,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        });
+        await avaliacaoService.AdicionarQuestaoAsync(quiz.Id, professor.Id, new PlataformaEnsino.API.DTOs.CriarQuestaoAvaliacaoDto
+        {
+            TituloInterno = "Questao",
+            Enunciado = "Enunciado",
+            TipoQuestao = TipoQuestao.MultiplaEscolha,
+            Pontos = 1,
+            Alternativas = new List<PlataformaEnsino.API.DTOs.CriarAlternativaAvaliacaoDto>
+            {
+                new() { Letra = "A", Texto = "Certa", EhCorreta = true },
+                new() { Letra = "B", Texto = "Errada", EhCorreta = false }
+            }
+        });
+        quiz.Publicar();
+        context.Avaliacoes.Update(quiz);
+        context.SaveChanges();
+
+        await avaliacaoService.EnviarRespostasAlunoAsync(quiz.Id, cenario.Aluno.Id, new PlataformaEnsino.API.DTOs.EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<PlataformaEnsino.API.DTOs.RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = (await context.QuestoesPublicadas.FirstAsync(q => q.AvaliacaoId == quiz.Id)).Id, AlternativaId = (await context.AlternativasQuestoesPublicadas.FirstAsync(a => a.EhCorreta)).Id }
+            }
+        });
+
+        var snapshot = await service.ObterSnapshotAsync(cenario.Aluno.Id);
+        var cursoProgresso = Assert.Single(snapshot.Cursos);
+        Assert.Equal(1, cursoProgresso.TotalModulos);
+        Assert.Equal(1, cursoProgresso.ModulosConcluidos);
+        Assert.Equal(100m, cursoProgresso.PercentualConclusao);
     }
 }

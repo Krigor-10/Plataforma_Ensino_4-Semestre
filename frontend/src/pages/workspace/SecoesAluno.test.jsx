@@ -92,6 +92,41 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
     expect(screen.getByText(/ainda nao possui modulos publicados/i)).toBeInTheDocument();
   });
 
+  // PROMPT-agente-progresso-e-trava-ao-concluir.md, Parte B, item 7: modulo
+  // so com quiz (sem nenhum conteudo) precisa aparecer na tela de Progresso
+  // e entrar em "Modulos concluidos" - antes o filtro so olhava conteudos.
+  test("modulo so com quiz (sem conteudo) aparece e entra em Modulos concluidos", async () => {
+    const cursos = [{ id: 30, titulo: "Curso So Com Quiz", imagemUrl: null }];
+    const modulos = [{ id: 300, cursoId: 30, titulo: "Fundamentos de Quiz", dataCriacao: "2026-01-01" }];
+    const avaliacoes = [
+      { id: 900, cursoId: 30, moduloId: 300, moduloTitulo: "Fundamentos de Quiz", titulo: "Quiz do modulo", tipoAvaliacao: 1, statusPublicacao: 2 }
+    ];
+    const matriculas = [{ id: 7, cursoId: 30, turmaId: null, status: "Aprovada", notaFinal: 0 }];
+    const progressos = {
+      conteudos: [],
+      modulos: [{ matriculaId: 7, moduloId: 300, percentualConclusao: 100, statusProgresso: 3 }],
+      cursos: [{ matriculaId: 7, cursoId: 30, percentualConclusao: 100, statusProgresso: 3 }]
+    };
+
+    render(
+      <SecaoCursosAluno
+        avaliacoes={avaliacoes}
+        conteudos={[]}
+        cursoIdSelecionado={30}
+        cursos={cursos}
+        matriculas={matriculas}
+        modulos={modulos}
+        onNavigate={vi.fn()}
+        progressos={progressos}
+        turmas={[]}
+      />
+    );
+
+    expect(screen.queryByText(/ainda nao possui modulos publicados/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Fundamentos de Quiz")).toBeInTheDocument();
+    expect(screen.getByText("1/1")).toBeInTheDocument();
+  });
+
   test("clicar num curso navega pra /app/meus-cursos/:id, e Voltar navega de volta pra lista", async () => {
     const usuario = userEvent.setup();
     const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos, turmas } = montarCenario();

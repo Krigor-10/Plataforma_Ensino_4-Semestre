@@ -138,7 +138,7 @@ public class AvaliacaoQuestaoEdicaoIntegrationTests : IAsyncLifetime
         CursoId = cursoId,
         ModuloId = moduloId,
         TipoAvaliacao = TipoAvaliacao.Quiz,
-        StatusPublicacao = StatusPublicacao.Publicado,
+        StatusPublicacao = StatusPublicacao.Rascunho,
         TentativasPermitidas = 1,
         NotaMaxima = 10,
         PesoNota = 1,

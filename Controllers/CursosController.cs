@@ -190,6 +190,23 @@ public class CursosController : ControllerBase
         return Ok(new { mensagem = "Curso reaberto com sucesso." });
     }
 
+    // Desfaz a conclusao do professor sem encerrar/reabrir - destrava a
+    // edicao e volta o curso pra "Em andamento" direto de "Aguardando
+    // encerramento". So Gratuito/Acompanhado tem esse botao.
+    [HttpPost("{id:int}/devolver-ao-professor")]
+    [Authorize(Roles = "Coordenador")]
+    public async Task<IActionResult> DevolverAoProfessor(int id, [FromBody] DevolverAoProfessorDto? dto)
+    {
+        var coordenadorId = ObterCoordenadorId();
+        if (!coordenadorId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o coordenador autenticado." });
+        }
+
+        await _cursoService.DevolverAoProfessorAsync(id, coordenadorId.Value, dto?.Motivo);
+        return Ok(new { mensagem = "Curso devolvido ao professor para ajustes." });
+    }
+
     // Preco/descricao do pacote (venda) sao responsabilidade exclusiva do
     // Admin, assim como preco e modelo em AtualizarCurso.
     [HttpPut("{id:int}/pacote")]

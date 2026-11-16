@@ -183,20 +183,30 @@ export default function ProgressoScreen({ snapshot }) {
           ) : (
             grupo.modulos.map((modulo) => {
               const totalConteudos = modulo.conteudos.length;
+              // Modulo so com quiz (sem nenhum conteudo) tambem conta aqui -
+              // prompt-agente-progresso-e-trava-ao-concluir.md, Parte B, item 7.
+              const totalItensModulo = totalConteudos + modulo.quizzes.length;
               // modulo.concluido/progresso ja vem do backend (ProgressoModuloAluno,
               // ver agruparConteudosPorCurso) e pondera o(s) quiz(zes) do modulo
               // junto com os conteudos - nao so os conteudos.
-              const moduloConcluido = totalConteudos > 0 && modulo.concluido;
-              const percentualModulo = totalConteudos > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
+              const moduloConcluido = totalItensModulo > 0 && modulo.concluido;
+              const percentualModulo = totalItensModulo > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
               const moduloPill = modulo.bloqueado
                 ? { cor: cores.textoSuave, corFundo: cores.fundoCartaoAtivo, icone: "lock-closed", rotulo: "Bloqueado" }
                 : moduloConcluido
                   ? { cor: cores.sucesso, corFundo: cores.sucessoFundo, icone: "checkmark-circle", rotulo: "Módulo concluído" }
                   : { cor: cores.destaque, corFundo: cores.bordaCartao, icone: "ellipse", rotulo: "Em andamento" };
+              // modulo.concluidos so conta conteudo - com quiz no modulo, "X
+              // de Y conteudos" ficaria incoerente com a porcentagem (que
+              // pondera os dois); descrever pelo percentual evita isso.
+              const descricaoItensConcluidos =
+                modulo.quizzes.length > 0
+                  ? `${Math.round(percentualModulo)}% concluído`
+                  : `${modulo.concluidos} de ${totalConteudos} conteúdos concluídos`;
 
               return (
                 <View
-                  accessibilityLabel={`${modulo.titulo}. ${moduloPill.rotulo}. ${modulo.concluidos} de ${totalConteudos} conteúdos concluídos.`}
+                  accessibilityLabel={`${modulo.titulo}. ${moduloPill.rotulo}. ${descricaoItensConcluidos}.`}
                   accessible
                   key={modulo.id}
                   style={[estilos.modulo, modulo.bloqueado ? estilos.moduloBloqueado : null]}

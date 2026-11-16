@@ -411,6 +411,90 @@ describe("PainelCursoGestao - confirmacao ao encerrar e reabrir curso", () => {
   });
 });
 
+// PROMPT-agente-progresso-e-trava-ao-concluir.md, Parte A: "Travar +
+// devolver" - o coordenador desfaz a conclusao do professor sem precisar
+// encerrar e reabrir so pra isso.
+describe("PainelCursoGestao - devolver ao professor", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CURSO_GRATUITO_CONCLUIDO = { ...CURSO, modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+  const CURSO_PACOTE_VINDO_DO_GRATUITO = { ...CURSO, modeloCurso: 2, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+
+  test("Gratuito concluido: mostra 'Devolver ao professor' ao lado de 'Encerrar curso'", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ curso: CURSO_GRATUITO_CONCLUIDO });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: /Encerrar curso/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Devolver ao professor/ })).toBeInTheDocument();
+  });
+
+  test("pacote vindo do Gratuito (concluidoPeloProfessorEm preenchido) nao mostra 'Devolver ao professor'", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ curso: CURSO_PACOTE_VINDO_DO_GRATUITO });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: /Devolver ao professor/ })).not.toBeInTheDocument();
+  });
+
+  test("abre o dialogo com campo de motivo opcional; Cancelar nao chama a API", async () => {
+    mockApi(DESEMPENHO);
+    const onDevolverAoProfessor = vi.fn();
+
+    renderPainel({ curso: CURSO_GRATUITO_CONCLUIDO, onDevolverAoProfessor });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Devolver ao professor/ }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByLabelText(/Motivo \(opcional\)/)).toBeInTheDocument();
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+    expect(onDevolverAoProfessor).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  test("confirmar com motivo preenchido chama onDevolverAoProfessor com o texto digitado e fecha a janela", async () => {
+    mockApi(DESEMPENHO);
+    const onDevolverAoProfessor = vi.fn().mockResolvedValue(undefined);
+
+    renderPainel({ curso: CURSO_GRATUITO_CONCLUIDO, onDevolverAoProfessor });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Devolver ao professor/ }));
+
+    const dialog = screen.getByRole("dialog");
+    await userEvent.type(within(dialog).getByLabelText(/Motivo \(opcional\)/), "Falta corrigir o modulo 2.");
+    await userEvent.click(within(dialog).getByRole("button", { name: /Devolver ao professor/ }));
+
+    expect(onDevolverAoProfessor).toHaveBeenCalledWith("Falta corrigir o modulo 2.");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  test("Reabrir Gratuito: o texto explica que o curso volta pro professor e precisa concluir de novo", async () => {
+    mockApi(DESEMPENHO);
+    const cursoGratuitoEncerrado = { ...CURSO_GRATUITO_CONCLUIDO, encerradoEm: "2026-02-01T12:00:00" };
+
+    renderPainel({ curso: cursoGratuitoEncerrado, onReabrirCurso: vi.fn() });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole("button", { name: /Reabrir curso/ }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/precisa concluir de novo/)).toBeInTheDocument();
+  });
+});
+
 describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-propria.md)", () => {
   afterEach(() => {
     vi.clearAllMocks();

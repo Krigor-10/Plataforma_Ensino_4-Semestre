@@ -14,6 +14,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
     private readonly IGenericRepository<Modulo> _moduloRepository;
     private readonly INotificacaoService _notificacaoService;
     private readonly ICursoService _cursoService;
+    private readonly IProgressoAlunoService _progressoAlunoService;
     private readonly PlataformaContext _context;
 
     public ConteudoDidaticoService(
@@ -23,6 +24,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         IGenericRepository<Modulo> moduloRepository,
         INotificacaoService notificacaoService,
         ICursoService cursoService,
+        IProgressoAlunoService progressoAlunoService,
         PlataformaContext context)
     {
         _conteudoRepository = conteudoRepository;
@@ -31,6 +33,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
         _moduloRepository = moduloRepository;
         _notificacaoService = notificacaoService;
         _cursoService = cursoService;
+        _progressoAlunoService = progressoAlunoService;
         _context = context;
     }
 
@@ -93,6 +96,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         await _conteudoRepository.AdicionarAsync(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(conteudo.CursoId);
 
         if (conteudo.StatusPublicacao == StatusPublicacao.Publicado)
         {
@@ -130,6 +134,7 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
 
         _conteudoRepository.Atualizar(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(conteudo.CursoId);
 
         if (statusAnterior != StatusPublicacao.Publicado && conteudo.StatusPublicacao == StatusPublicacao.Publicado)
         {
@@ -183,11 +188,13 @@ public class ConteudoDidaticoService : IConteudoDidaticoService
             conteudo.DefinirStatusPublicacao(StatusPublicacao.Arquivado);
             _conteudoRepository.Atualizar(conteudo);
             await _conteudoRepository.SalvarAlteracoesAsync();
+            await _progressoAlunoService.RecalcularProgressoDoCursoAsync(conteudo.CursoId);
             return true;
         }
 
         _conteudoRepository.Deletar(conteudo);
         await _conteudoRepository.SalvarAlteracoesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(conteudo.CursoId);
         return false;
     }
 

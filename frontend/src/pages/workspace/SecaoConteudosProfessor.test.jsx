@@ -15,10 +15,10 @@ const CURSO_ID = 10;
 const MODULO_ID = 100;
 const TURMA_ID = 50;
 
-function montarCenario({ conteudos = [], avaliacoes = [], modulos } = {}) {
+function montarCenario({ conteudos = [], avaliacoes = [], modulos, curso } = {}) {
   return {
     usuario: { id: PROFESSOR_ID },
-    cursos: [{ id: CURSO_ID, titulo: "Curso Teste" }],
+    cursos: [{ id: CURSO_ID, titulo: "Curso Teste", ...curso }],
     turmas: [{ id: TURMA_ID, cursoId: CURSO_ID, professorId: PROFESSOR_ID, nomeTurma: "Turma A" }],
     modulos: modulos || [{ id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" }],
     conteudos,
@@ -26,8 +26,8 @@ function montarCenario({ conteudos = [], avaliacoes = [], modulos } = {}) {
   };
 }
 
-function renderTrilha({ conteudos = [], avaliacoes = [], modulos, onSessionExpired = vi.fn(), onRefresh = vi.fn() } = {}) {
-  const cenario = montarCenario({ avaliacoes, conteudos, modulos });
+function renderTrilha({ conteudos = [], avaliacoes = [], modulos, curso, onSessionExpired = vi.fn(), onRefresh = vi.fn() } = {}) {
+  const cenario = montarCenario({ avaliacoes, conteudos, curso, modulos });
 
   const resultado = render(
     <ToastProvider>
@@ -1034,5 +1034,72 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Confirmar exclusao" }));
 
     expect(await screen.findByText(/dependencias academicas/)).toBeInTheDocument();
+  });
+});
+
+// PROMPT-agente-progresso-e-trava-ao-concluir.md, Parte A: professor ve a
+// faixa de aviso e os botoes de criar/editar/publicar/excluir desativados
+// quando o curso esta concluido-aguardando ou encerrado.
+describe("TrilhaConteudosProfessor - edicao travada (curso concluido ou encerrado)", () => {
+  beforeEach(() => {
+    apiRequest.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const CONTEUDO = { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID };
+  const CURSO_GRATUITO_CONCLUIDO = { modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+  const CURSO_GRATUITO_ENCERRADO = { modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00", encerradoEm: "2026-02-01T12:00:00" };
+
+  test("curso concluido e aguardando: mostra a faixa, esconde 'Novo modulo' e nao mostra 'Concluir curso'", () => {
+    renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_CONCLUIDO });
+
+    expect(screen.getByText(/aguardando o encerramento pelo coordenador/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Novo modulo/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Concluir curso/ })).not.toBeInTheDocument();
+  });
+
+  test("curso encerrado: mostra a faixa de encerrado", () => {
+    renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_ENCERRADO });
+
+    expect(screen.getByText("Curso encerrado. A edição está travada.")).toBeInTheDocument();
+  });
+
+  test("'Mais ações' fica com Editar/Excluir modulo e publicar/arquivar em lote desabilitados", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_CONCLUIDO });
+
+    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
+    const menu = screen.getByRole("menu");
+
+    expect(within(menu).getByRole("menuitem", { name: "Editar módulo" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir módulo" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Publicar selecionados" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Arquivar selecionados" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir selecionados" })).toBeDisabled();
+  });
+
+  test("menu do conteudo fica com Editar/Publicar/Excluir desabilitados; botoes 'Novo conteúdo'/'Adicionar Quiz' somem", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_CONCLUIDO });
+
+    await usuario.click(screen.getByRole("button", { name: `Opções de ${CONTEUDO.titulo}` }));
+    const menu = screen.getByRole("menu");
+
+    expect(within(menu).getByRole("menuitem", { name: "Editar" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Voltar para rascunho" })).toBeDisabled();
+    expect(within(menu).getByRole("menuitem", { name: "Excluir" })).toBeDisabled();
+
+    expect(screen.queryByRole("button", { name: /Novo conteúdo/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Adicionar Quiz/ })).not.toBeInTheDocument();
+  });
+
+  test("curso aberto (sem conclusao/encerramento): nenhuma faixa aparece e as acoes continuam habilitadas", () => {
+    renderTrilha({ conteudos: [CONTEUDO], curso: { modeloCurso: 1 } });
+
+    expect(screen.queryByText(/A edição está travada/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Novo modulo/ })).toBeInTheDocument();
   });
 });

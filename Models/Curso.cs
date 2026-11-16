@@ -130,6 +130,35 @@ public class Curso
         EncerradoEm = null;
     }
 
+    public void DesfazerConclusao()
+    {
+        ConcluidoPeloProfessorId = null;
+        ConcluidoPeloProfessorEm = null;
+    }
+
+    /// <summary>
+    /// Regra unica de "curso aceita edicao de conteudo/avaliacao/modulo",
+    /// usada tanto pela trava (CursoService.GarantirCursoAbertoParaEdicaoAsync)
+    /// quanto pelo recalculo de progresso (ProgressoAlunoService.
+    /// RecalcularProgressoDoCursoAsync) - as duas nunca podem divergir.
+    /// Encerrado trava sempre; "concluido pelo professor" so trava em
+    /// Gratuito/Acompanhado (no PagoPacote, ConcluidoPeloProfessorEm e so o
+    /// marcador de que ele veio do fluxo Gratuito->pacote, nao uma conclusao
+    /// de ciclo em andamento).
+    /// </summary>
+    public bool AceitaEdicao()
+    {
+        if (EncerradoEm.HasValue)
+        {
+            return false;
+        }
+
+        var concluidoTravaEdicao = ConcluidoPeloProfessorEm.HasValue
+            && (ModeloCurso == ModeloCurso.Gratuito || ModeloCurso == ModeloCurso.Acompanhado);
+
+        return !concluidoTravaEdicao;
+    }
+
     public void PublicarParaVenda(DateTime? momento = null)
     {
         PublicadoParaVendaEm = momento ?? DateTime.UtcNow;

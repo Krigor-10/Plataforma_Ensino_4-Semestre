@@ -370,7 +370,13 @@ export function SecaoCursosAluno({
 function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
   const percentual = clampPercent(detalhe.progresso);
-  const modulosComConteudo = detalhe.modulos.filter((modulo) => modulo.conteudos.length > 0);
+  // Modulo so com quiz (sem nenhum conteudo) tambem entra - mesmo criterio da
+  // aba Conteudos (SlideConteudosCurso, mais abaixo neste arquivo). Prova/
+  // Exercicio (tipoAvaliacao !== 1) nao conta aqui porque nao entra no
+  // PercentualConclusao do backend (so e nota, nao progresso).
+  const modulosComConteudo = detalhe.modulos.filter(
+    (modulo) => modulo.conteudos.length > 0 || modulo.avaliacoes.some((avaliacao) => Number(avaliacao.tipoAvaliacao) === 1)
+  );
   const modulosConcluidos = modulosComConteudo.filter((modulo) => modulo.progresso >= 100).length;
   const totalConteudos = detalhe.modulos.reduce((total, modulo) => total + modulo.conteudos.length, 0);
   const conteudosConcluidos = detalhe.modulos.reduce(

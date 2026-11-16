@@ -1004,6 +1004,13 @@ function TrilhaConteudosProfessor({
   const modeloCursoAtivo = Number(cursoAtivo.curso.modeloCurso);
   const cursoAceitaConclusao = modeloCursoAtivo === MODELO_GRATUITO || modeloCursoAtivo === MODELO_ACOMPANHADO;
   const cursoJaConcluido = Boolean(cursoAtivo.curso.concluidoPeloProfessorEm);
+  const cursoEncerrado = Boolean(cursoAtivo.curso.encerradoEm);
+  // Mesma regra do backend (Curso.AceitaEdicao/GarantirCursoAbertoParaEdicaoAsync):
+  // encerrado trava sempre; "concluido pelo professor" so trava em Gratuito/
+  // Acompanhado - um PagoPacote vindo do fluxo Gratuito->pacote mantem
+  // ConcluidoPeloProfessorEm preenchido so como marcador historico, nao como
+  // trava "em andamento".
+  const edicaoTravada = cursoEncerrado || (cursoAceitaConclusao && cursoJaConcluido);
 
   async function confirmarConclusaoCurso() {
     setConcluindoCurso(true);
@@ -1425,20 +1432,30 @@ function TrilhaConteudosProfessor({
               <TbArchive aria-hidden="true" size={15} /> Ver arquivados ({totalArquivadosCurso})
             </Botao>
           ) : null}
-          <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="sucesso">
-            <TbPlus aria-hidden="true" size={15} /> Novo modulo
-          </Botao>
-          {cursoAceitaConclusao && !cursoJaConcluido ? (
+          {!edicaoTravada ? (
+            <Botao onClick={() => modaisModulo.abrirFormularioNovoModulo(cursoAtivo.curso.id)} tamanho="pequeno" variante="sucesso">
+              <TbPlus aria-hidden="true" size={15} /> Novo modulo
+            </Botao>
+          ) : null}
+          {cursoAceitaConclusao && !cursoJaConcluido && !cursoEncerrado ? (
             <Botao onClick={() => setConfirmandoConclusao(true)} tamanho="pequeno" variante="primario">
               <TbCheck aria-hidden="true" size={15} /> Concluir curso
             </Botao>
           ) : null}
-          {cursoAceitaConclusao && cursoJaConcluido ? <Insignia texto="Concluído, aguardando o coordenador" /> : null}
+          {cursoAceitaConclusao && cursoJaConcluido && !cursoEncerrado ? <Insignia texto="Concluído, aguardando o coordenador" /> : null}
           <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">
             <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
           </Botao>
         </div>
       </header>
+
+      {edicaoTravada ? (
+        <InlineMessage tone="warning">
+          {cursoEncerrado
+            ? "Curso encerrado. A edição está travada."
+            : "Curso concluído — aguardando o encerramento pelo coordenador. A edição está travada."}
+        </InlineMessage>
+      ) : null}
 
       {confirmandoConclusao ? (
         <Modal
@@ -1503,38 +1520,40 @@ function TrilhaConteudosProfessor({
               {
                 chave: "editar-modulo",
                 rotulo: "Editar módulo",
+                desabilitado: edicaoTravada,
                 onSelecionar: () => modaisModulo.abrirEdicaoModulo(modulo)
               },
               {
                 chave: "excluir-modulo",
                 rotulo: "Excluir módulo",
                 perigo: true,
+                desabilitado: edicaoTravada,
                 onSelecionar: () => modaisModulo.abrirExclusaoModulo(modulo)
               },
               { chave: "divisor-acoes-em-lote", divisor: true },
               {
                 chave: "publicar",
                 rotulo: "Publicar selecionados",
-                desabilitado: totalSelecionadoNoModulo === 0,
+                desabilitado: edicaoTravada || totalSelecionadoNoModulo === 0,
                 onSelecionar: () => abrirConfirmacaoLote("publicar")
               },
               {
                 chave: "rascunho",
                 rotulo: "Voltar para rascunho",
-                desabilitado: totalSelecionadoNoModulo === 0,
+                desabilitado: edicaoTravada || totalSelecionadoNoModulo === 0,
                 onSelecionar: () => abrirConfirmacaoLote("rascunho")
               },
               {
                 chave: "arquivar",
                 rotulo: "Arquivar selecionados",
-                desabilitado: totalSelecionadoNoModulo === 0,
+                desabilitado: edicaoTravada || totalSelecionadoNoModulo === 0,
                 onSelecionar: () => abrirConfirmacaoLote("arquivar")
               },
               {
                 chave: "excluir",
                 rotulo: "Excluir selecionados",
                 perigo: true,
-                desabilitado: totalSelecionadoNoModulo === 0,
+                desabilitado: edicaoTravada || totalSelecionadoNoModulo === 0,
                 onSelecionar: () => abrirConfirmacaoLote("excluir")
               }
             ];
@@ -1654,27 +1673,28 @@ function TrilhaConteudosProfessor({
                               {
                                 chave: "editar",
                                 rotulo: "Editar",
-                                desabilitado: processando,
+                                desabilitado: edicaoTravada || processando,
                                 onSelecionar: () => onAbrirEdicao(conteudo)
                               },
                               {
                                 chave: "alternar-status",
                                 rotulo: publicado ? "Voltar para rascunho" : "Publicar",
+                                desabilitado: edicaoTravada,
                                 onSelecionar: () => onAlternarPublicacao(conteudo)
                               },
                               {
                                 chave: "mover-cima",
                                 rotulo: "Mover para cima",
-                                desabilitado: processando || indiceConteudo === 0,
+                                desabilitado: edicaoTravada || processando || indiceConteudo === 0,
                                 onSelecionar: () => onReordenar(conteudo, itensDoModulo, -1)
                               },
                               {
                                 chave: "mover-baixo",
                                 rotulo: "Mover para baixo",
-                                desabilitado: processando || indiceConteudo === itensDoModulo.length - 1,
+                                desabilitado: edicaoTravada || processando || indiceConteudo === itensDoModulo.length - 1,
                                 onSelecionar: () => onReordenar(conteudo, itensDoModulo, 1)
                               },
-                              { chave: "excluir", rotulo: "Excluir", perigo: true, onSelecionar: () => onExcluir(conteudo) }
+                              { chave: "excluir", rotulo: "Excluir", perigo: true, desabilitado: edicaoTravada, onSelecionar: () => onExcluir(conteudo) }
                             ];
 
                             const itensMenuQuizDoMaterial = (quiz) => {
@@ -1684,20 +1704,22 @@ function TrilhaConteudosProfessor({
                                 {
                                   chave: "editar",
                                   rotulo: "Editar",
-                                  desabilitado: quizProcessando,
+                                  desabilitado: edicaoTravada || quizProcessando,
                                   onSelecionar: () => onGerenciarQuizModulo(modulo, quiz)
                                 },
                                 {
                                   chave: "alternar-status",
                                   rotulo: quizPublicado ? "Voltar para rascunho" : "Publicar",
+                                  desabilitado: edicaoTravada,
                                   onSelecionar: () => onAlternarPublicacaoQuiz(quiz)
                                 },
                                 {
                                   chave: "arquivar",
                                   rotulo: "Arquivar",
+                                  desabilitado: edicaoTravada,
                                   onSelecionar: () => onArquivarQuiz(quiz)
                                 },
-                                { chave: "excluir", rotulo: "Excluir", perigo: true, onSelecionar: () => onExcluirQuiz(quiz) }
+                                { chave: "excluir", rotulo: "Excluir", perigo: true, desabilitado: edicaoTravada, onSelecionar: () => onExcluirQuiz(quiz) }
                               ];
                             };
 
@@ -1845,20 +1867,22 @@ function TrilhaConteudosProfessor({
                               {
                                 chave: "editar",
                                 rotulo: "Editar",
-                                desabilitado: processandoQuiz,
+                                desabilitado: edicaoTravada || processandoQuiz,
                                 onSelecionar: () => onGerenciarQuizModulo(modulo, quiz)
                               },
                               {
                                 chave: "alternar-status",
                                 rotulo: quizPublicado ? "Voltar para rascunho" : "Publicar",
+                                desabilitado: edicaoTravada,
                                 onSelecionar: () => onAlternarPublicacaoQuiz(quiz)
                               },
                               {
                                 chave: "arquivar",
                                 rotulo: "Arquivar",
+                                desabilitado: edicaoTravada,
                                 onSelecionar: () => onArquivarQuiz(quiz)
                               },
-                              { chave: "excluir", rotulo: "Excluir", perigo: true, onSelecionar: () => onExcluirQuiz(quiz) }
+                              { chave: "excluir", rotulo: "Excluir", perigo: true, desabilitado: edicaoTravada, onSelecionar: () => onExcluirQuiz(quiz) }
                             ];
 
                             return (
@@ -1896,22 +1920,24 @@ function TrilhaConteudosProfessor({
                         </div>
                       ) : null}
 
-                      <div className="atividades-curso__adicionar-grupo">
-                        <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="primario">
-                          <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                            <TbPlus aria-hidden="true" size={13} />
-                          </motion.span>{" "}
-                          Novo conteúdo
-                        </Botao>
-                        <Botao className="atividades-curso__adicionar atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno">
-                          <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
-                        </Botao>
-                        {itensDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
-                          <Botao className="atividades-curso__adicionar atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(modulo)} tamanho="pequeno">
-                            <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
+                      {!edicaoTravada ? (
+                        <div className="atividades-curso__adicionar-grupo">
+                          <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(modulo.id)} tamanho="pequeno" variante="primario">
+                            <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                              <TbPlus aria-hidden="true" size={13} />
+                            </motion.span>{" "}
+                            Novo conteúdo
                           </Botao>
-                        ) : null}
-                      </div>
+                          <Botao className="atividades-curso__adicionar atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(modulo)} tamanho="pequeno">
+                            <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
+                          </Botao>
+                          {itensDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
+                            <Botao className="atividades-curso__adicionar atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(modulo)} tamanho="pequeno">
+                              <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
+                            </Botao>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </motion.div>
                   ) : null}
                 </AnimatePresence>

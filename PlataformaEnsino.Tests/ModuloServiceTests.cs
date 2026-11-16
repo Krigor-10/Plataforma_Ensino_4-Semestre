@@ -18,7 +18,8 @@ public class ModuloServiceTests
             new GenericRepository<Coordenador>(context),
             new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
             new CertificadoService(context, new AcessoAcademicoService(context)));
-        return (new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), cursoService, context), context);
+        var progressoAlunoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        return (new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), cursoService, progressoAlunoService, context), context);
     }
 
     private static Curso CriarCurso(PlataformaContext context)

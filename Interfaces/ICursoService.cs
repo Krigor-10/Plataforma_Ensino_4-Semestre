@@ -19,6 +19,7 @@ public interface ICursoService
     Task ConcluirCursoComoProfessorAsync(int cursoId, int professorId);
     Task EncerrarCursoAsync(int cursoId, int coordenadorId);
     Task ReabrirCursoAsync(int cursoId, int coordenadorId);
+    Task DevolverAoProfessorAsync(int cursoId, int coordenadorId, string? motivo);
     Task AdicionarModuloAsync(int cursoId, Modulo novoModulo);
     Task AtribuirCoordenadorAsync(int cursoId, int coordenadorId);
     Task<Curso> DefinirImagemAsync(int cursoId, string imagemUrl);

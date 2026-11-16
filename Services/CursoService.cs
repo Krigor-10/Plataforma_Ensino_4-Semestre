@@ -184,19 +184,32 @@ public class CursoService : ICursoService
     /// Trava edicao de conteudo/avaliacao/modulo: qualquer modelo de curso com
     /// EncerradoEm preenchido fica congelado, inclusive um PagoPacote que veio
     /// do fluxo Gratuito->pacote (so volta a editar depois do coordenador
-    /// reabrir). Nao confundir com <see cref="GarantirCursoAbertoParaMatriculaAsync"/>,
-    /// que tem uma regra diferente pra matricula nova.
+    /// reabrir). Em Gratuito/Acompanhado tambem trava assim que o professor
+    /// conclui (ConcluidoPeloProfessorEm), antes mesmo do encerramento - so
+    /// volta a editar com "Devolver ao professor" ou reabrindo. Regra
+    /// centralizada em <see cref="Curso.AceitaEdicao"/>, a mesma usada pelo
+    /// recalculo de progresso (ProgressoAlunoService). Nao confundir com
+    /// <see cref="GarantirCursoAbertoParaMatriculaAsync"/>, que tem uma regra
+    /// diferente pra matricula nova.
     /// </summary>
     public async Task GarantirCursoAbertoParaEdicaoAsync(int cursoId)
     {
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
+        if (curso.AceitaEdicao())
+        {
+            return;
+        }
+
         if (curso.EncerradoEm.HasValue)
         {
             throw new InvalidOperationException(
                 "Este curso foi encerrado e nao aceita mais alteracoes de conteudo, avaliacoes ou modulos.");
         }
+
+        throw new InvalidOperationException(
+            "Este curso foi concluido pelo professor e esta aguardando o encerramento. Para alterar, peca ao coordenador para devolver o curso.");
     }
 
     /// <summary>
@@ -342,9 +355,96 @@ public class CursoService : ICursoService
             throw new InvalidOperationException("Tire o curso da venda antes de reabrir.");
         }
 
+        // Gratuito/Acompanhado: reabrir tambem devolve ao professor - sem isso
+        // o curso voltaria "Aguardando encerramento" para sempre (ConcluidoPeloProfessorEm
+        // continuaria preenchido) e o professor nunca conseguiria concluir de
+        // novo. Pacote (inclusive vindo do fluxo Gratuito->pacote) nao tem essa
+        // devolucao - so o EncerradoEm volta, como sempre.
+        var desfazConclusaoAoReabrir = curso.ModeloCurso == ModeloCurso.Gratuito || curso.ModeloCurso == ModeloCurso.Acompanhado;
+
         curso.Reabrir();
+        if (desfazConclusaoAoReabrir)
+        {
+            curso.DesfazerConclusao();
+        }
+
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
+
+        if (desfazConclusaoAoReabrir)
+        {
+            await NotificarProfessoresDoCursoAsync(
+                cursoId,
+                "Curso reaberto para ajustes",
+                $"O curso \"{curso.Titulo}\" foi reaberto e volta a aceitar ajustes. Conclua novamente quando terminar.");
+        }
+    }
+
+    /// <summary>
+    /// "Devolver" desfaz ConcluidoPeloProfessorEm sem passar por Encerrar -
+    /// destrava a edicao e devolve o curso pra "Em andamento" direto de
+    /// "Aguardando encerramento", sem o coordenador precisar encerrar e
+    /// reabrir so pra isso. So Gratuito/Acompanhado tem esse ciclo; pacote
+    /// nao tem conclusao de professor "em andamento" pra devolver.
+    /// </summary>
+    public async Task DevolverAoProfessorAsync(int cursoId, int coordenadorId, string? motivo)
+    {
+        var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
+            ?? throw new KeyNotFoundException("Curso não encontrado.");
+
+        if (curso.ModeloCurso != ModeloCurso.Gratuito && curso.ModeloCurso != ModeloCurso.Acompanhado)
+        {
+            throw new InvalidOperationException("Apenas cursos do modelo Gratuito ou Acompanhado podem ser devolvidos ao professor.");
+        }
+
+        if (curso.CoordenadorId != coordenadorId)
+        {
+            throw new InvalidOperationException("Apenas o coordenador responsavel por este curso pode devolve-lo ao professor.");
+        }
+
+        if (curso.EncerradoEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso ja foi encerrado. Reabra o curso em vez de devolve-lo.");
+        }
+
+        if (!curso.ConcluidoPeloProfessorEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso ainda nao foi concluido pelo professor.");
+        }
+
+        var motivoTratado = string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim();
+        if (motivoTratado is { Length: > 500 })
+        {
+            throw new ArgumentException("O motivo deve ter no maximo 500 caracteres.");
+        }
+
+        curso.DesfazerConclusao();
+        _cursoRepository.Atualizar(curso);
+        await _cursoRepository.SalvarAlteracoesAsync();
+
+        var mensagem = motivoTratado is null
+            ? $"O curso \"{curso.Titulo}\" foi devolvido para ajustes."
+            : $"O curso \"{curso.Titulo}\" foi devolvido para ajustes. Motivo: {motivoTratado}";
+
+        await NotificarProfessoresDoCursoAsync(cursoId, "Curso devolvido para ajustes", mensagem);
+    }
+
+    private async Task NotificarProfessoresDoCursoAsync(int cursoId, string titulo, string mensagem)
+    {
+        var professorIds = await _context.ProfessoresCursos
+            .Where(vinculo => vinculo.CursoId == cursoId)
+            .Select(vinculo => vinculo.ProfessorId)
+            .ToListAsync();
+
+        foreach (var professorId in professorIds)
+        {
+            await _notificacaoService.NotificarAsync(
+                professorId,
+                titulo,
+                mensagem,
+                TipoNotificacao.CursoDevolvidoAoProfessor,
+                $"/app/cursos/{cursoId}");
+        }
     }
 
     /// <summary>

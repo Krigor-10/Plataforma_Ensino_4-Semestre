@@ -394,4 +394,5 @@ public sealed class AvaliacaoServiceFake : IAvaliacaoService
     public Task<ResultadoGeracaoIA> GerarQuestoesComIaDeConteudoAsync(int avaliacaoId, int professorId, int conteudoDidaticoId, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken) => throw new NotSupportedException();
     public Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, Microsoft.AspNetCore.Http.IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo) => throw new NotSupportedException();
     public Task RemoverAnexoQuestaoAsync(int questaoBancoId, int anexoId, int professorId) => throw new NotSupportedException();
+    public Task<int> CorrigirAvaliacoesPublicadasSemQuestaoAsync() => throw new NotSupportedException();
 }

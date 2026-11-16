@@ -111,7 +111,12 @@ public class AvaliacaoService : IAvaliacaoService
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
-                cursoIds.Contains(avaliacao.CursoId))
+                cursoIds.Contains(avaliacao.CursoId) &&
+                // Defesa pra dados antigos: avaliacao publicada sem nenhuma
+                // questao e tratada como se nao estivesse publicada pro aluno
+                // (achado da auditoria de progresso - a brecha na criacao ja
+                // foi fechada em CriarAvaliacaoAsync).
+                avaliacao.Questoes.Count > 0)
             .Include(avaliacao => avaliacao.Turma)
             .Include(avaliacao => avaliacao.Modulo)
                 .ThenInclude(modulo => modulo!.Curso)
@@ -181,6 +186,15 @@ public class AvaliacaoService : IAvaliacaoService
         var material = await ValidarMaterialAsync(dto.ConteudoDidaticoId, modulo);
         await _cursoService.GarantirCursoAbertoParaEdicaoAsync(cursoId);
 
+        // Nenhuma avaliacao nasce com questao - criar ja Publicada sempre
+        // resultaria numa avaliacao vazia e publicada (achado da auditoria de
+        // progresso: 4 quizzes assim foram encontrados em producao). Mesma
+        // mensagem do bloqueio em AtualizarAvaliacaoAsync.
+        if (dto.StatusPublicacao == StatusPublicacao.Publicado)
+        {
+            throw new InvalidOperationException("Adicione ao menos uma questao antes de publicar o quiz.");
+        }
+
         var avaliacao = new Avaliacao
         {
             ModuloId = modulo?.Id,
@@ -193,6 +207,7 @@ public class AvaliacaoService : IAvaliacaoService
 
         await _context.Avaliacoes.AddAsync(avaliacao);
         await _context.SaveChangesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(cursoId);
 
         return await ObterDetalheAsync(avaliacao.Id) ?? avaliacao;
     }
@@ -223,6 +238,7 @@ public class AvaliacaoService : IAvaliacaoService
 
         _context.Avaliacoes.Update(avaliacao);
         await _context.SaveChangesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(cursoId);
 
         return await ObterDetalheAsync(id) ?? avaliacao;
     }
@@ -241,11 +257,13 @@ public class AvaliacaoService : IAvaliacaoService
             avaliacao.Arquivar();
             _context.Avaliacoes.Update(avaliacao);
             await _context.SaveChangesAsync();
+            await _progressoAlunoService.RecalcularProgressoDoCursoAsync(avaliacao.CursoId);
             return true;
         }
 
         _context.Avaliacoes.Remove(avaliacao);
         await _context.SaveChangesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(avaliacao.CursoId);
         return false;
     }
 
@@ -614,6 +632,16 @@ public class AvaliacaoService : IAvaliacaoService
     {
         var avaliacaoDaQuestaoExcluida = await ObterAvaliacaoPorProfessorAsync(avaliacaoId, professorId);
         await _cursoService.GarantirCursoAbertoParaEdicaoAsync(avaliacaoDaQuestaoExcluida.CursoId);
+
+        // Removia a ultima questao de uma avaliacao publicada sem reclamar -
+        // uma das brechas que deixava quiz publicado sem nenhuma questao
+        // (achado da auditoria de progresso). Despublicar primeiro.
+        if (avaliacaoDaQuestaoExcluida.StatusPublicacao == StatusPublicacao.Publicado
+            && avaliacaoDaQuestaoExcluida.Questoes.Count <= 1)
+        {
+            throw new InvalidOperationException(
+                "Esta é a última questão de uma avaliação publicada. Despublique a avaliação antes de removê-la.");
+        }
 
         var questao = await _context.QuestoesPublicadas
             .Include(item => item.Alternativas)
@@ -1311,6 +1339,28 @@ public class AvaliacaoService : IAvaliacaoService
 
         _context.AnexosQuestoesBanco.Remove(anexo);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<int> CorrigirAvaliacoesPublicadasSemQuestaoAsync()
+    {
+        var avaliacoesVazias = await _context.Avaliacoes
+            .Where(avaliacao =>
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
+                !avaliacao.Questoes.Any())
+            .ToListAsync();
+
+        if (avaliacoesVazias.Count == 0)
+        {
+            return 0;
+        }
+
+        foreach (var avaliacao in avaliacoesVazias)
+        {
+            avaliacao.VoltarParaRascunho();
+        }
+
+        await _context.SaveChangesAsync();
+        return avaliacoesVazias.Count;
     }
 
     private async Task ValidarQuestaoBancoDoProfessorAsync(int professorId, int questaoBancoId)

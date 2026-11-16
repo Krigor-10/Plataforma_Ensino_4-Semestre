@@ -367,10 +367,13 @@ export function SecaoCursos({
     }
   }
 
-  async function executarAcaoCurso(curso, acao, mensagemSucesso, mensagemErroPadrao) {
+  async function executarAcaoCurso(curso, acao, mensagemSucesso, mensagemErroPadrao, corpo) {
     setSalvando(true);
     try {
-      await apiRequest(`/Cursos/${curso.id}/${acao}`, { method: "POST" });
+      await apiRequest(`/Cursos/${curso.id}/${acao}`, {
+        method: "POST",
+        body: corpo ? JSON.stringify(corpo) : undefined
+      });
       mostrarToast(mensagemSucesso, "sucesso");
       onRefresh?.();
     } catch (err) {
@@ -390,6 +393,15 @@ export function SecaoCursos({
 
   const reabrirCurso = (curso) =>
     executarAcaoCurso(curso, "reabrir", "Curso reaberto com sucesso.", "Nao foi possivel reabrir o curso agora.");
+
+  const devolverAoProfessor = (curso, motivo) =>
+    executarAcaoCurso(
+      curso,
+      "devolver-ao-professor",
+      "Curso devolvido ao professor para ajustes.",
+      "Nao foi possivel devolver o curso agora.",
+      { motivo: motivo || undefined }
+    );
 
   function abrirModalEdicao(curso) {
     setCursoParaEditar(curso);
@@ -770,6 +782,7 @@ export function SecaoCursos({
           onAlterarFotoCurso={() => abrirModalImagem(cursoSelecionado)}
           onAtribuirCoordenador={() => abrirModalCoordenadorCurso(cursoSelecionado)}
           onEditarCurso={() => abrirModalEdicao(cursoSelecionado)}
+          onDevolverAoProfessor={(motivo) => devolverAoProfessor(cursoSelecionado, motivo)}
           onEncerrarCurso={() => encerrarCurso(cursoSelecionado)}
           onNavigate={onNavigate}
           onReabrirCurso={() => reabrirCurso(cursoSelecionado)}

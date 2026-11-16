@@ -356,7 +356,7 @@ public class CursoServiceTests
     }
 
     [Fact]
-    public async Task ReabrirCursoAsync_CursoEncerrado_LimpaEncerramento()
+    public async Task ReabrirCursoAsync_CursoEncerrado_LimpaEncerramentoEDesfazConclusao()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -372,13 +372,16 @@ public class CursoServiceTests
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Null(cursoAtualizado.EncerradoEm);
         Assert.Null(cursoAtualizado.EncerradoPorId);
-        // Marca de conclusao do professor nao e desfeita por reabrir — o
-        // coordenador pode encerrar de novo sem o professor repetir a acao.
-        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+        // Decisao "Travar + devolver" (PROMPT-agente-progresso-e-trava-ao-concluir.md,
+        // Parte A): reabrir Gratuito/Acompanhado tambem devolve ao professor -
+        // senao o curso ficaria "Aguardando encerramento" pra sempre e o
+        // professor nunca conseguiria concluir de novo.
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorEm);
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorId);
     }
 
     [Fact]
-    public async Task ReabrirCursoAsync_CursoGratuitoEncerrado_LimpaEncerramento()
+    public async Task ReabrirCursoAsync_CursoGratuitoEncerrado_LimpaEncerramentoEDesfazConclusao()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -394,6 +397,7 @@ public class CursoServiceTests
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Null(cursoAtualizado.EncerradoEm);
         Assert.Null(cursoAtualizado.EncerradoPorId);
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorEm);
     }
 
     [Fact]
@@ -438,6 +442,10 @@ public class CursoServiceTests
 
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Null(cursoAtualizado.EncerradoEm);
+        // PagoPacote (mesmo vindo do fluxo Gratuito->pacote) nao tem "Devolver
+        // ao professor" nem desfaz conclusao ao reabrir - ConcluidoPeloProfessorEm
+        // e so o marcador historico de origem (ver Curso.AceitaEdicao).
+        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
     }
 
     [Fact]
@@ -480,6 +488,8 @@ public class CursoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -574,6 +584,176 @@ public class CursoServiceTests
         var curso = CriarCurso(context, ModeloCurso.PagoPacote);
 
         await service.GarantirCursoAbertoParaEdicaoAsync(curso.Id);
+    }
+
+    [Theory]
+    [InlineData(ModeloCurso.Acompanhado)]
+    [InlineData(ModeloCurso.Gratuito)]
+    public async Task GarantirCursoAbertoParaEdicaoAsync_ConcluidoPeloProfessorNaoEncerrado_LancaInvalidOperation(ModeloCurso modeloCurso)
+    {
+        // Decisao "Travar + devolver": a edicao trava assim que o professor
+        // conclui, antes mesmo do coordenador encerrar.
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, modeloCurso, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        var excecao = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.GarantirCursoAbertoParaEdicaoAsync(curso.Id));
+
+        Assert.Contains("aguardando o encerramento", excecao.Message);
+    }
+
+    [Fact]
+    public async Task GarantirCursoAbertoParaEdicaoAsync_PagoPacoteVindoDoGratuitoNaoEncerrado_NuncaBloqueia()
+    {
+        // ConcluidoPeloProfessorEm em um PagoPacote e so o marcador historico
+        // de que ele veio do fluxo Gratuito->pacote - nao e uma conclusao "em
+        // andamento" (so o EncerradoEm trava um pacote).
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+        await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        await service.PublicarParaVendaAsync(curso.Id);
+        await service.DespublicarDaVendaAsync(curso.Id);
+        await service.ReabrirCursoAsync(curso.Id, coordenador.Id);
+
+        var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
+        Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
+        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+
+        await service.GarantirCursoAbertoParaEdicaoAsync(curso.Id);
+    }
+
+    [Theory]
+    [InlineData(ModeloCurso.Acompanhado)]
+    [InlineData(ModeloCurso.Gratuito)]
+    public async Task DevolverAoProfessorAsync_CursoConcluido_DesfazConclusaoENotificaProfessores(ModeloCurso modeloCurso)
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, modeloCurso, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        await service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, "Falta corrigir o modulo 2.");
+
+        var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorEm);
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorId);
+
+        // Edicao volta a funcionar imediatamente.
+        await service.GarantirCursoAbertoParaEdicaoAsync(curso.Id);
+
+        var notificacoes = context.Notificacoes.Where(n => n.UsuarioId == professor.Id).ToList();
+        var notificacaoDevolucao = Assert.Single(notificacoes, n => n.Tipo == TipoNotificacao.CursoDevolvidoAoProfessor);
+        Assert.Contains("Falta corrigir o modulo 2.", notificacaoDevolucao.Mensagem);
+    }
+
+    [Fact]
+    public async Task DevolverAoProfessorAsync_SemMotivo_NotificaSemMotivoNaMensagem()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        await service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, motivo: null);
+
+        var notificacao = context.Notificacoes.Single(n => n.UsuarioId == professor.Id && n.Tipo == TipoNotificacao.CursoDevolvidoAoProfessor);
+        Assert.DoesNotContain("Motivo:", notificacao.Mensagem);
+    }
+
+    [Fact]
+    public async Task DevolverAoProfessorAsync_CoordenadorNaoResponsavel_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenadorDono = CriarCoordenador(context);
+        var outroCoordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenadorDono.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DevolverAoProfessorAsync(curso.Id, outroCoordenador.Id, null));
+    }
+
+    [Fact]
+    public async Task DevolverAoProfessorAsync_CursoAindaNaoConcluido_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, null));
+    }
+
+    [Fact]
+    public async Task DevolverAoProfessorAsync_CursoJaEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, null));
+    }
+
+    [Fact]
+    public async Task DevolverAoProfessorAsync_PagoPacote_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, coordenador.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, null));
+    }
+
+    [Fact]
+    public async Task ConcluirCursoComoProfessorAsync_AposDevolver_FuncionaDeNovo()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.DevolverAoProfessorAsync(curso.Id, coordenador.Id, null);
+
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
+        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+
+        var notificacoesCoordenador = context.Notificacoes
+            .Where(n => n.UsuarioId == coordenador.Id && n.Tipo == TipoNotificacao.CursoConcluidoPeloProfessor)
+            .ToList();
+        Assert.Equal(2, notificacoesCoordenador.Count);
     }
 
     [Fact]
@@ -769,7 +949,7 @@ public class CursoServiceTests
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
-        var moduloService = new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), service, context);
+        var moduloService = new ModuloService(new ModuloRepository(context), new GenericRepository<Curso>(context), service, new ProgressoAlunoService(context, new AcessoAcademicoService(context)), context);
         var coordenador = CriarCoordenador(context);
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);

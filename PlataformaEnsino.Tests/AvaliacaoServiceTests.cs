@@ -129,7 +129,11 @@ public class AvaliacaoServiceTests
         return matricula;
     }
 
-    private static CriarAvaliacaoDto NovaAvaliacaoDto(int cursoId, int moduloId, StatusPublicacao status = StatusPublicacao.Publicado, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
+    // Default Rascunho - CriarAvaliacaoAsync recusa nascer Publicada (sem
+    // questao). Quem realmente precisa de uma avaliacao Publicada usa
+    // CriarCenarioComAvaliacaoPublicada (que publica pelo metodo de dominio
+    // depois de criar) ou passa status explicito + publica manualmente.
+    private static CriarAvaliacaoDto NovaAvaliacaoDto(int cursoId, int moduloId, StatusPublicacao status = StatusPublicacao.Rascunho, int tentativasPermitidas = 1, DateTime? dataAbertura = null, DateTime? dataFechamento = null, TipoAvaliacao tipoAvaliacao = TipoAvaliacao.Quiz)
     {
         return new CriarAvaliacaoDto
         {
@@ -179,8 +183,28 @@ public class AvaliacaoServiceTests
         var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
 
         Assert.Equal("Avaliacao Teste", avaliacao.Titulo);
-        Assert.Equal(StatusPublicacao.Publicado, avaliacao.StatusPublicacao);
-        Assert.NotNull(avaliacao.PublicadoEm);
+        Assert.Equal(StatusPublicacao.Rascunho, avaliacao.StatusPublicacao);
+        Assert.Null(avaliacao.PublicadoEm);
+    }
+
+    [Fact]
+    public async Task CriarAvaliacaoAsync_StatusPublicadoSemQuestao_LancaInvalidOperation()
+    {
+        // Brecha encontrada na auditoria de progresso: AtualizarAvaliacaoAsync
+        // ja bloqueava publicar sem questao, mas CriarAvaliacaoAsync aceitava
+        // criar ja Publicada - de la vieram quizzes publicados com 0 questoes
+        // em producao.
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarTurma(context, curso.Id, professor.Id);
+
+        var excecao = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Publicado)));
+
+        Assert.Equal("Adicione ao menos uma questao antes de publicar o quiz.", excecao.Message);
     }
 
     [Fact]
@@ -872,9 +896,17 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
 
+        // CriarAvaliacaoAsync agora recusa nascer Publicada (sem questao) -
+        // cria Rascunho e publica direto pelo metodo de dominio, simulando o
+        // cenario real que estes testes precisam: avaliacao ja publicada
+        // (pelo fluxo normal criar->adicionar questao->publicar), ANTES do
+        // teste adicionar a questao que ele mesmo quer exercitar.
         var avaliacao = await service.CriarAvaliacaoAsync(
             professor.Id,
-            NovaAvaliacaoDto(curso.Id, modulo.Id, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento, tipoAvaliacao: tipoAvaliacao));
+            NovaAvaliacaoDto(curso.Id, modulo.Id, status: StatusPublicacao.Rascunho, tentativasPermitidas: tentativasPermitidas, dataAbertura: dataAbertura, dataFechamento: dataFechamento, tipoAvaliacao: tipoAvaliacao));
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
 
         return (service, context, professor, aluno, turma, modulo, avaliacao);
     }
@@ -1037,6 +1069,9 @@ public class AvaliacaoServiceTests
 
         var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 10));
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
         var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
 
         var dto = new EnviarAvaliacaoAlunoDto
@@ -1063,6 +1098,9 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
 
         var alunoSemMatricula = CriarAluno(context);
         var dto = new EnviarAvaliacaoAlunoDto
@@ -1185,6 +1223,9 @@ public class AvaliacaoServiceTests
 
         var questao1 = await service.AdicionarQuestaoAsync(avaliacao1.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
         var questao2 = await service.AdicionarQuestaoAsync(avaliacao2.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 3));
+        avaliacao2.Publicar();
+        context.Avaliacoes.Update(avaliacao2);
+        await context.SaveChangesAsync();
 
         await service.EnviarRespostasAlunoAsync(avaliacao1.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
         {
@@ -1426,9 +1467,12 @@ public class AvaliacaoServiceTests
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoAntiga.Id, AlternativaId = questaoAntiga.Alternativas.First().Id } }
         };
 
-        // ...mas o professor trocou a questao antes do envio chegar.
-        await service.ExcluirQuestaoAsync(avaliacao.Id, questaoAntiga.Id, professor.Id);
+        // ...mas o professor trocou a questao antes do envio chegar. Adiciona
+        // a nova ANTES de excluir a antiga - ExcluirQuestaoAsync agora recusa
+        // remover a ultima questao de uma avaliacao publicada, entao precisa
+        // ter as duas questoes no ar por um instante pra trocar.
         await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        await service.ExcluirQuestaoAsync(avaliacao.Id, questaoAntiga.Id, professor.Id);
 
         var excecao = await Assert.ThrowsAsync<ErroEnvioAvaliacaoException>(() => service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto));
         Assert.Equal("AVALIACAO_ALTERADA", excecao.Codigo);
@@ -1519,7 +1563,11 @@ public class AvaliacaoServiceTests
         var turma = CriarTurma(context, curso.Id, professor.Id);
         CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
 
-        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
 
         var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
 
@@ -1562,7 +1610,11 @@ public class AvaliacaoServiceTests
         var modulo = CriarModulo(context, curso.Id);
         VincularProfessorCurso(context, professor.Id, curso.Id);
         CriarMatriculaAprovadaSemTurma(context, alunoAntigo.Id, curso.Id);
-        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
 
         curso.Preco = 29.90m;
         context.SaveChanges();
@@ -1867,7 +1919,8 @@ public class AvaliacaoServiceTests
     [Fact]
     public async Task ListarAvaliacoesPorAlunoAsync_QuizDeModuloComConteudoPendente_MarcaProgressoLiberadoFalso()
     {
-        var (service, context, _, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var (service, context, professor, aluno, turma, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
         CriarConteudoPublicado(context, turma.Id, modulo.Id, avaliacao.CursoId, "Aula 1");
 
         var resultado = (await service.ListarAvaliacoesPorAlunoAsync(aluno.Id)).ToList();
@@ -1895,13 +1948,16 @@ public class AvaliacaoServiceTests
             CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
-            StatusPublicacao = StatusPublicacao.Publicado,
+            StatusPublicacao = StatusPublicacao.Rascunho,
             TentativasPermitidas = 1,
             NotaMaxima = 10,
             PesoNota = 1,
             PesoProgresso = 1
         });
         var questao = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacaoFinal.Publicar();
+        context.Avaliacoes.Update(avaliacaoFinal);
+        await context.SaveChangesAsync();
         var dto = new EnviarAvaliacaoAlunoDto
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = questao.Alternativas.First().Id } }
@@ -1928,7 +1984,11 @@ public class AvaliacaoServiceTests
         await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
 
         // Quiz do modulo publicado, mas o aluno nunca enviou nenhuma tentativa.
-        await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        var quizPendente = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        await service.AdicionarQuestaoAsync(quizPendente.Id, professor.Id, NovaQuestaoObjetivaDto());
+        quizPendente.Publicar();
+        context.Avaliacoes.Update(quizPendente);
+        await context.SaveChangesAsync();
 
         var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
         {
@@ -1936,13 +1996,16 @@ public class AvaliacaoServiceTests
             CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
-            StatusPublicacao = StatusPublicacao.Publicado,
+            StatusPublicacao = StatusPublicacao.Rascunho,
             TentativasPermitidas = 1,
             NotaMaxima = 10,
             PesoNota = 1,
             PesoProgresso = 1
         });
         var questaoFinal = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacaoFinal.Publicar();
+        context.Avaliacoes.Update(avaliacaoFinal);
+        await context.SaveChangesAsync();
         var dto = new EnviarAvaliacaoAlunoDto
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoFinal.Id, AlternativaId = questaoFinal.Alternativas.First().Id } }
@@ -1970,6 +2033,9 @@ public class AvaliacaoServiceTests
 
         var quiz = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
         var questaoQuiz = await service.AdicionarQuestaoAsync(quiz.Id, professor.Id, NovaQuestaoObjetivaDto());
+        quiz.Publicar();
+        context.Avaliacoes.Update(quiz);
+        await context.SaveChangesAsync();
         await service.EnviarRespostasAlunoAsync(quiz.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoQuiz.Id, AlternativaId = questaoQuiz.Alternativas.First().Id } }
@@ -1981,13 +2047,16 @@ public class AvaliacaoServiceTests
             CursoId = curso.Id,
             ModuloId = null,
             TipoAvaliacao = TipoAvaliacao.Prova,
-            StatusPublicacao = StatusPublicacao.Publicado,
+            StatusPublicacao = StatusPublicacao.Rascunho,
             TentativasPermitidas = 1,
             NotaMaxima = 10,
             PesoNota = 1,
             PesoProgresso = 1
         });
         var questaoFinal = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacaoFinal.Publicar();
+        context.Avaliacoes.Update(avaliacaoFinal);
+        await context.SaveChangesAsync();
         var dto = new EnviarAvaliacaoAlunoDto
         {
             Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questaoFinal.Id, AlternativaId = questaoFinal.Alternativas.First().Id } }
@@ -1996,6 +2065,65 @@ public class AvaliacaoServiceTests
         var resultado = await service.EnviarRespostasAlunoAsync(avaliacaoFinal.Id, aluno.Id, dto);
 
         Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
+    }
+
+    // ---------- CorrigirAvaliacoesPublicadasSemQuestaoAsync (migracao de dados) ----------
+
+    [Fact]
+    public async Task CorrigirAvaliacoesPublicadasSemQuestaoAsync_AvaliacaoPublicadaSemQuestao_VoltaParaRascunho()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+
+        // Simula dado antigo: so era possivel antes de CriarAvaliacaoAsync
+        // recusar isso (ver CriarAvaliacaoAsync_StatusPublicadoSemQuestao_LancaInvalidOperation).
+        var avaliacaoVazia = new Avaliacao { Titulo = "Quiz vazio", TipoAvaliacao = TipoAvaliacao.Quiz, ModuloId = modulo.Id };
+        avaliacaoVazia.DefinirCurso(curso.Id);
+        avaliacaoVazia.Publicar();
+        context.Avaliacoes.Add(avaliacaoVazia);
+        await context.SaveChangesAsync();
+
+        var corrigidas = await service.CorrigirAvaliacoesPublicadasSemQuestaoAsync();
+
+        Assert.Equal(1, corrigidas);
+        var avaliacaoAtualizada = await context.Avaliacoes.AsNoTracking().SingleAsync(a => a.Id == avaliacaoVazia.Id);
+        Assert.Equal(StatusPublicacao.Rascunho, avaliacaoAtualizada.StatusPublicacao);
+    }
+
+    [Fact]
+    public async Task CorrigirAvaliacoesPublicadasSemQuestaoAsync_AvaliacaoPublicadaComQuestao_NaoAltera()
+    {
+        var (service, context, professor, _, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        var corrigidas = await service.CorrigirAvaliacoesPublicadasSemQuestaoAsync();
+
+        Assert.Equal(0, corrigidas);
+        var avaliacaoAtualizada = await context.Avaliacoes.AsNoTracking().SingleAsync(a => a.Id == avaliacao.Id);
+        Assert.Equal(StatusPublicacao.Publicado, avaliacaoAtualizada.StatusPublicacao);
+    }
+
+    [Fact]
+    public async Task CorrigirAvaliacoesPublicadasSemQuestaoAsync_ChamadoDeNovo_NaoAlteraMaisNada()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+
+        var avaliacaoVazia = new Avaliacao { Titulo = "Quiz vazio", TipoAvaliacao = TipoAvaliacao.Quiz, ModuloId = modulo.Id };
+        avaliacaoVazia.DefinirCurso(curso.Id);
+        avaliacaoVazia.Publicar();
+        context.Avaliacoes.Add(avaliacaoVazia);
+        await context.SaveChangesAsync();
+
+        await service.CorrigirAvaliacoesPublicadasSemQuestaoAsync();
+        var corrigidasDeNovo = await service.CorrigirAvaliacoesPublicadasSemQuestaoAsync();
+
+        Assert.Equal(0, corrigidasDeNovo);
     }
 
     private class ArmazenamentoArquivoServiceFake : IArmazenamentoArquivoService

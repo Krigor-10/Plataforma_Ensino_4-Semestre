@@ -30,6 +30,9 @@ import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 
+const MODELO_GRATUITO = 1;
+const MODELO_ACOMPANHADO = 3;
+
 function formatDecimal(value) {
   return Number(value || 0).toFixed(2).replace(".", ",");
 }
@@ -173,6 +176,22 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     () => (cursoAtivo ? modulosPorCursoId.get(cursoAtivo.curso.id) || [] : []),
     [cursoAtivo, modulosPorCursoId]
   );
+
+  // Mesma regra de Curso.AceitaEdicao (backend): encerrado trava sempre;
+  // concluido pelo professor so trava em Gratuito/Acompanhado.
+  const edicaoTravadaCursoAtivo = useMemo(() => {
+    if (!cursoAtivo) {
+      return false;
+    }
+
+    if (cursoAtivo.curso.encerradoEm) {
+      return true;
+    }
+
+    const modeloCurso = Number(cursoAtivo.curso.modeloCurso);
+    const modeloTravaPorConclusao = modeloCurso === MODELO_GRATUITO || modeloCurso === MODELO_ACOMPANHADO;
+    return modeloTravaPorConclusao && Boolean(cursoAtivo.curso.concluidoPeloProfessorEm);
+  }, [cursoAtivo]);
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/avaliacoes/${cursoId}`);
@@ -365,16 +384,27 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
           <header className="atividades-curso__cabecalho">
             <h2 className="atividades-curso__titulo">{cursoAtivo.curso.titulo}</h2>
-            <Botao onClick={abrirEscolhaNovaAvaliacao} variante="primario">
-              <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
-                <TbPlus aria-hidden="true" size={18} />
-              </motion.span>{" "}
-              Nova avaliacao
-            </Botao>
+            {!edicaoTravadaCursoAtivo ? (
+              <Botao onClick={abrirEscolhaNovaAvaliacao} variante="primario">
+                <motion.span whileHover={{ rotate: 90 }} transition={{ type: "spring", stiffness: 400, damping: 18 }} style={{ display: "flex" }}>
+                  <TbPlus aria-hidden="true" size={18} />
+                </motion.span>{" "}
+                Nova avaliacao
+              </Botao>
+            ) : null}
           </header>
+
+          {edicaoTravadaCursoAtivo ? (
+            <InlineMessage tone="warning">
+              {cursoAtivo.curso.encerradoEm
+                ? "Curso encerrado. A edição está travada."
+                : "Curso concluído — aguardando o encerramento pelo coordenador. A edição está travada."}
+            </InlineMessage>
+          ) : null}
 
           <SlideAvaliacoes
             avaliacoes={avaliacoesDoCursoAtivo}
+            edicaoTravada={edicaoTravadaCursoAtivo}
             mediaNotaPorAvaliacaoId={mediaNotaPorAvaliacaoId}
             menuAbertoId={menuAbertoId}
             onEditar={abrirEdicaoAvaliacao}
@@ -667,7 +697,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
    accordion (mesmo padrao visual/interacao do cabecalho de modulo em
    SecaoConteudosProfessor.jsx), com so uma aberta por vez; o menu "..." (Ver
    detalhes/Editar/Excluir) fica ao lado do cabecalho, fora do botao de toggle. */
-function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
+function SlideAvaliacoes({ avaliacoes, edicaoTravada, mediaNotaPorAvaliacaoId, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
   const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
 
   if (avaliacoes.length === 0) {
@@ -730,17 +760,17 @@ function SlideAvaliacoes({ avaliacoes, mediaNotaPorAvaliacaoId, menuAbertoId, on
                 {menuAbertoId === avaliacao.id ? (
                   <ul className="menu-contexto__lista">
                     <li>
-                      <button onClick={() => onVerDetalhes(avaliacao)} type="button">
+                      <button disabled={edicaoTravada} onClick={() => onVerDetalhes(avaliacao)} type="button">
                         Ajustes rapidos
                       </button>
                     </li>
                     <li>
-                      <button onClick={() => onEditar(avaliacao)} type="button">
+                      <button disabled={edicaoTravada} onClick={() => onEditar(avaliacao)} type="button">
                         Editar estrutura
                       </button>
                     </li>
                     <li>
-                      <button className="menu-item--perigo" onClick={() => onExcluir(avaliacao)} type="button">
+                      <button className="menu-item--perigo" disabled={edicaoTravada} onClick={() => onExcluir(avaliacao)} type="button">
                         Excluir
                       </button>
                     </li>

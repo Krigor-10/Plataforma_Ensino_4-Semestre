@@ -21,4 +21,19 @@ public interface IProgressoAlunoService
     /// conteudos — ver LiberacaoAvaliacoesInfo pra regra exata.
     /// </summary>
     Task<LiberacaoAvaliacoesInfo> ObterLiberacaoAvaliacoesAsync(int matriculaId);
+
+    /// <summary>
+    /// Recalcula o progresso de todas as matriculas aprovadas do curso -
+    /// chamado pelo professor publicar/despublicar/excluir conteudo ou quiz,
+    /// ou excluir modulo. Nao faz nada em curso que nao aceita edicao
+    /// (encerrado ou concluido-travado).
+    /// </summary>
+    Task RecalcularProgressoDoCursoAsync(int cursoId);
+
+    /// <summary>
+    /// Migracao de dados: recalcula todas as matriculas aprovadas de todo
+    /// curso nao encerrado (inclusive concluido-travado - excecao so pra
+    /// esta correcao historica). Ver implementacao pra detalhes.
+    /// </summary>
+    Task RecalcularProgressoDeCursosNaoEncerradosAsync();
 }

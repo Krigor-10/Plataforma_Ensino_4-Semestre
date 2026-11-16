@@ -26,4 +26,12 @@ public interface IAvaliacaoService
     Task<ResultadoGeracaoIA> GerarQuestoesComIaDeConteudoAsync(int avaliacaoId, int professorId, int conteudoDidaticoId, GerarQuestoesIaRequestDto configuracao, CancellationToken cancellationToken);
     Task<AnexoQuestaoBanco> AdicionarAnexoQuestaoAsync(int questaoBancoId, int professorId, IFormFile arquivo, string titulo, TipoConteudoDidatico tipoAnexo);
     Task RemoverAnexoQuestaoAsync(int questaoBancoId, int anexoId, int professorId);
+
+    /// <summary>
+    /// Migracao de dados (achado da auditoria de progresso): avaliacao
+    /// publicada sem nenhuma questao - possivel antes de CriarAvaliacaoAsync
+    /// recusar isso - volta pra Rascunho. Idempotente: sem avaliacao vazia
+    /// publicada, nao faz nada. Retorna quantas foram corrigidas.
+    /// </summary>
+    Task<int> CorrigirAvaliacoesPublicadasSemQuestaoAsync();
 }

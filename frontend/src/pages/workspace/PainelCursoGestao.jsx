@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TbAlertTriangle,
+  TbArrowBackUp,
   TbAward,
   TbBan,
   TbCamera,
@@ -76,6 +77,7 @@ export default function PainelCursoGestao({
   modulos,
   onAlterarFotoCurso,
   onAtribuirCoordenador,
+  onDevolverAoProfessor,
   onEditarCurso,
   onEncerrarCurso,
   onNavigate,
@@ -101,6 +103,8 @@ export default function PainelCursoGestao({
   const [erroRevisaoConteudo, setErroRevisaoConteudo] = useState("");
   const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
   const [confirmandoReabrir, setConfirmandoReabrir] = useState(false);
+  const [confirmandoDevolver, setConfirmandoDevolver] = useState(false);
+  const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [processandoConfirmacaoCiclo, setProcessandoConfirmacaoCiclo] = useState(false);
   const refAbas = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
@@ -305,6 +309,14 @@ export default function PainelCursoGestao({
     setConfirmandoReabrir(false);
   }
 
+  async function confirmarDevolucao() {
+    setProcessandoConfirmacaoCiclo(true);
+    await onDevolverAoProfessor(motivoDevolucao.trim());
+    setProcessandoConfirmacaoCiclo(false);
+    setConfirmandoDevolver(false);
+    setMotivoDevolucao("");
+  }
+
   function fecharConfirmacaoEncerrar() {
     if (processandoConfirmacaoCiclo) {
       return;
@@ -321,6 +333,15 @@ export default function PainelCursoGestao({
     setConfirmandoReabrir(false);
   }
 
+  function fecharConfirmacaoDevolver() {
+    if (processandoConfirmacaoCiclo) {
+      return;
+    }
+
+    setConfirmandoDevolver(false);
+    setMotivoDevolucao("");
+  }
+
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
   const ehGratuito = Number(curso.modeloCurso) === MODELO_GRATUITO;
   const ehPagoPacote = Number(curso.modeloCurso) === MODELO_PAGO_PACOTE;
@@ -329,6 +350,12 @@ export default function PainelCursoGestao({
   // (concluidoPeloProfessorEm preenchido) - um pacote criado direto pelo
   // Admin nunca passa por aqui.
   const temCicloDeEncerramento = ehAcompanhado || ehGratuito || (ehPagoPacote && Boolean(curso.concluidoPeloProfessorEm));
+  // "Devolver ao professor" so existe em Gratuito/Acompanhado concluido e nao
+  // encerrado - um pacote vindo do fluxo Gratuito->pacote nao tem essa
+  // conclusao "em andamento" pra devolver (PROMPT-agente-progresso-e-trava-
+  // ao-concluir.md, Parte A).
+  const podeDevolverAoProfessor =
+    !ehAdmin && (ehGratuito || ehAcompanhado) && Boolean(curso.concluidoPeloProfessorEm) && !curso.encerradoEm;
   const pacoteTravadoNaVenda = ehPagoPacote && Boolean(curso.publicadoParaVendaEm);
   // Round 6 (plano fluxo-venda-cursos): Gratuito encerrado abre a janela pra
   // virar pacote; PagoPacote (criado direto ou ja convertido) reabre a mesma
@@ -434,6 +461,11 @@ export default function PainelCursoGestao({
             {!ehAdmin && temCicloDeEncerramento && curso.concluidoPeloProfessorEm && !curso.encerradoEm ? (
               <Botao disabled={salvandoCurso} onClick={() => setConfirmandoEncerrar(true)} tamanho="pequeno" variante="primario">
                 <TbLock aria-hidden="true" size={16} /> Encerrar curso
+              </Botao>
+            ) : null}
+            {podeDevolverAoProfessor ? (
+              <Botao disabled={salvandoCurso} onClick={() => setConfirmandoDevolver(true)} tamanho="pequeno" variante="secundario">
+                <TbArrowBackUp aria-hidden="true" size={16} /> Devolver ao professor
               </Botao>
             ) : null}
             {!ehAdmin && temCicloDeEncerramento && curso.encerradoEm ? (
@@ -714,8 +746,49 @@ export default function PainelCursoGestao({
         >
           <p style={{ color: "var(--cor-texto-suave)", marginBottom: 0 }}>
             O conteúdo volta a ser editável pelo professor e o curso volta a aceitar novos alunos.
+            {ehGratuito || ehAcompanhado
+              ? " O curso volta para \"Em andamento\" e o professor precisa concluir de novo quando terminar os ajustes."
+              : ""}
             {ehAcompanhado ? " Os certificados já emitidos continuam válidos." : ""}
           </p>
+        </Modal>
+      ) : null}
+
+      {confirmandoDevolver ? (
+        <Modal
+          onFechar={fecharConfirmacaoDevolver}
+          titulo={
+            <span className="linha-icone-texto">
+              <TbArrowBackUp aria-hidden="true" size={18} /> Devolver "{curso.titulo}" ao professor?
+            </span>
+          }
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={fecharConfirmacaoDevolver} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao disabled={processandoConfirmacaoCiclo} onClick={confirmarDevolucao} variante="primario">
+                {processandoConfirmacaoCiclo ? "Devolvendo..." : "Devolver ao professor"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p style={{ color: "var(--cor-texto-suave)" }}>
+            O curso volta para "Em andamento", a edição é destravada e o professor é avisado. Ele precisa concluir de novo quando terminar os ajustes.
+          </p>
+          <div className="campo">
+            <label className="campo__rotulo" htmlFor="devolver-curso-motivo">Motivo (opcional)</label>
+            <textarea
+              className="campo__entrada"
+              disabled={processandoConfirmacaoCiclo}
+              id="devolver-curso-motivo"
+              maxLength={500}
+              onChange={(event) => setMotivoDevolucao(event.target.value)}
+              placeholder="O que precisa ser ajustado antes de concluir de novo?"
+              rows={3}
+              value={motivoDevolucao}
+            />
+          </div>
         </Modal>
       ) : null}
 

@@ -173,6 +173,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
 
         var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
@@ -206,6 +211,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
 
         var service = new CertificadoService(context, new AcessoAcademicoService(context));
 
@@ -227,6 +237,8 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+        contextoDeArranjo.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         contextoDeArranjo.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -263,6 +275,8 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+        contextoDeArranjo.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         contextoDeArranjo.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -317,6 +331,11 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -524,6 +543,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
         lancamento.RegistrarCorrecao(7, 1, OrigemCorrecaoNota.Automatica);
@@ -558,6 +582,11 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -614,6 +643,11 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         context.SaveChanges();
 
         var service = new CertificadoService(context, new AcessoAcademicoService(context));
@@ -725,6 +759,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
 
         const decimal notaRealBaixa = 6.99m;
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
@@ -768,6 +807,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
         lancamento.RegistrarCorrecao(6.99m, 1, OrigemCorrecaoNota.Automatica);
@@ -808,6 +852,11 @@ public class CertificadoServiceTests
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
         context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
         // Nenhum LancamentoNotaAluno criado - aluno ainda nao fez a prova.
 
         var ambienteDesenvolvimento = new AmbienteFalso { EnvironmentName = Environments.Development };
@@ -841,6 +890,11 @@ public class CertificadoServiceTests
         avaliacao.DefinirCurso(curso.Id);
         avaliacao.Publicar();
         context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        // Avaliacao publicada sem questao e tratada como nao publicada pro
+        // aluno (defesa pra dados antigos) - precisa de 1 questao pra valer
+        // como pendencia real de certificado.
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
         context.SaveChanges();
 
         var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };

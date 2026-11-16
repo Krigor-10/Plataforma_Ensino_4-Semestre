@@ -186,7 +186,10 @@ public class CertificadoService : ICertificadoService
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
-                avaliacao.CursoId == matricula.CursoId)
+                avaliacao.CursoId == matricula.CursoId &&
+                // Defesa pra dados antigos: avaliacao publicada sem questao
+                // (brecha ja fechada na criacao) e tratada como nao publicada.
+                avaliacao.Questoes.Count > 0)
             .Select(avaliacao => avaliacao.Id)
             .Where(avaliacaoId => !_context.LancamentosNotasAlunos
                 .Any(lancamento => lancamento.MatriculaId == matricula.Id && lancamento.AvaliacaoId == avaliacaoId))
@@ -208,7 +211,8 @@ public class CertificadoService : ICertificadoService
             .AnyAsync(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
-                avaliacao.CursoId == matricula.CursoId);
+                avaliacao.CursoId == matricula.CursoId &&
+                avaliacao.Questoes.Count > 0);
 
         if (possuiAvaliacaoFormalPublicada && matricula.NotaFinal < 7m)
         {

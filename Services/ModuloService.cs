@@ -12,17 +12,20 @@ public class ModuloService : IModuloService
     private readonly IModuloRepository _moduloRepository;
     private readonly IGenericRepository<Curso> _cursoRepository;
     private readonly ICursoService _cursoService;
+    private readonly IProgressoAlunoService _progressoAlunoService;
 
     public ModuloService(
         IModuloRepository moduloRepository,
         IGenericRepository<Curso> cursoRepository,
         ICursoService cursoService,
+        IProgressoAlunoService progressoAlunoService,
         PlataformaContext context)
     {
         _context = context;
         _moduloRepository = moduloRepository;
         _cursoRepository = cursoRepository;
         _cursoService = cursoService;
+        _progressoAlunoService = progressoAlunoService;
     }
 
     public async Task<Modulo> CriarModuloAsync(Modulo modulo)
@@ -108,6 +111,7 @@ public class ModuloService : IModuloService
 
         _moduloRepository.Deletar(modulo);
         await _moduloRepository.SalvarAlteracoesAsync();
+        await _progressoAlunoService.RecalcularProgressoDoCursoAsync(modulo.CursoId);
     }
 
     public async Task<Dictionary<int, int>> ContarConteudosPorModuloAsync(IEnumerable<int> moduloIds)

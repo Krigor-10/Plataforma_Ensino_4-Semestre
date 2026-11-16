@@ -309,6 +309,14 @@ await using (var scope = app.Services.CreateAsyncScope())
     {
         await DevelopmentDataSeeder.SeedAsync(dbContext);
     }
+
+    // Correcao de dados reais (nao gated por ambiente nem por
+    // RunMigrationsOnStartup - ver ProgressoDataFixMigration): precisa rodar
+    // em producao, onde o bug de progresso desatualizado foi encontrado.
+    await ProgressoDataFixMigration.AplicarAsync(
+        scope.ServiceProvider.GetRequiredService<IAvaliacaoService>(),
+        scope.ServiceProvider.GetRequiredService<IProgressoAlunoService>(),
+        scope.ServiceProvider.GetRequiredService<ILogger<Program>>());
 }
 
 if (string.IsNullOrWhiteSpace(azureStorageConnectionString))

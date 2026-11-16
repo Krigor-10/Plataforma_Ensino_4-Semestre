@@ -189,6 +189,82 @@ public class ProgressoAlunoService : IProgressoAlunoService
         await _context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Recalcula modulo+curso de todas as matriculas aprovadas sempre que o
+    /// professor muda algo que entra no progresso (publicar/despublicar/
+    /// excluir conteudo ou quiz, excluir modulo). Nao faz nada se o curso nao
+    /// aceitar edicao (<see cref="Curso.AceitaEdicao"/> - encerrado ou
+    /// concluido-travado pela Parte A deste prompt): historico fica
+    /// congelado, igual a trava de edicao de conteudo/avaliacao/modulo.
+    /// </summary>
+    public async Task RecalcularProgressoDoCursoAsync(int cursoId)
+    {
+        var curso = await _context.Cursos.AsNoTracking().FirstOrDefaultAsync(item => item.Id == cursoId);
+        if (curso is null || !curso.AceitaEdicao())
+        {
+            return;
+        }
+
+        await RecalcularMatriculasDoCursoAsync(cursoId);
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Migracao de dados (achado da auditoria de progresso): corrige
+    /// matriculas com PercentualConclusao desatualizado por professor ter
+    /// publicado/despublicado/excluido conteudo ou quiz antes do recalculo
+    /// automatico existir (RecalcularProgressoDoCursoAsync). Roda em todo
+    /// curso NAO encerrado, inclusive concluido-pelo-professor-aguardando -
+    /// excecao deliberada so pra esta correcao historica (decisao do usuario:
+    /// "quem ja tinha 100% pode cair"); o recalculo disparado por edicao
+    /// normal continua respeitando Curso.AceitaEdicao. Idempotente - sem
+    /// nada desatualizado, so recalcula os mesmos valores de novo.
+    /// </summary>
+    public async Task RecalcularProgressoDeCursosNaoEncerradosAsync()
+    {
+        var cursoIds = await _context.Cursos
+            .AsNoTracking()
+            .Where(curso => curso.EncerradoEm == null)
+            .Select(curso => curso.Id)
+            .ToListAsync();
+
+        foreach (var cursoId in cursoIds)
+        {
+            await RecalcularMatriculasDoCursoAsync(cursoId);
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task RecalcularMatriculasDoCursoAsync(int cursoId)
+    {
+        var matriculas = await _context.Matriculas
+            .Where(matricula => matricula.CursoId == cursoId && matricula.Status == StatusMatricula.Aprovada)
+            .ToListAsync();
+
+        if (matriculas.Count == 0)
+        {
+            return;
+        }
+
+        var moduloIds = await _context.Modulos
+            .AsNoTracking()
+            .Where(modulo => modulo.CursoId == cursoId)
+            .Select(modulo => modulo.Id)
+            .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        foreach (var matricula in matriculas)
+        {
+            foreach (var moduloId in moduloIds)
+            {
+                await RecalcularModuloAsync(matricula, moduloId, now);
+            }
+
+            await RecalcularCursoAsync(matricula, now);
+        }
+    }
+
     public async Task RecalcularProgressoQuizAsync(int matriculaId, int avaliacaoId)
     {
         var avaliacao = await _context.Avaliacoes
@@ -495,13 +571,24 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .ToListAsync();
 
         var concluidos = conteudosConcluidosIds.ToHashSet();
-        var modulosComConteudo = conteudosCurso
-            .GroupBy(conteudo => conteudo.ModuloId)
-            .ToList();
-        var modulosConcluidos = modulosComConteudo.Count(grupo =>
-            grupo.All(conteudo => concluidos.Contains(conteudo.Id)));
-
         var (quizzesCurso, quizzesConcluidos) = await ObterQuizzesDoCursoAsync(matricula);
+
+        // Modulo conta quando tem pelo menos um conteudo publicado OU um quiz
+        // publicado com questoes (achado da auditoria de progresso: um modulo
+        // so com quiz nunca entrava em TotalModulos/ModulosConcluidos, porque
+        // so agrupava pelos conteudos). "Concluido" exige os dois completos
+        // quando o modulo tiver os dois tipos de item.
+        var conteudosPorModuloId = conteudosCurso.ToLookup(conteudo => conteudo.ModuloId);
+        var quizzesPorModuloId = quizzesCurso
+            .Where(quiz => quiz.ModuloId.HasValue)
+            .ToLookup(quiz => quiz.ModuloId!.Value);
+        var moduloIdsComItem = conteudosPorModuloId.Select(grupo => grupo.Key)
+            .Concat(quizzesPorModuloId.Select(grupo => grupo.Key))
+            .Distinct()
+            .ToList();
+        var modulosConcluidos = moduloIdsComItem.Count(moduloId =>
+            conteudosPorModuloId[moduloId].All(conteudo => concluidos.Contains(conteudo.Id)) &&
+            quizzesPorModuloId[moduloId].All(quiz => quizzesConcluidos.Contains(quiz.Id)));
 
         var pesoTotal = SomarPeso(conteudosCurso.Select(conteudo => conteudo.PesoProgresso)
             .Concat(quizzesCurso.Select(quiz => quiz.PesoProgresso)));
@@ -532,7 +619,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
         progressoCurso.PesoConcluido = pesoConcluido;
         progressoCurso.PesoTotal = pesoTotal;
         progressoCurso.ModulosConcluidos = modulosConcluidos;
-        progressoCurso.TotalModulos = modulosComConteudo.Count;
+        progressoCurso.TotalModulos = moduloIdsComItem.Count;
         progressoCurso.AtualizadoEm = now;
     }
 
@@ -544,8 +631,9 @@ public class ProgressoAlunoService : IProgressoAlunoService
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
                 avaliacao.CursoId == matricula.CursoId &&
-                avaliacao.ModuloId == moduloId)
-            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
+                avaliacao.ModuloId == moduloId &&
+                _context.QuestoesPublicadas.Any(questao => questao.AvaliacaoId == avaliacao.Id))
+            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.ModuloId, avaliacao.PesoProgresso))
             .ToListAsync();
 
         var concluidos = await ObterQuizzesConcluidosIdsAsync(matricula.Id, quizzes);
@@ -554,13 +642,18 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
     private async Task<(List<AvaliacaoProgressoInfo> Quizzes, HashSet<int> ConcluidosIds)> ObterQuizzesDoCursoAsync(Matricula matricula)
     {
+        // "sem questoes" = tratada como nao publicada pro aluno - defesa pra
+        // dados antigos (achado da auditoria de progresso: quiz publicado sem
+        // questao nunca deveria existir, mas a brecha na criacao ja foi
+        // fechada em AvaliacaoService.CriarAvaliacaoAsync).
         var quizzes = await _context.Avaliacoes
             .AsNoTracking()
             .Where(avaliacao =>
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
-                avaliacao.CursoId == matricula.CursoId)
-            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.PesoProgresso))
+                avaliacao.CursoId == matricula.CursoId &&
+                _context.QuestoesPublicadas.Any(questao => questao.AvaliacaoId == avaliacao.Id))
+            .Select(avaliacao => new AvaliacaoProgressoInfo(avaliacao.Id, avaliacao.ModuloId, avaliacao.PesoProgresso))
             .ToListAsync();
 
         var concluidos = await ObterQuizzesConcluidosIdsAsync(matricula.Id, quizzes);
@@ -594,7 +687,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
         return concluidos.ToHashSet();
     }
 
-    private sealed record AvaliacaoProgressoInfo(int Id, decimal PesoProgresso);
+    private sealed record AvaliacaoProgressoInfo(int Id, int? ModuloId, decimal PesoProgresso);
 
     private static decimal SomarPeso(IEnumerable<decimal> pesos)
     {

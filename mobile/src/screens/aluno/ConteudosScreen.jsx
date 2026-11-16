@@ -438,11 +438,15 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         {cursoAtivo.modulos.map((modulo) => {
           const aberto = !modulo.bloqueado && modulosAbertos.has(modulo.id);
           const totalConteudos = modulo.conteudos.length;
+          // Modulo so com quiz (sem nenhum conteudo) tambem tem pill/barra -
+          // contar os quizzes aqui tambem, nao so os conteudos (prompt-agente-
+          // progresso-e-trava-ao-concluir.md, Parte B, item 7).
+          const totalItensModulo = totalConteudos + modulo.quizzes.length;
           // modulo.concluido/progresso ja vem do backend (ProgressoModuloAluno,
           // ver agruparConteudosPorCurso) e pondera o(s) quiz(zes) do modulo
           // junto com os conteudos - nao so os conteudos.
-          const moduloConcluido = totalConteudos > 0 && modulo.concluido;
-          const percentualModulo = totalConteudos > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
+          const moduloConcluido = totalItensModulo > 0 && modulo.concluido;
+          const percentualModulo = totalItensModulo > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
           const linhas = montarLinhasModulo(modulo);
 
           return (
@@ -476,7 +480,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                   <Text numberOfLines={2} style={estilos.moduloTitulo}>{modulo.titulo}</Text>
                   {modulo.bloqueado ? (
                     <Text style={estilos.moduloContagem}>Conclua o módulo anterior para desbloquear</Text>
-                  ) : totalConteudos > 0 ? (
+                  ) : totalItensModulo > 0 ? (
                     <>
                       <View style={estilos.moduloProgressoLinha}>
                         <Text style={estilos.moduloProgressoRotulo}>Progresso da trilha</Text>
@@ -484,7 +488,15 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                       </View>
                       <View
                         accessibilityHint="Representação visual do progresso do módulo em barra"
-                        accessibilityLabel={`${modulo.concluidos} de ${totalConteudos} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
+                        accessibilityLabel={
+                          // modulo.concluidos so conta conteudo (nao quiz) -
+                          // com quiz no modulo, "X de Y conteudos" ficaria
+                          // incoerente com a porcentagem (que pondera os
+                          // dois); descrever pelo percentual evita isso.
+                          modulo.quizzes.length > 0
+                            ? `${Math.round(percentualModulo)}% do módulo concluído${moduloConcluido ? ". Módulo concluído" : ""}`
+                            : `${modulo.concluidos} de ${totalItensModulo} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`
+                        }
                         accessible
                         style={estilos.barraFundoFina}
                       >
