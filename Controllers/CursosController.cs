@@ -15,6 +15,7 @@ public class CursosController : ControllerBase
     private readonly ICursoService _cursoService;
     private readonly IArmazenamentoArquivoService _armazenamentoService;
     private readonly ICursoDesempenhoService _cursoDesempenhoService;
+    private readonly ICursoInscricoesService _cursoInscricoesService;
     private readonly ICursoAutorizacaoService _cursoAutorizacaoService;
     private readonly ITaxaAdesaoService _taxaAdesaoService;
     private readonly ICursoRevisaoConteudoService _cursoRevisaoConteudoService;
@@ -23,12 +24,14 @@ public class CursosController : ControllerBase
         ICursoService cursoService,
         IArmazenamentoArquivoService armazenamentoService,
         ICursoDesempenhoService cursoDesempenhoService,
+        ICursoInscricoesService cursoInscricoesService,
         ICursoAutorizacaoService cursoAutorizacaoService,
         ITaxaAdesaoService taxaAdesaoService,
         ICursoRevisaoConteudoService cursoRevisaoConteudoService)
     {
         _cursoService = cursoService;
         _cursoDesempenhoService = cursoDesempenhoService;
+        _cursoInscricoesService = cursoInscricoesService;
         _armazenamentoService = armazenamentoService;
         _cursoAutorizacaoService = cursoAutorizacaoService;
         _taxaAdesaoService = taxaAdesaoService;
@@ -271,6 +274,18 @@ public class CursosController : ControllerBase
 
         var taxaAdesaoCoordenador = await _taxaAdesaoService.ObterParaCoordenadorAsync(coordenadorId.Value, dataInicio, dataFim, agrupamento);
         return Ok(taxaAdesaoCoordenador);
+    }
+
+    // Tela "Inscricoes" do Admin (PROMPT-agente-tela-inscricoes.md) - funil
+    // de vendas/inscricao por curso, nao confundir com /desempenho (usado
+    // por Coordenador/Professor, pedagogico). "de"/"ate" opcionais, formato
+    // AAAA-MM-DD.
+    [HttpGet("inscricoes")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ListarInscricoes([FromQuery] DateTime? de, [FromQuery] DateTime? ate)
+    {
+        var inscricoes = await _cursoInscricoesService.ObterInscricoesAsync(de, ate);
+        return Ok(inscricoes);
     }
 
     [HttpGet("desempenho")]

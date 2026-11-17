@@ -75,6 +75,7 @@ builder.Services.AddScoped<IModuloService, ModuloService>();
 builder.Services.AddScoped<ITurmaService, TurmaService>();
 builder.Services.AddScoped<ITurmaRepository, TurmaRepository>();
 builder.Services.AddScoped<ICursoDesempenhoService, CursoDesempenhoService>();
+builder.Services.AddScoped<ICursoInscricoesService, CursoInscricoesService>();
 builder.Services.AddScoped<ICursoRevisaoConteudoService, CursoRevisaoConteudoService>();
 builder.Services.AddScoped<IChatbotFerramentasService, ChatbotFerramentasService>();
 builder.Services.AddScoped<IChatbotIAService, ChatbotIAService>();

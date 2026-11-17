@@ -1,13 +1,15 @@
 /* ============================================================
    DASHBOARD ADMIN — Painel administrativo (Etapa 2 do reskin)
-   Replica TelaDashboardAdmin do protótipo. O KPI "taxa de
-   conclusao" do protótipo vinha de um mock global; aqui vira
-   "taxa de aprovacao de matriculas", que e calculavel a partir
-   dos dados reais ja carregados pelo snapshot do Admin. O botao
-   de resetar dados de demonstracao nao existe: e um recurso do
-   modo mock do protótipo, sem equivalente no backend real.
+   Replica TelaDashboardAdmin do protótipo. O KPI "Taxa de
+   conclusao" busca GET /Cursos/inscricoes (mesma fonte da tela
+   Inscrições) e soma concluíram/inscritos entre todos os cursos -
+   antes era "Taxa de aprovacao" de matrícula, que ficou sempre
+   100% desde que a matrícula deixou de ser aprovada manualmente
+   (PROMPT-agente-tela-inscricoes.md). O botao de resetar dados de
+   demonstracao nao existe: e um recurso do modo mock do protótipo,
+   sem equivalente no backend real.
    ============================================================ */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   MdAssignment,
@@ -24,6 +26,7 @@ import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GraficoTaxaAdesao from "../../components/GraficoTaxaAdesao.jsx";
 import { mapById } from "../../lib/dashboard.js";
 import { LARGURA_MAXIMA_BARRA_EM_PE } from "../../lib/graficos.js";
+import { ApiError, apiRequest } from "../../lib/api.js";
 import { parseApiDate } from "../../lib/format.js";
 
 const MESES_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -69,7 +72,39 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
   const alunosAtivos = alunos.filter((aluno) => aluno.ativo).length;
   const totalUsuarios = alunos.length + professores.length + coordenadores.length;
   const matriculasAprovadas = matriculas.filter((matricula) => matricula.status === "Aprovada");
-  const taxaAprovacao = matriculas.length ? Math.round((matriculasAprovadas.length / matriculas.length) * 100) : 0;
+
+  // PROMPT-agente-tela-inscricoes.md, item 9: "Taxa de aprovacao" (sempre
+  // 100% desde que a matricula deixou de ser aprovada manualmente) vira
+  // "Taxa de conclusao" = concluiram / inscritos, somado entre todos os
+  // cursos, com os mesmos dados da tela Inscricoes (sem filtro de periodo).
+  const [inscricoes, setInscricoes] = useState([]);
+
+  useEffect(() => {
+    let ativo = true;
+
+    apiRequest("/Cursos/inscricoes")
+      .then((dados) => {
+        if (ativo) {
+          setInscricoes(dados);
+        }
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          onSessionExpired?.();
+        }
+        // Falha ao carregar nao deve quebrar o resto do Dashboard - o KPI so
+        // fica em 0% (mesmo tratamento silencioso ja usado em outros
+        // carregamentos auxiliares desta tela, ex. status de certificado).
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [onSessionExpired]);
+
+  const totalInscritos = inscricoes.reduce((total, curso) => total + curso.inscritos, 0);
+  const totalConcluiram = inscricoes.reduce((total, curso) => total + curso.concluiram, 0);
+  const taxaConclusao = totalInscritos ? Math.round((totalConcluiram / totalInscritos) * 100) : 0;
 
   const cursoPorId = mapById(cursos);
   // Conversao: cadastro -> pelo menos uma matricula aprovada (matricula e
@@ -94,7 +129,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
   const kpis = [
     { detalhe: `${professores.length} professor(es), ${coordenadores.length} coordenador(es)`, icone: <MdPeople size={22} />, rotulo: "Usuarios", valor: totalUsuarios },
     { corBorda: "var(--cor-info)", detalhe: `de ${alunos.length} cadastrados`, icone: <MdSchool size={22} />, rotulo: "Alunos ativos", valor: alunosAtivos },
-    { corBorda: "var(--cor-sucesso)", detalhe: "das matriculas registradas", icone: <MdBarChart size={22} />, rotulo: "Taxa de aprovacao", valor: `${taxaAprovacao}%` },
+    { corBorda: "var(--cor-sucesso)", detalhe: "dos alunos inscritos", icone: <MdBarChart size={22} />, rotulo: "Taxa de conclusao", valor: `${taxaConclusao}%` },
     { corBorda: "var(--cor-marca)", detalhe: "alunos cadastrados com matricula aprovada", icone: <MdTrendingUp size={22} />, rotulo: "Conversao", valor: `${taxaConversao}%` },
     { corBorda: "var(--cor-aviso)", detalhe: "matriculas aprovadas em cursos pagos", icone: <MdAssignmentTurnedIn size={22} />, rotulo: "Em cursos pagos", valor: matriculasEmCursoPago },
     {
@@ -121,7 +156,7 @@ export function DashboardAdmin({ alunos = [], coordenadores = [], cursos = [], m
       </header>
 
       <section aria-label="Metricas gerais da plataforma">
-        <div className="grade-estatisticas">
+        <div className="grade-estatisticas grade-estatisticas--compacta-6">
           {kpis.map((kpi) => (
             <CartaoEstatistica corBorda={kpi.corBorda} icone={kpi.icone} key={kpi.rotulo} onClick={kpi.onClick} rotulo={kpi.rotulo} valor={kpi.valor} />
           ))}

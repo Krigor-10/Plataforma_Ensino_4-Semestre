@@ -80,6 +80,13 @@ export default function WorkspaceScreen({
           return { ...section, label: "Catalogo de Cursos" };
         }
 
+        // PROMPT-agente-tela-inscricoes.md: so o que o Admin ve muda de nome
+        // ("Matriculas" -> "Inscricoes") - a chave de rota "matriculas"
+        // continua a mesma, matricula no banco/codigo nao muda.
+        if (section.key === "matriculas" && role === "Admin") {
+          return { ...section, label: "Inscrições" };
+        }
+
         if (section.key === "turmas" && role === "Professor") {
           return { ...section, label: "Progresso" };
         }

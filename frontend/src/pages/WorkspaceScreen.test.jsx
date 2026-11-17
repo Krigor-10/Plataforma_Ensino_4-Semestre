@@ -195,3 +195,23 @@ describe("WorkspaceScreen - rota canonica preserva /avaliacoes/:id", () => {
     await waitFor(() => expect(onNavigate).toHaveBeenCalledWith("/app/cursos/12", { replace: true }));
   });
 });
+
+// PROMPT-agente-tela-inscricoes.md, item 3: so o que o Admin ve muda de
+// nome ("Matriculas" -> "Inscricoes"); a chave de rota "matriculas"
+// continua a mesma, e o aluno nao muda nada.
+describe("WorkspaceScreen - secao 'matriculas' vira 'Inscricoes' so pro Admin", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("Admin ve 'Inscrições' no caminho do topo", async () => {
+    loadWorkspaceSnapshot.mockResolvedValue(snapshotComCursoEModulo());
+    apiRequest.mockResolvedValue([]);
+    window.history.pushState({}, "", "/app/matriculas");
+
+    renderWorkspace({ onNavigate: vi.fn(), route: { kind: "app", section: "matriculas", param: null } });
+
+    expect((await screen.findAllByText("Inscrições")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Fluxo de matriculas")).not.toBeInTheDocument();
+  });
+});

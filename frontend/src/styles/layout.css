@@ -397,6 +397,91 @@
   font-weight: 500;
 }
 
+/* Dashboard do Admin (PROMPT-agente-kpis-menores.md): os 6 KPIs numa linha
+   só no desktop, em vez de 5 + o 6º sozinho numa segunda linha. Escopado
+   nesse modificador pra nao alterar .grade-estatisticas/.cartao-estatistica
+   base, usados em varias outras telas (Coordenador, Professor, Aluno,
+   Progresso, Modulos). Mesmo tamanho de cartao compacto que ja existe em
+   .atividades-curso__kpis-compactos (workspace.css), so com 6 colunas em
+   vez de 2. --compacta-5 (tela Inscricoes, PROMPT-agente-tela-inscricoes.md)
+   reaproveita o mesmo tamanho de cartao, so com 5 colunas. */
+.grade-estatisticas--compacta-6,
+.grade-estatisticas--compacta-5 {
+  gap: 0.875rem;
+}
+
+.grade-estatisticas--compacta-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.grade-estatisticas--compacta-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.grade-estatisticas--compacta-6 .cartao-estatistica,
+.grade-estatisticas--compacta-5 .cartao-estatistica {
+  padding: 0.75rem 1rem;
+  gap: 0.75rem;
+  border-top-width: 2px;
+}
+
+.grade-estatisticas--compacta-6 .cartao-estatistica__icone svg,
+.grade-estatisticas--compacta-5 .cartao-estatistica__icone svg {
+  width: 22px;
+  height: 22px;
+}
+
+.grade-estatisticas--compacta-6 .cartao-estatistica__valor,
+.grade-estatisticas--compacta-5 .cartao-estatistica__valor {
+  font-size: 1.35rem;
+}
+
+.grade-estatisticas--compacta-6 .cartao-estatistica__rotulo,
+.grade-estatisticas--compacta-5 .cartao-estatistica__rotulo {
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+@media (max-width: 1200px) {
+  .grade-estatisticas--compacta-6,
+  .grade-estatisticas--compacta-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* <= 768px: volta a ficar identico a .grade-estatisticas base (2 por linha,
+   mesmo padding/gap/fonte de sempre) - "como hoje", conforme o prompt. */
+@media (max-width: 768px) {
+  .grade-estatisticas--compacta-6,
+  .grade-estatisticas--compacta-5 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--espaco-sm);
+  }
+
+  .grade-estatisticas--compacta-6 .cartao-estatistica,
+  .grade-estatisticas--compacta-5 .cartao-estatistica {
+    padding: var(--espaco-sm) var(--espaco-md);
+    gap: var(--espaco-sm);
+  }
+
+  .grade-estatisticas--compacta-6 .cartao-estatistica__icone svg,
+  .grade-estatisticas--compacta-5 .cartao-estatistica__icone svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .grade-estatisticas--compacta-6 .cartao-estatistica__valor,
+  .grade-estatisticas--compacta-5 .cartao-estatistica__valor {
+    font-size: 1.4rem;
+  }
+
+  .grade-estatisticas--compacta-6 .cartao-estatistica__rotulo,
+  .grade-estatisticas--compacta-5 .cartao-estatistica__rotulo {
+    font-size: 0.75rem;
+    line-height: normal;
+  }
+}
+
 /* ------------------------------------------------------------
    SEÇÃO DE PAINEL
    ------------------------------------------------------------ */

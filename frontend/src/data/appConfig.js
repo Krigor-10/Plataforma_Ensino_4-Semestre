@@ -142,11 +142,13 @@ export function getSectionMeta(section, role) {
           : "Escolha um curso para preparar provas, quizzes e exercicios."
     },
     matriculas: {
-      title: role === "Aluno" ? "Catalogo de Cursos" : "Fluxo de matriculas",
+      // PROMPT-agente-tela-inscricoes.md: "Matriculas" vira "Inscricoes" so
+      // pra quem o Admin ve - aluno continua igual.
+      title: role === "Aluno" ? "Catalogo de Cursos" : "Inscrições",
       description:
         role === "Aluno"
           ? "Cursos disponiveis para matricula, ainda nao cursados por voce."
-          : "Acompanhamento das solicitacoes e do status academico."
+          : "O aluno entra no curso sozinho, de graca ou comprando. Acompanhe quem entrou, quem terminou e o que foi vendido."
     },
     turmas: {
       title: "Progresso",

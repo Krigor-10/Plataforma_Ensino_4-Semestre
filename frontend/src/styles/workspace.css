@@ -5560,9 +5560,212 @@
   cursor: pointer;
 }
 
+.tabela-linha-clicavel:focus-visible {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: -2px;
+}
+
 .tabela-matricula__vazio {
   color: var(--cor-texto-mudo);
   font-size: 0.9rem;
+}
+
+/* ------------------------------------------------------------
+   TELA INSCRIÇÕES (Admin) - PROMPT-agente-tela-inscricoes.md
+   ------------------------------------------------------------ */
+.inscricoes-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-lg);
+}
+
+.inscricoes-filtros__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inscricoes-chip {
+  border: 1px solid var(--cor-borda);
+  background: transparent;
+  color: var(--cor-texto-suave);
+  border-radius: var(--raio-circular);
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transicao-rapida), color var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.inscricoes-chip:hover {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-texto-forte);
+}
+
+.inscricoes-chip--ativo,
+.inscricoes-chip--ativo:hover {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca);
+  color: #fff;
+}
+
+.inscricoes-filtros__periodo {
+  min-width: 11rem;
+}
+
+.inscricoes-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.3rem;
+}
+
+/* Funil: barra unica dividida em 4 segmentos proporcionais aos INSCRITOS do
+   curso (concluiram-com-certificado, concluiram-sem-certificado, em
+   andamento, nao comecaram) + o texto "N comecaram > N concluiram > N com
+   certificado" embaixo. */
+.inscricoes-funil {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 11rem;
+}
+
+.inscricoes-funil__barra {
+  display: flex;
+  height: 0.5rem;
+  width: 100%;
+  border-radius: var(--raio-circular);
+  overflow: hidden;
+  background: var(--cor-borda);
+}
+
+.inscricoes-funil__barra--vazia {
+  background: var(--cor-borda);
+}
+
+.inscricoes-funil__segmento {
+  height: 100%;
+}
+
+.inscricoes-funil__segmento--concluido-com-certificado {
+  background: var(--cor-sucesso);
+}
+
+.inscricoes-funil__segmento--concluido-sem-certificado {
+  background: var(--cor-marca);
+}
+
+.inscricoes-funil__segmento--em-andamento {
+  background: var(--cor-info);
+}
+
+.inscricoes-funil__segmento--nao-comecaram {
+  background: transparent;
+}
+
+.inscricoes-funil__texto {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  margin: 0;
+}
+
+.inscricoes-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  margin: var(--espaco-md) 0 0;
+  padding: var(--espaco-sm) 0 0;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.inscricoes-legenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inscricoes-legenda__cor {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.inscricoes-legenda__cor--concluido-com-certificado {
+  background: var(--cor-sucesso);
+}
+
+.inscricoes-legenda__cor--concluido-sem-certificado {
+  background: var(--cor-marca);
+}
+
+.inscricoes-legenda__cor--em-andamento {
+  background: var(--cor-info);
+}
+
+.inscricoes-legenda__cor--nao-comecaram {
+  background: var(--cor-borda);
+  border: 1px solid var(--cor-texto-mudo);
+}
+
+.inscricoes-pendentes--destaque {
+  color: var(--cor-aviso);
+  font-weight: 700;
+}
+
+.tabela-dados--inscricoes td {
+  vertical-align: middle;
+}
+
+/* Celular (<= 768px, ver useLarguraJanela em SecaoMatriculas.jsx): cada
+   curso vira um cartao, no lugar da tabela. */
+.inscricoes-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inscricoes-cartao {
+  background: var(--cor-cartao);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  padding: var(--espaco-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.inscricoes-cartao:focus-visible {
+  outline: 2px solid var(--cor-marca);
+  outline-offset: 2px;
+}
+
+.inscricoes-cartao--total {
+  cursor: default;
+  background: transparent;
+  border-style: dashed;
+}
+
+.inscricoes-cartao__titulo {
+  font-size: 1rem;
+  color: var(--cor-texto-forte);
+}
+
+.inscricoes-cartao__linha-dados {
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+  margin: 0;
 }
 
 .kebab-btn {
