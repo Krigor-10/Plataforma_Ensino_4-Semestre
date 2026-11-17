@@ -1,21 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   TbArrowRight,
+  TbBook2,
+  TbCalendar,
+  TbChevronLeft,
   TbChevronRight,
   TbCircleCheck,
   TbClock,
   TbCreditCard,
   TbCurrencyReal,
+  TbFilter,
   TbMedal,
   TbPlayerPlay,
   TbSearch,
-  TbUsers
+  TbUsers,
+  TbUsersGroup
 } from "react-icons/tb";
 import { EmptyState, InlineMessage } from "../../components/Primitives.jsx";
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import AtalhoAssistente from "../../components/chatbot/AtalhoAssistente.jsx";
 import Botao from "../../components/Botao.jsx";
-import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import ConfirmacaoCompraModal from "../../components/ConfirmacaoCompraModal.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import SelectSimples from "../../components/SelectSimples.jsx";
@@ -364,6 +368,7 @@ function VistaAlunoMatriculas({ cursos = [], linhasMatriculas, onNavigate, onRef
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
+const CURSOS_POR_PAGINA_INSCRICOES = 10;
 
 // 1=EmAndamento, 2=AguardandoEncerramento, 3=Encerrado, 4=AVenda (backend
 // SituacaoCursoInscricoes) - rotulo sempre neutro (so o modelo tem cor).
@@ -430,59 +435,107 @@ function calcularResumoInscricoes(lista) {
   };
 }
 
-/* Texto "N começaram › N concluíram › N com certificado" (prompt-agente-
-   tela-inscricoes.md, item 7) - singular so nos verbos (comecar/concluir),
-   "com certificado" nao muda de forma. */
-function textoFunilInscricoes({ comCertificado, comecaram, concluiram, inscritos }) {
-  if (inscritos === 0) {
-    return "Ninguém inscrito ainda";
-  }
-
-  const verboComecar = comecaram === 1 ? "começou" : "começaram";
-  const verboConcluir = concluiram === 1 ? "concluiu" : "concluíram";
-  return `${comecaram} ${verboComecar} › ${concluiram} ${verboConcluir} › ${comCertificado} com certificado`;
+/* % de uma parte sobre os inscritos do curso (ou do total filtrado) -
+   0 quando nao ha inscritos, pra nao dividir por zero (prompt-agente-
+   inscricoes-v2.md: "com 0 inscritos, os % ficam 0%"). */
+function percentualDeInscritos(parte, inscritos) {
+  return inscritos > 0 ? Math.round((parte / inscritos) * 100) : 0;
 }
 
-function BarraFunilInscricoes({ inscricao }) {
-  const { comCertificado, comecaram, concluiram, inscritos } = inscricao;
-  const texto = textoFunilInscricoes(inscricao);
+/* Busca sem diferenciar maiusculas/acentos (prompt-agente-inscricoes-v2.md,
+   item 5: "Buscar curso..." filtra pelo titulo no navegador). */
+function normalizarTextoBusca(texto) {
+  return String(texto || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
 
-  if (inscritos === 0) {
-    return (
-      <div className="inscricoes-funil">
-        <div aria-hidden="true" className="inscricoes-funil__barra inscricoes-funil__barra--vazia" />
-        <p className="inscricoes-funil__texto">{texto}</p>
-      </div>
-    );
-  }
+/* "N gratuito"/"N gratuitos" etc. - singular so quando a contagem e 1
+   (prompt-agente-inscricoes-v2.md, item 3 do KPI "Total de cursos"). */
+function contarPorModelo(lista, modeloCurso, singular, plural) {
+  const quantidade = lista.filter((item) => item.modeloCurso === modeloCurso).length;
+  return `${quantidade} ${quantidade === 1 ? singular : plural}`;
+}
 
-  const concluidoComCertificado = comCertificado;
-  const concluidoSemCertificado = Math.max(0, concluiram - comCertificado);
-  const emAndamento = Math.max(0, comecaram - concluiram);
-  const naoComecaram = Math.max(0, inscritos - comecaram);
-  const paraPercentual = (valor) => (valor / inscritos) * 100;
-
+/* Cartao dos 5 KPIs com visual proprio desta tela (inscricoes-v2-proposta.png):
+   icone num quadrado colorido + valor/rotulo, com uma linha extra opcional
+   embaixo (% das inscricoes, pendentes) na mesma cor do cartao. A cor e uma
+   custom property (--inscricoes-kpi-cor) pra um unico bloco de CSS servir os
+   5 cartoes, em vez de 5 modificadores de cor repetindo o mesmo degrade. */
+function CartaoKpiInscricoes({ cor, extra, icone, rotulo, valor }) {
+  // "extra" pode ser texto simples (% das inscrições) ou um node com o selo
+  // "Simulada" (Receita) - a aria-label so incorpora quando e texto puro,
+  // pra nao virar "[object Object]" (prompt-agente-inscricoes-v2-correcoes.md,
+  // item 1: o selo saiu de dentro do rotulo e foi pra linha extra).
+  const extraTexto = typeof extra === "string" ? ` - ${extra}` : "";
   return (
-    <div className="inscricoes-funil">
-      <div aria-hidden="true" className="inscricoes-funil__barra">
-        <span className="inscricoes-funil__segmento inscricoes-funil__segmento--concluido-com-certificado" style={{ width: `${paraPercentual(concluidoComCertificado)}%` }} />
-        <span className="inscricoes-funil__segmento inscricoes-funil__segmento--concluido-sem-certificado" style={{ width: `${paraPercentual(concluidoSemCertificado)}%` }} />
-        <span className="inscricoes-funil__segmento inscricoes-funil__segmento--em-andamento" style={{ width: `${paraPercentual(emAndamento)}%` }} />
-        <span className="inscricoes-funil__segmento inscricoes-funil__segmento--nao-comecaram" style={{ width: `${paraPercentual(naoComecaram)}%` }} />
+    <article
+      aria-label={`${rotulo}: ${valor}${extraTexto}`}
+      className="inscricoes-kpi"
+      style={{ "--inscricoes-kpi-cor": cor }}
+    >
+      <div className="inscricoes-kpi__cabeca">
+        <span aria-hidden="true" className="inscricoes-kpi__icone">{icone}</span>
+        <div className="inscricoes-kpi__texto">
+          <strong className="inscricoes-kpi__valor" title={String(valor)}>{valor}</strong>
+          <span className="inscricoes-kpi__rotulo">{rotulo}</span>
+        </div>
       </div>
-      <p className="inscricoes-funil__texto">{texto}</p>
-    </div>
+      {extra ? <p className="inscricoes-kpi__extra">{extra}</p> : null}
+    </article>
   );
 }
 
-function LegendaFunilInscricoes() {
+/* Paginacao no navegador (prompt-agente-inscricoes-v2.md, item 8): 10 cursos
+   por pagina, some sozinha quando tudo cabe numa pagina so. */
+function PaginacaoInscricoes({ itensPorPagina, onMudarPagina, paginaAtual, totalItens }) {
+  const totalPaginas = Math.max(1, Math.ceil(totalItens / itensPorPagina));
+  if (totalPaginas <= 1) {
+    return null;
+  }
+
+  const inicio = (paginaAtual - 1) * itensPorPagina + 1;
+  const fim = Math.min(paginaAtual * itensPorPagina, totalItens);
+  const paginas = Array.from({ length: totalPaginas }, (_, indice) => indice + 1);
+
   return (
-    <ul aria-label="Legenda do funil de inscrições" className="inscricoes-legenda" role="list">
-      <li><span aria-hidden="true" className="inscricoes-legenda__cor inscricoes-legenda__cor--concluido-com-certificado" /> concluíram com certificado</li>
-      <li><span aria-hidden="true" className="inscricoes-legenda__cor inscricoes-legenda__cor--concluido-sem-certificado" /> concluíram sem certificado</li>
-      <li><span aria-hidden="true" className="inscricoes-legenda__cor inscricoes-legenda__cor--em-andamento" /> em andamento</li>
-      <li><span aria-hidden="true" className="inscricoes-legenda__cor inscricoes-legenda__cor--nao-comecaram" /> não começaram</li>
-    </ul>
+    <div className="inscricoes-paginacao">
+      <p className="inscricoes-paginacao__resumo">
+        Mostrando {inicio}–{fim} de {totalItens} curso{totalItens === 1 ? "" : "s"}
+      </p>
+      <nav aria-label="Paginação de cursos" className="inscricoes-paginacao__controles">
+        <button
+          aria-label="Página anterior"
+          className="inscricoes-paginacao__botao"
+          disabled={paginaAtual === 1}
+          onClick={() => onMudarPagina(paginaAtual - 1)}
+          type="button"
+        >
+          <TbChevronLeft aria-hidden="true" size={16} />
+        </button>
+        {paginas.map((pagina) => (
+          <button
+            aria-current={pagina === paginaAtual ? "page" : undefined}
+            className={`inscricoes-paginacao__botao${pagina === paginaAtual ? " inscricoes-paginacao__botao--ativo" : ""}`}
+            key={pagina}
+            onClick={() => onMudarPagina(pagina)}
+            type="button"
+          >
+            {pagina}
+          </button>
+        ))}
+        <button
+          aria-label="Próxima página"
+          className="inscricoes-paginacao__botao"
+          disabled={paginaAtual === totalPaginas}
+          onClick={() => onMudarPagina(paginaAtual + 1)}
+          type="button"
+        >
+          <TbChevronRight aria-hidden="true" size={16} />
+        </button>
+      </nav>
+    </div>
   );
 }
 
@@ -508,7 +561,9 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
   const [erro, setErro] = useState("");
   const [inscricoes, setInscricoes] = useState([]);
   const [filtroModelo, setFiltroModelo] = useState("todos");
+  const [busca, setBusca] = useState("");
   const [periodo, setPeriodo] = useState("todoOPeriodo");
+  const [paginaAtual, setPaginaAtual] = useState(1);
   const largura = useLarguraJanela();
   const ehCelular = largura <= 768;
 
@@ -552,15 +607,41 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
     };
   }, [onSessionExpired, periodo]);
 
-  // Modelo e filtrado no cliente (dados ja carregados); periodo refaz a
-  // chamada (ver useEffect acima) - ordem por inscritos ja vem do backend e
-  // o filter() preserva a ordem relativa.
+  const buscaNormalizada = useMemo(() => normalizarTextoBusca(busca), [busca]);
+
+  // Modelo e busca sao filtrados no cliente (dados ja carregados); periodo
+  // refaz a chamada (ver useEffect acima) - ordem por inscritos ja vem do
+  // backend e o filter() preserva a ordem relativa. "inscricoes" (sem
+  // filtro) sempre traz TODOS os cursos da plataforma - o backend nao
+  // filtra a lista pelo periodo, so os numeros de cada curso.
   const inscricoesFiltradas = useMemo(
-    () => (filtroModelo === "todos" ? inscricoes : inscricoes.filter((item) => String(item.modeloCurso) === filtroModelo)),
-    [filtroModelo, inscricoes]
+    () =>
+      inscricoes.filter((item) => {
+        if (filtroModelo !== "todos" && String(item.modeloCurso) !== filtroModelo) {
+          return false;
+        }
+        return !buscaNormalizada || normalizarTextoBusca(item.titulo).includes(buscaNormalizada);
+      }),
+    [buscaNormalizada, filtroModelo, inscricoes]
   );
 
+  // Troca de chip, busca ou periodo volta pra pagina 1 (prompt-agente-
+  // inscricoes-v2.md, item 8).
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [buscaNormalizada, filtroModelo, periodo]);
+
+  const totalPaginas = Math.max(1, Math.ceil(inscricoesFiltradas.length / CURSOS_POR_PAGINA_INSCRICOES));
+  const paginaAtualValida = Math.min(paginaAtual, totalPaginas);
+  const inicioPagina = (paginaAtualValida - 1) * CURSOS_POR_PAGINA_INSCRICOES;
+  const inscricoesDaPagina = inscricoesFiltradas.slice(inicioPagina, inicioPagina + CURSOS_POR_PAGINA_INSCRICOES);
+
   const resumo = useMemo(() => calcularResumoInscricoes(inscricoesFiltradas), [inscricoesFiltradas]);
+
+  const totalCursosPlataforma = inscricoes.length;
+  const rotuloGratuitos = contarPorModelo(inscricoes, MODELO_GRATUITO, "gratuito", "gratuitos");
+  const rotuloPagos = contarPorModelo(inscricoes, MODELO_PAGO_PACOTE, "pago", "pagos");
+  const rotuloAcompanhados = contarPorModelo(inscricoes, MODELO_ACOMPANHADO, "acompanhado", "acompanhados");
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/cursos/${cursoId}`);
@@ -572,48 +653,113 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
     }
   }
 
+  function aoClicarVerDetalhes(event, cursoId) {
+    event.stopPropagation();
+    abrirCurso(cursoId);
+  }
+
+  function capaDoCurso(inscricao, event) {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = getCourseCover(inscricao);
+  }
+
   return (
     <div className="tela-matriculas tela-inscricoes">
       <header className="cabecalho-pagina">
-        <div>
-          <h2 className="cabecalho-pagina__titulo">Inscrições</h2>
-          <p className="cabecalho-pagina__subtitulo">
-            O aluno entra no curso sozinho, de graça ou comprando. Acompanhe quem entrou, quem terminou e o que foi vendido.
-          </p>
+        <div className="inscricoes-cabecalho__identidade">
+          <span aria-hidden="true" className="inscricoes-cabecalho__icone"><TbUsersGroup size={40} /></span>
+          <span aria-hidden="true" className="inscricoes-cabecalho__linha" />
+          <div>
+            <h2 className="cabecalho-pagina__titulo">Inscrições</h2>
+            <p className="cabecalho-pagina__subtitulo">
+              Acompanhe inscrições, desempenho acadêmico, certificados e receita dos cursos.
+            </p>
+          </div>
         </div>
+
+        <article
+          aria-label={`Total de cursos na plataforma: ${totalCursosPlataforma} (${rotuloGratuitos}, ${rotuloPagos}, ${rotuloAcompanhados})`}
+          className="inscricoes-kpi-total"
+        >
+          <span aria-hidden="true" className="inscricoes-kpi-total__icone"><TbBook2 size={24} /></span>
+          <div className="inscricoes-kpi-total__corpo">
+            <strong className="inscricoes-kpi-total__valor">{totalCursosPlataforma}</strong>
+            <span className="inscricoes-kpi-total__rotulo">cursos na plataforma</span>
+            <div className="inscricoes-kpi-total__pilulas">
+              <span className="inscricoes-kpi-total__pilula">{rotuloGratuitos}</span>
+              <span className="inscricoes-kpi-total__pilula">{rotuloPagos}</span>
+              <span className="inscricoes-kpi-total__pilula">{rotuloAcompanhados}</span>
+            </div>
+          </div>
+        </article>
       </header>
 
       {erro ? <InlineMessage tone="erro">{erro}</InlineMessage> : null}
 
-      <div className="grade-estatisticas grade-estatisticas--compacta-5" style={{ marginBottom: "var(--espaco-lg)" }}>
-        <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbUsers size={22} />} rotulo="Inscrições" valor={resumo.totalInscritos} />
-        <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbPlayerPlay size={22} />} rotulo={`Começaram · ${resumo.percentualComecaram}%`} valor={resumo.totalComecaram} />
-        <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbCircleCheck size={22} />} rotulo={`Concluíram · ${resumo.percentualConcluiram}%`} valor={resumo.totalConcluiram} />
-        <CartaoEstatistica corBorda="var(--cor-aviso)" icone={<TbMedal size={22} />} rotulo="Certificados emitidos" valor={resumo.totalComCertificado} />
-        <CartaoEstatistica
-          corBorda="var(--cor-marca)"
-          icone={<TbCurrencyReal size={22} />}
-          rotulo={`Receita (simulada) · ${resumo.totalPendentes} pendente${resumo.totalPendentes === 1 ? "" : "s"}`}
+      <div className="inscricoes-kpis">
+        <CartaoKpiInscricoes cor="var(--cor-marca)" icone={<TbUsers size={24} />} rotulo="Inscrições" valor={resumo.totalInscritos} />
+        <CartaoKpiInscricoes
+          cor="var(--cor-info)"
+          extra={`${resumo.percentualComecaram}% das inscrições`}
+          icone={<TbPlayerPlay size={24} />}
+          rotulo="Começaram"
+          valor={resumo.totalComecaram}
+        />
+        <CartaoKpiInscricoes
+          cor="var(--cor-sucesso)"
+          extra={`${resumo.percentualConcluiram}% das inscrições`}
+          icone={<TbCircleCheck size={24} />}
+          rotulo="Concluíram"
+          valor={resumo.totalConcluiram}
+        />
+        <CartaoKpiInscricoes cor="var(--cor-aviso)" icone={<TbMedal size={24} />} rotulo="Certificados emitidos" valor={resumo.totalComCertificado} />
+        <CartaoKpiInscricoes
+          cor="#c084fc"
+          extra={
+            <>
+              <Insignia texto="Simulada" variante="neutro" />
+              {resumo.totalPendentes > 0 ? `${resumo.totalPendentes} pendente${resumo.totalPendentes === 1 ? "" : "s"}` : null}
+            </>
+          }
+          icone={<TbCurrencyReal size={24} />}
+          rotulo="Receita estimada"
           valor={formatMoney(resumo.totalReceita)}
         />
       </div>
 
       <div className="inscricoes-filtros">
-        <div aria-label="Filtrar por modelo do curso" className="inscricoes-filtros__chips" role="group">
-          {CHIPS_MODELO_CURSO.map((chip) => (
-            <button
-              aria-pressed={filtroModelo === chip.valor}
-              className={`inscricoes-chip${filtroModelo === chip.valor ? " inscricoes-chip--ativo" : ""}`}
-              key={chip.valor}
-              onClick={() => setFiltroModelo(chip.valor)}
-              type="button"
-            >
-              {chip.rotulo}
-            </button>
-          ))}
+        <div className="inscricoes-filtros__grupo-modalidade">
+          <span className="inscricoes-filtros__rotulo"><TbFilter aria-hidden="true" size={16} /> Modalidade</span>
+          <div aria-label="Filtrar por modelo do curso" className="inscricoes-filtros__chips" role="group">
+            {CHIPS_MODELO_CURSO.map((chip) => (
+              <button
+                aria-pressed={filtroModelo === chip.valor}
+                className={`inscricoes-chip${filtroModelo === chip.valor ? " inscricoes-chip--ativo" : ""}`}
+                key={chip.valor}
+                onClick={() => setFiltroModelo(chip.valor)}
+                type="button"
+              >
+                {chip.rotulo}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="visualmente-oculto" htmlFor="inscricoes-busca-curso">Buscar curso</label>
+        <div className="campo-busca inscricoes-filtros__busca">
+          <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
+          <input
+            className="campo__entrada"
+            id="inscricoes-busca-curso"
+            onChange={(event) => setBusca(event.target.value)}
+            placeholder="Buscar curso…"
+            type="search"
+            value={busca}
+          />
         </div>
 
         <div className="inscricoes-filtros__periodo">
+          <TbCalendar aria-hidden="true" className="inscricoes-filtros__periodo-icone" size={16} />
           <label className="visualmente-oculto" htmlFor="inscricoes-filtro-periodo">Período</label>
           <SelectSimples id="inscricoes-filtro-periodo" onChange={setPeriodo} opcoes={OPCOES_PERIODO_INSCRICOES} value={periodo} />
         </div>
@@ -624,98 +770,187 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
       ) : inscricoesFiltradas.length === 0 ? (
         <EmptyState message="Nenhum curso encontrado para esse filtro." />
       ) : ehCelular ? (
-        <ul aria-label="Inscrições por curso" className="inscricoes-cartoes" role="list">
-          {inscricoesFiltradas.map((inscricao) => (
-            <li
-              aria-label={`Abrir ${inscricao.titulo}`}
-              className="inscricoes-cartao"
-              key={inscricao.cursoId}
-              onClick={() => abrirCurso(inscricao.cursoId)}
-              onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
-              role="button"
-              tabIndex={0}
-            >
-              <strong className="inscricoes-cartao__titulo">{inscricao.titulo}</strong>
-              <BadgesCursoInscricoes inscricao={inscricao} />
-              <BarraFunilInscricoes inscricao={inscricao} />
+        <>
+          <ul aria-label="Inscrições por curso" className="inscricoes-cartoes" role="list">
+            {inscricoesDaPagina.map((inscricao) => {
+              const percentualIniciaram = percentualDeInscritos(inscricao.comecaram, inscricao.inscritos);
+              const percentualConcluiram = percentualDeInscritos(inscricao.concluiram, inscricao.inscritos);
+
+              return (
+                <li
+                  aria-label={`Abrir ${inscricao.titulo}`}
+                  className="inscricoes-cartao"
+                  key={inscricao.cursoId}
+                  onClick={() => abrirCurso(inscricao.cursoId)}
+                  onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <img
+                    alt=""
+                    className="inscricoes-cartao__capa"
+                    loading="lazy"
+                    onError={(event) => capaDoCurso(inscricao, event)}
+                    src={resolverImagemCurso(inscricao)}
+                  />
+                  <strong className="inscricoes-cartao__titulo">{inscricao.titulo}</strong>
+                  <BadgesCursoInscricoes inscricao={inscricao} />
+                  <p className="inscricoes-cartao__linha-dados">
+                    {inscricao.modeloCurso === MODELO_GRATUITO ? "Grátis" : formatMoney(inscricao.preco)}
+                    {" · "}
+                    {inscricao.inscritos} inscrito{inscricao.inscritos === 1 ? "" : "s"}
+                  </p>
+                  <p className="inscricoes-cartao__linha-dados">
+                    Iniciaram {inscricao.comecaram} ({percentualIniciaram}%) · Concluíram {inscricao.concluiram} ({percentualConcluiram}%)
+                  </p>
+                  <p className="inscricoes-cartao__linha-dados">
+                    <span className={inscricao.pendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
+                      {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : inscricao.pendentes} pendente{inscricao.pendentes === 1 ? "" : "s"}
+                    </span>
+                    {" · "}
+                    {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : formatMoney(inscricao.receita)}
+                  </p>
+                  <Botao
+                    aria-label={`Ver curso ${inscricao.titulo}`}
+                    className="inscricoes-cartao__botao inscricoes-botao-ver-curso"
+                    onClick={(event) => aoClicarVerDetalhes(event, inscricao.cursoId)}
+                    tamanho="pequeno"
+                    variante="secundario"
+                  >
+                    Ver curso <TbArrowRight aria-hidden="true" className="inscricoes-botao-ver-curso__seta" size={16} />
+                  </Botao>
+                </li>
+              );
+            })}
+            <li className="inscricoes-cartao inscricoes-cartao--total">
+              <strong>Total · {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"}</strong>
               <p className="inscricoes-cartao__linha-dados">
-                {inscricao.modeloCurso === MODELO_GRATUITO ? "Grátis" : formatMoney(inscricao.preco)}
-                {" · "}
-                {inscricao.inscritos} inscrito{inscricao.inscritos === 1 ? "" : "s"}
-                {" · "}
-                <span className={inscricao.pendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
-                  {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : inscricao.pendentes} pendente{inscricao.pendentes === 1 ? "" : "s"}
-                </span>
-                {" · "}
-                {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : formatMoney(inscricao.receita)}
+                {resumo.totalInscritos} inscrito{resumo.totalInscritos === 1 ? "" : "s"} · {resumo.totalPendentes} pendente{resumo.totalPendentes === 1 ? "" : "s"} · {formatMoney(resumo.totalReceita)}
               </p>
             </li>
-          ))}
-          <li className="inscricoes-cartao inscricoes-cartao--total">
-            <strong>Total · {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"}</strong>
-            <p className="inscricoes-cartao__linha-dados">
-              {resumo.totalInscritos} inscrito{resumo.totalInscritos === 1 ? "" : "s"} · {resumo.totalPendentes} pendente{resumo.totalPendentes === 1 ? "" : "s"} · {formatMoney(resumo.totalReceita)}
-            </p>
-          </li>
-          <LegendaFunilInscricoes />
-        </ul>
+          </ul>
+          <PaginacaoInscricoes
+            itensPorPagina={CURSOS_POR_PAGINA_INSCRICOES}
+            onMudarPagina={setPaginaAtual}
+            paginaAtual={paginaAtualValida}
+            totalItens={inscricoesFiltradas.length}
+          />
+        </>
       ) : (
         <div className="tabela-dados-container painel-secao">
+          <header className="painel-secao__cabecalho">
+            <h3 className="painel-secao__titulo inscricoes-tabela-titulo">
+              <TbBook2 aria-hidden="true" size={18} /> Cursos e Desempenho
+            </h3>
+            <span className="inscricoes-tabela-contagem">
+              {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"} encontrado{inscricoesFiltradas.length === 1 ? "" : "s"}
+            </span>
+          </header>
           <table aria-label="Inscrições por curso" className="tabela-dados tabela-dados--inscricoes">
             <thead>
               <tr>
                 <th scope="col">Curso</th>
                 <th scope="col">Preço</th>
                 <th scope="col">Inscritos</th>
-                <th scope="col">Funil: começaram › concluíram › certificado</th>
+                <th scope="col">Iniciaram</th>
+                <th scope="col">Concluíram</th>
+                <th scope="col">Certificados</th>
                 <th scope="col">Pendentes</th>
                 <th scope="col">Receita</th>
                 <th aria-hidden="true" scope="col" />
               </tr>
             </thead>
             <tbody>
-              {inscricoesFiltradas.map((inscricao) => (
-                <tr
-                  className="tabela-linha-clicavel"
-                  key={inscricao.cursoId}
-                  onClick={() => abrirCurso(inscricao.cursoId)}
-                  onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
-                  tabIndex={0}
-                >
-                  <td data-label="Curso">
-                    <strong>{inscricao.titulo}</strong>
-                    <br />
-                    <BadgesCursoInscricoes inscricao={inscricao} />
-                  </td>
-                  <td data-label="Preço">{inscricao.modeloCurso === MODELO_GRATUITO ? "Grátis" : formatMoney(inscricao.preco)}</td>
-                  <td data-label="Inscritos">{inscricao.inscritos}</td>
-                  <td data-label="Funil">
-                    <BarraFunilInscricoes inscricao={inscricao} />
-                  </td>
-                  <td data-label="Pendentes">
-                    <span className={inscricao.pendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
-                      {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : inscricao.pendentes}
-                    </span>
-                  </td>
-                  <td data-label="Receita">{inscricao.modeloCurso === MODELO_GRATUITO ? "—" : formatMoney(inscricao.receita)}</td>
-                  <td aria-hidden="true" data-label="">
-                    <TbChevronRight size={16} />
-                  </td>
-                </tr>
-              ))}
+              {inscricoesDaPagina.map((inscricao) => {
+                const percentualIniciaram = percentualDeInscritos(inscricao.comecaram, inscricao.inscritos);
+                const percentualConcluiram = percentualDeInscritos(inscricao.concluiram, inscricao.inscritos);
+
+                return (
+                  <tr
+                    className="tabela-linha-clicavel"
+                    key={inscricao.cursoId}
+                    onClick={() => abrirCurso(inscricao.cursoId)}
+                    onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
+                    tabIndex={0}
+                  >
+                    <td data-label="Curso">
+                      <div className="inscricoes-tabela-curso">
+                        <img
+                          alt=""
+                          className="inscricoes-tabela-capa"
+                          loading="lazy"
+                          onError={(event) => capaDoCurso(inscricao, event)}
+                          src={resolverImagemCurso(inscricao)}
+                        />
+                        <div>
+                          <strong className="inscricoes-tabela-curso__titulo" title={inscricao.titulo}>{inscricao.titulo}</strong>
+                          <BadgesCursoInscricoes inscricao={inscricao} />
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Preço">{inscricao.modeloCurso === MODELO_GRATUITO ? "Grátis" : formatMoney(inscricao.preco)}</td>
+                    <td data-label="Inscritos">{inscricao.inscritos}</td>
+                    <td data-label="Iniciaram">
+                      <div className="inscricoes-tabela-metrica">
+                        <span>{inscricao.comecaram} <small>{percentualIniciaram}%</small></span>
+                        <span aria-hidden="true" className="inscricoes-mini-barra inscricoes-mini-barra--azul">
+                          <span style={{ width: `${percentualIniciaram}%` }} />
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Concluíram">
+                      <div className="inscricoes-tabela-metrica">
+                        <span>{inscricao.concluiram} <small>{percentualConcluiram}%</small></span>
+                        <span aria-hidden="true" className="inscricoes-mini-barra inscricoes-mini-barra--roxa">
+                          <span style={{ width: `${percentualConcluiram}%` }} />
+                        </span>
+                      </div>
+                    </td>
+                    <td data-label="Certificados">{inscricao.comCertificado}</td>
+                    <td data-label="Pendentes">
+                      <span className={inscricao.pendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
+                        {inscricao.modeloCurso === MODELO_GRATUITO ? "—" : inscricao.pendentes}
+                      </span>
+                    </td>
+                    <td data-label="Receita">{inscricao.modeloCurso === MODELO_GRATUITO ? "—" : formatMoney(inscricao.receita)}</td>
+                    <td data-label="">
+                      <Botao
+                        aria-label={`Ver curso ${inscricao.titulo}`}
+                        className="inscricoes-botao-ver-curso"
+                        onClick={(event) => aoClicarVerDetalhes(event, inscricao.cursoId)}
+                        tamanho="pequeno"
+                        variante="secundario"
+                      >
+                        Ver curso <TbArrowRight aria-hidden="true" className="inscricoes-botao-ver-curso__seta" size={16} />
+                      </Botao>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr>
                 <td colSpan={2}><strong>Total · {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"}</strong></td>
                 <td>{resumo.totalInscritos}</td>
-                <td />
-                <td>{resumo.totalPendentes}</td>
+                <td>{resumo.totalComecaram} <small>· {resumo.percentualComecaram}%</small></td>
+                <td>{resumo.totalConcluiram} <small>· {resumo.percentualConcluiram}%</small></td>
+                <td>{resumo.totalComCertificado}</td>
+                <td>
+                  <span className={resumo.totalPendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
+                    {resumo.totalPendentes}
+                  </span>
+                </td>
                 <td>{formatMoney(resumo.totalReceita)}</td>
                 <td />
               </tr>
             </tfoot>
           </table>
-          <LegendaFunilInscricoes />
+          <PaginacaoInscricoes
+            itensPorPagina={CURSOS_POR_PAGINA_INSCRICOES}
+            onMudarPagina={setPaginaAtual}
+            paginaAtual={paginaAtualValida}
+            totalItens={inscricoesFiltradas.length}
+          />
         </div>
       )}
     </div>

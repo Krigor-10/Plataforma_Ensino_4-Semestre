@@ -22,6 +22,7 @@ public class CursoInscricoesResponseDto
 {
     public int CursoId { get; set; }
     public string Titulo { get; set; } = string.Empty;
+    public string? ImagemUrl { get; set; }
     public ModeloCurso ModeloCurso { get; set; }
     public SituacaoCursoInscricoes Situacao { get; set; }
     public decimal Preco { get; set; }

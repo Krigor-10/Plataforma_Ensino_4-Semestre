@@ -5572,14 +5572,219 @@
 
 /* ------------------------------------------------------------
    TELA INSCRIÇÕES (Admin) - PROMPT-agente-tela-inscricoes.md
+   + PROMPT-agente-inscricoes-v2.md (cabecalho, KPI "Total de
+   cursos", 5 KPIs no visual da sugestao, busca e paginacao)
    ------------------------------------------------------------ */
+.inscricoes-cabecalho__identidade {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+}
+
+.inscricoes-cabecalho__icone {
+  display: inline-flex;
+  color: var(--cor-marca-clara);
+  flex-shrink: 0;
+}
+
+.inscricoes-cabecalho__linha {
+  width: 2px;
+  height: 3.25rem;
+  flex-shrink: 0;
+  border-radius: var(--raio-circular);
+  background: linear-gradient(180deg, var(--cor-marca), var(--cor-marca-clara));
+}
+
+/* KPI "Total de cursos" (item 3 do prompt v2): unico cartao com fundo roxo
+   cheio no canto do cabecalho - os outros KPIs (.inscricoes-kpi) sao tingidos,
+   entao esse se destaca sozinho. Numero NUNCA muda com chip/busca/periodo -
+   e sempre inscricoes.length (todos os cursos), nao inscricoesFiltradas. */
+.inscricoes-kpi-total {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  width: min(26.875rem, 100%);
+  padding: 1.1rem 1.25rem;
+  border-radius: var(--raio-lg);
+  background: linear-gradient(135deg, #7b2ff7 0%, #9d4dff 55%, #c084fc 100%);
+  box-shadow: 0 10px 28px rgba(123, 47, 247, 0.4);
+  color: #fff;
+}
+
+.inscricoes-kpi-total__icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.875rem;
+  height: 2.875rem;
+  flex-shrink: 0;
+  border-radius: var(--raio-md);
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.inscricoes-kpi-total__corpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.inscricoes-kpi-total__valor {
+  font-family: var(--fonte-display);
+  font-size: 2.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.inscricoes-kpi-total__rotulo {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.inscricoes-kpi-total__pilulas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.inscricoes-kpi-total__pilula {
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--raio-circular);
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .tela-inscricoes .cabecalho-pagina {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inscricoes-kpi-total {
+    width: 100%;
+  }
+}
+
+/* 5 KPIs com o visual da sugestao (prompt-agente-inscricoes-v2.md, item 4):
+   classes novas desta tela - NAO reaproveita .cartao-estatistica nem os
+   modificadores --compacta-N do Dashboard, que continuam intocados. */
+.inscricoes-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: var(--espaco-lg);
+}
+
+.inscricoes-kpi {
+  --inscricoes-kpi-cor: var(--cor-marca);
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 84px;
+  padding: 1rem 1.125rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--inscricoes-kpi-cor) 45%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--inscricoes-kpi-cor) 14%, var(--cor-cartao)), color-mix(in srgb, var(--inscricoes-kpi-cor) 5%, var(--cor-cartao)));
+}
+
+.inscricoes-kpi__cabeca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.inscricoes-kpi__icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--inscricoes-kpi-cor) 18%, transparent);
+  color: var(--inscricoes-kpi-cor);
+}
+
+.inscricoes-kpi__texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.inscricoes-kpi__valor {
+  font-family: var(--fonte-display);
+  font-size: clamp(1.1rem, 9cqi, 1.55rem);
+  font-weight: 800;
+  color: var(--cor-texto-forte);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.inscricoes-kpi__rotulo {
+  font-size: 0.84rem;
+  color: var(--cor-texto-suave);
+}
+
+.inscricoes-kpi__extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--inscricoes-kpi-cor);
+}
+
+@media (max-width: 1200px) {
+  .inscricoes-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .inscricoes-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--espaco-sm);
+  }
+}
+
 .inscricoes-filtros {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--espaco-md);
   margin-bottom: var(--espaco-lg);
+  padding-top: var(--espaco-md);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.inscricoes-filtros__grupo-modalidade {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.inscricoes-filtros__rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.inscricoes-filtros__busca {
+  flex: 1 1 13rem;
+  width: auto;
 }
 
 .inscricoes-filtros__chips {
@@ -5588,32 +5793,109 @@
   gap: 0.5rem;
 }
 
+/* Filtros de Modalidade "em relevo" (prompt-agente-inscricoes-v2-correcoes.md,
+   item 4 - opcao A de opcoes-filtros-relevo.png): antes pareciam selo
+   (pilula transparente), agora parecem botao fisico - mesma altura da busca
+   e do periodo (40px), com relevo de cima pra baixo e sombra de base que
+   "afunda" no clique. Escopado a esta tela - nao mexe nos chips de outras
+   telas. */
 .inscricoes-chip {
-  border: 1px solid var(--cor-borda);
-  background: transparent;
-  color: var(--cor-texto-suave);
-  border-radius: var(--raio-circular);
-  padding: 0.4rem 0.9rem;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-bottom-color: rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg, #2f3240 0%, #22242f 100%);
+  color: #e7e3f0;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--transicao-rapida), color var(--transicao-rapida), border-color var(--transicao-rapida);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 2px 0 #0b0c10, 0 4px 10px rgba(0, 0, 0, 0.35);
+  transition: transform 150ms, box-shadow 150ms, background 150ms, border-color 150ms;
 }
 
 .inscricoes-chip:hover {
-  border-color: var(--cor-marca-clara);
-  color: var(--cor-texto-forte);
+  background: linear-gradient(180deg, #373a4a 0%, #282a36 100%);
+  border-color: rgba(168, 85, 247, 0.55);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 3px 0 #0b0c10, 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+.inscricoes-chip:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.inscricoes-chip:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
 }
 
 .inscricoes-chip--ativo,
 .inscricoes-chip--ativo:hover {
-  background: var(--cor-marca);
-  border-color: var(--cor-marca);
+  background: linear-gradient(180deg, #9d4dff 0%, #7b2ff7 100%);
+  border-color: #9d4dff;
+  border-bottom-color: #4c1d95;
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 2px 0 #3b1577, 0 6px 16px rgba(123, 47, 247, 0.45);
+}
+
+.inscricoes-chip--ativo:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inscricoes-chip {
+    transition: box-shadow 150ms, background 150ms, border-color 150ms;
+  }
+
+  .inscricoes-chip:hover,
+  .inscricoes-chip:active,
+  .inscricoes-chip--ativo:active {
+    transform: none;
+  }
+}
+
+[data-tema="claro"] .inscricoes-chip {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-bottom-color: rgba(0, 0, 0, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f1f0f5 100%);
+  color: var(--cor-texto-forte);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 0 rgba(0, 0, 0, 0.12);
+}
+
+[data-tema="claro"] .inscricoes-chip:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e9e7f0 100%);
+  border-color: rgba(123, 47, 247, 0.4);
+  color: var(--cor-texto-forte);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 3px 0 rgba(0, 0, 0, 0.12);
+}
+
+[data-tema="claro"] .inscricoes-chip--ativo,
+[data-tema="claro"] .inscricoes-chip--ativo:hover {
+  background: linear-gradient(180deg, #9d4dff 0%, #7b2ff7 100%);
+  border-color: #9d4dff;
+  border-bottom-color: #4c1d95;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 2px 0 #3b1577, 0 6px 16px rgba(123, 47, 247, 0.45);
+}
+
+.inscricoes-filtros__busca .campo__entrada {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
 .inscricoes-filtros__periodo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   min-width: 11rem;
+}
+
+.inscricoes-filtros__periodo-icone {
+  color: var(--cor-texto-mudo);
+  flex-shrink: 0;
 }
 
 .inscricoes-badges {
@@ -5623,105 +5905,175 @@
   margin-top: 0.3rem;
 }
 
-/* Funil: barra unica dividida em 4 segmentos proporcionais aos INSCRITOS do
-   curso (concluiram-com-certificado, concluiram-sem-certificado, em
-   andamento, nao comecaram) + o texto "N comecaram > N concluiram > N com
-   certificado" embaixo. */
-.inscricoes-funil {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 11rem;
-}
-
-.inscricoes-funil__barra {
-  display: flex;
-  height: 0.5rem;
-  width: 100%;
-  border-radius: var(--raio-circular);
-  overflow: hidden;
-  background: var(--cor-borda);
-}
-
-.inscricoes-funil__barra--vazia {
-  background: var(--cor-borda);
-}
-
-.inscricoes-funil__segmento {
-  height: 100%;
-}
-
-.inscricoes-funil__segmento--concluido-com-certificado {
-  background: var(--cor-sucesso);
-}
-
-.inscricoes-funil__segmento--concluido-sem-certificado {
-  background: var(--cor-marca);
-}
-
-.inscricoes-funil__segmento--em-andamento {
-  background: var(--cor-info);
-}
-
-.inscricoes-funil__segmento--nao-comecaram {
-  background: transparent;
-}
-
-.inscricoes-funil__texto {
-  font-size: 0.78rem;
-  color: var(--cor-texto-suave);
-  margin: 0;
-}
-
-.inscricoes-legenda {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  list-style: none;
-  margin: var(--espaco-md) 0 0;
-  padding: var(--espaco-sm) 0 0;
-  border-top: 1px solid var(--cor-borda);
-  font-size: 0.78rem;
-  color: var(--cor-texto-suave);
-}
-
-.inscricoes-legenda li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.inscricoes-legenda__cor {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.inscricoes-legenda__cor--concluido-com-certificado {
-  background: var(--cor-sucesso);
-}
-
-.inscricoes-legenda__cor--concluido-sem-certificado {
-  background: var(--cor-marca);
-}
-
-.inscricoes-legenda__cor--em-andamento {
-  background: var(--cor-info);
-}
-
-.inscricoes-legenda__cor--nao-comecaram {
-  background: var(--cor-borda);
-  border: 1px solid var(--cor-texto-mudo);
-}
-
 .inscricoes-pendentes--destaque {
   color: var(--cor-aviso);
   font-weight: 700;
 }
 
+/* Altura parecida entre linhas + coluna Curso sem quebrar o layout
+   (prompt-agente-inscricoes-v2-correcoes.md, item 3): titulo com no maximo
+   2 linhas (line-clamp, com o titulo completo no title) e selos numa unica
+   linha, mesmo com nome de curso comprido. */
 .tabela-dados--inscricoes td {
+  height: 72px;
   vertical-align: middle;
+}
+
+.tabela-dados--inscricoes th:first-child,
+.tabela-dados--inscricoes td:first-child {
+  min-width: 320px;
+}
+
+.inscricoes-tabela-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.inscricoes-tabela-contagem {
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.inscricoes-tabela-curso {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inscricoes-tabela-curso__titulo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.inscricoes-tabela-curso .inscricoes-badges {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.inscricoes-tabela-capa {
+  width: 5.25rem;
+  height: 3rem;
+  flex-shrink: 0;
+  border-radius: 9px;
+  object-fit: cover;
+}
+
+.inscricoes-tabela-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 5.5rem;
+}
+
+.inscricoes-tabela-metrica small {
+  color: var(--cor-texto-suave);
+  font-weight: 500;
+}
+
+.inscricoes-mini-barra {
+  display: block;
+  width: 90px;
+  height: 5px;
+  border-radius: var(--raio-circular);
+  overflow: hidden;
+  background: var(--cor-borda);
+}
+
+.inscricoes-mini-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.inscricoes-mini-barra--azul span {
+  background: var(--cor-info);
+}
+
+.inscricoes-mini-barra--roxa span {
+  background: var(--cor-marca);
+}
+
+/* Botao "Ver curso" (prompt-agente-inscricoes-v2-correcoes.md, item 2): a
+   seta anda 2px pra direita no hover, pra ficar bem visivel. */
+.inscricoes-botao-ver-curso__seta {
+  transition: transform 150ms;
+}
+
+.inscricoes-botao-ver-curso:hover .inscricoes-botao-ver-curso__seta {
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inscricoes-botao-ver-curso__seta {
+    transition: none;
+  }
+
+  .inscricoes-botao-ver-curso:hover .inscricoes-botao-ver-curso__seta {
+    transform: none;
+  }
+}
+
+/* Paginacao no navegador (prompt-agente-inscricoes-v2.md, item 8) - rodape
+   do cartao da tabela/dos cartoes mobile. */
+.inscricoes-paginacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-md) var(--espaco-lg);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.inscricoes-paginacao__resumo {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.inscricoes-paginacao__controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.inscricoes-paginacao__botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: var(--raio-md);
+  border: 1px solid var(--cor-borda);
+  background: transparent;
+  color: var(--cor-texto-suave);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transicao-rapida), color var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.inscricoes-paginacao__botao:hover:not(:disabled) {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-texto-forte);
+}
+
+.inscricoes-paginacao__botao:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.inscricoes-paginacao__botao--ativo,
+.inscricoes-paginacao__botao--ativo:hover {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca);
+  color: #fff;
 }
 
 /* Celular (<= 768px, ver useLarguraJanela em SecaoMatriculas.jsx): cada
@@ -5766,6 +6118,17 @@
   font-size: 0.82rem;
   color: var(--cor-texto-suave);
   margin: 0;
+}
+
+.inscricoes-cartao__capa {
+  width: 100%;
+  height: 8.5rem;
+  border-radius: var(--raio-md);
+  object-fit: cover;
+}
+
+.inscricoes-cartao__botao {
+  align-self: flex-start;
 }
 
 .kebab-btn {

@@ -109,6 +109,7 @@ public class CursoInscricoesService : ICursoInscricoesService
             {
                 CursoId = curso.Id,
                 Titulo = curso.Titulo,
+                ImagemUrl = curso.ImagemUrl,
                 ModeloCurso = curso.ModeloCurso,
                 Situacao = DefinirSituacao(curso),
                 Preco = curso.Preco,

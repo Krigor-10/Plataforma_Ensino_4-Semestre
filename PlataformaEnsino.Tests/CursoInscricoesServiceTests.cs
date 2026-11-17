@@ -314,6 +314,22 @@ public class CursoInscricoesServiceTests
     }
 
     [Fact]
+    public async Task ObterInscricoesAsync_RetornaImagemUrlDoCurso()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var cursoComImagem = CriarCurso(context, ModeloCurso.Gratuito);
+        cursoComImagem.ImagemUrl = "/uploads/cursos/capa.jpg";
+        context.SaveChanges();
+        var cursoSemImagem = CriarCurso(context, ModeloCurso.Gratuito);
+
+        var resultado = (await service.ObterInscricoesAsync(null, null)).ToList();
+
+        Assert.Equal("/uploads/cursos/capa.jpg", resultado.Single(item => item.CursoId == cursoComImagem.Id).ImagemUrl);
+        Assert.Null(resultado.Single(item => item.CursoId == cursoSemImagem.Id).ImagemUrl);
+    }
+
+    [Fact]
     public async Task ObterInscricoesAsync_CursoSemNenhumaMatricula_RetornaZerados()
     {
         var context = TestContextFactory.Criar();
