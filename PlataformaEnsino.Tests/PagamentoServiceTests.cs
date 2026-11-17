@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
 using PlataformaEnsino.API.Services;
@@ -11,9 +13,13 @@ public class PagamentoServiceTests
     private static (PagamentoService Service, PlataformaContext Context) CriarService()
     {
         var context = TestContextFactory.Criar();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Pagamentos:DiasParaVencer"] = "3" })
+            .Build();
         var service = new PagamentoService(
             context,
-            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance));
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            configuration);
 
         return (service, context);
     }
@@ -151,5 +157,78 @@ public class PagamentoServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.ConfirmarPagamentoAsync(matricula.Id, aluno.Id));
+    }
+
+    [Fact]
+    public async Task ListarPagamentosDoAlunoAsync_Pendente_PreencheVenceEmComCriadoEmMaisDiasParaVencer()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        var pagamento = CriarPagamentoPendente(context, matricula.Id, 199.90m);
+
+        var pagamentos = (await service.ListarPagamentosDoAlunoAsync(aluno.Id)).ToList();
+
+        Assert.Equal(pagamento.CriadoEm.AddDays(3), Assert.Single(pagamentos).VenceEm);
+    }
+
+    [Fact]
+    public async Task ListarPagamentosDoAlunoAsync_Pago_NaoTemVenceEm()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        CriarPagamentoPendente(context, matricula.Id, 199.90m);
+
+        await service.ConfirmarPagamentoAsync(matricula.Id, aluno.Id);
+        var pagamentos = (await service.ListarPagamentosDoAlunoAsync(aluno.Id)).ToList();
+
+        Assert.Null(Assert.Single(pagamentos).VenceEm);
+    }
+
+    [Fact]
+    public async Task CancelarAsync_DonoComPagamentoPendente_CancelaEDevolveStatusCancelado()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        var pagamento = CriarPagamentoPendente(context, matricula.Id, 199.90m);
+
+        var resultado = await service.CancelarAsync(matricula.Id, aluno.Id);
+
+        Assert.Equal(StatusPagamento.Cancelado, resultado.Status);
+        var pagamentoAtualizado = context.Pagamentos.Single(p => p.Id == pagamento.Id);
+        Assert.Equal(StatusPagamento.Cancelado, pagamentoAtualizado.Status);
+    }
+
+    [Fact]
+    public async Task CancelarAsync_MatriculaDeOutroAluno_LancaKeyNotFound()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var outroAluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        CriarPagamentoPendente(context, matricula.Id, 199.90m);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            () => service.CancelarAsync(matricula.Id, outroAluno.Id));
+    }
+
+    [Fact]
+    public async Task CancelarAsync_SemPagamentoPendente_LancaConflitoDeNegocio()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        CriarPagamentoPendente(context, matricula.Id, 199.90m);
+        await service.ConfirmarPagamentoAsync(matricula.Id, aluno.Id);
+
+        await Assert.ThrowsAsync<ConflitoDeNegocioException>(
+            () => service.CancelarAsync(matricula.Id, aluno.Id));
     }
 }

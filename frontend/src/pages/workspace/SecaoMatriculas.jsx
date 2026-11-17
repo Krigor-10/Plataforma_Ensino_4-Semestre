@@ -6,13 +6,14 @@ import {
   TbChevronLeft,
   TbChevronRight,
   TbCircleCheck,
+  TbCircleX,
   TbClock,
   TbCreditCard,
-  TbCurrencyReal,
   TbFilter,
   TbMedal,
   TbPlayerPlay,
   TbSearch,
+  TbTrendingUp,
   TbUsers,
   TbUsersGroup
 } from "react-icons/tb";
@@ -27,7 +28,7 @@ import PopupResultadoMatricula from "./PopupResultadoMatricula.jsx";
 import { useLarguraJanela } from "../../hooks/useLarguraJanela.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { clampPercent, formatDate, formatGrade, formatMoney } from "../../lib/format.js";
+import { clampPercent, formatDate, formatDayMonth, formatGrade, formatMoney } from "../../lib/format.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
@@ -71,11 +72,22 @@ function criarMatriculaPorCursoId(linhasMatriculas) {
    (upload real do Admin), com fallback pro dicionario estatico por titulo
    (getCourseCover), garantindo que as tres telas mostrem sempre a mesma
    imagem por curso. */
-export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onComecarGratis, onComprar, onConcluirCompra, onEntrarNoCurso, onReabrir, processando }) {
+export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCancelar, onComecarGratis, onComprar, onConcluirCompra, onDesistir, onEntrarNoCurso, onReabrir, processando }) {
+  const [confirmandoDesistencia, setConfirmandoDesistencia] = useState(false);
   const temPagamentoPendente = matricula?.status === "Aprovada" && matricula.pagamentoStatus === PAGAMENTO_PENDENTE;
+  // Gratuito ou com Pagamento Pago confirmado - "so Cancelado" (desistiu/
+  // venceu, prompt-agente-inscricoes-v3.md) NAO libera, mesmo Aprovada.
+  const acessoLiberado = matricula?.acessoLiberado ?? true;
+  const precisaComprar = matricula?.status === "Aprovada" && !temPagamentoPendente && !acessoLiberado;
   const progresso = clampPercent(matricula?.progresso);
   const rotuloEntrada = progresso > 0 ? "Continuar curso" : "Iniciar curso";
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
+  const pagueAte = temPagamentoPendente && matricula.pagamentoVenceEm ? formatDayMonth(matricula.pagamentoVenceEm) : null;
+
+  function confirmarDesistencia() {
+    setConfirmandoDesistencia(false);
+    onDesistir?.();
+  }
 
   return (
     <li className="catalogo-card">
@@ -112,12 +124,17 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
             {temPagamentoPendente ? (
               <>
                 <InlineMessage tone="warning">
-                  Compra pendente: {formatMoney(matricula.pagamentoValor)}.
+                  Compra pendente: {formatMoney(matricula.pagamentoValor)}{pagueAte ? ` · Pague até ${pagueAte}` : ""}.
                 </InlineMessage>
                 <AtalhoAssistente pergunta={`Meu pagamento de ${curso.titulo} foi confirmado?`} />
               </>
             ) : null}
             {compacto && matricula.status === "Aprovada" ? <BarraProgresso percentual={progresso} /> : null}
+            {temPagamentoPendente && confirmandoDesistencia ? (
+              <InlineMessage tone="warning">
+                Desistir da compra de {curso.titulo}? Você pode comprar de novo depois.
+              </InlineMessage>
+            ) : null}
             <footer className="catalogo-card__rodape-aluno">
               {!compacto ? <span className="catalogo-card__codigo">{matricula.codigoRegistro || "Sem protocolo"}</span> : null}
               {!compacto && matricula.status === "Aprovada" ? <span className="catalogo-card__codigo">Nota {formatGrade(matricula.notaFinal)}</span> : null}
@@ -131,12 +148,35 @@ export function CartaoCursoMatricula({ compacto = false, curso, matricula, onCan
                   {processando ? "Reabrindo..." : "Reabrir solicitacao"}
                 </Botao>
               ) : null}
-              {temPagamentoPendente && onConcluirCompra ? (
-                <Botao onClick={onConcluirCompra} tamanho="pequeno" variante="sucesso">
-                  <TbCreditCard aria-hidden="true" size={14} /> Concluir compra
+              {temPagamentoPendente && confirmandoDesistencia ? (
+                <>
+                  <Botao disabled={processando} onClick={() => setConfirmandoDesistencia(false)} tamanho="pequeno" variante="perigo">
+                    Não
+                  </Botao>
+                  <Botao disabled={processando} onClick={confirmarDesistencia} tamanho="pequeno" variante="sucesso">
+                    {processando ? "Desistindo..." : "Sim, desistir"}
+                  </Botao>
+                </>
+              ) : (
+                <>
+                  {temPagamentoPendente && onConcluirCompra ? (
+                    <Botao onClick={onConcluirCompra} tamanho="pequeno" variante="sucesso">
+                      <TbCreditCard aria-hidden="true" size={14} /> Concluir compra
+                    </Botao>
+                  ) : null}
+                  {temPagamentoPendente && onDesistir ? (
+                    <Botao disabled={processando} onClick={() => setConfirmandoDesistencia(true)} tamanho="pequeno" variante="secundario">
+                      Desistir da compra
+                    </Botao>
+                  ) : null}
+                </>
+              )}
+              {precisaComprar && onComprar ? (
+                <Botao onClick={onComprar} tamanho="pequeno" variante="primario">
+                  <TbCreditCard aria-hidden="true" size={14} /> Comprar · {formatMoney(curso.preco)}
                 </Botao>
               ) : null}
-              {matricula.status === "Aprovada" && !temPagamentoPendente && onEntrarNoCurso ? (
+              {matricula.status === "Aprovada" && !temPagamentoPendente && acessoLiberado && onEntrarNoCurso ? (
                 <Botao onClick={onEntrarNoCurso} tamanho="pequeno" variante="primario">
                   {rotuloEntrada} <TbArrowRight aria-hidden="true" size={14} />
                 </Botao>
@@ -212,6 +252,24 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
     }
   }
 
+  async function desistirDaCompra(matricula) {
+    setMatriculaProcessando(matricula.id);
+
+    try {
+      await apiRequest(`/Pagamentos/${matricula.id}/cancelar`, { method: "POST" });
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      mostrarToast(err.message || "Nao foi possivel desistir da compra agora.", "erro");
+    } finally {
+      setMatriculaProcessando(null);
+    }
+  }
+
   return (
     <div className="tela-matriculas">
       <header className="cabecalho-pagina">
@@ -234,7 +292,9 @@ export function SecaoMeusCursosMatriculados({ cursos = [], linhasMatriculas = []
                 key={curso.id}
                 matricula={matricula}
                 onCancelar={() => cancelarMatricula(matricula)}
+                onComprar={() => setCursoParaComprar(curso)}
                 onConcluirCompra={() => setCursoParaComprar(curso)}
+                onDesistir={() => desistirDaCompra(matricula)}
                 onReabrir={() => reabrirMatricula(matricula)}
                 processando={matriculaProcessando === matricula.id}
               />
@@ -430,6 +490,12 @@ function calcularResumoInscricoes(lista) {
     totalInscritos,
     totalPendentes: somar((item) => item.pendentes),
     totalReceita: somar((item) => item.receita),
+    // Aba "Vendas" (prompt-agente-inscricoes-v3.md, item 10).
+    totalAReceber: somar((item) => item.aReceber),
+    totalCancelados: somar((item) => item.cancelados),
+    totalValorCancelado: somar((item) => item.valorCancelado),
+    totalTentativasCompra: somar((item) => item.tentativasCompra),
+    totalCompraram: somar((item) => item.compraram),
     percentualComecaram: totalInscritos ? Math.round((totalComecaram / totalInscritos) * 100) : 0,
     percentualConcluiram: totalInscritos ? Math.round((totalConcluiram / totalInscritos) * 100) : 0
   };
@@ -564,6 +630,7 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
   const [busca, setBusca] = useState("");
   const [periodo, setPeriodo] = useState("todoOPeriodo");
   const [paginaAtual, setPaginaAtual] = useState(1);
+  const [abaAtiva, setAbaAtiva] = useState("alunos");
   const largura = useLarguraJanela();
   const ehCelular = largura <= 768;
 
@@ -647,10 +714,17 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
     onNavigate?.(`/app/cursos/${cursoId}`);
   }
 
-  function aoPressionarTeclaNaLinha(event, cursoId) {
-    if (event.key === "Enter") {
-      abrirCurso(cursoId);
+  // Tablist com 2 abas so (Alunos/Vendas): seta troca pra outra aba e leva o
+  // foco junto, como o padrao WAI-ARIA de tabs pede.
+  function aoNavegarAbas(event) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+      return;
     }
+
+    event.preventDefault();
+    const proxima = abaAtiva === "alunos" ? "vendas" : "alunos";
+    setAbaAtiva(proxima);
+    document.getElementById(`inscricoes-aba-${proxima}`)?.focus();
   }
 
   function aoClicarVerDetalhes(event, cursoId) {
@@ -696,35 +770,90 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
 
       {erro ? <InlineMessage tone="erro">{erro}</InlineMessage> : null}
 
-      <div className="inscricoes-kpis">
-        <CartaoKpiInscricoes cor="var(--cor-marca)" icone={<TbUsers size={24} />} rotulo="Inscrições" valor={resumo.totalInscritos} />
-        <CartaoKpiInscricoes
-          cor="var(--cor-info)"
-          extra={`${resumo.percentualComecaram}% das inscrições`}
-          icone={<TbPlayerPlay size={24} />}
-          rotulo="Começaram"
-          valor={resumo.totalComecaram}
-        />
-        <CartaoKpiInscricoes
-          cor="var(--cor-sucesso)"
-          extra={`${resumo.percentualConcluiram}% das inscrições`}
-          icone={<TbCircleCheck size={24} />}
-          rotulo="Concluíram"
-          valor={resumo.totalConcluiram}
-        />
-        <CartaoKpiInscricoes cor="var(--cor-aviso)" icone={<TbMedal size={24} />} rotulo="Certificados emitidos" valor={resumo.totalComCertificado} />
-        <CartaoKpiInscricoes
-          cor="#c084fc"
-          extra={
-            <>
-              <Insignia texto="Simulada" variante="neutro" />
-              {resumo.totalPendentes > 0 ? `${resumo.totalPendentes} pendente${resumo.totalPendentes === 1 ? "" : "s"}` : null}
-            </>
-          }
-          icone={<TbCurrencyReal size={24} />}
-          rotulo="Receita estimada"
-          valor={formatMoney(resumo.totalReceita)}
-        />
+      <div aria-label="Visão da tela Inscrições" className="inscricoes-abas" role="tablist">
+        <button
+          aria-controls="inscricoes-painel"
+          aria-selected={abaAtiva === "alunos"}
+          className={`inscricoes-aba${abaAtiva === "alunos" ? " inscricoes-aba--ativa" : ""}`}
+          id="inscricoes-aba-alunos"
+          onClick={() => setAbaAtiva("alunos")}
+          onKeyDown={aoNavegarAbas}
+          role="tab"
+          tabIndex={abaAtiva === "alunos" ? 0 : -1}
+          type="button"
+        >
+          <TbUsersGroup aria-hidden="true" size={16} /> Alunos
+        </button>
+        <button
+          aria-controls="inscricoes-painel"
+          aria-selected={abaAtiva === "vendas"}
+          className={`inscricoes-aba${abaAtiva === "vendas" ? " inscricoes-aba--ativa" : ""}`}
+          id="inscricoes-aba-vendas"
+          onClick={() => setAbaAtiva("vendas")}
+          onKeyDown={aoNavegarAbas}
+          role="tab"
+          tabIndex={abaAtiva === "vendas" ? 0 : -1}
+          type="button"
+        >
+          <TbCreditCard aria-hidden="true" size={16} /> Vendas
+          {resumo.totalPendentes > 0 ? (
+            <span className="inscricoes-aba__contagem">{resumo.totalPendentes} pendente{resumo.totalPendentes === 1 ? "" : "s"}</span>
+          ) : null}
+        </button>
+      </div>
+
+      <div aria-labelledby={`inscricoes-aba-${abaAtiva}`} className="inscricoes-kpis" id="inscricoes-painel" role="tabpanel">
+        {abaAtiva === "alunos" ? (
+          <>
+            <CartaoKpiInscricoes cor="var(--cor-marca)" icone={<TbUsers size={24} />} rotulo="Inscrições" valor={resumo.totalInscritos} />
+            <CartaoKpiInscricoes
+              cor="var(--cor-info)"
+              extra={`${resumo.percentualComecaram}% das inscrições`}
+              icone={<TbPlayerPlay size={24} />}
+              rotulo="Começaram"
+              valor={resumo.totalComecaram}
+            />
+            <CartaoKpiInscricoes
+              cor="var(--cor-sucesso)"
+              extra={`${resumo.percentualConcluiram}% das inscrições`}
+              icone={<TbCircleCheck size={24} />}
+              rotulo="Concluíram"
+              valor={resumo.totalConcluiram}
+            />
+            <CartaoKpiInscricoes cor="var(--cor-aviso)" icone={<TbMedal size={24} />} rotulo="Certificados emitidos" valor={resumo.totalComCertificado} />
+          </>
+        ) : (
+          <>
+            <CartaoKpiInscricoes
+              cor="var(--cor-sucesso)"
+              extra={`${resumo.totalCompraram} pagamento${resumo.totalCompraram === 1 ? "" : "s"}`}
+              icone={<TbCreditCard size={24} />}
+              rotulo="Recebido"
+              valor={formatMoney(resumo.totalReceita)}
+            />
+            <CartaoKpiInscricoes
+              cor="var(--cor-aviso)"
+              extra={`${resumo.totalPendentes} aluno${resumo.totalPendentes === 1 ? "" : "s"} pendente${resumo.totalPendentes === 1 ? "" : "s"}`}
+              icone={<TbClock size={24} />}
+              rotulo="A receber"
+              valor={formatMoney(resumo.totalAReceber)}
+            />
+            <CartaoKpiInscricoes
+              cor="var(--cor-erro)"
+              extra={formatMoney(resumo.totalValorCancelado)}
+              icone={<TbCircleX size={24} />}
+              rotulo="Cancelados"
+              valor={resumo.totalCancelados}
+            />
+            <CartaoKpiInscricoes
+              cor="var(--cor-marca)"
+              extra={resumo.totalTentativasCompra > 0 ? `${resumo.totalCompraram} de ${resumo.totalTentativasCompra} pagaram` : null}
+              icone={<TbTrendingUp size={24} />}
+              rotulo="Conversão"
+              valor={resumo.totalTentativasCompra > 0 ? `${Math.round((resumo.totalCompraram / resumo.totalTentativasCompra) * 100)}%` : "—"}
+            />
+          </>
+        )}
       </div>
 
       <div className="inscricoes-filtros">
@@ -777,15 +906,7 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
               const percentualConcluiram = percentualDeInscritos(inscricao.concluiram, inscricao.inscritos);
 
               return (
-                <li
-                  aria-label={`Abrir ${inscricao.titulo}`}
-                  className="inscricoes-cartao"
-                  key={inscricao.cursoId}
-                  onClick={() => abrirCurso(inscricao.cursoId)}
-                  onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
-                  role="button"
-                  tabIndex={0}
-                >
+                <li className="inscricoes-cartao" key={inscricao.cursoId}>
                   <img
                     alt=""
                     className="inscricoes-cartao__capa"
@@ -822,12 +943,6 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
                 </li>
               );
             })}
-            <li className="inscricoes-cartao inscricoes-cartao--total">
-              <strong>Total · {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"}</strong>
-              <p className="inscricoes-cartao__linha-dados">
-                {resumo.totalInscritos} inscrito{resumo.totalInscritos === 1 ? "" : "s"} · {resumo.totalPendentes} pendente{resumo.totalPendentes === 1 ? "" : "s"} · {formatMoney(resumo.totalReceita)}
-              </p>
-            </li>
           </ul>
           <PaginacaoInscricoes
             itensPorPagina={CURSOS_POR_PAGINA_INSCRICOES}
@@ -866,13 +981,7 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
                 const percentualConcluiram = percentualDeInscritos(inscricao.concluiram, inscricao.inscritos);
 
                 return (
-                  <tr
-                    className="tabela-linha-clicavel"
-                    key={inscricao.cursoId}
-                    onClick={() => abrirCurso(inscricao.cursoId)}
-                    onKeyDown={(event) => aoPressionarTeclaNaLinha(event, inscricao.cursoId)}
-                    tabIndex={0}
-                  >
+                  <tr key={inscricao.cursoId}>
                     <td data-label="Curso">
                       <div className="inscricoes-tabela-curso">
                         <img
@@ -928,22 +1037,6 @@ function VistaGestorMatriculas({ onNavigate, onSessionExpired }) {
                 );
               })}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={2}><strong>Total · {inscricoesFiltradas.length} curso{inscricoesFiltradas.length === 1 ? "" : "s"}</strong></td>
-                <td>{resumo.totalInscritos}</td>
-                <td>{resumo.totalComecaram} <small>· {resumo.percentualComecaram}%</small></td>
-                <td>{resumo.totalConcluiram} <small>· {resumo.percentualConcluiram}%</small></td>
-                <td>{resumo.totalComCertificado}</td>
-                <td>
-                  <span className={resumo.totalPendentes > 0 ? "inscricoes-pendentes inscricoes-pendentes--destaque" : "inscricoes-pendentes"}>
-                    {resumo.totalPendentes}
-                  </span>
-                </td>
-                <td>{formatMoney(resumo.totalReceita)}</td>
-                <td />
-              </tr>
-            </tfoot>
           </table>
           <PaginacaoInscricoes
             itensPorPagina={CURSOS_POR_PAGINA_INSCRICOES}

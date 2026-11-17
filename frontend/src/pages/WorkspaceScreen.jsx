@@ -268,15 +268,36 @@ export default function WorkspaceScreen({
     return snapshot.modulos.filter((modulo) => idsCursosAcademicos.has(modulo.cursoId));
   }, [cursosDaSecaoCursos, isProfessor, role, snapshot.modulos]);
 
-  const pagamentoPorMatriculaId = useMemo(() => mapById(snapshot.pagamentos.map((pagamento) => ({ ...pagamento, id: pagamento.matriculaId }))), [snapshot.pagamentos]);
+  // Agrupado por matricula (nao "um pagamento por matricula"): desde que uma
+  // compra cancelada pode ser refeita (prompt-agente-inscricoes-v3.md, item
+  // 3), a MESMA matricula pode acumular varios Pagamentos ao longo do tempo
+  // (Cancelado -> Pendente novo -> Pago, por exemplo) - precisa do pendente
+  // e do pago especificos, nao so "o ultimo da lista".
+  const pagamentosPorMatriculaId = useMemo(() => {
+    const mapa = new Map();
+    snapshot.pagamentos.forEach((pagamento) => {
+      const lista = mapa.get(pagamento.matriculaId) || [];
+      lista.push(pagamento);
+      mapa.set(pagamento.matriculaId, lista);
+    });
+    return mapa;
+  }, [snapshot.pagamentos]);
 
-  // Curso pago com pagamento pendente nao conta como "ativo"/"liberado" em
+  // Curso pago sem NENHUM pagamento Pago nao conta como "ativo"/"liberado" em
   // nenhuma tela do aluno (Dashboard, Progresso, Conteudos) — so a matricula
-  // aprovada nao basta. StatusPagamento.Pendente = 1.
-  const matriculaIdsComPagamentoPendente = useMemo(
-    () => new Set(snapshot.pagamentos.filter((pagamento) => Number(pagamento.status) === 1).map((pagamento) => pagamento.matriculaId)),
-    [snapshot.pagamentos]
-  );
+  // aprovada nao basta. Cobre tanto o pendente de sempre quanto o caso novo
+  // de "so tem Cancelado" (desistiu ou venceu e ainda nao comprou de novo) -
+  // StatusPagamento.Pago = 2.
+  const matriculaIdsComPagamentoPendente = useMemo(() => {
+    const semAcessoLiberado = new Set();
+    pagamentosPorMatriculaId.forEach((pagamentosDaMatricula, matriculaId) => {
+      const temPago = pagamentosDaMatricula.some((pagamento) => Number(pagamento.status) === 2);
+      if (!temPago) {
+        semAcessoLiberado.add(matriculaId);
+      }
+    });
+    return semAcessoLiberado;
+  }, [pagamentosPorMatriculaId]);
   const progressoCursoPorMatriculaId = useMemo(
     () => mapById((snapshot.progressos.cursos || []).map((progresso) => ({ ...progresso, id: progresso.matriculaId }))),
     [snapshot.progressos.cursos]
@@ -285,7 +306,10 @@ export default function WorkspaceScreen({
   const matriculaRows = useMemo(
     () =>
       snapshot.matriculas.map((matricula) => {
-        const pagamento = pagamentoPorMatriculaId.get(matricula.id);
+        const pagamentosDaMatricula = pagamentosPorMatriculaId.get(matricula.id) || [];
+        const pagamentoPago = pagamentosDaMatricula.find((pagamento) => Number(pagamento.status) === 2);
+        const pagamentoPendente = pagamentosDaMatricula.find((pagamento) => Number(pagamento.status) === 1);
+        const pagamentoAtual = pagamentoPendente || pagamentoPago;
         const progresso = progressoCursoPorMatriculaId.get(matricula.id);
 
         return {
@@ -307,12 +331,17 @@ export default function WorkspaceScreen({
           notaFinal: matricula.notaFinal ?? 0,
           status: normalizeStatus(matricula.status),
           dataSolicitacao: matricula.dataSolicitacao,
-          pagamentoStatus: pagamento?.status ?? null,
-          pagamentoValor: pagamento?.valor ?? null,
+          // Gratuito (nenhum pagamento nunca existiu) ou pago com Pagamento
+          // Pago confirmado - "so Cancelado" (desistiu/venceu) NAO libera,
+          // mesmo com a matricula Aprovada (prompt-agente-inscricoes-v3.md).
+          acessoLiberado: pagamentosDaMatricula.length === 0 || Boolean(pagamentoPago),
+          pagamentoStatus: pagamentoAtual?.status ?? null,
+          pagamentoValor: pagamentoAtual?.valor ?? null,
+          pagamentoVenceEm: pagamentoPendente?.venceEm ?? null,
           progresso: progresso?.percentualConclusao ?? 0
         };
       }),
-    [alunoById, cursoById, pagamentoPorMatriculaId, professorById, progressoCursoPorMatriculaId, snapshot.matriculas, turmaById]
+    [alunoById, cursoById, pagamentosPorMatriculaId, professorById, progressoCursoPorMatriculaId, snapshot.matriculas, turmaById]
   );
 
   const studentApprovedCourseCount = useMemo(

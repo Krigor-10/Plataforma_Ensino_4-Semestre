@@ -6,7 +6,7 @@ import Botao from "./Botao.jsx";
 import CapaCurso from "./CapaCurso.jsx";
 import Toast from "./Toast.jsx";
 import { apiRequest, ApiError } from "../lib/api.js";
-import { formatMoney } from "../lib/format.js";
+import { formatDayMonth, formatMoney } from "../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 const MODELO_ACOMPANHADO = 3;
@@ -19,9 +19,10 @@ const MODELO_ACOMPANHADO = 3;
    CatalogoScreen.jsx). Chama POST /Matriculas/comprar internamente, como o
    QuizModal chama a API de avaliacoes - a tela que abre este painel so
    precisa fornecer o curso e os callbacks de recarregar/navegar. */
-export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFechar, onIrParaCurso, onSessionExpired, valorTotal, visivel }) {
+export default function ConfirmacaoCompraSheet({ curso, matriculaId, onCompraConfirmada, onDesistirConfirmado, onFechar, onIrParaCurso, onSessionExpired, valorTotal, venceEm, visivel }) {
   const [fase, setFase] = useState("confirmar");
   const [erro, setErro] = useState("");
+  const [confirmandoDesistencia, setConfirmandoDesistencia] = useState(false);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reset intencional do estado interno do painel toda vez que ele reabre, mesmo padrao do QuizModal.jsx.
       setFase("confirmar");
       setErro("");
+      setConfirmandoDesistencia(false);
     }
   }, [visivel, curso?.id]);
 
@@ -57,6 +59,27 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
         return;
       }
       setErro(err.message || "Não foi possível concluir a compra agora.");
+      setFase("confirmar");
+    }
+  }
+
+  // Desistir so existe quando ja ha uma matricula com pagamento pendente
+  // (matriculaId vem do item que abriu o painel) - compra nova (Catalogo)
+  // nunca passa matriculaId, entao o botao nem aparece.
+  async function desistir() {
+    setFase("enviando");
+    setErro("");
+
+    try {
+      await apiRequest(`/Pagamentos/${matriculaId}/cancelar`, { method: "POST" });
+      await onDesistirConfirmado?.();
+      onFechar?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      setErro(err.message || "Não foi possível desistir da compra agora.");
       setFase("confirmar");
     }
   }
@@ -116,6 +139,8 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
                 <Text style={estilos.totalValor}>{formatMoney(valorExibido)}</Text>
               </View>
 
+              {venceEm ? <Text style={estilos.prazoTexto}>Pague até {formatDayMonth(venceEm)}</Text> : null}
+
               <View style={estilos.avisoCartao}>
                 <Ionicons color={cores.acento} name="information-circle-outline" size={18} />
                 <Text style={estilos.avisoTexto}>
@@ -125,10 +150,31 @@ export default function ConfirmacaoCompraSheet({ curso, onCompraConfirmada, onFe
 
               <Toast mensagem={erro} onFechar={() => setErro("")} tipo="erro" />
 
-              <Botao carregando={fase === "enviando"} icone="card" onPress={confirmar} style={estilos.botaoConfirmar} variante="primario">
-                Confirmar compra
-              </Botao>
-              <Botao disabled={fase === "enviando"} onPress={onFechar} variante="fantasma">Cancelar</Botao>
+              {confirmandoDesistencia ? (
+                <>
+                  <Text style={estilos.confirmacaoTexto}>
+                    Desistir da compra de {curso.titulo}? Você pode comprar de novo depois.
+                  </Text>
+                  <Botao carregando={fase === "enviando"} onPress={desistir} style={estilos.botaoConfirmar} variante="sucesso">
+                    Sim, desistir
+                  </Botao>
+                  <Botao disabled={fase === "enviando"} onPress={() => setConfirmandoDesistencia(false)} variante="perigo">
+                    Não
+                  </Botao>
+                </>
+              ) : (
+                <>
+                  <Botao carregando={fase === "enviando"} icone="card" onPress={confirmar} style={estilos.botaoConfirmar} variante="primario">
+                    Confirmar compra
+                  </Botao>
+                  {matriculaId ? (
+                    <Botao disabled={fase === "enviando"} onPress={() => setConfirmandoDesistencia(true)} style={estilos.botaoConfirmar} variante="secundario">
+                      Desistir da compra
+                    </Botao>
+                  ) : null}
+                  <Botao disabled={fase === "enviando"} onPress={onFechar} variante="fantasma">Cancelar</Botao>
+                </>
+              )}
             </>
           )}
         </View>
@@ -174,6 +220,8 @@ const estilos = StyleSheet.create({
   },
   totalRotulo: { color: cores.textoSuave, fontSize: tipografia.corpo, fontWeight: "600" },
   totalValor: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800" },
+  prazoTexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginBottom: espacamentos.md },
+  confirmacaoTexto: { color: cores.texto, fontSize: tipografia.corpo, lineHeight: 20, marginBottom: espacamentos.md },
   avisoCartao: {
     flexDirection: "row",
     gap: espacamentos.sm,

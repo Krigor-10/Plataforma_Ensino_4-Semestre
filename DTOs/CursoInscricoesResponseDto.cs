@@ -32,4 +32,21 @@ public class CursoInscricoesResponseDto
     public int ComCertificado { get; set; }
     public int Pendentes { get; set; }
     public decimal Receita { get; set; }
+
+    /// <summary>
+    /// Campos de vendas (PROMPT-agente-inscricoes-v3.md, aba "Vendas" da
+    /// tela Inscricoes do Admin) - mesmo periodo de Pendentes (pela
+    /// DataSolicitacao da matricula), nao o de Receita (que usa PagoEm).
+    /// </summary>
+    public decimal AReceber { get; set; }
+    public int Cancelados { get; set; }
+    public decimal ValorCancelado { get; set; }
+
+    /// <summary>
+    /// Matriculas de curso PAGO com pelo menos um pagamento (de qualquer
+    /// status) - TentativasCompra; Compraram e o subconjunto com pagamento
+    /// Pago. Curso Gratuito sempre fica em 0/0 (conversao "-" no frontend).
+    /// </summary>
+    public int TentativasCompra { get; set; }
+    public int Compraram { get; set; }
 }

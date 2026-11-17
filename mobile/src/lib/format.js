@@ -28,6 +28,13 @@ export function formatDate(value) {
   return data ? data.toLocaleDateString("pt-BR") : "-";
 }
 
+// "DD/MM" - usado em "Pague até DD/MM" (prazo do pagamento pendente,
+// Pagamento.VenceEm). Mesmo formato de formatDayMonth no Web.
+export function formatDayMonth(value) {
+  const data = parseApiDate(value);
+  return data ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(data) : "";
+}
+
 export function formatPercent(value) {
   return `${Math.round(Number(value) || 0)}%`;
 }

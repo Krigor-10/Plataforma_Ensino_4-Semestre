@@ -1,7 +1,9 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { SecaoMatriculas } from "./SecaoMatriculas.jsx";
+import { SecaoMatriculas, SecaoMeusCursosMatriculados } from "./SecaoMatriculas.jsx";
+import { AssistenteChatbotProvider } from "../../hooks/useAssistenteChatbot.jsx";
+import { ToastProvider } from "../../hooks/useToast.jsx";
 import { apiRequest } from "../../lib/api.js";
 
 vi.mock("../../lib/api.js", async () => {
@@ -21,6 +23,11 @@ const INSCRICAO_GRATUITO_ENCERRADO = {
   comCertificado: 2,
   pendentes: 0,
   receita: 0,
+  aReceber: 0,
+  cancelados: 0,
+  valorCancelado: 0,
+  tentativasCompra: 0,
+  compraram: 0,
   imagemUrl: null
 };
 
@@ -36,6 +43,11 @@ const INSCRICAO_PAGO_A_VENDA = {
   comCertificado: 1,
   pendentes: 1,
   receita: 1290,
+  aReceber: 1290,
+  cancelados: 1,
+  valorCancelado: 990,
+  tentativasCompra: 4,
+  compraram: 2,
   imagemUrl: null
 };
 
@@ -51,6 +63,11 @@ const INSCRICAO_SEM_NINGUEM = {
   comCertificado: 0,
   pendentes: 0,
   receita: 0,
+  aReceber: 0,
+  cancelados: 0,
+  valorCancelado: 0,
+  tentativasCompra: 0,
+  compraram: 0,
   imagemUrl: null
 };
 
@@ -66,6 +83,11 @@ const INSCRICAO_ENGENHARIA_SINGULAR = {
   comCertificado: 0,
   pendentes: 0,
   receita: 29.9,
+  aReceber: 0,
+  cancelados: 0,
+  valorCancelado: 0,
+  tentativasCompra: 1,
+  compraram: 1,
   imagemUrl: null
 };
 
@@ -82,6 +104,11 @@ function criarCursoGenerico(cursoId, overrides = {}) {
     comCertificado: 0,
     pendentes: 0,
     receita: 0,
+    aReceber: 0,
+    cancelados: 0,
+    valorCancelado: 0,
+    tentativasCompra: 0,
+    compraram: 0,
     imagemUrl: null,
     ...overrides
   };
@@ -156,41 +183,87 @@ describe("SecaoMatriculas - VistaGestorMatriculas (tela Inscrições do Admin)",
     expect(screen.getByText("1 acompanhado")).toBeInTheDocument();
   });
 
-  test("5 KPIs somam os numeros de todos os cursos filtrados", async () => {
-    mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO, INSCRICAO_PAGO_A_VENDA]);
-    renderInscricoes();
+  describe("abas 'Alunos' e 'Vendas'", () => {
+    test("comeca em 'Alunos', com os 4 KPIs academicos", async () => {
+      mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO, INSCRICAO_PAGO_A_VENDA]);
+      renderInscricoes();
 
-    await screen.findByText("Introdução à IA");
+      await screen.findByText("Introdução à IA");
 
-    // 5 + 2 = 7 inscritos; 4 + 1 = 5 concluiram (71% de 7, arredondado).
-    expect(screen.getByRole("article", { name: /^Inscrições: 7$/ })).toBeInTheDocument();
-    expect(screen.getByRole("article", { name: /Concluíram: 5 - 71% das inscrições/ })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /Alunos/ })).toHaveAttribute("aria-selected", "true");
+      // 5 + 2 = 7 inscritos; 4 + 1 = 5 concluiram (71% de 7, arredondado).
+      expect(screen.getByRole("article", { name: /^Inscrições: 7$/ })).toBeInTheDocument();
+      expect(screen.getByRole("article", { name: /Concluíram: 5 - 71% das inscrições/ })).toBeInTheDocument();
+      expect(screen.queryByRole("article", { name: /^Recebido:/ })).not.toBeInTheDocument();
+    });
 
-    // 1 pendente (so o curso pago) aparece na linha de baixo da "Receita estimada", junto do selo "Simulada".
-    const cartaoReceita = screen.getByRole("article", { name: /^Receita estimada: R\$\s*1\.290,00$/ });
-    expect(within(cartaoReceita).getByText("Simulada")).toBeInTheDocument();
-    expect(within(cartaoReceita).getByText("1 pendente")).toBeInTheDocument();
-  });
+    test("clicar em 'Vendas' troca os 4 KPIs pros numeros de vendas", async () => {
+      const usuario = userEvent.setup();
+      mockInscricoes([INSCRICAO_PAGO_A_VENDA]);
+      renderInscricoes();
 
-  test("KPI de receita: sem pendentes, a linha de baixo mostra so o selo 'Simulada'", async () => {
-    mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
-    renderInscricoes();
+      await screen.findByText("Desenvolvimento Web");
+      await usuario.click(screen.getByRole("tab", { name: /Vendas/ }));
 
-    await screen.findByText("Introdução à IA");
+      expect(screen.getByRole("tab", { name: /Vendas/ })).toHaveAttribute("aria-selected", "true");
+      expect(screen.queryByRole("article", { name: /^Inscrições:/ })).not.toBeInTheDocument();
+      // receita 1290, compraram 2 pagamentos.
+      expect(screen.getByRole("article", { name: /^Recebido: R\$\s*1\.290,00 - 2 pagamentos$/ })).toBeInTheDocument();
+      // aReceber 1290, 1 aluno pendente (singular).
+      expect(screen.getByRole("article", { name: /^A receber: R\$\s*1\.290,00 - 1 aluno pendente$/ })).toBeInTheDocument();
+      // cancelados 1, valorCancelado 990.
+      expect(screen.getByRole("article", { name: /^Cancelados: 1 - R\$\s*990,00$/ })).toBeInTheDocument();
+      // compraram 2 de tentativasCompra 4 = 50%.
+      expect(screen.getByRole("article", { name: /^Conversão: 50% - 2 de 4 pagaram$/ })).toBeInTheDocument();
+    });
 
-    const cartaoReceita = screen.getByRole("article", { name: /^Receita estimada: R\$\s*0,00$/ });
-    expect(within(cartaoReceita).getByText("Simulada")).toBeInTheDocument();
-    expect(within(cartaoReceita).queryByText(/pendente/)).not.toBeInTheDocument();
-  });
+    test("Conversão mostra '—' quando nao ha tentativas de compra (curso gratuito)", async () => {
+      const usuario = userEvent.setup();
+      mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
+      renderInscricoes();
 
-  test("KPIs nunca cortam o valor, mesmo com numeros grandes", async () => {
-    mockInscricoes([{ ...INSCRICAO_PAGO_A_VENDA, receita: 100000 }]);
-    renderInscricoes();
+      await screen.findByText("Introdução à IA");
+      await usuario.click(screen.getByRole("tab", { name: /Vendas/ }));
 
-    await screen.findByText("Desenvolvimento Web");
+      expect(screen.getByRole("article", { name: /^Conversão: —$/ })).toBeInTheDocument();
+    });
 
-    const cartaoReceita = screen.getByRole("article", { name: /^Receita estimada:/ });
-    expect(within(cartaoReceita).getByText("R$ 100.000,00")).toBeInTheDocument();
+    test("aba Vendas mostra 'N pendentes' quando ha pendentes, e nada quando nao ha", async () => {
+      mockInscricoes([INSCRICAO_PAGO_A_VENDA]);
+      renderInscricoes();
+
+      await screen.findByText("Desenvolvimento Web");
+      expect(within(screen.getByRole("tab", { name: /Vendas/ })).getByText("1 pendente")).toBeInTheDocument();
+    });
+
+    test("aba Vendas nao mostra contador quando nao ha pendentes", async () => {
+      mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
+      renderInscricoes();
+
+      await screen.findByText("Introdução à IA");
+      expect(within(screen.getByRole("tab", { name: /Vendas/ })).queryByText(/pendente/)).not.toBeInTheDocument();
+    });
+
+    test("seta do teclado troca de aba e move o foco", async () => {
+      const usuario = userEvent.setup();
+      mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
+      renderInscricoes();
+
+      await screen.findByText("Introdução à IA");
+      screen.getByRole("tab", { name: /Alunos/ }).focus();
+
+      await usuario.keyboard("{ArrowRight}");
+
+      const abaVendas = screen.getByRole("tab", { name: /Vendas/ });
+      expect(abaVendas).toHaveAttribute("aria-selected", "true");
+      expect(abaVendas).toHaveFocus();
+
+      await usuario.keyboard("{ArrowLeft}");
+
+      const abaAlunos = screen.getByRole("tab", { name: /Alunos/ });
+      expect(abaAlunos).toHaveAttribute("aria-selected", "true");
+      expect(abaAlunos).toHaveFocus();
+    });
   });
 
   test("filtro de modelo (chip) e feito no cliente, sem nova chamada a API", async () => {
@@ -260,52 +333,22 @@ describe("SecaoMatriculas - VistaGestorMatriculas (tela Inscrições do Admin)",
     expect(pendentePago).toHaveClass("inscricoes-pendentes--destaque");
   });
 
-  test("clicar na linha chama onNavigate pra tela do curso", async () => {
+  test("clicar na linha ou numa celula nao abre o curso - so o botao 'Ver curso' abre", async () => {
     const usuario = userEvent.setup();
     const onNavigate = vi.fn();
     mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
     renderInscricoes({ onNavigate });
 
     await screen.findByText("Introdução à IA");
+    await usuario.click(screen.getByText("Introdução à IA"));
     await usuario.click(screen.getByText("Introdução à IA").closest("tr"));
 
-    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/1");
-  });
+    expect(onNavigate).not.toHaveBeenCalled();
 
-  test("Enter com foco na linha tambem navega pra tela do curso", async () => {
-    const usuario = userEvent.setup();
-    const onNavigate = vi.fn();
-    mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
-    renderInscricoes({ onNavigate });
-
-    await screen.findByText("Introdução à IA");
-    const linha = screen.getByText("Introdução à IA").closest("tr");
-    linha.focus();
-    await usuario.keyboard("{Enter}");
-
-    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/1");
-  });
-
-  test("botao 'Ver curso' navega sem duplicar a navegacao da linha", async () => {
-    const usuario = userEvent.setup();
-    const onNavigate = vi.fn();
-    mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO]);
-    renderInscricoes({ onNavigate });
-
-    await screen.findByText("Introdução à IA");
     await usuario.click(screen.getByRole("button", { name: "Ver curso Introdução à IA" }));
 
     expect(onNavigate).toHaveBeenCalledTimes(1);
     expect(onNavigate).toHaveBeenCalledWith("/app/cursos/1");
-  });
-
-  test("linha de total soma inscritos, iniciaram/concluiram, pendentes e receita de todos os cursos filtrados", async () => {
-    mockInscricoes([INSCRICAO_GRATUITO_ENCERRADO, INSCRICAO_PAGO_A_VENDA]);
-    renderInscricoes();
-
-    await screen.findByText("Introdução à IA");
-
-    expect(screen.getByText("Total · 2 cursos")).toBeInTheDocument();
   });
 
   describe("paginação (10 cursos por página)", () => {
@@ -324,15 +367,6 @@ describe("SecaoMatriculas - VistaGestorMatriculas (tela Inscrições do Admin)",
       expect(screen.getByText("Curso 12")).toBeInTheDocument();
       expect(screen.queryByText("Curso 01")).not.toBeInTheDocument();
       expect(screen.getByText("Mostrando 11–12 de 12 cursos")).toBeInTheDocument();
-    });
-
-    test("linha de total soma TODOS os cursos filtrados, nao so a pagina atual", async () => {
-      mockInscricoes(criarLista(12, { inscritos: 1 }));
-      renderInscricoes();
-
-      await screen.findByText("Curso 01");
-
-      expect(screen.getByText("Total · 12 cursos")).toBeInTheDocument();
     });
 
     test("nao aparece com 10 cursos ou menos", async () => {
@@ -360,5 +394,131 @@ describe("SecaoMatriculas - VistaGestorMatriculas (tela Inscrições do Admin)",
       expect(await screen.findByText("Grátis 1")).toBeInTheDocument();
       expect(screen.queryByText(/Mostrando/)).not.toBeInTheDocument();
     });
+  });
+});
+
+const CURSO_PAGO_PENDENTE = { id: 10, titulo: "Curso Pago X", preco: 300, modeloCurso: 2, descricao: "Descrição do curso" };
+
+function criarLinhaMatriculaPendente(overrides = {}) {
+  return {
+    id: 55,
+    cursoId: 10,
+    status: "Aprovada",
+    pagamentoStatus: 1,
+    pagamentoValor: 300,
+    pagamentoVenceEm: "2026-11-20T12:00:00Z",
+    acessoLiberado: false,
+    dataSolicitacao: "2026-11-17T00:00:00Z",
+    notaFinal: 0,
+    codigoRegistro: "MAT-0001",
+    ...overrides
+  };
+}
+
+// So com Pagamento Cancelado (desistiu ou venceu) - prompt-agente-inscricoes-
+// v3.md, item 3: sem pendente e sem acesso liberado, a matricula volta a
+// mostrar "Comprar" em vez de "Entrar no curso".
+function criarLinhaMatriculaSoCancelada(overrides = {}) {
+  return {
+    id: 56,
+    cursoId: 10,
+    status: "Aprovada",
+    pagamentoStatus: null,
+    pagamentoValor: null,
+    pagamentoVenceEm: null,
+    acessoLiberado: false,
+    dataSolicitacao: "2026-11-10T00:00:00Z",
+    notaFinal: 0,
+    codigoRegistro: "MAT-0002",
+    ...overrides
+  };
+}
+
+function renderMeusCursos(props = {}) {
+  return render(
+    <ToastProvider>
+      <AssistenteChatbotProvider ativo={false}>
+        <SecaoMeusCursosMatriculados
+          cursos={[CURSO_PAGO_PENDENTE]}
+          linhasMatriculas={[criarLinhaMatriculaPendente()]}
+          onNavigate={vi.fn()}
+          onRefresh={vi.fn()}
+          onSessionExpired={vi.fn()}
+          {...props}
+        />
+      </AssistenteChatbotProvider>
+    </ToastProvider>
+  );
+}
+
+describe("SecaoMeusCursosMatriculados - desistir da compra (pagamento pendente)", () => {
+  beforeEach(() => {
+    apiRequest.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("mostra 'Pague até DD/MM' e o botao 'Desistir da compra'", async () => {
+    renderMeusCursos();
+
+    expect(await screen.findByText(/Pague até 20\/11/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desistir da compra" })).toBeInTheDocument();
+  });
+
+  test("Desistir da compra pede confirmacao antes de chamar a API", async () => {
+    const usuario = userEvent.setup();
+    const onRefresh = vi.fn();
+    renderMeusCursos({ onRefresh });
+
+    await usuario.click(await screen.findByRole("button", { name: "Desistir da compra" }));
+
+    expect(screen.getByText(/Desistir da compra de Curso Pago X\?/)).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalledWith("/Pagamentos/55/cancelar", expect.anything());
+
+    await usuario.click(screen.getByRole("button", { name: "Sim, desistir" }));
+
+    expect(apiRequest).toHaveBeenCalledWith("/Pagamentos/55/cancelar", { method: "POST" });
+    expect(onRefresh).toHaveBeenCalled();
+  });
+
+  test("clicar em 'Não' cancela a desistencia sem chamar a API", async () => {
+    const usuario = userEvent.setup();
+    renderMeusCursos();
+
+    await usuario.click(await screen.findByRole("button", { name: "Desistir da compra" }));
+    await usuario.click(screen.getByRole("button", { name: "Não" }));
+
+    expect(screen.queryByText(/Desistir da compra de/)).not.toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalledWith("/Pagamentos/55/cancelar", expect.anything());
+  });
+});
+
+describe("SecaoMeusCursosMatriculados - comprar de novo depois de cancelado", () => {
+  beforeEach(() => {
+    apiRequest.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("matricula aprovada so com pagamento cancelado mostra 'Comprar', nao 'Entrar no curso'", async () => {
+    renderMeusCursos({ linhasMatriculas: [criarLinhaMatriculaSoCancelada()] });
+
+    expect(await screen.findByRole("button", { name: /Comprar/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Entrar no curso|Continuar curso|Iniciar curso/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Pague até/)).not.toBeInTheDocument();
+  });
+
+  test("clicar em 'Comprar' abre a confirmacao e chama POST /Matriculas/comprar", async () => {
+    const usuario = userEvent.setup();
+    renderMeusCursos({ linhasMatriculas: [criarLinhaMatriculaSoCancelada()] });
+
+    await usuario.click(await screen.findByRole("button", { name: /Comprar/ }));
+    await usuario.click(await screen.findByRole("button", { name: "Confirmar compra" }));
+
+    expect(apiRequest).toHaveBeenCalledWith("/Matriculas/comprar", { method: "POST", body: JSON.stringify({ cursoId: 10 }) });
   });
 });

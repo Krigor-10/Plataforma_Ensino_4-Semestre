@@ -1,13 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useState } from "react";
 import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Botao from "./Botao.jsx";
 import { resolverImagemCurso } from "../lib/courseCovers.js";
-import { formatMoney } from "../lib/format.js";
+import { formatDayMonth, formatMoney } from "../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
 function obterStatus(item) {
   if (item.pagamentoPendente) {
     return { cor: cores.aviso, corFundo: cores.avisoFundo, rotulo: "Compra pendente" };
+  }
+
+  if (item.acessoLiberado === false) {
+    return { cor: cores.aviso, corFundo: cores.avisoFundo, rotulo: "Comprar" };
   }
 
   const percentual = Math.max(0, Math.min(Number(item.progresso) || 0, 100));
@@ -32,7 +37,7 @@ function obterStatus(item) {
    suas outras funcoes, incluindo "Cancelar solicitacao", eram inalcancaveis
    desde que matricula virou sempre automatica, ver pendencia_matriculas_
    sempre_automatica_2026_10_27 na memoria do projeto). */
-export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onConcluirCompra, onSelecionar, processandoPagamentoId }) {
+export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, onConcluirCompra, onDesistir, onSelecionar, processandoPagamentoId }) {
   return (
     <FlatList
       columnWrapperStyle={estilos.linha}
@@ -45,6 +50,7 @@ export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, 
           accessibilityLabelPrefix={accessibilityLabelPrefix}
           item={item}
           onConcluirCompra={onConcluirCompra}
+          onDesistir={onDesistir}
           onSelecionar={onSelecionar}
           processando={processandoPagamentoId === item.matriculaId}
         />
@@ -53,9 +59,21 @@ export default function GradeCursosConteudos({ accessibilityLabelPrefix, itens, 
   );
 }
 
-function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecionar, processando }) {
-  const { curso, id, pagamentoPendente, progresso, valorPagamento } = item;
+function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onDesistir, onSelecionar, processando }) {
+  const [confirmandoDesistencia, setConfirmandoDesistencia] = useState(false);
+  const { acessoLiberado, curso, id, pagamentoPendente, pagamentoVenceEm, progresso, valorPagamento } = item;
   const tituloCurso = curso?.titulo || `Curso #${id}`;
+  // So Pagamento Cancelado (desistiu ou venceu, prompt-agente-inscricoes-
+  // v3.md item 3): sem cobranca pendente, mas tambem sem acesso - volta a
+  // precisar comprar, pelo preco atual (onConcluirCompra abre o mesmo painel,
+  // que sem valorPagamento mostra curso.preco em vez do valor congelado).
+  const precisaComprar = acessoLiberado === false && !pagamentoPendente;
+  const bloqueado = pagamentoPendente || precisaComprar;
+
+  function confirmarDesistencia() {
+    setConfirmandoDesistencia(false);
+    onDesistir?.(item);
+  }
   const capa = resolverImagemCurso(curso);
   const status = obterStatus(item);
   const percentual = Math.max(0, Math.min(Number(progresso) || 0, 100));
@@ -75,7 +93,7 @@ function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecio
       <View style={estilos.corpo}>
         <Text numberOfLines={2} style={estilos.cartaoTitulo}>{tituloCurso}</Text>
 
-        {!pagamentoPendente ? (
+        {!bloqueado ? (
           <>
             <View style={estilos.barraFundo}>
               <View style={[estilos.barraPreenchida, { width: `${percentual}%` }]} />
@@ -88,12 +106,66 @@ function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecio
           <View style={[estilos.pill, { backgroundColor: status.corFundo }]}>
             <Text numberOfLines={1} style={[estilos.pillTexto, { color: status.cor }]}>{status.rotulo}</Text>
           </View>
-          {!pagamentoPendente ? <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} /> : null}
+          {!bloqueado ? <Ionicons color={cores.textoSuave} name="chevron-forward" size={18} /> : null}
         </View>
 
         {pagamentoPendente ? (
           <View style={estilos.pagamentoLinha}>
             {valorPagamento ? <Text style={estilos.pagamentoValor}>{formatMoney(valorPagamento)}</Text> : null}
+            {pagamentoVenceEm ? <Text style={estilos.pagamentoPrazo}>Pague até {formatDayMonth(pagamentoVenceEm)}</Text> : null}
+            {confirmandoDesistencia ? (
+              <>
+                <Text style={estilos.confirmacaoTexto}>
+                  Desistir da compra de {tituloCurso}? Você pode comprar de novo depois.
+                </Text>
+                <Botao
+                  carregando={processando}
+                  onPress={confirmarDesistencia}
+                  style={estilos.botaoPagamento}
+                  textoStyle={estilos.botaoPagamentoTexto}
+                  variante="sucesso"
+                >
+                  Sim, desistir
+                </Botao>
+                <Botao
+                  disabled={processando}
+                  onPress={() => setConfirmandoDesistencia(false)}
+                  style={estilos.botaoPagamento}
+                  textoStyle={estilos.botaoPagamentoTexto}
+                  variante="perigo"
+                >
+                  Não
+                </Botao>
+              </>
+            ) : (
+              <>
+                <Botao
+                  carregando={processando}
+                  onPress={() => onConcluirCompra?.(item)}
+                  style={estilos.botaoPagamento}
+                  textoStyle={estilos.botaoPagamentoTexto}
+                  variante="sucesso"
+                >
+                  Concluir compra
+                </Botao>
+                {onDesistir ? (
+                  <Botao
+                    disabled={processando}
+                    onPress={() => setConfirmandoDesistencia(true)}
+                    style={estilos.botaoPagamento}
+                    textoStyle={estilos.botaoPagamentoTexto}
+                    variante="secundario"
+                  >
+                    Desistir da compra
+                  </Botao>
+                ) : null}
+              </>
+            )}
+          </View>
+        ) : null}
+
+        {precisaComprar ? (
+          <View style={estilos.pagamentoLinha}>
             <Botao
               carregando={processando}
               onPress={() => onConcluirCompra?.(item)}
@@ -101,7 +173,7 @@ function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecio
               textoStyle={estilos.botaoPagamentoTexto}
               variante="sucesso"
             >
-              Concluir compra
+              Comprar
             </Botao>
           </View>
         ) : null}
@@ -109,7 +181,7 @@ function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onSelecio
     </>
   );
 
-  if (pagamentoPendente) {
+  if (bloqueado) {
     return <View style={estilos.cartao}>{corpoCartao}</View>;
   }
 
@@ -151,6 +223,8 @@ const estilos = StyleSheet.create({
   pillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
   pagamentoLinha: { marginTop: espacamentos.sm, gap: espacamentos.xs },
   pagamentoValor: { color: cores.aviso, fontWeight: "700", fontSize: tipografia.legenda },
+  pagamentoPrazo: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  confirmacaoTexto: { color: cores.texto, fontSize: tipografia.legenda, lineHeight: 16 },
   botaoPagamento: { paddingVertical: 8, paddingHorizontal: 12, minHeight: 36 },
   botaoPagamentoTexto: { fontSize: tipografia.rotulo }
 });

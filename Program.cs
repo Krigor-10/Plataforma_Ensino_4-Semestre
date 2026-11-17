@@ -156,6 +156,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<INotificacaoService, NotificacaoService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 builder.Services.AddHostedService<ChatbotExpurgoService>();
+builder.Services.AddHostedService<PagamentoVencimentoService>();
 
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("banco-de-dados");

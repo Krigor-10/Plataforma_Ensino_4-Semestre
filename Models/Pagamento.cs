@@ -60,4 +60,14 @@ public class Pagamento
 
         Status = StatusPagamento.Cancelado;
     }
+
+    /// <summary>
+    /// So existe pra backdatar CriadoEm em teste (PagamentoVencimentoExecutor
+    /// cancela quem passou de Pagamentos:DiasParaVencer) - em producao
+    /// CriadoEm fica sempre no inicializador padrao (DateTime.UtcNow).
+    /// </summary>
+    public void RegistrarCriacao(DateTime criadoEm)
+    {
+        CriadoEm = criadoEm;
+    }
 }

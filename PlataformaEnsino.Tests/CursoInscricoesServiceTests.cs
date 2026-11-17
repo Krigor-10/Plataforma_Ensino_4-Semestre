@@ -82,6 +82,16 @@ public class CursoInscricoesServiceTests
         return pagamento;
     }
 
+    private static Pagamento CriarPagamentoCancelado(PlataformaContext context, int matriculaId, decimal valor)
+    {
+        var pagamento = Pagamento.CriarPendente(matriculaId, valor);
+        context.Pagamentos.Add(pagamento);
+        context.SaveChanges();
+        pagamento.Cancelar();
+        context.SaveChanges();
+        return pagamento;
+    }
+
     private static void DefinirProgresso(PlataformaContext context, int matriculaId, int cursoId, decimal percentual)
     {
         context.ProgressosCursosAlunos.Add(new ProgressoCursoAluno
@@ -327,6 +337,101 @@ public class CursoInscricoesServiceTests
 
         Assert.Equal("/uploads/cursos/capa.jpg", resultado.Single(item => item.CursoId == cursoComImagem.Id).ImagemUrl);
         Assert.Null(resultado.Single(item => item.CursoId == cursoSemImagem.Id).ImagemUrl);
+    }
+
+    [Fact]
+    public async Task ObterInscricoesAsync_AReceber_SomaOValorDosPagamentosPendentes()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, preco: 100m);
+        var aluno1 = CriarAluno(context);
+        var matricula1 = CriarMatricula(context, aluno1.Id, curso.Id, valorNaMatricula: 100m);
+        CriarPagamentoPendente(context, matricula1.Id, 100m);
+        var aluno2 = CriarAluno(context);
+        var matricula2 = CriarMatricula(context, aluno2.Id, curso.Id, valorNaMatricula: 100m);
+        CriarPagamentoPendente(context, matricula2.Id, 100m);
+
+        var resultado = (await service.ObterInscricoesAsync(null, null)).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.Equal(200m, item.AReceber);
+    }
+
+    [Fact]
+    public async Task ObterInscricoesAsync_Cancelados_ContaQuantidadeESomaOValorCancelado()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, preco: 100m);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id, valorNaMatricula: 100m);
+        CriarPagamentoCancelado(context, matricula.Id, 100m);
+
+        var resultado = (await service.ObterInscricoesAsync(null, null)).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.Equal(1, item.Cancelados);
+        Assert.Equal(100m, item.ValorCancelado);
+    }
+
+    [Fact]
+    public async Task ObterInscricoesAsync_TentativasCompraECompraram_ContamMatriculasComQualquerPagamentoEComPago()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, preco: 100m);
+
+        var alunoPagou = CriarAluno(context);
+        var matriculaPagou = CriarMatricula(context, alunoPagou.Id, curso.Id, valorNaMatricula: 100m);
+        CriarPagamentoPago(context, matriculaPagou.Id, 100m);
+
+        var alunoCancelou = CriarAluno(context);
+        var matriculaCancelou = CriarMatricula(context, alunoCancelou.Id, curso.Id, valorNaMatricula: 100m);
+        CriarPagamentoCancelado(context, matriculaCancelou.Id, 100m);
+
+        var resultado = (await service.ObterInscricoesAsync(null, null)).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.Equal(2, item.TentativasCompra);
+        Assert.Equal(1, item.Compraram);
+    }
+
+    [Fact]
+    public async Task ObterInscricoesAsync_CursoGratuito_TentativasCompraECompraramFicamZero()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito);
+        var aluno = CriarAluno(context);
+        CriarMatricula(context, aluno.Id, curso.Id, valorNaMatricula: 0);
+
+        var resultado = (await service.ObterInscricoesAsync(null, null)).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.Equal(0, item.TentativasCompra);
+        Assert.Equal(0, item.Compraram);
+    }
+
+    [Fact]
+    public async Task ObterInscricoesAsync_AReceber_RespeitaOPeriodoPelaDataDaInscricao()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, preco: 100m);
+        var alunoDentro = CriarAluno(context);
+        var matriculaDentro = CriarMatricula(context, alunoDentro.Id, curso.Id, valorNaMatricula: 100m, dataSolicitacao: new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc));
+        CriarPagamentoPendente(context, matriculaDentro.Id, 100m);
+        var alunoFora = CriarAluno(context);
+        var matriculaFora = CriarMatricula(context, alunoFora.Id, curso.Id, valorNaMatricula: 100m, dataSolicitacao: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        CriarPagamentoPendente(context, matriculaFora.Id, 100m);
+
+        var resultado = (await service.ObterInscricoesAsync(
+            de: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc),
+            ate: new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc))).ToList();
+
+        var item = Assert.Single(resultado);
+        Assert.Equal(100m, item.AReceber);
     }
 
     [Fact]

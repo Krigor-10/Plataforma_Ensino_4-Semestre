@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
@@ -10,23 +11,32 @@ public class PagamentoService : IPagamentoService
 {
     private readonly PlataformaContext _context;
     private readonly INotificacaoService _notificacaoService;
+    private readonly IConfiguration _configuration;
 
-    public PagamentoService(PlataformaContext context, INotificacaoService notificacaoService)
+    public PagamentoService(PlataformaContext context, INotificacaoService notificacaoService, IConfiguration configuration)
     {
         _context = context;
         _notificacaoService = notificacaoService;
+        _configuration = configuration;
     }
 
     public async Task<IEnumerable<PagamentoAlunoResponseDto>> ListarPagamentosDoAlunoAsync(int alunoId)
     {
-        return await _context.Pagamentos
+        // Materializa ANTES de mapear: MapResponse agora e metodo de instancia
+        // (le _configuration pro VenceEm) - encadear .Select(MapResponse) direto
+        // no IQueryable faria o EF tentar traduzir/avaliar a query capturando
+        // "this", e ele avisa (CoreEventId.ClientProjectionCapturingConstantInQueryWarning)
+        // que isso pode vazar memoria. Com o ToListAsync() aqui, o Select()
+        // roda em memoria (LINQ to Objects), sem esse problema.
+        var pagamentos = await _context.Pagamentos
             .AsNoTracking()
             .Include(pagamento => pagamento.Matricula)
             .ThenInclude(matricula => matricula!.Curso)
             .Where(pagamento => pagamento.Matricula!.AlunoId == alunoId)
             .OrderByDescending(pagamento => pagamento.CriadoEm)
-            .Select(pagamento => MapResponse(pagamento))
             .ToListAsync();
+
+        return pagamentos.Select(MapResponse);
     }
 
     public async Task<PagamentoAlunoResponseDto> ConfirmarPagamentoAsync(int matriculaId, int alunoId)
@@ -51,8 +61,31 @@ public class PagamentoService : IPagamentoService
         return MapResponse(pagamento);
     }
 
-    private static PagamentoAlunoResponseDto MapResponse(Pagamento pagamento)
+    public async Task<PagamentoAlunoResponseDto> CancelarAsync(int matriculaId, int alunoId)
     {
+        var matriculaPertenceAoAluno = await _context.Matriculas
+            .AnyAsync(matricula => matricula.Id == matriculaId && matricula.AlunoId == alunoId);
+        if (!matriculaPertenceAoAluno)
+        {
+            throw new KeyNotFoundException("Matricula nao encontrada.");
+        }
+
+        var pagamento = await _context.Pagamentos
+            .Include(item => item.Matricula)
+            .ThenInclude(matricula => matricula!.Curso)
+            .FirstOrDefaultAsync(item => item.MatriculaId == matriculaId && item.Status == StatusPagamento.Pendente)
+            ?? throw new ConflitoDeNegocioException("Nao ha pagamento pendente para esta matricula.");
+
+        pagamento.Cancelar();
+        await _context.SaveChangesAsync();
+
+        return MapResponse(pagamento);
+    }
+
+    private PagamentoAlunoResponseDto MapResponse(Pagamento pagamento)
+    {
+        var diasParaVencer = _configuration.GetValue("Pagamentos:DiasParaVencer", PagamentoVencimentoExecutor.DiasParaVencerPadrao);
+
         return new PagamentoAlunoResponseDto
         {
             Id = pagamento.Id,
@@ -62,7 +95,8 @@ public class PagamentoService : IPagamentoService
             Valor = pagamento.Valor,
             Status = pagamento.Status,
             CriadoEm = pagamento.CriadoEm,
-            PagoEm = pagamento.PagoEm
+            PagoEm = pagamento.PagoEm,
+            VenceEm = pagamento.Status == StatusPagamento.Pendente ? pagamento.CriadoEm.AddDays(diasParaVencer) : null
         };
     }
 }

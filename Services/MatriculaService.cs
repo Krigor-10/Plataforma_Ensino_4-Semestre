@@ -82,9 +82,27 @@ public class MatriculaService : IMatriculaService
         if (matriculaAprovada is not null)
         {
             var pagamentoPendente = matriculaAprovada.Pagamentos.FirstOrDefault(p => p.Status == StatusPagamento.Pendente);
+
             if (pagamentoPendente is null)
             {
-                throw new InvalidOperationException("Você já tem este curso.");
+                var jaPagou = matriculaAprovada.Pagamentos.Any(p => p.Status == StatusPagamento.Pago);
+                var precoAtual = await _context.Cursos
+                    .Where(curso => curso.Id == cursoId)
+                    .Select(curso => curso.Preco)
+                    .FirstOrDefaultAsync();
+
+                // So Pago (ou curso gratuito, sem cobranca nenhuma pra fazer)
+                // continua "Você já tem este curso." - matricula com so
+                // Pagamentos Cancelados (desistiu ou venceu, ver
+                // PagamentoVencimentoExecutor) pode comprar de novo, pelo
+                // preco ATUAL do curso (nao o congelado na matricula antiga).
+                if (jaPagou || precoAtual <= 0)
+                {
+                    throw new InvalidOperationException("Você já tem este curso.");
+                }
+
+                pagamentoPendente = Pagamento.CriarPendente(matriculaAprovada.Id, precoAtual);
+                await _context.Pagamentos.AddAsync(pagamentoPendente);
             }
 
             pagamentoPendente.ConfirmarPagamento();

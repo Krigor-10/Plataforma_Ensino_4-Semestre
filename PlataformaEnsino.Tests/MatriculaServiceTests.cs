@@ -279,6 +279,28 @@ public class MatriculaServiceTests
     }
 
     [Fact]
+    public async Task ComprarCursoAsync_MatriculaSoComPagamentosCancelados_CriaNovoPagamentoEConcluiCompra()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context, preco: 199.90m);
+        var aluno = CriarAluno(context);
+
+        await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+        var matriculaInicial = context.Matriculas.Single(m => m.AlunoId == aluno.Id && m.CursoId == curso.Id);
+        var pagamentoOriginal = context.Pagamentos.Single(p => p.MatriculaId == matriculaInicial.Id);
+        pagamentoOriginal.Cancelar();
+        context.SaveChanges();
+
+        var matricula = await service.ComprarCursoAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(matriculaInicial.Id, matricula.Id);
+        var pagamentos = context.Pagamentos.Where(p => p.MatriculaId == matricula.Id).ToList();
+        Assert.Equal(2, pagamentos.Count);
+        Assert.Single(pagamentos, p => p.Status == StatusPagamento.Cancelado);
+        Assert.Single(pagamentos, p => p.Status == StatusPagamento.Pago);
+    }
+
+    [Fact]
     public async Task ComprarCursoAsync_CursoJaCompradoETotalmentePago_LancaInvalidOperation()
     {
         var (service, context) = CriarService();

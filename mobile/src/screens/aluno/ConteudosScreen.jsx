@@ -37,6 +37,7 @@ import VisualizadorConteudo from "../../components/VisualizadorConteudo.jsx";
 const STATUS_TENTATIVA_CORRIGIDA = 3;
 
 const PAGAMENTO_PENDENTE = 1;
+const PAGAMENTO_PAGO = 2;
 // Tipos abertos dentro do app (modal) com conclusao automatica - ver
 // pendencia_auditoria_conteudos_conclusao_exclusao_visualizacao (item B) na
 // memoria do projeto. Texto (1) e Link externo (4) continuam com handoff
@@ -87,7 +88,9 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [quizSelecionado, setQuizSelecionado] = useState(null);
   const [quizParaRevisar, setQuizParaRevisar] = useState(null);
   const [cursoParaComprar, setCursoParaComprar] = useState(null);
+  const [matriculaIdParaComprar, setMatriculaIdParaComprar] = useState(null);
   const [valorPagamentoPendenteParaComprar, setValorPagamentoPendenteParaComprar] = useState(null);
+  const [venceEmParaComprar, setVenceEmParaComprar] = useState(null);
   const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
   const [urlVisualizando, setUrlVisualizando] = useState(null);
   const route = useRoute();
@@ -193,10 +196,20 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     [snapshot.matriculas]
   );
 
-  const pagamentoPorMatriculaId = useMemo(
-    () => new Map((snapshot.pagamentos || []).map((pagamento) => [pagamento.matriculaId, pagamento])),
-    [snapshot.pagamentos]
-  );
+  // Agrupado por matricula (nao "um pagamento por matricula"): depois que
+  // uma compra cancelada pode ser refeita (prompt-agente-inscricoes-v3.md,
+  // item 3), a MESMA matricula acumula varios Pagamentos ao longo do tempo
+  // (Cancelado -> Pendente novo -> Pago, por exemplo) - precisa do pendente
+  // e do pago especificos, nao so "o ultimo do array".
+  const pagamentosPorMatriculaId = useMemo(() => {
+    const mapa = new Map();
+    (snapshot.pagamentos || []).forEach((pagamento) => {
+      const lista = mapa.get(pagamento.matriculaId) || [];
+      lista.push(pagamento);
+      mapa.set(pagamento.matriculaId, lista);
+    });
+    return mapa;
+  }, [snapshot.pagamentos]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
@@ -204,17 +217,24 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     () =>
       grupos.map((grupo) => {
         const matricula = matriculaPorCursoId.get(grupo.id);
-        const pagamento = matricula ? pagamentoPorMatriculaId.get(matricula.id) : null;
+        const pagamentosDaMatricula = matricula ? (pagamentosPorMatriculaId.get(matricula.id) || []) : [];
+        const pagamentoPago = pagamentosDaMatricula.find((pagamento) => pagamento.status === PAGAMENTO_PAGO);
+        const pagamentoPendente = pagamentosDaMatricula.find((pagamento) => pagamento.status === PAGAMENTO_PENDENTE);
+
         return {
           curso: { imagemUrl: grupo.imagemUrl, titulo: grupo.titulo },
           id: grupo.id,
           matriculaId: matricula?.id ?? null,
-          pagamentoPendente: Boolean(pagamento && pagamento.status === PAGAMENTO_PENDENTE),
+          // Gratuito (nenhum pagamento nunca existiu) ou com Pagamento Pago
+          // confirmado - "so Cancelado" (desistiu/venceu) NAO libera.
+          acessoLiberado: pagamentosDaMatricula.length === 0 || Boolean(pagamentoPago),
+          pagamentoPendente: Boolean(pagamentoPendente),
+          pagamentoVenceEm: pagamentoPendente?.venceEm ?? null,
           progresso: grupo.progresso,
-          valorPagamento: pagamento?.valor
+          valorPagamento: pagamentoPendente?.valor
         };
       }),
-    [grupos, matriculaPorCursoId, pagamentoPorMatriculaId]
+    [grupos, matriculaPorCursoId, pagamentosPorMatriculaId]
   );
 
   // Abre o mesmo painel de confirmacao do Catalogo (ConfirmacaoCompraSheet,
@@ -229,7 +249,29 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     const curso = cursoPorId.get(item.id);
     if (curso) {
       setCursoParaComprar(curso);
+      setMatriculaIdParaComprar(item.matriculaId);
       setValorPagamentoPendenteParaComprar(item.valorPagamento);
+      setVenceEmParaComprar(item.pagamentoVenceEm);
+    }
+  }
+
+  // O aluno desiste da compra (prompt-agente-inscricoes-v3.md, item 11):
+  // cancela so o Pagamento Pendente - a matricula continua Aprovada, e o
+  // curso volta a mostrar "Comprar" depois do proximo onRecarregar.
+  async function desistirDaCompra(item) {
+    if (!item.matriculaId) {
+      return;
+    }
+
+    try {
+      await apiRequest(`/Pagamentos/${item.matriculaId}/cancelar`, { method: "POST" });
+      await onRecarregar();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      setMensagem({ tipo: "erro", texto: err.message || "Não foi possível desistir da compra agora." });
     }
   }
 
@@ -357,23 +399,31 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
           accessibilityLabelPrefix="Ver conteúdos de"
           itens={itensGrade}
           onConcluirCompra={abrirConfirmacaoCompra}
+          onDesistir={desistirDaCompra}
           onSelecionar={setCursoSelecionadoId}
         />
 
         <ConfirmacaoCompraSheet
           curso={cursoParaComprar}
+          matriculaId={matriculaIdParaComprar}
           onCompraConfirmada={onRecarregar}
+          onDesistirConfirmado={onRecarregar}
           onFechar={() => {
             setCursoParaComprar(null);
+            setMatriculaIdParaComprar(null);
             setValorPagamentoPendenteParaComprar(null);
+            setVenceEmParaComprar(null);
           }}
           onIrParaCurso={(cursoId) => {
             setCursoParaComprar(null);
+            setMatriculaIdParaComprar(null);
             setValorPagamentoPendenteParaComprar(null);
+            setVenceEmParaComprar(null);
             setCursoSelecionadoId(cursoId);
           }}
           onSessionExpired={onSessionExpired}
           valorTotal={valorPagamentoPendenteParaComprar}
+          venceEm={venceEmParaComprar}
           visivel={Boolean(cursoParaComprar)}
         />
       </View>

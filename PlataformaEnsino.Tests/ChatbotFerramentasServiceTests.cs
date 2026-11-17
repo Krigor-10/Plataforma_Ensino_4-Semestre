@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -18,7 +19,7 @@ public class ChatbotFerramentasServiceTests
             new ProgressoAlunoService(context, acessoAcademico),
             avaliacoes,
             new CertificadoService(context, acessoAcademico),
-            new PagamentoService(context, new NotificacaoService(context, NullLogger<NotificacaoService>.Instance)));
+            new PagamentoService(context, new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new ConfigurationBuilder().Build()));
     }
 
     private static Aluno CriarAluno(PlataformaContext context, string sufixo)

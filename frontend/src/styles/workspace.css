@@ -5669,12 +5669,61 @@
   }
 }
 
-/* 5 KPIs com o visual da sugestao (prompt-agente-inscricoes-v2.md, item 4):
-   classes novas desta tela - NAO reaproveita .cartao-estatistica nem os
-   modificadores --compacta-N do Dashboard, que continuam intocados. */
+/* Abas "Alunos"/"Vendas" (prompt-agente-inscricoes-v3.md, item 10): trocam
+   so os 4 KPIs embaixo - filtros, tabela e paginacao continuam iguais nas
+   duas. Sublinhado roxo na aba ativa, setas do teclado trocam de aba. */
+.inscricoes-abas {
+  display: flex;
+  gap: var(--espaco-md);
+  margin-bottom: var(--espaco-md);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.inscricoes-aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 0.25rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--cor-texto-suave);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.inscricoes-aba:hover {
+  color: var(--cor-texto-forte);
+}
+
+.inscricoes-aba:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
+}
+
+.inscricoes-aba--ativa {
+  color: var(--cor-texto-forte);
+  border-bottom-color: var(--cor-marca);
+}
+
+.inscricoes-aba__contagem {
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--raio-circular);
+  background: color-mix(in srgb, var(--cor-aviso) 20%, transparent);
+  color: var(--cor-aviso);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* 4 KPIs com o visual da sugestao (prompt-agente-inscricoes-v2.md, item 4;
+   virou 4 colunas na v3 com as abas Alunos/Vendas) - classes novas desta
+   tela, NAO reaproveita .cartao-estatistica nem os modificadores
+   --compacta-N do Dashboard, que continuam intocados. */
 .inscricoes-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: var(--espaco-lg);
 }
@@ -5924,6 +5973,15 @@
   min-width: 320px;
 }
 
+/* Coluna do botao "Ver curso" (prompt-agente-inscricoes-v2-correcoes.md,
+   item 8): width:1% faz a coluna encolher pro conteudo (o botao em
+   white-space:nowrap), sobrando largura pras outras colunas. */
+.tabela-dados--inscricoes th:last-child,
+.tabela-dados--inscricoes td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .inscricoes-tabela-titulo {
   display: flex;
   align-items: center;
@@ -5997,9 +6055,17 @@
   background: var(--cor-marca);
 }
 
-/* Botao "Ver curso" (prompt-agente-inscricoes-v2-correcoes.md, item 2): a
-   seta anda 2px pra direita no hover, pra ficar bem visivel. */
+/* Botao "Ver curso" (prompt-agente-inscricoes-v2-correcoes.md, item 2; seta
+   somia (0,8px) corrigida na v3, item 8): a ultima coluna da tabela e
+   estreita (width:1%) e sem white-space:nowrap aqui o botao quebrava linha
+   e o svg encolhia via flex-shrink do flex interno do Botao. */
+.inscricoes-botao-ver-curso {
+  width: max-content;
+  white-space: nowrap;
+}
+
 .inscricoes-botao-ver-curso__seta {
+  flex-shrink: 0;
   transition: transform 150ms;
 }
 
@@ -6095,18 +6161,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  cursor: pointer;
-}
-
-.inscricoes-cartao:focus-visible {
-  outline: 2px solid var(--cor-marca);
-  outline-offset: 2px;
-}
-
-.inscricoes-cartao--total {
-  cursor: default;
-  background: transparent;
-  border-style: dashed;
 }
 
 .inscricoes-cartao__titulo {

@@ -43,5 +43,18 @@ public class PagamentosController : ControllerBase
         return Ok(pagamento);
     }
 
+    [HttpPost("{matriculaId:int}/cancelar")]
+    public async Task<IActionResult> CancelarPagamento(int matriculaId)
+    {
+        var alunoId = ObterUsuarioIdAutenticado();
+        if (!alunoId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o aluno autenticado." });
+        }
+
+        var pagamento = await _pagamentoService.CancelarAsync(matriculaId, alunoId.Value);
+        return Ok(pagamento);
+    }
+
     private int? ObterUsuarioIdAutenticado() => User.ObterUsuarioId();
 }

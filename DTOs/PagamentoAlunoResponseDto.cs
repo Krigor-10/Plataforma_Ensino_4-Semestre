@@ -12,4 +12,11 @@ public class PagamentoAlunoResponseDto
     public StatusPagamento Status { get; set; }
     public DateTime CriadoEm { get; set; }
     public DateTime? PagoEm { get; set; }
+
+    /// <summary>
+    /// CriadoEm + Pagamentos:DiasParaVencer - so preenchido pra pagamentos
+    /// Pendentes (PagamentoVencimentoExecutor cancela sozinho depois disso).
+    /// Pago/Cancelado nao tem prazo, por isso ficam null.
+    /// </summary>
+    public DateTime? VenceEm { get; set; }
 }

@@ -1,5 +1,6 @@
 import {
   formatCep,
+  formatDayMonth,
   formatGrade,
   formatPercent,
   formatScore,
@@ -38,6 +39,17 @@ describe("parseApiDate", () => {
     const comZ = parseApiDate("2026-04-27T06:26:00Z");
     const semZ = parseApiDate("2026-04-27T06:26:00");
     expect(semZ.getTime()).toBe(comZ.getTime());
+  });
+});
+
+describe("formatDayMonth", () => {
+  it("formata como DD/MM", () => {
+    expect(formatDayMonth("2026-11-20T12:00:00Z")).toBe("20/11");
+  });
+
+  it("retorna string vazia pra data invalida ou ausente", () => {
+    expect(formatDayMonth(null)).toBe("");
+    expect(formatDayMonth("nao-e-uma-data")).toBe("");
   });
 });
 

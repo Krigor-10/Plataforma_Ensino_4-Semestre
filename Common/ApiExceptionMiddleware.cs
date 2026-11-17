@@ -40,6 +40,11 @@ public class ApiExceptionMiddleware
             _logger.LogWarning(ex, "Requisicao invalida.");
             await WriteErrorAsync(context, HttpStatusCode.BadRequest, ex.Message);
         }
+        catch (ConflitoDeNegocioException ex)
+        {
+            _logger.LogWarning(ex, "Estado atual do recurso impede a operacao.");
+            await WriteErrorAsync(context, HttpStatusCode.Conflict, ex.Message);
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Operacao rejeitada por regra de negocio.");

@@ -10,8 +10,9 @@ namespace PlataformaEnsino.API.Services;
    nao existe mais aprovacao manual de matricula, a antiga tela "Matriculas"
    ficou sem funcao (matricula aprovada == aluno ativo sempre). Esse servico
    agrega por curso o funil de vendas/inscricao (inscritos, comecaram,
-   concluiram, com certificado, pendentes, receita), em poucas consultas
-   agrupadas - nao mexe em CursoDesempenhoService (usado por outras telas). */
+   concluiram, com certificado, pendentes, receita, a receber, cancelados,
+   tentativas de compra), em poucas consultas agrupadas - nao mexe em
+   CursoDesempenhoService (usado por outras telas). */
 public class CursoInscricoesService : ICursoInscricoesService
 {
     private readonly PlataformaContext _context;
@@ -50,25 +51,19 @@ public class CursoInscricoesService : ICursoInscricoesService
 
         var matriculaIds = matriculas.Select(matricula => matricula.Id).ToList();
 
-        // Mesma regra de acesso liberado de AcessoAcademicoService.MatriculaTemAcessoLiberado,
-        // inline porque aqui ja vem de uma projecao (nao da entidade Matricula).
-        var matriculaIdsComPagamentoPago = matriculaIds.Count == 0
-            ? new HashSet<int>()
-            : (await _context.Pagamentos
+        // Todos os pagamentos (qualquer status) das matriculas do periodo, numa
+        // unica consulta - os campos de vendas (AReceber, Cancelados,
+        // TentativasCompra, etc., PROMPT-agente-inscricoes-v3.md) derivam
+        // todos daqui, sem round-trip extra por campo.
+        var pagamentos = matriculaIds.Count == 0
+            ? new List<PagamentoResumo>()
+            : await _context.Pagamentos
                 .AsNoTracking()
-                .Where(pagamento => matriculaIds.Contains(pagamento.MatriculaId) && pagamento.Status == StatusPagamento.Pago)
-                .Select(pagamento => pagamento.MatriculaId)
-                .ToListAsync())
-                .ToHashSet();
+                .Where(pagamento => matriculaIds.Contains(pagamento.MatriculaId))
+                .Select(pagamento => new PagamentoResumo(pagamento.MatriculaId, pagamento.Valor, pagamento.Status))
+                .ToListAsync();
 
-        var matriculaIdsComPagamentoPendente = matriculaIds.Count == 0
-            ? new HashSet<int>()
-            : (await _context.Pagamentos
-                .AsNoTracking()
-                .Where(pagamento => matriculaIds.Contains(pagamento.MatriculaId) && pagamento.Status == StatusPagamento.Pendente)
-                .Select(pagamento => pagamento.MatriculaId)
-                .ToListAsync())
-                .ToHashSet();
+        var pagamentosPorMatriculaId = pagamentos.ToLookup(pagamento => pagamento.MatriculaId);
 
         var percentualPorMatriculaId = matriculaIds.Count == 0
             ? new Dictionary<int, decimal>()
@@ -101,9 +96,21 @@ public class CursoInscricoesService : ICursoInscricoesService
         var resultado = cursos.Select(curso =>
         {
             var matriculasDoCurso = matriculasPorCursoId[curso.Id].ToList();
+            var pagamentosDoCurso = matriculasDoCurso.SelectMany(matricula => pagamentosPorMatriculaId[matricula.Id]).ToList();
+
+            var matriculaIdsComPago = pagamentosDoCurso.Where(pagamento => pagamento.Status == StatusPagamento.Pago).Select(pagamento => pagamento.MatriculaId).ToHashSet();
+            var matriculaIdsComPendente = pagamentosDoCurso.Where(pagamento => pagamento.Status == StatusPagamento.Pendente).Select(pagamento => pagamento.MatriculaId).ToHashSet();
+            var matriculaIdsComQualquerPagamento = pagamentosDoCurso.Select(pagamento => pagamento.MatriculaId).ToHashSet();
+
             var inscritas = matriculasDoCurso
-                .Where(matricula => matricula.ValorNaMatricula <= 0 || matriculaIdsComPagamentoPago.Contains(matricula.Id))
+                .Where(matricula => matricula.ValorNaMatricula <= 0 || matriculaIdsComPago.Contains(matricula.Id))
                 .ToList();
+
+            // "De curso pago" (prompt v3, item 5): curso Gratuito sempre fica
+            // em 0/0 aqui, mesmo que por algum motivo tenha pagamento.
+            var cursoEhPago = curso.ModeloCurso != ModeloCurso.Gratuito;
+            var tentativasCompra = cursoEhPago ? matriculaIdsComQualquerPagamento.Count : 0;
+            var compraram = cursoEhPago ? matriculaIdsComQualquerPagamento.Count(matriculaId => matriculaIdsComPago.Contains(matriculaId)) : 0;
 
             return new CursoInscricoesResponseDto
             {
@@ -117,8 +124,13 @@ public class CursoInscricoesService : ICursoInscricoesService
                 Comecaram = inscritas.Count(matricula => percentualPorMatriculaId.GetValueOrDefault(matricula.Id, 0) > 0),
                 Concluiram = inscritas.Count(matricula => percentualPorMatriculaId.GetValueOrDefault(matricula.Id, 0) >= 100),
                 ComCertificado = inscritas.Count(matricula => matricula.CertificadoEmitidoEm.HasValue),
-                Pendentes = matriculasDoCurso.Count(matricula => matriculaIdsComPagamentoPendente.Contains(matricula.Id)),
-                Receita = receitaPorCursoId.GetValueOrDefault(curso.Id, 0m)
+                Pendentes = matriculasDoCurso.Count(matricula => matriculaIdsComPendente.Contains(matricula.Id)),
+                Receita = receitaPorCursoId.GetValueOrDefault(curso.Id, 0m),
+                AReceber = pagamentosDoCurso.Where(pagamento => pagamento.Status == StatusPagamento.Pendente).Sum(pagamento => pagamento.Valor),
+                Cancelados = pagamentosDoCurso.Count(pagamento => pagamento.Status == StatusPagamento.Cancelado),
+                ValorCancelado = pagamentosDoCurso.Where(pagamento => pagamento.Status == StatusPagamento.Cancelado).Sum(pagamento => pagamento.Valor),
+                TentativasCompra = tentativasCompra,
+                Compraram = compraram
             };
         })
         .OrderByDescending(item => item.Inscritos)
@@ -126,6 +138,8 @@ public class CursoInscricoesService : ICursoInscricoesService
 
         return resultado;
     }
+
+    private sealed record PagamentoResumo(int MatriculaId, decimal Valor, StatusPagamento Status);
 
     private static SituacaoCursoInscricoes DefinirSituacao(Curso curso)
     {
