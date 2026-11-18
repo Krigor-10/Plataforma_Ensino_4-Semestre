@@ -244,7 +244,7 @@ export default function TelaModuloGestao({
                           {obterIconeTipoConteudo(item.conteudo.tipoConteudo)}
                         </span>
                         <div className="atividades-curso__corpo">
-                          <strong className="atividades-curso__item-titulo">{item.titulo}</strong>
+                          <strong className="atividades-curso__item-titulo" title={item.titulo}>{item.titulo}</strong>
                           <p className="atividades-curso__meta">
                             <span>{normalizeContentType(item.conteudo.tipoConteudo)}</span>
                           </p>
@@ -277,7 +277,7 @@ export default function TelaModuloGestao({
                           <TbTrophy size="1.75rem" />
                         </span>
                         <div className="atividades-curso__corpo">
-                          <strong className="atividades-curso__item-titulo">{item.titulo}</strong>
+                          <strong className="atividades-curso__item-titulo" title={item.titulo}>{item.titulo}</strong>
                           <p className="atividades-curso__meta">
                             <span>
                               Quiz · {item.quiz.totalQuestoes || 0} {item.quiz.totalQuestoes === 1 ? "questão" : "questões"}

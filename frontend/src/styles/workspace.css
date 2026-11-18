@@ -4035,6 +4035,32 @@
   }
 }
 
+/* Tela do modulo (coluna mais larga - .modulo-gestao, 1600px no lugar de
+   1320px, ver .layout-principal:has(.modulo-gestao) em layout.css): o
+   limite acima (100.5rem = 1320px + 2*9rem) manda o Voltar pra margem cedo
+   demais aqui - com a coluna de 1600px, a "margem" that sobra nessa faixa
+   e quase nula, e o botao fica por baixo da sidebar aberta. So nesta tela,
+   o limite de verdade e 1600px + 2*9rem = 118rem; entre 100.5rem e 118rem
+   desfaz a posicao absoluta (a especificidade do seletor com .modulo-gestao
+   ja ganha da regra generica acima, sem precisar de !important). Dai
+   118rem pra cima, a regra generica acima ja basta. */
+@container (min-width: 100.5rem) and (max-width: 117.9375rem) {
+  .modulo-gestao .atividades-curso__navegacao {
+    position: static;
+    right: auto;
+    top: auto;
+    width: auto;
+  }
+
+  .modulo-gestao .atividades-curso__voltar-texto {
+    display: inline;
+  }
+
+  .modulo-gestao .atividades-curso__voltar-texto-curto {
+    display: none;
+  }
+}
+
 /* ------------------------------------------------------------
    ATIVIDADES DO CURSO — cabecalho compacto reaproveitado (com
    grade-estatisticas) por Progresso, Turmas e Modulos do
@@ -5168,16 +5194,11 @@
   color: var(--cor-texto-suave);
 }
 
-.atividades-curso__adicionar {
-  align-self: flex-start;
-  margin: 0;
-  padding: 0.3rem 0.7rem;
-  font-size: 0.75rem;
-}
-
-/* "Adicionar Quiz" e "Gerar quiz com IA" (ajuste final): cor propria em vez
-   de variante="fantasma", que no tema claro vira fundo branco opaco (ver
-   [data-tema="claro"] .botao--fantasma em base.css) e apagava a cor. */
+/* "Adicionar Quiz" e "Gerar quiz com IA" (hoje no cabecalho da tela do
+   modulo, docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
+   organizacao.md): cor propria em vez de variante="fantasma", que no tema
+   claro vira fundo branco opaco (ver [data-tema="claro"] .botao--fantasma
+   em base.css) e apagava a cor. */
 .atividades-curso__adicionar--quiz {
   background: rgba(123, 47, 247, 0.16);
   color: var(--cor-texto-forte);
@@ -5216,24 +5237,6 @@
 .atividades-curso__adicionar--ia:focus-visible {
   outline: 2px solid var(--cor-ia);
   outline-offset: 2px;
-}
-
-/* Rodape do cartao (item 9, rodada 2): "Adicionar"/"Gerar quiz com IA" viram
-   uma faixa de ponta a ponta, mesmo padrao visual do bloco "Quizzes do
-   modulo" acima (--cor-fundo-alt + separador acima) - padding horizontal
-   proprio porque o cartao perdeu o padding lateral no item 3. Cantos
-   inferiores arredondados porque e sempre o ultimo bloco do corpo aberto do
-   modulo, encostado na borda de baixo do cartao. */
-.atividades-curso__adicionar-grupo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  padding: var(--espaco-sm) var(--espaco-md);
-  background: var(--cor-fundo-alt);
-  border-top: 1px solid var(--cor-borda);
-  border-radius: 0 0 var(--raio-md) var(--raio-md);
 }
 
 .atividades-curso__linha--acionavel {
@@ -9625,12 +9628,17 @@
   font-weight: 700;
 }
 
+/* Linha fina separando o cabecalho (migalha/titulo/resumo + acoes do
+   Professor, quando houver) do corpo - ref. docs/TelaConteudosProfessor/
+   modulo-cabecalho-opcao-a.png, numero 2. */
 .modulo-gestao__cabecalho {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--espaco-md);
+  padding-bottom: var(--espaco-md);
+  border-bottom: 1px solid var(--cor-borda);
 }
 
 .modulo-gestao__cabecalho-principal {
@@ -9753,12 +9761,38 @@
   height: 60%;
 }
 
+/* 1 linha com reticencias (nao mais 2 linhas) - docs/TelaConteudosProfessor/
+   PROMPT-agente-tela-modulo-voltar-selo-cartoes.md, item 3: um titulo longo
+   nao pode deixar o cartao dele mais alto que os outros. O nome completo
+   continua disponivel no `title` (tooltip nativo) de cada item. */
 .modulo-gestao__lista .atividades-curso__item-titulo {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  display: block;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Selo compacto (item 2): nos cartoes da lista, "Publicado"/"Rascunho"
+   fica do tamanho da linha "Texto ·" ao lado - o padrao de .insignia
+   (componentes.css) e feito pra ficar sozinho, maior que o texto da linha
+   aqui. So o tamanho muda; a cor de cada status (.insignia--sucesso etc.)
+   continua a mesma. O selo do painel da previa (PreviaItemAluno.jsx) nao
+   esta dentro de .modulo-gestao__lista, entao nao e afetado. */
+.modulo-gestao__lista .insignia {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+/* Barra "Selecionar tudo / Mais ações" fixa no topo da lista ao rolar - so
+   na tela do modulo do Professor (unica que tem selecao em lote aqui), ref.
+   docs/TelaConteudosProfessor/modulo-cabecalho-opcao-a.png, numero 3. Mesmo
+   fundo do painel (--cor-fundo-alt) pra nao deixar o conteudo por baixo
+   transparecendo atras da barra. */
+.modulo-gestao__lista .atividades-curso__barra-selecao {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--cor-fundo-alt);
 }
 
 /* A metrica do topo do modulo (Progresso/Conclusao) ja repete essa info -
@@ -10062,6 +10096,7 @@
 }
 
 .previa-item-aluno__pdf {
+  position: relative;
   display: flex;
   justify-content: center;
   max-height: 18.75rem;

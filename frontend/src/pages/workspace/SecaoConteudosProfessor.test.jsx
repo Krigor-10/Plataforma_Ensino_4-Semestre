@@ -195,6 +195,28 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(selosRascunho[0]).toBeVisible();
   });
 
+  // docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-voltar-selo-
+  // cartoes.md, item 3: titulo longo vira 1 linha com reticencias via CSS
+  // (text-overflow), mas o nome completo precisa continuar acessivel no
+  // `title` (tooltip nativo) - inclusive pro quiz dentro de um conteudo e
+  // pro quiz solto, nao so pro material.
+  test("titulo longo mantem o nome completo no atributo title, em material e quiz", () => {
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "ANALISE_DESENVOLV_SISTEMA_01", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "QUIZ_VINCULADO_DESENVOLV_SISTEMA_01", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 201, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "QUIZ_SOLTO_DESENVOLV_SISTEMA_01", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    const lista = document.querySelector(".modulo-gestao__lista");
+    expect(within(lista).getByText("ANALISE_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "ANALISE_DESENVOLV_SISTEMA_01");
+    expect(within(lista).getByText("QUIZ_VINCULADO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_VINCULADO_DESENVOLV_SISTEMA_01");
+    expect(within(lista).getByText("QUIZ_SOLTO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_SOLTO_DESENVOLV_SISTEMA_01");
+  });
+
   test("modulo vazio mostra o aviso no lugar da contagem", () => {
     const { container } = renderTrilha({ conteudos: [], moduloIdSelecionado: null });
 
@@ -635,6 +657,78 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     await usuario.click(screen.getByRole("button", { name: "Adicionar Quiz" }));
     expect(await screen.findByRole("dialog", { name: "Adicionar Quiz" })).toBeInTheDocument();
+  });
+
+  // docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-organizacao.md,
+  // item 1: os 3 botoes de adicionar saem do fim da lista e vao pro
+  // cabecalho, ao lado do titulo.
+  test('botoes de adicionar ficam no cabecalho do modulo, nao no fim da lista', () => {
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    const cabecalho = document.querySelector(".modulo-gestao__cabecalho");
+    expect(within(cabecalho).getByRole("button", { name: "Novo conteúdo" })).toBeInTheDocument();
+    expect(within(cabecalho).getByRole("button", { name: "Adicionar Quiz" })).toBeInTheDocument();
+    expect(within(cabecalho).getByRole("button", { name: "Gerar quiz com IA" })).toBeInTheDocument();
+
+    const lista = document.querySelector(".modulo-gestao__lista");
+    expect(within(lista).queryByRole("button", { name: "Novo conteúdo" })).not.toBeInTheDocument();
+    expect(within(lista).queryByRole("button", { name: "Adicionar Quiz" })).not.toBeInTheDocument();
+  });
+
+  test('"Gerar quiz com IA" so aparece com conteudo do tipo Texto ou PDF no modulo', () => {
+    const { rerender } = renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 3, titulo: "Aula em video", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    expect(screen.queryByRole("button", { name: "Gerar quiz com IA" })).not.toBeInTheDocument();
+
+    rerender(
+      trilhaJsx({
+        conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula em texto", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+      })
+    );
+
+    expect(screen.getByRole("button", { name: "Gerar quiz com IA" })).toBeInTheDocument();
+  });
+
+  // O menu agora abre em portal (MenuAcoes.jsx) - o jsdom nao calcula layout
+  // de verdade, mas confirma que o menu do ULTIMO item da lista e do quiz
+  // recuado dentro de um conteudo renderizam com todas as opcoes esperadas
+  // (nao e cortado/omitido por estar no fim da lista ou aninhado).
+  test("menu ⋮ do ultimo item da lista e do quiz dentro de um conteudo abrem com todas as opcoes", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [
+        { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID },
+        { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2 (ultima)", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz da Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Opções de Aula 2 (ultima)" }));
+    let menu = screen.getByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Editar",
+      "Voltar para rascunho",
+      "Mover para cima",
+      "Mover para baixo",
+      "Excluir"
+    ]);
+
+    await usuario.keyboard("{Escape}");
+
+    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz da Aula 1" }));
+    menu = screen.getByRole("menu");
+    expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Editar",
+      "Voltar para rascunho",
+      "Arquivar",
+      "Excluir"
+    ]);
   });
 
   test("menu de acoes do material abre e fecha pelo teclado, e Excluir abre a confirmacao", async () => {

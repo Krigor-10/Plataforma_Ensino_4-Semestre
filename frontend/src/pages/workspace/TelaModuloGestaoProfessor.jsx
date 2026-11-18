@@ -500,6 +500,22 @@ export default function TelaModuloGestaoProfessor({
             ) : null}
           </p>
         </div>
+
+        {!edicaoTravada ? (
+          <div className="atividades-curso__cabecalho-acoes">
+            {conteudosDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
+              <Botao className="atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(moduloAtual)} tamanho="pequeno">
+                <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
+              </Botao>
+            ) : null}
+            <Botao className="atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(moduloAtual)} tamanho="pequeno">
+              <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
+            </Botao>
+            <Botao onClick={() => onNovoConteudo(moduloAtual.id)} tamanho="pequeno" variante="primario">
+              <TbPlus aria-hidden="true" size={13} /> Novo conteúdo
+            </Botao>
+          </div>
+        ) : null}
       </header>
 
       {edicaoTravada ? (
@@ -509,19 +525,7 @@ export default function TelaModuloGestaoProfessor({
       ) : null}
 
       {moduloVazio ? (
-        <>
-          <p className="texto-vazio" role="status">Nenhum conteúdo neste módulo ainda.</p>
-          {!edicaoTravada ? (
-            <div className="atividades-curso__adicionar-grupo">
-              <Botao onClick={() => onNovoConteudo(moduloAtual.id)} tamanho="pequeno" variante="primario">
-                <TbPlus aria-hidden="true" size={13} /> Novo conteúdo
-              </Botao>
-              <Botao onClick={() => onGerenciarQuizModulo(moduloAtual)} tamanho="pequeno">
-                <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
-              </Botao>
-            </div>
-          ) : null}
-        </>
+        <p className="texto-vazio" role="status">Nenhum conteúdo neste módulo ainda.</p>
       ) : (
         <div className={`modulo-gestao__corpo${itemAberto ? " modulo-gestao__corpo--item-aberto" : ""}`}>
           <div className="modulo-gestao__lista">
@@ -603,7 +607,7 @@ export default function TelaModuloGestaoProfessor({
                             {obterIconeTipoConteudo(conteudo.tipoConteudo)}
                           </span>
                           <div className="atividades-curso__corpo">
-                            <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
+                            <strong className="atividades-curso__item-titulo" title={conteudo.titulo}>{conteudo.titulo}</strong>
                             <p className="atividades-curso__meta">
                               <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
                               <span aria-hidden="true" className="atividades-curso__separador">·</span>
@@ -714,7 +718,7 @@ export default function TelaModuloGestaoProfessor({
                             <TbTrophy aria-hidden="true" size="1.75rem" />
                           </span>
                           <div className="atividades-curso__corpo">
-                            <strong className="atividades-curso__item-titulo">{nomesQuizzesSoltos.get(quiz.id)}</strong>
+                            <strong className="atividades-curso__item-titulo" title={nomesQuizzesSoltos.get(quiz.id)}>{nomesQuizzesSoltos.get(quiz.id)}</strong>
                             <p className="atividades-curso__meta">
                               <span>Quiz</span>
                               <span aria-hidden="true" className="atividades-curso__separador">·</span>
@@ -730,22 +734,6 @@ export default function TelaModuloGestaoProfessor({
                   })}
                 </ul>
               </section>
-            ) : null}
-
-            {!edicaoTravada ? (
-              <div className="atividades-curso__adicionar-grupo">
-                <Botao className="atividades-curso__adicionar" onClick={() => onNovoConteudo(moduloAtual.id)} tamanho="pequeno" variante="primario">
-                  <TbPlus aria-hidden="true" size={13} /> Novo conteúdo
-                </Botao>
-                <Botao className="atividades-curso__adicionar atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(moduloAtual)} tamanho="pequeno">
-                  <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
-                </Botao>
-                {conteudosDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
-                  <Botao className="atividades-curso__adicionar atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(moduloAtual)} tamanho="pequeno">
-                    <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
-                  </Botao>
-                ) : null}
-              </div>
             ) : null}
           </div>
 

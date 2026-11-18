@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Document, Page } from "react-pdf";
 import { TbExternalLink, TbMaximize } from "react-icons/tb";
-import Botao from "./Botao.jsx";
 import GabaritoQuestoes from "./GabaritoQuestoes.jsx";
 import Insignia from "./Insignia.jsx";
 import { InlineMessage } from "./Primitives.jsx";
@@ -33,7 +32,7 @@ function PreviaMaterial({ conteudo }) {
       <>
         <div className="previa-item-aluno__imagem">
           <img alt={conteudo.titulo} className="previa-item-aluno__imagem-img" src={linkArquivo} />
-          <button className="previa-item-aluno__ampliar" onClick={() => setVisualizadorAberto(true)} type="button">
+          <button aria-label="Ampliar imagem" className="previa-item-aluno__ampliar" onClick={() => setVisualizadorAberto(true)} type="button">
             <TbMaximize aria-hidden="true" size="1rem" /> Ampliar
           </button>
         </div>
@@ -63,10 +62,10 @@ function PreviaMaterial({ conteudo }) {
           >
             <Page height={ALTURA_MIDIA_INLINE} pageNumber={1} />
           </Document>
+          <button aria-label="Ampliar PDF" className="previa-item-aluno__ampliar" onClick={() => setVisualizadorAberto(true)} type="button">
+            <TbMaximize aria-hidden="true" size="1rem" /> Ampliar
+          </button>
         </div>
-        <Botao onClick={() => setVisualizadorAberto(true)} tamanho="pequeno" variante="secundario">
-          Abrir PDF
-        </Botao>
         {visualizadorAberto ? (
           <VisualizadorPdf onFechar={() => setVisualizadorAberto(false)} titulo={conteudo.titulo} url={linkArquivo} />
         ) : null}

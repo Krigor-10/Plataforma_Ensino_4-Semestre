@@ -53,7 +53,10 @@ describe("PreviaItemAluno - imagem", () => {
     expect(imagem).toHaveAttribute("src", "https://cdn.teste/imagem.png");
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /Ampliar/ }));
+    const botaoAmpliar = screen.getByRole("button", { name: "Ampliar imagem" });
+    expect(botaoAmpliar).toHaveTextContent("Ampliar");
+
+    await userEvent.click(botaoAmpliar);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
@@ -65,13 +68,16 @@ describe("PreviaItemAluno - imagem", () => {
 });
 
 describe("PreviaItemAluno - PDF", () => {
-  test("mostra a 1a pagina embutida e o botao Abrir PDF", async () => {
+  test("mostra a 1a pagina embutida e o botao Ampliar (mesmo padrao da imagem)", async () => {
     render(<PreviaItemAluno item={materialItem(2, { arquivoUrl: "https://cdn.teste/arquivo.pdf" })} selo="Somente leitura" />);
 
     expect(screen.getByTestId("pdf-documento")).toBeInTheDocument();
     expect(screen.getByTestId("pdf-pagina")).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Abrir PDF" }));
+    const botaoAmpliar = screen.getByRole("button", { name: "Ampliar PDF" });
+    expect(botaoAmpliar).toHaveTextContent("Ampliar");
+
+    await userEvent.click(botaoAmpliar);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
