@@ -569,10 +569,12 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     await waitFor(() => expect(screen.getByText("Qual a resposta certa?")).toBeInTheDocument());
 
-    // O cartao da lista nao mostra mais "participante", mas o cabecalho da
-    // leitura continua mostrando (docs/bugs/PROMPT-agente-modulo-cartao-
-    // seta-e-metrica.md, item 3).
-    expect(screen.getByText(/Quiz · 1 questão · 1 participante/)).toBeInTheDocument();
+    // A previa (PreviaItemAluno) mostra o item exatamente como o aluno ve -
+    // sem metrica de participantes, que nao faz parte dessa visao (docs/
+    // TelaConteudosProfessor/PROMPT-agente-fluxo-professor-igual-
+    // coordenador.md, etapa 1). O tipo aparece em maiusculo no cabecalho.
+    expect(screen.getByText("QUIZ")).toBeInTheDocument();
+    expect(screen.queryByText(/participante/)).not.toBeInTheDocument();
 
     const itemAlternativaCerta = screen.getByText(
       (_, element) =>

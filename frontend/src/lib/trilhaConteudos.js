@@ -1,6 +1,60 @@
 // Helpers compartilhados entre as trilhas de Conteudos do Professor
-// (SecaoConteudosProfessor.jsx) e do Aluno (SecoesAluno.jsx), extraidos pra
-// nao duplicar a mesma logica de normalizacao/titulo-generico nas duas telas.
+// (SecaoConteudosProfessor.jsx/TelaModuloGestaoProfessor.jsx) e do Aluno
+// (SecoesAluno.jsx), extraidos pra nao duplicar a mesma logica de
+// normalizacao/titulo-generico/status entre as telas (e pra SecaoConteudos
+// Professor.jsx e TelaModuloGestaoProfessor.jsx nao precisarem de import
+// circular um do outro).
+
+export const STATUS_RASCUNHO = 1;
+export const STATUS_PUBLICADO = 2;
+export const STATUS_ARQUIVADO = 3;
+
+export const TITULO_LOTE_POR_ACAO = {
+  publicar: "Publicar selecionados",
+  rascunho: "Voltar para rascunho",
+  arquivar: "Arquivar selecionados",
+  excluir: "Excluir selecionados"
+};
+
+export function montarPayloadConteudo(conteudo, overrides = {}) {
+  return {
+    titulo: conteudo.titulo,
+    descricao: conteudo.descricao || "",
+    tipoConteudo: Number(conteudo.tipoConteudo),
+    corpoTexto: conteudo.corpoTexto || "",
+    arquivoUrl: conteudo.arquivoUrl || "",
+    linkUrl: conteudo.linkUrl || "",
+    moduloId: conteudo.moduloId,
+    statusPublicacao: Number(conteudo.statusPublicacao),
+    ordemExibicao: conteudo.ordemExibicao ?? 0,
+    pesoProgresso: conteudo.pesoProgresso ?? 1,
+    ...overrides
+  };
+}
+
+// Espelha montarDadosEnvioAvaliacao (AssistenteQuizAvaliacao.jsx) - mesmos campos
+// que o PUT /Avaliacoes/{id} exige, reaproveitando os dados que o quiz ja tem pra
+// trocar so o status (publicar/voltar a rascunho/restaurar) sem abrir o modal
+// inteiro. Nao e rota nova, e o mesmo PUT que o modal ja usa pra salvar.
+export function montarPayloadAvaliacao(quiz, overrides = {}) {
+  return {
+    titulo: quiz.titulo,
+    descricao: quiz.descricao || "",
+    cursoId: quiz.cursoId,
+    moduloId: quiz.moduloId ?? null,
+    conteudoDidaticoId: quiz.conteudoDidaticoId ?? null,
+    tipoAvaliacao: Number(quiz.tipoAvaliacao),
+    statusPublicacao: Number(quiz.statusPublicacao),
+    dataAbertura: quiz.dataAbertura || null,
+    dataFechamento: quiz.dataFechamento || null,
+    tentativasPermitidas: quiz.tentativasPermitidas ?? 1,
+    tempoLimiteMinutos: quiz.tempoLimiteMinutos ?? null,
+    notaMaxima: quiz.notaMaxima ?? 10,
+    pesoNota: quiz.pesoNota ?? 1,
+    pesoProgresso: quiz.pesoProgresso ?? 1,
+    ...overrides
+  };
+}
 
 export function normalizarTextoComparavel(texto) {
   return (texto || "")

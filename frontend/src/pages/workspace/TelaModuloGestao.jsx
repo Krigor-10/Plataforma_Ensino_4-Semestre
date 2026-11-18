@@ -4,7 +4,7 @@ import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import { obterIconeTipoConteudo } from "../../components/PreviaTrilhaAluno.jsx";
-import LeituraItemConteudo from "../../components/LeituraItemConteudo.jsx";
+import PreviaItemAluno from "../../components/PreviaItemAluno.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useLarguraJanela } from "../../hooks/useLarguraJanela.js";
@@ -68,31 +68,17 @@ function montarItensDoModulo(moduloRevisao) {
   return { conteudos, quizzes };
 }
 
-// Quiz e de fixacao, sem nota - nao faz sentido mostrar "Media" (prompt
-// modulo-tela-melhorias.md, achado 5).
-function metricaQuiz(metricaQuizPorId, quiz) {
-  const metrica = metricaQuizPorId.get(quiz.id);
-  if (!metrica) {
-    return "—";
-  }
-
-  const total = metrica.totalParticipantes || 0;
-  if (total === 0) {
-    return "Nenhum participante ainda";
-  }
-
-  return `${total} participante${total === 1 ? "" : "s"}`;
-}
-
 /* Tela do modulo (Admin/Coordenador) - docs/fluxo-coordenador/PROMPT-agente-
    modulo-tela-propria.md (fluxo original) + PROMPT-agente-modulo-tela-
    melhorias.md (relevo, leitura ocupando o lado direito inteiro,
-   responsividade 1024/768). Mostrada por PainelCursoGestao.jsx no lugar do
-   conteudo normal do curso quando ha moduloIdSelecionado. A lista vem de
-   GET /Cursos/{id}/revisao-conteudo (so publicado, carregado uma vez e
-   reaproveitado pelo curso inteiro - ver PainelCursoGestao); as metricas vem
-   do /desempenho que o curso ja carrega, ligadas por conteudoDidaticoId/
-   avaliacaoId. */
+   responsividade 1024/768) + docs/TelaConteudosProfessor/PROMPT-agente-
+   fluxo-professor-igual-coordenador.md, etapa 1 (painel vira PreviaItemAluno,
+   "como o aluno ve", em vez de so tipo+"Abrir arquivo"). Mostrada por
+   PainelCursoGestao.jsx no lugar do conteudo normal do curso quando ha
+   moduloIdSelecionado. A lista vem de GET /Cursos/{id}/revisao-conteudo (so
+   publicado, carregado uma vez e reaproveitado pelo curso inteiro - ver
+   PainelCursoGestao); as metricas dos KPIs do cabecalho vem do /desempenho
+   que o curso ja carrega, ligadas por conteudoDidaticoId/avaliacaoId. */
 export default function TelaModuloGestao({
   curso,
   desempenho,
@@ -136,11 +122,6 @@ export default function TelaModuloGestao({
   const desempenhoModulo = useMemo(
     () => desempenho?.modulos?.find((modulo) => modulo.moduloId === moduloId) || null,
     [desempenho, moduloId]
-  );
-
-  const metricaQuizPorId = useMemo(
-    () => new Map((desempenhoModulo?.avaliacoes || []).map((avaliacao) => [avaliacao.avaliacaoId, avaliacao])),
-    [desempenhoModulo]
   );
 
   const moduloRevisao = useMemo(
@@ -324,15 +305,7 @@ export default function TelaModuloGestao({
                   </button>
                 </div>
 
-                <LeituraItemConteudo
-                  item={itemAberto}
-                  meta={
-                    itemAberto.tipo === "quiz"
-                      ? `Quiz · ${itemAberto.quiz.totalQuestoes || 0} ${itemAberto.quiz.totalQuestoes === 1 ? "questão" : "questões"} · ${metricaQuiz(metricaQuizPorId, itemAberto.quiz)}`
-                      : undefined
-                  }
-                  questoes={itemAberto.questoes}
-                />
+                <PreviaItemAluno item={itemAberto} questoes={itemAberto.questoes} selo="Somente leitura" />
 
                 <footer className="modal-rodape modulo-gestao__painel-rodape">
                   <Botao

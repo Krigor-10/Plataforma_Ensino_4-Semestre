@@ -29,13 +29,16 @@ function anexosArquivo(questao) {
 }
 
 /* Extraido de PreviaTrilhaAluno.jsx (fluxo-coordenador Parte 3/3) pra ser
-   reaproveitado tambem pela leitura do modulo (LeituraItemConteudo.jsx) e
-   pela tela da avaliacao (TelaAvaliacaoGestao.jsx) - mesmo gabarito, so
-   mudou onde e renderizado:
+   reaproveitado tambem pela previa de um item (PreviaItemAluno.jsx,
+   docs/TelaConteudosProfessor/PROMPT-agente-fluxo-professor-igual-
+   coordenador.md) e pela tela da avaliacao (TelaAvaliacaoGestao.jsx) - mesmo
+   gabarito, so mudou onde e renderizado:
    - `compacto` (docs/fluxo-coordenador/PROMPT-agente-modulo-leitura-
-     compacta.md) e usado so pela leitura do modulo: cabecalho "QUESTAO N" +
-     pilula "Resposta: X", sem os rotulos "Alternativas"/"Explicacao" em
-     cima. A previa do Professor continua no formato padrao.
+     compacta.md): cabecalho "QUESTAO N" + pilula "Resposta: X", sem os
+     rotulos "Alternativas"/"Explicacao" em cima. So usado hoje junto com
+     `mostrarFicha` (tela da avaliacao, abaixo) - a previa de um item
+     (PreviaItemAluno) e a previa do Professor continuam no formato padrao,
+     igual ao que o aluno ve.
    - `mostrarFicha`/`numeroInicial` (docs/fluxo-coordenador/PROMPT-agente-
      avaliacao-tela-propria.md + ...-avaliacao-tela-limpa.md + ...-
      avaliacao-figura-layout.md) sao usados so pela tela da avaliacao, que

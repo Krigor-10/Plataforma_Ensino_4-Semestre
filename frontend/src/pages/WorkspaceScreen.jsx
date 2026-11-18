@@ -140,11 +140,18 @@ export default function WorkspaceScreen({
     // Tela do modulo e tela da avaliacao (Admin/Coordenador, docs/fluxo-
     // coordenador/PROMPT-agente-modulo-tela-propria.md e ...-avaliacao-tela-
     // propria.md): /app/cursos/:id/modulos/:moduloId e /app/cursos/:id/
-    // avaliacoes/:avaliacaoId sao os unicos casos validos de subsecao/subparam
-    // hoje - qualquer outra combinacao continua cortada pro canonico so com
-    // section/param, como antes.
+    // avaliacoes/:avaliacaoId. Professor ganhou a mesma tela do modulo em
+    // /app/conteudos/:id/modulos/:moduloId (docs/TelaConteudosProfessor/
+    // PROMPT-agente-fluxo-professor-igual-coordenador.md, etapa 2) - sem essa
+    // segunda condicao, este efeito cortava o /modulos/:moduloId de volta pro
+    // canonico so com section/param assim que o professor clicava num modulo
+    // (tela "piscava" e voltava pra lista). Qualquer outra combinacao
+    // continua cortada, como antes.
     const temModuloNaRota =
-      activeSection === "cursos" && Boolean(route.param) && route.subsecao === "modulos" && Boolean(route.subparam);
+      (activeSection === "cursos" || activeSection === "conteudos") &&
+      Boolean(route.param) &&
+      route.subsecao === "modulos" &&
+      Boolean(route.subparam);
     const temAvaliacaoNaRota =
       activeSection === "cursos" && Boolean(route.param) && route.subsecao === "avaliacoes" && Boolean(route.subparam);
     const subsecaoNaRota = temModuloNaRota
@@ -786,6 +793,7 @@ export default function WorkspaceScreen({
                   conteudos={snapshot.conteudos}
                   cursoIdSelecionado={route.param ? Number(route.param) : null}
                   cursos={snapshot.cursos}
+                  moduloIdSelecionado={route.subsecao === "modulos" && route.subparam ? Number(route.subparam) : null}
                   modulos={snapshot.modulos}
                   onNavigate={onNavigate}
                   onRefresh={() => setRefreshKey((current) => current + 1)}

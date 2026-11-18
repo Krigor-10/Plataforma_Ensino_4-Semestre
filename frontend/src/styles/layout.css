@@ -34,6 +34,15 @@
   padding-top: calc(var(--altura-topbar) + 44px + var(--espaco-xl));
 }
 
+/* Tela do modulo (Professor/Coordenador/Admin, ref. docs/
+   TelaConteudosProfessor/modulo-compacto-exemplo.png): so essa tela ganha
+   mais largura (ate ~1600px, no lugar dos 1280px padrao) - o espaco extra vai pra
+   previa (.modulo-gestao__painel, flex:1), a lista continua com largura
+   fixa (ver .modulo-gestao__lista em workspace.css). */
+.layout-principal:has(.modulo-gestao) {
+  max-width: 1600px;
+}
+
 /* ------------------------------------------------------------
    TOPBAR
    ------------------------------------------------------------ */

@@ -4251,13 +4251,13 @@
   --quiz-vinculado-curva-largura: calc(var(--coluna-icone-conteudo) / 2 + var(--espaco-md) - 0.3rem);
 }
 
-/* So o Professor (TrilhaConteudosProfessor) tem caixa de selecao - nem a
-   trilha real do Aluno (SlideConteudosCurso) nem a previa "Visualizar como
-   aluno" (PreviaTrilhaAluno) tem, mesmo as duas tambem usando
-   .trilha-conteudos. 16px e so o tamanho de .tabela-checkbox - em telas de
-   toque, o alvo de clique de .atividades-curso__checkbox-alvo cresce pra
-   2.75rem (ver @media hover:none abaixo), que e o que realmente empurra a
-   coluna seguinte. */
+/* So o Professor (ListaModulosProfessor/TelaModuloGestaoProfessor) tem caixa
+   de selecao - nem a trilha real do Aluno (SlideConteudosCurso) nem a previa
+   "Visualizar como aluno" (PreviaTrilhaAluno) tem, mesmo as duas tambem
+   usando .trilha-conteudos. 16px e so a coluna reservada pra caixa (um pouco
+   maior que os 14px de .tabela-checkbox, de proposito) - em telas de toque, o
+   alvo de clique de .atividades-curso__checkbox-alvo cresce pra 2.75rem (ver
+   @media hover:none abaixo), que e o que realmente empurra a coluna seguinte. */
 .trilha-conteudos--editavel {
   --coluna-checkbox-conteudo: 16px;
 }
@@ -9123,14 +9123,69 @@
 }
 
 /* ------------------------------------------------------------
-   TABELA — checkbox nativo (matriculas em lote)
+   TABELA — checkbox customizado (tela de modulo do professor,
+   docs/TelaConteudosProfessor/PROMPT-agente-fluxo-professor-igual-
+   coordenador.md, etapa 3 item 5). appearance:none pra desenhar o quadrado
+   escuro com o check/traço via pseudo-elemento em vez do checkbox nativo do
+   navegador - o alvo de toque continua em .atividades-curso__checkbox-alvo,
+   sem mudanca.
    ------------------------------------------------------------ */
 .tabela-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--cor-marca);
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 0.25rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.25);
   cursor: pointer;
-  display: block;
+  position: relative;
+}
+
+.tabela-checkbox:checked,
+.tabela-checkbox:indeterminate {
+  border-color: var(--cor-marca);
+  background: var(--cor-marca);
+}
+
+.tabela-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 0.01rem;
+  width: 0.25rem;
+  height: 0.45rem;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.tabela-checkbox:indeterminate::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.1rem;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.tabela-checkbox:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
+}
+
+[data-tema="claro"] .tabela-checkbox {
+  border-color: rgba(0, 0, 0, 0.3);
+  background: #fff;
+}
+
+[data-tema="claro"] .tabela-checkbox:checked,
+[data-tema="claro"] .tabela-checkbox:indeterminate {
+  border-color: var(--cor-marca);
+  background: var(--cor-marca);
 }
 
 /* ------------------------------------------------------------
@@ -9676,8 +9731,34 @@
   overflow: hidden;
 }
 
-.modulo-gestao__item-cartao .atividades-curso__linha--acionavel {
-  padding: var(--espaco-sm) var(--espaco-md);
+/* Cartao compacto (docs/TelaConteudosProfessor/PROMPT-agente-modulo-
+   compacto-espaco.md, item 3): padding menor, icone menor e titulo em no
+   maximo 2 linhas, so na lista da tela do modulo (Professor e Coordenador/
+   Admin, que reaproveitam a mesma classe) - nao mexe em nada disso nas
+   outras telas que tambem tem .atividades-curso__item. Escopado em
+   .modulo-gestao__lista (nao .modulo-gestao__item-cartao) pra cobrir
+   tambem o quiz vinculado a um material, que fica recuado dentro do
+   cartao do material em vez de ser o proprio cartao. */
+.modulo-gestao__lista .atividades-curso__linha--acionavel {
+  padding: 0.5rem var(--espaco-sm);
+}
+
+.modulo-gestao__lista .atividades-curso__icone {
+  width: 2rem;
+  height: 2rem;
+}
+
+.modulo-gestao__lista .atividades-curso__icone svg {
+  width: 60%;
+  height: 60%;
+}
+
+.modulo-gestao__lista .atividades-curso__item-titulo {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 /* A metrica do topo do modulo (Progresso/Conclusao) ja repete essa info -
@@ -9819,6 +9900,17 @@
     height: calc(100dvh - var(--altura-topbar) - (var(--espaco-xl) * 2));
   }
 
+  /* Secoes com abas (ex.: Conteudos do Professor, dentro do grupo
+     "Academico") somam mais 44px de altura fixa acima do conteudo
+     (.layout-principal--com-tabs, layout.css) - sem descontar isso aqui, o
+     rodape (Modulo anterior/Proximo modulo) passava da altura visivel da
+     tela (ref. docs/TelaConteudosProfessor/modulo-compacto-exemplo.png,
+     numero 6). A tela do modulo do Coordenador/Admin (Cursos, sem abas) nao
+     tem essa classe no ancestral, entao nao e afetada. */
+  .layout-principal--com-tabs .modulo-gestao {
+    height: calc(100dvh - var(--altura-topbar) - 44px - (var(--espaco-xl) * 2));
+  }
+
   .modulo-gestao__corpo {
     flex-direction: row;
     align-items: stretch;
@@ -9855,18 +9947,21 @@
 
 @media (min-width: 1024px) {
   .modulo-gestao__lista {
-    width: 400px;
+    width: 360px;
   }
 }
 
 /* ------------------------------------------------------------
-   LEITURA DE UM ITEM (material ou quiz) — components/
-   LeituraItemConteudo.jsx, reaproveitado pelo painel lateral da
-   tela do modulo acima. Cabecalho (titulo/meta/selo) e rodape
-   ficam fixos; so o corpo (material ou gabarito do quiz) rola -
-   ver .modulo-gestao__painel-rodape acima, que e o rodape de verdade.
+   PREVIA DE UM ITEM COMO O ALUNO VE (material ou quiz) —
+   components/PreviaItemAluno.jsx, reaproveitada pelo painel lateral da
+   tela do modulo acima (Coordenador/Admin, selo "Somente leitura") e pela
+   tela do modulo do professor (selo Publicado/Rascunho, aviso e rodape de
+   acoes) - docs/TelaConteudosProfessor/PROMPT-agente-fluxo-professor-igual-
+   coordenador.md, etapa 1. Cabecalho (titulo/tipo/selo) fica fixo; so o
+   corpo (material ou gabarito do quiz) rola - ver .modulo-gestao__painel-
+   rodape acima, que e o rodape de verdade da tela do modulo.
    ------------------------------------------------------------ */
-.leitura-item {
+.previa-item-aluno {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -9874,7 +9969,7 @@
   gap: var(--espaco-sm);
 }
 
-.leitura-item__cabecalho {
+.previa-item-aluno__cabecalho {
   display: flex;
   flex-wrap: wrap;
   flex-shrink: 0;
@@ -9883,67 +9978,146 @@
   gap: var(--espaco-sm);
 }
 
-.leitura-item__cabecalho-texto {
+.previa-item-aluno__cabecalho-texto {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
 }
 
-.leitura-item__titulo {
+.previa-item-aluno__titulo {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
+  overflow-wrap: anywhere;
 }
 
-.leitura-item__meta {
+.previa-item-aluno__tipo {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--cor-texto-mudo);
-}
-
-.leitura-item__material,
-.leitura-item__quiz {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.leitura-item__material {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-xs);
-}
-
-.leitura-item__material-tipo {
-  font-size: 0.78rem;
   color: var(--cor-texto-mudo);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.leitura-item__material-descricao {
+.previa-item-aluno__corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.previa-item-aluno__texto {
   font-size: 0.9rem;
   color: var(--cor-texto-suave);
   line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.leitura-item__abrir-arquivo {
-  align-self: flex-start;
-  margin-top: var(--espaco-xs);
-  padding: 0.5rem 1rem;
+.previa-item-aluno__vazio {
+  font-size: 0.9rem;
+  color: var(--cor-texto-mudo);
+}
+
+.previa-item-aluno__imagem {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 18.75rem;
+  border-radius: var(--raio-md);
+  background: #000;
+  overflow: hidden;
+}
+
+.previa-item-aluno__imagem-img {
+  width: 100%;
+  max-height: 18.75rem;
+  object-fit: contain;
+}
+
+.previa-item-aluno__ampliar {
+  position: absolute;
+  right: var(--espaco-sm);
+  bottom: var(--espaco-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.7rem;
+  border: none;
+  border-radius: var(--raio-md);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.previa-item-aluno__ampliar:hover {
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.previa-item-aluno__pdf {
+  display: flex;
+  justify-content: center;
+  max-height: 18.75rem;
+  overflow: hidden;
   border-radius: var(--raio-md);
   border: 1px solid var(--cor-borda);
   background: var(--cor-fundo-elevado);
-  color: var(--cor-texto-forte);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: none;
 }
 
-.leitura-item__abrir-arquivo:hover {
-  border-color: var(--cor-marca);
-  color: var(--cor-marca-clara);
+.previa-item-aluno__pdf-indisponivel {
+  padding: var(--espaco-md);
+  font-size: 0.85rem;
+  color: var(--cor-texto-mudo);
+}
+
+.previa-item-aluno__video {
+  width: 100%;
+  max-height: 18.75rem;
+  border-radius: var(--raio-md);
+  background: #000;
+}
+
+.previa-item-aluno__link-cartao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-md);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+}
+
+.previa-item-aluno__link-endereco {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.previa-item-aluno__rodape {
+  flex-shrink: 0;
+  margin-top: var(--espaco-sm);
+}
+
+/* Rodape do professor (TelaModuloGestaoProfessor.jsx): Editar/Publicar fica
+   numa linha acima do Anterior/Proximo (que reaproveita .modulo-gestao__
+   painel-rodape, ja compartilhado com o Coordenador). */
+.previa-item-aluno__acoes-professor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espaco-sm);
+  margin-bottom: var(--espaco-sm);
 }
 
 /* Questoes do gabarito em 2 colunas quando a LEITURA (nao a janela) tiver
@@ -9963,13 +10137,14 @@
 }
 
 /* ------------------------------------------------------------
-   GABARITO COMPACTO — components/GabaritoQuestoes.jsx com
-   `compacto`, usado so pela leitura do modulo (LeituraItemConteudo).
-   Cabecalho "QUESTAO N" + pilula "Resposta: X", sem os rotulos
-   "Alternativas"/"Explicacao" em cima, letra em circulo e menos
-   espaco por questao - docs/fluxo-coordenador/PROMPT-agente-modulo-
-   leitura-compacta.md, item 4. A previa do Professor (PreviaTrilhaAluno)
-   nao usa essa variante.
+   GABARITO COMPACTO — components/GabaritoQuestoes.jsx com `compacto`,
+   usado hoje so junto com `mostrarFicha` pela tela da avaliacao
+   (TelaAvaliacaoGestao.jsx). Cabecalho "QUESTAO N" + pilula "Resposta: X",
+   sem os rotulos "Alternativas"/"Explicacao" em cima, letra em circulo e
+   menos espaco por questao - docs/fluxo-coordenador/PROMPT-agente-modulo-
+   leitura-compacta.md, item 4 (nasceu aqui, mas a previa de um item
+   (PreviaItemAluno.jsx) e a previa do Professor (PreviaTrilhaAluno) usam o
+   formato padrao, igual ao que o aluno ve).
    ------------------------------------------------------------ */
 .revisao-avaliacao--compacta .revisao-questao {
   padding: 0.75rem 0.875rem;
