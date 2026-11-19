@@ -510,37 +510,27 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(screen.queryByRole("button", { name: /Ver conteúdo/ })).not.toBeInTheDocument();
   });
 
-  test("migalha, titulo, KPIs e secoes Conteudos/Quizzes com as metricas do modulo (singular/plural, sem Media no quiz)", async () => {
+  test("trilha substitui a migalha, cabecalho mostra titulo e resumo (singular/plural), sem Media/participante", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    // "← Voltar" pelo componente padrao (BotaoVoltar.jsx), nao mais um botao
-    // so com seta dentro do caminho - docs/fluxo-coordenador/PROMPT-agente-
-    // modulo-caminho-e-voltar.md.
-    expect(screen.getByRole("button", { name: "Voltar para Módulos" })).toBeInTheDocument();
+    // "← {curso}" no topo da trilha substitui o BotaoVoltar + migalha
+    // (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-trilha-versao-b.md).
+    expect(await screen.findByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Caminho até o módulo" })).not.toBeInTheDocument();
 
-    const migalha = await screen.findByRole("navigation", { name: "Caminho até o módulo" });
-    expect(within(migalha).getByRole("button", { name: "Cursos" })).toBeInTheDocument();
-    expect(within(migalha).getByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
-    expect(within(migalha).getByText("Modulo A")).toBeInTheDocument();
-    expect(within(migalha).getAllByRole("button")).toHaveLength(2);
-
-    // O caminho entrou pro header (alinha com os KPIs, docs/fluxo-
-    // coordenador/PROMPT-agente-avaliacao-tela-limpa.md, item 1).
-    expect(migalha.closest("header")).toHaveClass("modulo-gestao__cabecalho");
+    const cabecalho = screen.getByRole("heading", { level: 2 }).closest("header");
+    expect(cabecalho).toHaveClass("modulo-gestao__cabecalho");
+    expect(within(cabecalho).getByText("Modulo A")).toBeInTheDocument();
+    expect(within(cabecalho).getByText("1 conteúdo · 1 quiz")).toBeInTheDocument();
 
     expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();
-    expect(screen.getByText("60%")).toBeInTheDocument();
 
-    // Cartoes do modulo (docs/fluxo-coordenador/PROMPT-agente-modulo-
-    // cartao-seta-e-metrica.md): sem a linha de concluintes/participantes,
-    // ja repetida pelos KPIs do topo (Progresso/Conclusao).
     expect(screen.queryByText(/alunos? conclu[ií]u?ram?/)).not.toBeInTheDocument();
     expect(screen.queryByText(/participante/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Média/)).not.toBeInTheDocument();
-    expect(screen.getByText("Quiz · 1 questão")).toBeInTheDocument();
 
     // Desktop (jsdom default >= 768px): o 1o item (Material revisado) ja
     // abre sozinho, sem precisar clicar - prompt-agente-modulo-tela-
@@ -648,16 +638,15 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     window.dispatchEvent(new Event("resize"));
   });
 
-  test("modulo sem nada publicado mostra o aviso e o rodape de modulo anterior/proximo navega", async () => {
+  test("modulo sem nada publicado mostra o aviso e clicar em outro modulo fechado na trilha navega para ele", async () => {
     mockApi(DESEMPENHO);
     const onNavigate = vi.fn();
 
     renderPainel({ moduloIdSelecionado: 2, onNavigate });
 
     expect(await screen.findByText("Este módulo ainda não tem conteúdo publicado.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Módulo anterior/ })).toBeDisabled();
 
-    await userEvent.click(screen.getByRole("button", { name: /Próximo módulo: Modulo A/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Modulo A/ }));
     expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/modulos/1");
   });
 

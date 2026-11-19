@@ -89,8 +89,8 @@ describe("WorkspaceScreen - rota canonica preserva /modulos/:id", () => {
       route: { kind: "app", section: "cursos", param: "12", subsecao: "modulos", subparam: "34" }
     });
 
-    const migalha = await screen.findByRole("navigation", { name: "Caminho até o módulo" });
-    expect(within(migalha).getByText("Modulo Teste")).toBeInTheDocument();
+    const cabecalho = await screen.findByRole("heading", { level: 2 });
+    expect(within(cabecalho).getByText("Modulo Teste")).toBeInTheDocument();
     expect(onNavigate).not.toHaveBeenCalledWith("/app/cursos/12", { replace: true });
   });
 

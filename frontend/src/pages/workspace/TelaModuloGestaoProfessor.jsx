@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbArrowRight, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
+import { TbArrowLeft, TbArrowRight, TbChevronDown, TbChevronRight, TbListCheck, TbPlus, TbSparkles, TbTrophy, TbX } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
-import BotaoVoltar from "../../components/BotaoVoltar.jsx";
-import Insignia from "../../components/Insignia.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
@@ -12,7 +10,6 @@ import { InlineMessage } from "../../components/Primitives.jsx";
 import { useLarguraJanela } from "../../hooks/useLarguraJanela.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
-import { normalizeContentType } from "../../lib/format.js";
 import {
   montarNomesExibicaoQuizzesVinculados,
   montarPayloadAvaliacao,
@@ -79,14 +76,32 @@ function montarItensOrdenados(conteudosDoModulo, quizzesPorConteudoId, quizzesSo
   return itens;
 }
 
-/* Tela do modulo do professor (docs/TelaConteudosProfessor/PROMPT-agente-
-   fluxo-professor-igual-coordenador.md, etapa 2) - mesmo formato de
-   TelaModuloGestao.jsx (Coordenador/Admin: lista a esquerda, previa "como o
-   aluno ve" a direita), mas com rascunhos visiveis e as ferramentas de edicao
-   de hoje (selecao em lote, menu de cada item, criar conteudo/quiz). Os
-   handlers (onAbrirEdicao, onAlternarPublicacao etc.) e os modais que eles
-   abrem (criar/editar conteudo, excluir, assistente de quiz/IA) continuam
-   todos em SecaoConteudosProfessor.jsx, compartilhados com ListaModulosProfessor -
+// Ponto colorido + texto pequeno (verde/ambar) no lugar do selo .insignia -
+// docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-trilha-versao-b.md,
+// item 1.4. Mesma logica de cor que o selo ja usava (sucesso/aviso), so o
+// desenho muda.
+function StatusPonto({ publicado }) {
+  return (
+    <span className="modulo-gestao__trilha-item-status">
+      <span
+        aria-hidden="true"
+        className={`modulo-gestao__status-ponto modulo-gestao__status-ponto--${publicado ? "publicado" : "rascunho"}`}
+      />
+      {publicado ? "Publicado" : "Rascunho"}
+    </span>
+  );
+}
+
+/* Tela do modulo do professor - versao B (docs/TelaConteudosProfessor/
+   PROMPT-agente-tela-modulo-trilha-versao-b.md): trilha com TODOS os modulos
+   do curso a esquerda (module atual aberto com os itens dentro, os outros
+   fechados e clicaveis pra trocar de modulo sem voltar pra lista), previa
+   larga a direita com as acoes (Editar/Publicar) no topo do painel. A
+   selecao em lote fica escondida atras do botao "Selecionar" (modoSelecao) -
+   so aparece quando o professor liga. Os handlers (onAbrirEdicao,
+   onAlternarPublicacao etc.) e os modais que eles abrem (criar/editar
+   conteudo, excluir, assistente de quiz/IA) continuam todos em
+   SecaoConteudosProfessor.jsx, compartilhados com ListaModulosProfessor -
    esta tela so os aciona. */
 export default function TelaModuloGestaoProfessor({
   acaoEmAndamentoId,
@@ -114,6 +129,7 @@ export default function TelaModuloGestaoProfessor({
   const leituraFixa = larguraJanela >= LARGURA_MINIMA_LEITURA_FIXA;
 
   const [itemAbertoId, setItemAbertoId] = useState(null);
+  const [modoSelecao, setModoSelecao] = useState(false);
   const [itensSelecionados, setItensSelecionados] = useState(() => new Set());
   const [loteConfirmacao, setLoteConfirmacao] = useState(null);
   const [loteExecutando, setLoteExecutando] = useState(false);
@@ -123,9 +139,6 @@ export default function TelaModuloGestaoProfessor({
 
   const indiceModuloAtual = modulosOrdenados.findIndex((modulo) => modulo.id === moduloId);
   const moduloAtual = indiceModuloAtual >= 0 ? modulosOrdenados[indiceModuloAtual] : null;
-  const moduloAnterior = indiceModuloAtual > 0 ? modulosOrdenados[indiceModuloAtual - 1] : null;
-  const moduloProximo =
-    indiceModuloAtual >= 0 && indiceModuloAtual < modulosOrdenados.length - 1 ? modulosOrdenados[indiceModuloAtual + 1] : null;
 
   const { conteudosDoModulo, quizzesDoModulo, quizzesPorConteudoId, quizzesSoltos } = useMemo(
     () => montarDadosDoModulo(moduloId, conteudos, avaliacoes),
@@ -138,6 +151,7 @@ export default function TelaModuloGestaoProfessor({
 
   useEffect(() => {
     setItemAbertoId(null);
+    setModoSelecao(false);
     setItensSelecionados(new Set());
     setLoteFalhas([]);
   }, [moduloId]);
@@ -220,6 +234,11 @@ export default function TelaModuloGestaoProfessor({
 
   function irParaModulo(id) {
     onNavigate?.(`/app/conteudos/${cursoAtivo.curso.id}/modulos/${id}`);
+  }
+
+  function sairDoModoSelecao() {
+    setModoSelecao(false);
+    setItensSelecionados(new Set());
   }
 
   function alternarSelecaoItem(tipo, id) {
@@ -358,7 +377,7 @@ export default function TelaModuloGestaoProfessor({
   const totalRascunhos = [...conteudosDoModulo, ...quizzesDoModulo].filter(
     (item) => Number(item.statusPublicacao) === STATUS_RASCUNHO
   ).length;
-  const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"} · módulo ${indiceModuloAtual + 1} de ${modulosOrdenados.length}`;
+  const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"}${totalRascunhos > 0 ? ` · ${totalRascunhos} rascunho${totalRascunhos === 1 ? "" : "s"}` : ""}`;
 
   const chavesSelecionaveis = [
     ...conteudosDoModulo.map((item) => chaveItem("material", item.id)),
@@ -472,342 +491,311 @@ export default function TelaModuloGestaoProfessor({
 
   const nomesQuizzesSoltos = montarNomesExibicaoQuizzesVinculados(quizzesSoltos, moduloAtual.titulo);
 
-  return (
-    <div className="modulo-gestao">
-      <BotaoVoltar destino="Módulos" onClick={voltarParaModulos} />
-
-      <header className="modulo-gestao__cabecalho">
-        <div className="modulo-gestao__cabecalho-principal">
-          <nav aria-label="Caminho até o módulo" className="modulo-gestao__migalha">
-            <button onClick={() => onNavigate?.("/app/conteudos")} type="button">
-              Conteúdos
-            </button>
-            <span aria-hidden="true">›</span>
-            <button onClick={voltarParaModulos} title={cursoAtivo.curso.titulo} type="button">
-              {cursoAtivo.curso.titulo}
-            </button>
-            <span aria-hidden="true">›</span>
-            <span aria-current="page">{moduloAtual.titulo}</span>
-          </nav>
-
-          <h2 className="modulo-gestao__titulo">
-            <NumeroModulo indice={indiceModuloAtual} /> {moduloAtual.titulo}
-          </h2>
-          <p className="modulo-gestao__resumo">
-            {resumoModulo}
-            {totalRascunhos > 0 ? (
-              <span style={{ color: "var(--cor-aviso)", fontWeight: 600 }}> · {totalRascunhos} rascunho{totalRascunhos === 1 ? "" : "s"}</span>
-            ) : null}
-          </p>
+  // Linha de 1 item da trilha (material ou quiz, vinculado ou solto) - usada
+  // nas 3 situacoes abaixo pra nao repetir a mesma marcacao 3x. `titulo` e o
+  // texto exibido (pode ser o nome generico "Quiz do conteúdo" quando o quiz
+  // vinculado nao tem nome proprio - montarNomesExibicaoQuizzesVinculados);
+  // `tituloReal` (default = titulo) e sempre o nome de verdade do item e vai
+  // pro title/aria-label/menu, pra nunca perder a referencia a qual item e
+  // qual quando varios mostram o mesmo texto generico.
+  function renderizarLinhaItem({ chave, titulo, tituloReal = titulo, icone, publicado, recuado, menuItens, onAbrir }) {
+    const aberto = itemAberto?.id === chave;
+    return (
+      <li className={`modulo-gestao__trilha-item-wrap${recuado ? " modulo-gestao__trilha-item-wrap--recuado" : ""}`} key={chave}>
+        <div
+          aria-current={aberto ? "true" : undefined}
+          aria-label={`Ver ${tituloReal}`}
+          className="modulo-gestao__trilha-item"
+          onClick={onAbrir}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) {
+              return;
+            }
+            event.preventDefault();
+            onAbrir();
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          {modoSelecao ? (
+            <span className="atividades-curso__checkbox-alvo" onClick={(event) => event.stopPropagation()}>
+              <input
+                aria-label={`Selecionar ${tituloReal}`}
+                checked={itensSelecionados.has(chave)}
+                className="tabela-checkbox"
+                onChange={() => alternarSelecaoItem(...chave.split(":"))}
+                type="checkbox"
+              />
+            </span>
+          ) : null}
+          <span aria-hidden="true" className="modulo-gestao__trilha-item-icone">
+            {icone}
+          </span>
+          <span className="modulo-gestao__trilha-item-titulo" title={tituloReal}>
+            {titulo}
+          </span>
+          <StatusPonto publicado={publicado} />
+          <div className="modulo-gestao__trilha-item-acoes" onClick={(event) => event.stopPropagation()}>
+            <MenuAcoes itens={menuItens} rotulo={`Opções de ${tituloReal}`} />
+          </div>
         </div>
+      </li>
+    );
+  }
 
-        {!edicaoTravada ? (
-          <div className="atividades-curso__cabecalho-acoes">
-            {conteudosDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
-              <Botao className="atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(moduloAtual)} tamanho="pequeno">
-                <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
-              </Botao>
-            ) : null}
-            <Botao className="atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(moduloAtual)} tamanho="pequeno">
-              <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
-            </Botao>
-            <Botao onClick={() => onNovoConteudo(moduloAtual.id)} tamanho="pequeno" variante="primario">
-              <TbPlus aria-hidden="true" size={13} /> Novo conteúdo
-            </Botao>
-          </div>
-        ) : null}
-      </header>
+  return (
+    <div className={`modulo-gestao modulo-gestao--trilha${itemAberto ? " modulo-gestao--item-aberto" : ""}`}>
+      <aside aria-label="Módulos do curso" className="modulo-gestao__trilha">
+        <button className="modulo-gestao__trilha-voltar" onClick={voltarParaModulos} type="button">
+          <TbArrowLeft aria-hidden="true" size={16} /> {cursoAtivo.curso.titulo}
+        </button>
 
-      {edicaoTravada ? (
-        <InlineMessage tone="warning">
-          A edição deste curso está travada. A prévia continua funcionando.
-        </InlineMessage>
-      ) : null}
+        <nav aria-label="Módulos" className="modulo-gestao__trilha-lista">
+          {modulosOrdenados.map((modulo, indice) => {
+            if (modulo.id !== moduloId) {
+              return (
+                <button
+                  className="modulo-gestao__trilha-modulo"
+                  key={modulo.id}
+                  onClick={() => irParaModulo(modulo.id)}
+                  type="button"
+                >
+                  <NumeroModulo indice={indice} />
+                  <span className="modulo-gestao__trilha-modulo-titulo" title={modulo.titulo}>
+                    {modulo.titulo}
+                  </span>
+                  <TbChevronRight aria-hidden="true" className="modulo-gestao__trilha-modulo-seta" size="1.1rem" />
+                </button>
+              );
+            }
 
-      {moduloVazio ? (
-        <p className="texto-vazio" role="status">Nenhum conteúdo neste módulo ainda.</p>
-      ) : (
-        <div className={`modulo-gestao__corpo${itemAberto ? " modulo-gestao__corpo--item-aberto" : ""}`}>
-          <div className="modulo-gestao__lista">
-            <div className="atividades-curso__barra-selecao">
-              <label className="atividades-curso__selecionar-tudo">
-                <span className="atividades-curso__checkbox-alvo">
-                  <input
-                    checked={todosSelecionados}
-                    className="tabela-checkbox"
-                    onChange={() => alternarSelecaoTudo(chavesSelecionaveis)}
-                    ref={(elemento) => {
-                      if (elemento) {
-                        elemento.indeterminate = algunsSelecionados;
-                      }
-                    }}
-                    type="checkbox"
-                  />
-                </span>
-                Selecionar tudo
-              </label>
-              <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
-              <span aria-live="polite" className="atividades-curso__contagem-selecao">
-                {totalSelecionado} selecionado{totalSelecionado === 1 ? "" : "s"}
-              </span>
-              <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
-            </div>
-
-            {loteFalhas.length > 0 ? (
-              <InlineMessage tone="error">
-                <strong>{loteFalhas.length} {loteFalhas.length === 1 ? "item não foi processado" : "itens não foram processados"}:</strong>
-                <ul className="atividades-curso__lote-falhas-lista">
-                  {loteFalhas.map((falha, indice) => (
-                    <li key={indice}>{falha.titulo} — {falha.motivo}</li>
-                  ))}
-                </ul>
-              </InlineMessage>
-            ) : null}
-
-            {conteudosDoModulo.length > 0 ? (
-              <section aria-label={`Conteúdos (${conteudosDoModulo.length})`}>
-                <h3 className="modulo-gestao__secao-titulo">
-                  Conteúdos
-                  <span className="modulo-gestao__secao-contagem">{conteudosDoModulo.length}</span>
-                  <span aria-hidden="true" className="modulo-gestao__secao-linha" />
-                </h3>
-                <ul aria-label={`Conteúdos de ${moduloAtual.titulo}`} className="atividades-curso__lista" role="list">
-                  {conteudosDoModulo.map((conteudo, indiceConteudo) => {
-                    const publicado = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO;
-                    const quizzesDoMaterial = quizzesPorConteudoId.get(conteudo.id) || [];
-                    const nomesQuizDoMaterial = montarNomesExibicaoQuizzesVinculados(quizzesDoMaterial, conteudo.titulo);
-
-                    return (
-                      <li className="atividades-curso__item modulo-gestao__item-cartao" key={conteudo.id}>
-                        <div
-                          aria-current={itemAberto?.id === chaveItem("material", conteudo.id) ? "true" : undefined}
-                          aria-label={`Ver detalhes de ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
-                          className="atividades-curso__linha atividades-curso__linha--acionavel"
-                          onClick={() => setItemAbertoId(chaveItem("material", conteudo.id))}
-                          onKeyDown={(event) => {
-                            if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) {
-                              return;
-                            }
-                            event.preventDefault();
-                            setItemAbertoId(chaveItem("material", conteudo.id));
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <span className="atividades-curso__checkbox-alvo" onClick={(event) => event.stopPropagation()}>
-                            <input
-                              aria-label={`Selecionar ${conteudo.titulo}`}
-                              checked={itensSelecionados.has(chaveItem("material", conteudo.id))}
-                              className="tabela-checkbox"
-                              onChange={() => alternarSelecaoItem("material", conteudo.id)}
-                              type="checkbox"
-                            />
-                          </span>
-                          <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
-                            {obterIconeTipoConteudo(conteudo.tipoConteudo)}
-                          </span>
-                          <div className="atividades-curso__corpo">
-                            <strong className="atividades-curso__item-titulo" title={conteudo.titulo}>{conteudo.titulo}</strong>
-                            <p className="atividades-curso__meta">
-                              <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                              <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                              <Insignia texto={publicado ? "Publicado" : "Rascunho"} />
-                            </p>
-                          </div>
-                          <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
-                            <MenuAcoes itens={itensMenuMaterial(conteudo, indiceConteudo)} rotulo={`Opções de ${conteudo.titulo}`} />
-                          </div>
-                        </div>
-
-                        {quizzesDoMaterial.length > 0 ? (
-                          <ul aria-label={`Quizzes de ${conteudo.titulo}`} className="atividades-curso__quizzes" role="list">
-                            {quizzesDoMaterial.map((quiz) => {
-                              const quizPublicado = Number(quiz.statusPublicacao) === STATUS_PUBLICADO;
-                              return (
-                                <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-${quiz.id}`}>
-                                  <div
-                                    aria-current={itemAberto?.id === chaveItem("quiz", quiz.id) ? "true" : undefined}
-                                    aria-label={`Ver quiz: ${quiz.titulo}`}
-                                    className="atividades-curso__linha atividades-curso__linha--acionavel"
-                                    onClick={() => setItemAbertoId(chaveItem("quiz", quiz.id))}
-                                    onKeyDown={(event) => {
-                                      if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) {
-                                        return;
-                                      }
-                                      event.preventDefault();
-                                      setItemAbertoId(chaveItem("quiz", quiz.id));
-                                    }}
-                                    role="button"
-                                    tabIndex={0}
-                                  >
-                                    <span className="atividades-curso__checkbox-alvo" onClick={(event) => event.stopPropagation()}>
-                                      <input
-                                        aria-label={`Selecionar ${quiz.titulo}`}
-                                        checked={itensSelecionados.has(chaveItem("quiz", quiz.id))}
-                                        className="tabela-checkbox"
-                                        onChange={() => alternarSelecaoItem("quiz", quiz.id)}
-                                        type="checkbox"
-                                      />
-                                    </span>
-                                    <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                      <TbTrophy aria-hidden="true" size="1.75rem" />
-                                    </span>
-                                    <div className="atividades-curso__corpo">
-                                      <strong className="atividades-curso__item-titulo" title={quiz.titulo}>
-                                        {nomesQuizDoMaterial.get(quiz.id)}
-                                      </strong>
-                                      <p className="atividades-curso__meta">
-                                        <span>Quiz</span>
-                                        <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                                        <Insignia texto={quizPublicado ? "Publicado" : "Rascunho"} />
-                                      </p>
-                                    </div>
-                                    <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
-                                      <MenuAcoes itens={itensMenuQuiz(quiz)} rotulo={`Opções do quiz ${quiz.titulo}`} />
-                                    </div>
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ) : null}
-
-            {quizzesSoltos.length > 0 ? (
-              <section aria-label={`Quizzes (${quizzesSoltos.length})`} className="modulo-gestao__secao--quizzes">
-                <h3 className="modulo-gestao__secao-titulo">
-                  Quizzes
-                  <span className="modulo-gestao__secao-contagem">{quizzesSoltos.length}</span>
-                  <span aria-hidden="true" className="modulo-gestao__secao-linha" />
-                </h3>
-                <ul aria-label={`Quizzes de ${moduloAtual.titulo}`} className="atividades-curso__lista" role="list">
-                  {quizzesSoltos.map((quiz) => {
-                    const quizPublicado = Number(quiz.statusPublicacao) === STATUS_PUBLICADO;
-                    return (
-                      <li className="atividades-curso__item atividades-curso__item--quiz modulo-gestao__item-cartao" key={quiz.id}>
-                        <div
-                          aria-current={itemAberto?.id === chaveItem("quiz", quiz.id) ? "true" : undefined}
-                          aria-label={`Ver quiz: ${nomesQuizzesSoltos.get(quiz.id)}`}
-                          className="atividades-curso__linha atividades-curso__linha--acionavel"
-                          onClick={() => setItemAbertoId(chaveItem("quiz", quiz.id))}
-                          onKeyDown={(event) => {
-                            if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) {
-                              return;
-                            }
-                            event.preventDefault();
-                            setItemAbertoId(chaveItem("quiz", quiz.id));
-                          }}
-                          role="button"
-                          tabIndex={0}
-                        >
-                          <span className="atividades-curso__checkbox-alvo" onClick={(event) => event.stopPropagation()}>
-                            <input
-                              aria-label={`Selecionar ${quiz.titulo}`}
-                              checked={itensSelecionados.has(chaveItem("quiz", quiz.id))}
-                              className="tabela-checkbox"
-                              onChange={() => alternarSelecaoItem("quiz", quiz.id)}
-                              type="checkbox"
-                            />
-                          </span>
-                          <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                            <TbTrophy aria-hidden="true" size="1.75rem" />
-                          </span>
-                          <div className="atividades-curso__corpo">
-                            <strong className="atividades-curso__item-titulo" title={nomesQuizzesSoltos.get(quiz.id)}>{nomesQuizzesSoltos.get(quiz.id)}</strong>
-                            <p className="atividades-curso__meta">
-                              <span>Quiz</span>
-                              <span aria-hidden="true" className="atividades-curso__separador">·</span>
-                              <Insignia texto={quizPublicado ? "Publicado" : "Rascunho"} />
-                            </p>
-                          </div>
-                          <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
-                            <MenuAcoes itens={itensMenuQuiz(quiz)} rotulo={`Opções do quiz ${quiz.titulo}`} />
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ) : null}
-          </div>
-
-          <div aria-label="Prévia do item selecionado" className="modulo-gestao__painel">
-            {itemAberto ? (
-              <>
-                <div className="modulo-gestao__painel-topo">
-                  <button className="modulo-gestao__voltar-painel" onClick={() => setItemAbertoId(null)} type="button">
-                    <TbArrowLeft aria-hidden="true" size={16} /> Voltar ao módulo
-                  </button>
-                  <button aria-label="Fechar" className="modulo-gestao__fechar-painel" onClick={() => setItemAbertoId(null)} type="button">
-                    <TbX aria-hidden="true" size={18} />
-                  </button>
+            return (
+              <section className="modulo-gestao__trilha-modulo modulo-gestao__trilha-modulo--aberto" key={modulo.id}>
+                <div className="modulo-gestao__trilha-modulo-cabecalho">
+                  <NumeroModulo indice={indice} />
+                  <span className="modulo-gestao__trilha-modulo-titulo" title={modulo.titulo}>
+                    {modulo.titulo}
+                  </span>
+                  <TbChevronDown aria-hidden="true" className="modulo-gestao__trilha-modulo-seta modulo-gestao__trilha-modulo-seta--aberta" size="1.1rem" />
                 </div>
 
-                <PreviaItemAluno
-                  aviso={!itemAbertoPublicado ? "Rascunho — os alunos ainda não veem este item." : undefined}
-                  item={itemAberto}
-                  questoes={itemAberto.tipo === "quiz" ? questoesPorAvaliacaoId.get(itemAberto.quiz.id) : undefined}
-                  rodape={
-                    <>
-                      <div className="previa-item-aluno__acoes-professor">
-                        <Botao disabled={edicaoTravada} onClick={abrirEdicaoDoItemAberto} tamanho="pequeno" variante="secundario">
-                          Editar
-                        </Botao>
-                        <Botao disabled={edicaoTravada} onClick={alternarPublicacaoDoItemAberto} tamanho="pequeno" variante="primario">
-                          {itemAbertoPublicado ? "Voltar para rascunho" : "Publicar"}
+                {moduloVazio ? (
+                  <p className="texto-vazio" role="status">Nenhum conteúdo neste módulo ainda.</p>
+                ) : (
+                  <div className="modulo-gestao__trilha-itens">
+                    <div className="modulo-gestao__trilha-itens-cabecalho">
+                      <span className="modulo-gestao__trilha-itens-rotulo">Itens do módulo</span>
+                      {!edicaoTravada && !modoSelecao ? (
+                        <button className="modulo-gestao__trilha-selecionar" onClick={() => setModoSelecao(true)} type="button">
+                          <TbListCheck aria-hidden="true" size={15} /> Selecionar
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {modoSelecao ? (
+                      <div className="atividades-curso__barra-selecao">
+                        <label className="atividades-curso__selecionar-tudo">
+                          <span className="atividades-curso__checkbox-alvo">
+                            <input
+                              checked={todosSelecionados}
+                              className="tabela-checkbox"
+                              onChange={() => alternarSelecaoTudo(chavesSelecionaveis)}
+                              ref={(elemento) => {
+                                if (elemento) {
+                                  elemento.indeterminate = algunsSelecionados;
+                                }
+                              }}
+                              type="checkbox"
+                            />
+                          </span>
+                          Selecionar tudo
+                        </label>
+                        <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
+                        <span aria-live="polite" className="atividades-curso__contagem-selecao">
+                          {totalSelecionado} selecionado{totalSelecionado === 1 ? "" : "s"}
+                        </span>
+                        <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
+                        <Botao onClick={sairDoModoSelecao} tamanho="pequeno" variante="fantasma">
+                          Cancelar
                         </Botao>
                       </div>
-                      <footer className="modal-rodape modulo-gestao__painel-rodape">
-                        <Botao
-                          aria-label="Item anterior"
-                          disabled={!itemAnterior}
-                          onClick={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
-                          title={itemAnterior?.titulo}
-                          type="button"
-                          variante="secundario"
-                        >
-                          <TbArrowLeft aria-hidden="true" size={16} /> Anterior
-                        </Botao>
-                        <span className="modulo-gestao__painel-rodape-contador">
-                          Item {indiceItemAberto + 1} de {itensOrdenados.length}
-                        </span>
-                        <Botao
-                          aria-label="Próximo item"
-                          disabled={!itemProximo}
-                          onClick={() => itemProximo && setItemAbertoId(itemProximo.id)}
-                          title={itemProximo?.titulo}
-                          type="button"
-                          variante="primario"
-                        >
-                          Próximo <TbArrowRight aria-hidden="true" size={16} />
-                        </Botao>
-                      </footer>
-                    </>
-                  }
-                  selo={itemAbertoPublicado ? "Publicado" : "Rascunho"}
-                />
-              </>
-            ) : (
-              <p className="texto-vazio" role="status">Escolha um conteúdo ou quiz para ver aqui.</p>
-            )}
-          </div>
-        </div>
-      )}
+                    ) : null}
 
-      <footer className="modulo-gestao__rodape">
-        <Botao disabled={!moduloAnterior} onClick={() => moduloAnterior && irParaModulo(moduloAnterior.id)} variante="secundario">
-          <TbArrowLeft aria-hidden="true" size={16} /> Módulo anterior
-        </Botao>
-        <Botao disabled={!moduloProximo} onClick={() => moduloProximo && irParaModulo(moduloProximo.id)} variante="primario">
-          {moduloProximo ? `Próximo módulo: ${moduloProximo.titulo}` : "Próximo módulo"} <TbArrowRight aria-hidden="true" size={16} />
-        </Botao>
-      </footer>
+                    {loteFalhas.length > 0 ? (
+                      <InlineMessage tone="error">
+                        <strong>{loteFalhas.length} {loteFalhas.length === 1 ? "item não foi processado" : "itens não foram processados"}:</strong>
+                        <ul className="atividades-curso__lote-falhas-lista">
+                          {loteFalhas.map((falha, indiceFalha) => (
+                            <li key={indiceFalha}>{falha.titulo} — {falha.motivo}</li>
+                          ))}
+                        </ul>
+                      </InlineMessage>
+                    ) : null}
+
+                    {conteudosDoModulo.length > 0 ? (
+                      <section aria-label={`Conteúdos (${conteudosDoModulo.length})`}>
+                        <h3 className="modulo-gestao__secao-titulo">
+                          Conteúdos
+                          <span className="modulo-gestao__secao-contagem">{conteudosDoModulo.length}</span>
+                        </h3>
+                        <ul aria-label={`Conteúdos de ${modulo.titulo}`} role="list">
+                          {conteudosDoModulo.flatMap((conteudo, indiceConteudo) => {
+                            const publicado = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO;
+                            const quizzesDoMaterial = quizzesPorConteudoId.get(conteudo.id) || [];
+                            const nomesQuizDoMaterial = montarNomesExibicaoQuizzesVinculados(quizzesDoMaterial, conteudo.titulo);
+
+                            return [
+                              renderizarLinhaItem({
+                                chave: chaveItem("material", conteudo.id),
+                                titulo: conteudo.titulo,
+                                icone: obterIconeTipoConteudo(conteudo.tipoConteudo, "1.1rem"),
+                                publicado,
+                                menuItens: itensMenuMaterial(conteudo, indiceConteudo),
+                                onAbrir: () => setItemAbertoId(chaveItem("material", conteudo.id))
+                              }),
+                              ...quizzesDoMaterial.map((quiz) => {
+                                const quizPublicado = Number(quiz.statusPublicacao) === STATUS_PUBLICADO;
+                                return renderizarLinhaItem({
+                                  chave: chaveItem("quiz", quiz.id),
+                                  titulo: nomesQuizDoMaterial.get(quiz.id),
+                                  tituloReal: quiz.titulo,
+                                  icone: <TbTrophy aria-hidden="true" size="1.1rem" />,
+                                  publicado: quizPublicado,
+                                  recuado: true,
+                                  menuItens: itensMenuQuiz(quiz),
+                                  onAbrir: () => setItemAbertoId(chaveItem("quiz", quiz.id))
+                                });
+                              })
+                            ];
+                          })}
+                        </ul>
+                      </section>
+                    ) : null}
+
+                    {quizzesSoltos.length > 0 ? (
+                      <section aria-label={`Quizzes (${quizzesSoltos.length})`}>
+                        <h3 className="modulo-gestao__secao-titulo">
+                          Quizzes do módulo
+                          <span className="modulo-gestao__secao-contagem">{quizzesSoltos.length}</span>
+                        </h3>
+                        <ul aria-label={`Quizzes de ${modulo.titulo}`} role="list">
+                          {quizzesSoltos.map((quiz) => {
+                            const quizPublicado = Number(quiz.statusPublicacao) === STATUS_PUBLICADO;
+                            return renderizarLinhaItem({
+                              chave: chaveItem("quiz", quiz.id),
+                              titulo: nomesQuizzesSoltos.get(quiz.id),
+                              tituloReal: quiz.titulo,
+                              icone: <TbTrophy aria-hidden="true" size="1.1rem" />,
+                              publicado: quizPublicado,
+                              menuItens: itensMenuQuiz(quiz),
+                              onAbrir: () => setItemAbertoId(chaveItem("quiz", quiz.id))
+                            });
+                          })}
+                        </ul>
+                      </section>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <div className="modulo-gestao__conteudo">
+        <header className="modulo-gestao__cabecalho">
+          <div className="modulo-gestao__cabecalho-principal">
+            <h2 className="modulo-gestao__titulo">
+              <NumeroModulo indice={indiceModuloAtual} />
+              <span className="modulo-gestao__titulo-texto" title={moduloAtual.titulo}>{moduloAtual.titulo}</span>
+            </h2>
+            <p className="modulo-gestao__resumo">{resumoModulo}</p>
+          </div>
+
+          {!edicaoTravada ? (
+            <div className="atividades-curso__cabecalho-acoes">
+              {conteudosDoModulo.some((conteudo) => [1, 2].includes(Number(conteudo.tipoConteudo))) ? (
+                <Botao className="atividades-curso__adicionar--ia" onClick={() => onGerarQuizComIaModulo(moduloAtual)} tamanho="pequeno">
+                  <TbSparkles aria-hidden="true" size={13} /> Gerar quiz com IA
+                </Botao>
+              ) : null}
+              <Botao className="atividades-curso__adicionar--quiz" onClick={() => onGerenciarQuizModulo(moduloAtual)} tamanho="pequeno">
+                <TbPlus aria-hidden="true" size={13} /> Adicionar Quiz
+              </Botao>
+              <Botao onClick={() => onNovoConteudo(moduloAtual.id)} tamanho="pequeno" variante="primario">
+                <TbPlus aria-hidden="true" size={13} /> Novo conteúdo
+              </Botao>
+            </div>
+          ) : null}
+        </header>
+
+        {edicaoTravada ? (
+          <InlineMessage tone="warning">
+            A edição deste curso está travada. A prévia continua funcionando.
+          </InlineMessage>
+        ) : null}
+
+        <div aria-label="Prévia do item selecionado" className="modulo-gestao__painel">
+          {itemAberto ? (
+            <>
+              <div className="modulo-gestao__painel-topo">
+                <button className="modulo-gestao__voltar-painel" onClick={() => setItemAbertoId(null)} type="button">
+                  <TbArrowLeft aria-hidden="true" size={16} /> Voltar ao módulo
+                </button>
+                <button aria-label="Fechar" className="modulo-gestao__fechar-painel" onClick={() => setItemAbertoId(null)} type="button">
+                  <TbX aria-hidden="true" size={18} />
+                </button>
+              </div>
+
+              <PreviaItemAluno
+                acoesCabecalho={
+                  <div className="previa-item-aluno__acoes-professor">
+                    <Botao disabled={edicaoTravada} onClick={alternarPublicacaoDoItemAberto} tamanho="pequeno" variante="fantasma">
+                      {itemAbertoPublicado ? "Voltar para rascunho" : "Publicar"}
+                    </Botao>
+                    <Botao disabled={edicaoTravada} onClick={abrirEdicaoDoItemAberto} tamanho="pequeno" variante="secundario">
+                      Editar
+                    </Botao>
+                  </div>
+                }
+                aviso={!itemAbertoPublicado ? "Rascunho — os alunos ainda não veem este item." : undefined}
+                item={itemAberto}
+                questoes={itemAberto.tipo === "quiz" ? questoesPorAvaliacaoId.get(itemAberto.quiz.id) : undefined}
+                rodape={
+                  <footer className="modal-rodape modulo-gestao__painel-rodape">
+                    <Botao
+                      aria-label="Item anterior"
+                      disabled={!itemAnterior}
+                      onClick={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
+                      title={itemAnterior?.titulo}
+                      type="button"
+                      variante="secundario"
+                    >
+                      <TbArrowLeft aria-hidden="true" size={16} /> Anterior
+                    </Botao>
+                    <span className="modulo-gestao__painel-rodape-contador">
+                      Item {indiceItemAberto + 1} de {itensOrdenados.length}
+                    </span>
+                    <Botao
+                      aria-label="Próximo item"
+                      disabled={!itemProximo}
+                      onClick={() => itemProximo && setItemAbertoId(itemProximo.id)}
+                      title={itemProximo?.titulo}
+                      type="button"
+                      variante="primario"
+                    >
+                      Próximo <TbArrowRight aria-hidden="true" size={16} />
+                    </Botao>
+                  </footer>
+                }
+                selo={itemAbertoPublicado ? "Publicado" : "Rascunho"}
+              />
+            </>
+          ) : (
+            <p className="texto-vazio" role="status">Escolha um conteúdo ou quiz para ver aqui.</p>
+          )}
+        </div>
+      </div>
 
       {loteConfirmacao ? (
         <Modal

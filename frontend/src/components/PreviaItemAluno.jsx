@@ -127,7 +127,7 @@ function PreviaQuiz({ questoes }) {
    Professor (tela do modulo do professor, selo Publicado/Rascunho, com
    aviso de rascunho e rodape de acoes) - a UNICA diferenca entre as duas
    e o que cada chamador passa nessas props. */
-export default function PreviaItemAluno({ aviso, item, questoes, rodape, selo }) {
+export default function PreviaItemAluno({ acoesCabecalho, aviso, item, questoes, rodape, selo }) {
   const varianteSelo = selo === "Somente leitura" ? "info" : undefined;
 
   return (
@@ -139,7 +139,10 @@ export default function PreviaItemAluno({ aviso, item, questoes, rodape, selo })
             {item.tipo === "quiz" ? "QUIZ" : normalizeContentType(item.conteudo.tipoConteudo).toUpperCase()}
           </p>
         </div>
-        {selo ? <Insignia texto={selo} variante={varianteSelo} /> : null}
+        <div className="previa-item-aluno__cabecalho-acoes">
+          {selo ? <Insignia texto={selo} variante={varianteSelo} /> : null}
+          {acoesCabecalho}
+        </div>
       </div>
 
       {aviso ? <InlineMessage tone="warning">{aviso}</InlineMessage> : null}

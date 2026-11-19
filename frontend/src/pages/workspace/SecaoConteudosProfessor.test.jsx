@@ -82,7 +82,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     vi.clearAllMocks();
   });
 
-  test("quiz vinculado a um material renderiza dentro do item desse material", () => {
+  test("quiz vinculado a um material renderiza recuado, logo depois dele, na lista de Conteudos", () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -98,10 +98,10 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    expect(screen.getAllByText("Aula 1").length).toBeGreaterThan(0);
-
-    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
-    expect(within(listaQuizzesDoMaterial).getByText("Quiz da Aula 1")).toBeInTheDocument();
+    const listaDeConteudos = screen.getByRole("list", { name: "Conteúdos de Módulo 1" });
+    expect(within(listaDeConteudos).getByText("Aula 1")).toBeInTheDocument();
+    const linhaDoQuiz = within(listaDeConteudos).getByText("Quiz da Aula 1").closest(".modulo-gestao__trilha-item-wrap");
+    expect(linhaDoQuiz).toHaveClass("modulo-gestao__trilha-item-wrap--recuado");
   });
 
   test("dois quizzes vinculados ao mesmo material aparecem os dois", () => {
@@ -129,9 +129,9 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
-    expect(within(listaQuizzesDoMaterial).getByText("Quiz A da Aula 1")).toBeInTheDocument();
-    expect(within(listaQuizzesDoMaterial).getByText("Quiz B da Aula 1")).toBeInTheDocument();
+    const listaDeConteudos = screen.getByRole("list", { name: "Conteúdos de Módulo 1" });
+    expect(within(listaDeConteudos).getByText("Quiz A da Aula 1")).toBeInTheDocument();
+    expect(within(listaDeConteudos).getByText("Quiz B da Aula 1")).toBeInTheDocument();
   });
 
   test("quiz do modulo em rascunho aparece na contagem e no resumo do topo", () => {
@@ -211,7 +211,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const lista = document.querySelector(".modulo-gestao__lista");
+    const lista = document.querySelector(".modulo-gestao__trilha-itens");
     expect(within(lista).getByText("ANALISE_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "ANALISE_DESENVOLV_SISTEMA_01");
     expect(within(lista).getByText("QUIZ_VINCULADO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_VINCULADO_DESENVOLV_SISTEMA_01");
     expect(within(lista).getByText("QUIZ_SOLTO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_SOLTO_DESENVOLV_SISTEMA_01");
@@ -259,9 +259,9 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
-    expect(within(listaQuizzesDoMaterial).getByText("Quiz do conteúdo")).toBeInTheDocument();
-    expect(within(listaQuizzesDoMaterial).queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
+    const listaDeConteudos = screen.getByRole("list", { name: "Conteúdos de Módulo 1" });
+    expect(within(listaDeConteudos).getByText("Quiz do conteúdo")).toBeInTheDocument();
+    expect(within(listaDeConteudos).queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
   });
 
   test("quiz vinculado com titulo proprio exibe o titulo real", () => {
@@ -280,9 +280,9 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
-    expect(within(listaQuizzesDoMaterial).getByText("Revisão de Variáveis")).toBeInTheDocument();
-    expect(within(listaQuizzesDoMaterial).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
+    const listaDeConteudos = screen.getByRole("list", { name: "Conteúdos de Módulo 1" });
+    expect(within(listaDeConteudos).getByText("Revisão de Variáveis")).toBeInTheDocument();
+    expect(within(listaDeConteudos).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
   });
 
   test("dois quizzes do mesmo conteudo que cairiam na regra generica exibem os titulos reais", () => {
@@ -310,10 +310,15 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaQuizzesDoMaterial = screen.getByRole("list", { name: "Quizzes de Aula 1" });
-    expect(within(listaQuizzesDoMaterial).getAllByText("Aula 1")).toHaveLength(1);
-    expect(within(listaQuizzesDoMaterial).getByText("Quiz: Aula 1")).toBeInTheDocument();
-    expect(within(listaQuizzesDoMaterial).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
+    // Dois quizzes cairiam na regra generica (titulo igual ao conteudo e
+    // "Quiz: {conteudo}"), entao os dois mostram o titulo real em vez de
+    // "Quiz do conteúdo" - o quiz 200 so por coincidencia tem titulo real
+    // identico ao do material ("Aula 1"), entao o texto aparece 2x na
+    // mesma lista (material + esse quiz), o que e esperado.
+    const listaDeConteudos = screen.getByRole("list", { name: "Conteúdos de Módulo 1" });
+    expect(within(listaDeConteudos).getAllByText("Aula 1")).toHaveLength(2);
+    expect(within(listaDeConteudos).getByText("Quiz: Aula 1")).toBeInTheDocument();
+    expect(within(listaDeConteudos).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
   });
 
   test("aria-label de selecao do quiz vinculado mantem o titulo real mesmo com nome generico exibido, e Editar e a 1a opcao do menu", async () => {
@@ -334,9 +339,10 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     expect(screen.getByLabelText("Selecionar Quiz - Aula 1")).toBeInTheDocument();
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz - Aula 1" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz - Aula 1" }));
     const opcoes = screen.getAllByRole("menuitem");
     expect(opcoes[0]).toHaveTextContent("Editar");
 
@@ -356,7 +362,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const lista = document.querySelector(".modulo-gestao__lista");
+    const lista = document.querySelector(".modulo-gestao__trilha-itens");
     expect(within(lista).queryByRole("button", { name: /^Editar/ })).not.toBeInTheDocument();
   });
 
@@ -384,7 +390,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     const opcoes = screen.getAllByRole("menuitem");
     expect(opcoes[0]).toHaveTextContent("Editar");
 
@@ -411,11 +417,12 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await waitFor(() => expect(screen.getByRole("menuitem", { name: "Editar" })).not.toBeDisabled());
   });
 
-  // O selo de status saiu da direita da linha (onde competia espaco com o
-  // titulo) e foi pra linha de baixo, junto do tipo - "Quiz · Publicado"
-  // (ref. docs/TelaConteudosProfessor/modulo-compacto-exemplo.png, numero
-  // 2). Cartao mais compacto = titulo ganha a largura toda.
-  test('quizzes (vinculado e do modulo) mostram "Quiz · Publicado" na linha de baixo do titulo', () => {
+  // O selo de status (Insignia) virou um ponto colorido + texto pequeno
+  // (StatusPonto, verde/ambar) na propria linha do item - docs/
+  // TelaConteudosProfessor/PROMPT-agente-tela-modulo-trilha-versao-b.md,
+  // item 1.4. O icone do tipo (nao mais texto "Quiz") ja distingue material
+  // de quiz na linha.
+  test('quizzes (vinculado e do modulo) mostram o status "Publicado" junto do titulo', () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -440,10 +447,10 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const linhasQuiz = screen.getAllByText("Quiz", { selector: "p span" });
-    expect(linhasQuiz).toHaveLength(2);
-    linhasQuiz.forEach((span) => {
-      expect(within(span.closest(".atividades-curso__meta")).getByText("Publicado")).toBeInTheDocument();
+    const linhaQuizVinculado = screen.getByText("Quiz da Aula 1").closest(".modulo-gestao__trilha-item");
+    const linhaQuizDoModulo = screen.getByText("Quiz do Módulo").closest(".modulo-gestao__trilha-item");
+    [linhaQuizVinculado, linhaQuizDoModulo].forEach((linha) => {
+      expect(within(linha).getByText("Publicado")).toBeInTheDocument();
     });
   });
 
@@ -567,7 +574,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Arquivar" }));
 
     await waitFor(() =>
@@ -597,7 +604,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
 
     const mensagemErro = await screen.findByText("Adicione ao menos uma questao antes de publicar o quiz.");
@@ -622,7 +629,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz do Módulo" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir" }));
 
     expect(screen.getByRole("dialog", { name: "Excluir quiz" })).toBeInTheDocument();
@@ -672,7 +679,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(within(cabecalho).getByRole("button", { name: "Adicionar Quiz" })).toBeInTheDocument();
     expect(within(cabecalho).getByRole("button", { name: "Gerar quiz com IA" })).toBeInTheDocument();
 
-    const lista = document.querySelector(".modulo-gestao__lista");
+    const lista = document.querySelector(".modulo-gestao__trilha-itens");
     expect(within(lista).queryByRole("button", { name: "Novo conteúdo" })).not.toBeInTheDocument();
     expect(within(lista).queryByRole("button", { name: "Adicionar Quiz" })).not.toBeInTheDocument();
   });
@@ -721,7 +728,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     await usuario.keyboard("{Escape}");
 
-    await usuario.click(screen.getByRole("button", { name: "Opções do quiz Quiz da Aula 1" }));
+    await usuario.click(screen.getByRole("button", { name: "Opções de Quiz da Aula 1" }));
     menu = screen.getByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
       "Editar",
@@ -785,7 +792,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
-    await usuario.click(screen.getByRole("button", { name: /Ver detalhes.*Aula 1/ }));
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
@@ -837,7 +844,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
-    await usuario.click(screen.getByRole("button", { name: /Ver detalhes.*Aula 1/ }));
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
@@ -880,6 +887,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
+
     const selecionarTudo = screen.getByLabelText("Selecionar tudo");
     expect(selecionarTudo.checked).toBe(false);
     expect(selecionarTudo.indeterminate).toBe(false);
@@ -911,11 +920,15 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     const { rerender } = renderTrilha({ modulos, conteudos, moduloIdSelecionado: MODULO_ID });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
     expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
 
     rerender(trilhaJsx({ modulos, conteudos, moduloIdSelecionado: MODULO_2 }));
 
+    // Trocar de modulo tambem sai do modo de selecao (volta o botao
+    // "Selecionar") - a marcacao anterior some junto.
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     expect(screen.getByLabelText("Selecionar Aula 2").checked).toBe(false);
   });
 
@@ -925,6 +938,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
     const menu = screen.getByRole("menu");
 
@@ -954,13 +968,15 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     const painel = document.querySelector(".modulo-gestao__painel");
     expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
 
     expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
     expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
   });
 
-  test('linha de "Quizzes do modulo" tem uma unica caixa de selecao', () => {
+  test('linha de "Quizzes do modulo" tem uma unica caixa de selecao', async () => {
+    const usuario = userEvent.setup();
     renderTrilha({
       conteudos: [],
       avaliacoes: [
@@ -976,8 +992,10 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const lista = document.querySelector(".modulo-gestao__lista");
-    const linhaDoQuiz = within(lista).getByText("Quiz do Módulo").closest(".atividades-curso__linha");
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
+
+    const lista = document.querySelector(".modulo-gestao__trilha-itens");
+    const linhaDoQuiz = within(lista).getByText("Quiz do Módulo").closest(".modulo-gestao__trilha-item-wrap");
     expect(within(linhaDoQuiz).getAllByRole("checkbox")).toHaveLength(1);
   });
 
@@ -1013,6 +1031,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
     await usuario.click(screen.getByLabelText("Selecionar Quiz do Módulo"));
 
@@ -1034,6 +1053,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir selecionados" }));
@@ -1052,6 +1072,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
     await usuario.click(screen.getByLabelText("Selecionar Aula 2"));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
@@ -1075,6 +1096,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
     await usuario.click(screen.getByLabelText("Selecionar Aula 2"));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
@@ -1094,6 +1116,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula Publicada"));
     await usuario.click(screen.getByLabelText("Selecionar Aula Rascunho"));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
@@ -1115,6 +1138,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
+    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
     const menu = screen.getByRole("menu");
 
@@ -1229,17 +1253,16 @@ describe("TrilhaConteudosProfessor - edicao travada (curso concluido ou encerrad
     expect(within(menu).getByRole("menuitem", { name: "Excluir módulo" })).toBeDisabled();
   });
 
-  test("'Mais ações' da tela do modulo fica com publicar/arquivar/excluir em lote desabilitados", async () => {
-    const usuario = userEvent.setup();
+  // Com edicaoTravada o botao "Selecionar" nem aparece (item 2.4 do prompt
+  // trilha-versao-b) - sem ele nao ha como entrar no modo de selecao, entao
+  // "Mais ações" tambem nunca aparece. Substitui o teste antigo (que checava
+  // os itens do menu desabilitados) porque esse menu agora e inalcancavel
+  // pela UI quando a edicao esta travada.
+  test("com edicaoTravada o botao 'Selecionar' nao aparece, entao 'Mais ações' tambem nao", () => {
     renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_CONCLUIDO });
 
-    await usuario.click(screen.getByRole("button", { name: "Mais ações" }));
-    const menu = screen.getByRole("menu");
-
-    expect(within(menu).getByRole("menuitem", { name: "Publicar selecionados" })).toBeDisabled();
-    expect(within(menu).getByRole("menuitem", { name: "Voltar para rascunho" })).toBeDisabled();
-    expect(within(menu).getByRole("menuitem", { name: "Arquivar selecionados" })).toBeDisabled();
-    expect(within(menu).getByRole("menuitem", { name: "Excluir selecionados" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Selecionar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mais ações" })).not.toBeInTheDocument();
   });
 
   test("menu do conteudo fica com Editar/Publicar/Excluir desabilitados; botoes 'Novo conteúdo'/'Adicionar Quiz' somem", async () => {

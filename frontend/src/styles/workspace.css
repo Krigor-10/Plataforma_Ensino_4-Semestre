@@ -4035,32 +4035,6 @@
   }
 }
 
-/* Tela do modulo (coluna mais larga - .modulo-gestao, 1600px no lugar de
-   1320px, ver .layout-principal:has(.modulo-gestao) em layout.css): o
-   limite acima (100.5rem = 1320px + 2*9rem) manda o Voltar pra margem cedo
-   demais aqui - com a coluna de 1600px, a "margem" that sobra nessa faixa
-   e quase nula, e o botao fica por baixo da sidebar aberta. So nesta tela,
-   o limite de verdade e 1600px + 2*9rem = 118rem; entre 100.5rem e 118rem
-   desfaz a posicao absoluta (a especificidade do seletor com .modulo-gestao
-   ja ganha da regra generica acima, sem precisar de !important). Dai
-   118rem pra cima, a regra generica acima ja basta. */
-@container (min-width: 100.5rem) and (max-width: 117.9375rem) {
-  .modulo-gestao .atividades-curso__navegacao {
-    position: static;
-    right: auto;
-    top: auto;
-    width: auto;
-  }
-
-  .modulo-gestao .atividades-curso__voltar-texto {
-    display: inline;
-  }
-
-  .modulo-gestao .atividades-curso__voltar-texto-curto {
-    display: none;
-  }
-}
-
 /* ------------------------------------------------------------
    ATIVIDADES DO CURSO — cabecalho compacto reaproveitado (com
    grade-estatisticas) por Progresso, Turmas e Modulos do
@@ -9556,16 +9530,19 @@
 }
 
 /* ------------------------------------------------------------
-   TELA DO MODULO (Admin/Coordenador) — migalha + titulo/resumo +
-   KPIs + secoes "Conteudos"/"Quizzes" em cartoes com relevo, leitura
-   do item ao lado (docs/fluxo-coordenador/PROMPT-agente-modulo-tela-
-   propria.md + PROMPT-agente-modulo-tela-melhorias.md - substitui a
-   antiga janela "Revisar conteudo"). Mobile first: abaixo de 768px a
-   lista ocupa a tela inteira e abrir um item troca pra leitura em
-   tela cheia; a partir de 768px lista (largura fixa) e leitura
-   (resto da largura) ficam lado a lado, cada um com rolagem propria
-   e a altura da area visivel - a pagina em si nao rola.
-   ------------------------------------------------------------ */
+   TELA DO MODULO (Professor/Coordenador/Admin) — versao B, trilha a
+   esquerda (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-trilha-
+   versao-b.md): a trilha mostra TODOS os modulos do curso, o atual aberto
+   com os itens dentro (sem cartao, linhas finas) e os outros fechados,
+   clicaveis pra trocar de modulo sem voltar pra lista. A previa fica a
+   direita, ocupando o resto da largura. Mobile first: abaixo de 768px a
+   trilha ocupa a tela inteira e abrir um item troca pra previa em tela
+   cheia (.modulo-gestao--item-aberto); a partir de 768px trilha (largura
+   fixa) e previa (resto da largura) ficam lado a lado, cada uma com
+   rolagem propria e a altura da area visivel - a pagina em si nao rola.
+   .avaliacao-gestao (TelaAvaliacaoGestao.jsx) reaproveita o mesmo layout
+   base e os blocos __migalha/__cabecalho/__rodape desta tela sem usar a
+   trilha - ver overrides no bloco "TELA DA AVALIACAO" mais abaixo. */
 .modulo-gestao,
 .avaliacao-gestao {
   display: flex;
@@ -9573,68 +9550,320 @@
   gap: var(--espaco-lg);
 }
 
-/* O "← Voltar" (BotaoVoltar.jsx) vira o padrao de todas as telas de
-   detalhe - sem margem sobrando ele fica no fluxo, acima do caminho; em
-   tela larga sai pra margem esquerda sozinho (regra ja existente em
-   .atividades-curso__navegacao, nao duplicada aqui). O gap uniforme de
-   --espaco-lg do .modulo-gestao/.avaliacao-gestao fica grande demais so
-   entre esses 2 primeiros itens (botao->caminho->titulo) - margin-bottom
-   negativo "come" parte do gap so nesses 2 casos, docs/fluxo-coordenador/
-   PROMPT-agente-modulo-caminho-e-voltar.md (e ...-avaliacao-tela-propria.md,
-   que reaproveita o mesmo caminho). */
-.modulo-gestao > .atividades-curso__navegacao,
-.avaliacao-gestao > .atividades-curso__navegacao {
-  margin-bottom: calc(var(--espaco-sm) - var(--espaco-lg));
+.modulo-gestao__trilha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  min-width: 0;
 }
 
-.modulo-gestao__migalha {
+.modulo-gestao__conteudo {
+  display: none;
+  flex-direction: column;
+  gap: var(--espaco-lg);
+  min-width: 0;
+  min-height: 0;
+}
+
+.modulo-gestao--item-aberto .modulo-gestao__conteudo {
   display: flex;
-  flex-wrap: wrap;
+}
+
+/* Abaixo de 768px a previa vira tela cheia por cima de tudo (sidebar e
+   topbar inclusive) - "Voltar ao modulo"/Esc fecham, ver TelaModuloGestao.jsx/
+   TelaModuloGestaoProfessor.jsx (useLarguraJanela). Acima disso a trilha e a
+   previa ficam lado a lado o tempo todo. */
+@media (max-width: 767.98px) {
+  .modulo-gestao--item-aberto .modulo-gestao__trilha {
+    display: none;
+  }
+
+  .modulo-gestao--item-aberto .modulo-gestao__painel {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    border: none;
+    border-radius: 0;
+  }
+}
+
+.modulo-gestao__trilha-voltar {
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.82rem;
-  color: var(--cor-texto-mudo);
-}
-
-.modulo-gestao__migalha button {
-  background: none;
+  align-self: flex-start;
+  margin-bottom: var(--espaco-xs);
+  padding: 0.3rem 0;
   border: none;
-  padding: 0;
-  font: inherit;
-  max-width: 280px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--cor-texto-suave);
+  background: none;
+  color: var(--cor-marca-clara);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: var(--raio-sm);
 }
 
-.modulo-gestao__migalha button:hover,
-.modulo-gestao__migalha button:focus-visible {
-  color: var(--cor-texto-forte);
+.modulo-gestao__trilha-voltar:hover,
+.modulo-gestao__trilha-voltar:focus-visible {
   text-decoration: underline;
-  text-decoration-color: var(--cor-marca-clara);
   text-underline-offset: 3px;
 }
 
-.modulo-gestao__migalha button:focus-visible {
-  outline: 2px solid var(--cor-marca-clara);
-  outline-offset: 2px;
+.modulo-gestao__trilha-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
 }
 
-.modulo-gestao__migalha [aria-current="page"] {
+.modulo-gestao__trilha-modulo {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  width: 100%;
+  padding: var(--espaco-sm);
+  border: 1px solid transparent;
+  border-radius: var(--raio-md);
+  background: none;
+  color: var(--cor-texto-suave);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.modulo-gestao__trilha-modulo:hover,
+.modulo-gestao__trilha-modulo:focus-visible {
+  background: var(--cor-fundo-elevado);
+  border-color: var(--cor-borda);
   color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__trilha-modulo-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.modulo-gestao__trilha-modulo-seta {
+  flex-shrink: 0;
+  color: var(--cor-texto-mudo);
+  transition: transform var(--transicao-rapida);
+}
+
+.modulo-gestao__trilha-modulo-seta--aberta {
+  color: var(--cor-marca-clara);
+}
+
+/* Modulo atual: aberto e destacado em roxo - os itens dele ficam logo
+   abaixo, dentro da propria trilha (nao mais num painel a parte). */
+.modulo-gestao__trilha-modulo--aberto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-sm);
+  border: 1px solid var(--cor-marca-clara);
+  border-radius: var(--raio-md);
+  background: color-mix(in srgb, var(--cor-marca) 8%, transparent);
+}
+
+.modulo-gestao__trilha-modulo-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+  color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__trilha-modulo-cabecalho .modulo-gestao__trilha-modulo-titulo {
+  color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__trilha-itens {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+  padding-top: var(--espaco-xs);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.modulo-gestao__trilha-itens-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+}
+
+.modulo-gestao__trilha-itens-rotulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-mudo);
+}
+
+/* "Selecionar" sob demanda (item 2): a selecao em lote fica escondida atras
+   deste botao discreto - sem ele ligado, a trilha nao mostra caixa nenhuma. */
+.modulo-gestao__trilha-selecionar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  background: none;
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modulo-gestao__trilha-selecionar:hover {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+/* Linha fina de 1 item (material ou quiz), sem cartao - item 1.4. */
+.modulo-gestao__trilha-item-wrap {
+  list-style: none;
+}
+
+/* Quiz ligado a um conteudo: recuado, com uma linha vertical fina ligando
+   ele ao material acima (mesma ideia visual de .atividades-curso__quizzes
+   nas outras telas, soh que mais simples - sem cartao). */
+.modulo-gestao__trilha-item-wrap--recuado {
+  margin-left: 1.4rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--cor-borda);
+}
+
+.modulo-gestao__trilha-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  border: none;
+  border-radius: var(--raio-sm);
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition: background var(--transicao-rapida), color var(--transicao-rapida);
+}
+
+.modulo-gestao__trilha-item:hover,
+.modulo-gestao__trilha-item:focus-visible {
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__trilha-item:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: -2px;
+}
+
+.modulo-gestao__trilha-item[aria-current="true"] {
+  background: color-mix(in srgb, var(--cor-marca) 14%, transparent);
+  color: var(--cor-texto-forte);
+  box-shadow: inset 2px 0 0 var(--cor-marca-clara);
+}
+
+.modulo-gestao__trilha-item-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--cor-texto-mudo);
+}
+
+.modulo-gestao__trilha-item[aria-current="true"] .modulo-gestao__trilha-item-icone {
+  color: var(--cor-marca-clara);
+}
+
+.modulo-gestao__trilha-item-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+/* Status em ponto colorido + texto pequeno, no lugar do selo .insignia -
+   item 1.4. */
+.modulo-gestao__trilha-item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--cor-texto-mudo);
+  white-space: nowrap;
+}
+
+.modulo-gestao__status-ponto {
+  width: 0.4rem;
+  height: 0.4rem;
+  flex-shrink: 0;
+  border-radius: var(--raio-circular);
+}
+
+.modulo-gestao__status-ponto--publicado {
+  background: var(--cor-sucesso);
+}
+
+.modulo-gestao__status-ponto--rascunho {
+  background: var(--cor-aviso);
+}
+
+/* O ⋮ so aparece no hover/foco da linha ou quando o item esta aberto - o
+   resto do tempo fica escondido, pra trilha ficar limpa (item 1.4). O botao
+   continua tabulavel (opacity, nao display:none), entao `:focus-within`
+   cobre tanto focar a propria linha (tabIndex=0) quanto focar o botao "..."
+   direto depois de um clique. */
+.modulo-gestao__trilha-item-acoes {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transicao-rapida);
+}
+
+.modulo-gestao__trilha-item:hover .modulo-gestao__trilha-item-acoes,
+.modulo-gestao__trilha-item:focus-within .modulo-gestao__trilha-item-acoes,
+.modulo-gestao__trilha-item[aria-current="true"] .modulo-gestao__trilha-item-acoes {
+  opacity: 1;
+}
+
+.modulo-gestao__secao-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: var(--espaco-xs) 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--cor-texto-mudo);
+}
+
+.modulo-gestao__secao-contagem {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.35rem;
+  border-radius: var(--raio-circular);
+  background: color-mix(in srgb, var(--cor-marca) 16%, transparent);
+  color: var(--cor-marca-clara);
+  font-size: 0.65rem;
   font-weight: 700;
 }
 
-/* Linha fina separando o cabecalho (migalha/titulo/resumo + acoes do
-   Professor, quando houver) do corpo - ref. docs/TelaConteudosProfessor/
-   modulo-cabecalho-opcao-a.png, numero 2. */
 .modulo-gestao__cabecalho {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--espaco-md);
   padding-bottom: var(--espaco-md);
@@ -9645,195 +9874,40 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  min-width: 14rem;
+  min-width: 0;
   flex: 1 1 18rem;
 }
 
+/* Cabecalho enxuto (item 3): numero + titulo numa linha so, cortado com
+   reticencias se faltar espaco - nao pode quebrar linha a partir de 1366px. */
 .modulo-gestao__titulo {
   display: flex;
   align-items: center;
   gap: var(--espaco-sm);
-  font-size: 1.5rem;
+  min-width: 0;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--cor-texto-forte);
+}
+
+.modulo-gestao__titulo-texto {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .modulo-gestao__resumo {
   font-size: 0.85rem;
   color: var(--cor-texto-suave);
   margin: 0;
-}
-
-/* 3 colunas sempre (desktop e celular) - reaproveita o encolhimento visual
-   de .atividades-curso__kpis-compactos (icone/valor/rotulo menores), so
-   troca a grade de 2 pra 3 colunas pra nao sobrar 1 KPI sozinho embaixo. */
-.modulo-gestao__kpis {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  flex-shrink: 0;
-}
-
-@media (max-width: 480px) {
-  .modulo-gestao__kpis .cartao-estatistica {
-    padding: 0.5rem 0.4rem;
-    gap: 0.3rem;
-  }
-
-  .modulo-gestao__kpis .cartao-estatistica__valor {
-    font-size: 0.95rem;
-  }
-
-  .modulo-gestao__kpis .cartao-estatistica__rotulo {
-    font-size: 0.65rem;
-  }
-}
-
-.modulo-gestao__secao-titulo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 var(--espaco-sm);
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: var(--cor-texto-forte);
-}
-
-/* "Quizzes" ganha mais respiro que o espaco entre os cartoes (0.5rem,
-   .atividades-curso__lista) - o gap de --espaco-lg do .modulo-gestao__lista
-   ja separa as 2 secoes; essa margem soma um pouco mais so na 2a. */
-.modulo-gestao__secao--quizzes {
-  margin-top: var(--espaco-sm);
-}
-
-.modulo-gestao__secao-contagem {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.3rem;
-  height: 1.3rem;
-  padding: 0 0.4rem;
-  border-radius: var(--raio-circular);
-  background: color-mix(in srgb, var(--cor-marca) 16%, transparent);
-  color: var(--cor-marca-clara);
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.modulo-gestao__secao-linha {
-  flex: 1;
-  height: 1px;
-  min-width: 1rem;
-  background: var(--cor-borda);
-}
-
-/* Cada conteudo/quiz vira um cartao com o mesmo relevo dos cartoes de
-   modulo (--cor-card-modulo/--borda-card-modulo/--relevo-card-*, ver
-   .conteudos-modulo--cartao em base.css) - sem herdar o separador fino de
-   .atividades-curso__item (lista "lisa" das outras telas). */
-.modulo-gestao__item-cartao {
-  border-bottom: none;
-  background: var(--cor-card-modulo);
-  border: 1px solid var(--borda-card-modulo);
-  border-radius: var(--raio-md);
-  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
-  padding: 0;
-  overflow: hidden;
-}
-
-/* Cartao compacto (docs/TelaConteudosProfessor/PROMPT-agente-modulo-
-   compacto-espaco.md, item 3): padding menor, icone menor e titulo em no
-   maximo 2 linhas, so na lista da tela do modulo (Professor e Coordenador/
-   Admin, que reaproveitam a mesma classe) - nao mexe em nada disso nas
-   outras telas que tambem tem .atividades-curso__item. Escopado em
-   .modulo-gestao__lista (nao .modulo-gestao__item-cartao) pra cobrir
-   tambem o quiz vinculado a um material, que fica recuado dentro do
-   cartao do material em vez de ser o proprio cartao. */
-.modulo-gestao__lista .atividades-curso__linha--acionavel {
-  padding: 0.5rem var(--espaco-sm);
-}
-
-.modulo-gestao__lista .atividades-curso__icone {
-  width: 2rem;
-  height: 2rem;
-}
-
-.modulo-gestao__lista .atividades-curso__icone svg {
-  width: 60%;
-  height: 60%;
-}
-
-/* 1 linha com reticencias (nao mais 2 linhas) - docs/TelaConteudosProfessor/
-   PROMPT-agente-tela-modulo-voltar-selo-cartoes.md, item 3: um titulo longo
-   nao pode deixar o cartao dele mais alto que os outros. O nome completo
-   continua disponivel no `title` (tooltip nativo) de cada item. */
-.modulo-gestao__lista .atividades-curso__item-titulo {
-  display: block;
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* Selo compacto (item 2): nos cartoes da lista, "Publicado"/"Rascunho"
-   fica do tamanho da linha "Texto ·" ao lado - o padrao de .insignia
-   (componentes.css) e feito pra ficar sozinho, maior que o texto da linha
-   aqui. So o tamanho muda; a cor de cada status (.insignia--sucesso etc.)
-   continua a mesma. O selo do painel da previa (PreviaItemAluno.jsx) nao
-   esta dentro de .modulo-gestao__lista, entao nao e afetado. */
-.modulo-gestao__lista .insignia {
-  padding: 0.1rem 0.45rem;
-  font-size: 0.68rem;
-}
-
-/* Barra "Selecionar tudo / Mais ações" fixa no topo da lista ao rolar - so
-   na tela do modulo do Professor (unica que tem selecao em lote aqui), ref.
-   docs/TelaConteudosProfessor/modulo-cabecalho-opcao-a.png, numero 3. Mesmo
-   fundo do painel (--cor-fundo-alt) pra nao deixar o conteudo por baixo
-   transparecendo atras da barra. */
-.modulo-gestao__lista .atividades-curso__barra-selecao {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--cor-fundo-alt);
-}
-
-/* A metrica do topo do modulo (Progresso/Conclusao) ja repete essa info -
-   so a seta ("›") fica centralizada na altura do cartao, que agora tem so
-   2 linhas (titulo + tipo/contagem) - docs/fluxo-coordenador/PROMPT-agente-
-   modulo-cartao-seta-e-metrica.md. .atividades-curso__linha (regra geral,
-   outras telas) nao muda. */
-.modulo-gestao__item-cartao .atividades-curso__chevron {
-  align-self: center;
-}
-
-/* Item aberto ganha contorno roxo, igual ao pedido do usuario - soma ao
-   relevo em vez de substituir (duas sombras, ver acima). */
-.modulo-gestao__item-cartao:has(.atividades-curso__linha--acionavel[aria-current="true"]) {
-  border-color: var(--cor-marca-clara);
-  box-shadow: 0 0 0 1px var(--cor-marca-clara), var(--relevo-card-topo), var(--relevo-card-base);
-}
-
-.modulo-gestao__corpo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-lg);
-}
-
-.modulo-gestao__lista {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-lg);
-  min-width: 0;
-}
-
-.modulo-gestao__rodape {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
 }
 
 .modulo-gestao__painel {
-  display: none;
+  display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   min-height: 0;
   padding: var(--espaco-md);
@@ -9841,27 +9915,6 @@
   border-radius: var(--raio-lg);
   background: var(--cor-fundo-alt);
   container-type: inline-size;
-}
-
-.modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
-  display: none;
-}
-
-.modulo-gestao__corpo--item-aberto .modulo-gestao__painel {
-  display: flex;
-}
-
-/* Abaixo de 768px o item aberto vira tela cheia por cima de tudo (sidebar e
-   topbar inclusive) - "Voltar ao modulo"/Esc fecham, ver TelaModuloGestao.jsx
-   (useLarguraJanela). Acima disso a leitura e uma coluna fixa, nunca some. */
-@media (max-width: 767.98px) {
-  .modulo-gestao__corpo--item-aberto .modulo-gestao__painel {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    border: none;
-    border-radius: 0;
-  }
 }
 
 .modulo-gestao__painel-topo {
@@ -9937,51 +9990,35 @@
   /* Secoes com abas (ex.: Conteudos do Professor, dentro do grupo
      "Academico") somam mais 44px de altura fixa acima do conteudo
      (.layout-principal--com-tabs, layout.css) - sem descontar isso aqui, o
-     rodape (Modulo anterior/Proximo modulo) passava da altura visivel da
-     tela (ref. docs/TelaConteudosProfessor/modulo-compacto-exemplo.png,
-     numero 6). A tela do modulo do Coordenador/Admin (Cursos, sem abas) nao
-     tem essa classe no ancestral, entao nao e afetada. */
+     conteudo passava da altura visivel da tela. A tela do modulo do
+     Coordenador/Admin (Cursos, sem abas) nao tem essa classe no ancestral,
+     entao nao e afetada. */
   .layout-principal--com-tabs .modulo-gestao {
     height: calc(100dvh - var(--altura-topbar) - 44px - (var(--espaco-xl) * 2));
   }
 
-  .modulo-gestao__corpo {
+  .modulo-gestao {
     flex-direction: row;
     align-items: stretch;
-    flex: 1;
-    min-height: 0;
     overflow: hidden;
   }
 
-  .modulo-gestao__lista {
-    width: 320px;
+  .modulo-gestao__trilha {
+    width: 280px;
     flex-shrink: 0;
     overflow-y: auto;
     padding-right: var(--espaco-xs);
   }
 
-  .modulo-gestao__rodape {
-    margin-top: auto;
-    padding-top: var(--espaco-md);
-  }
-
-  .modulo-gestao__painel {
+  .modulo-gestao__conteudo {
     display: flex;
     flex: 1;
-  }
-
-  .modulo-gestao__corpo--item-aberto .modulo-gestao__lista {
-    display: flex;
-  }
-
-  .modulo-gestao__painel-topo {
-    display: none;
   }
 }
 
 @media (min-width: 1024px) {
-  .modulo-gestao__lista {
-    width: 360px;
+  .modulo-gestao__trilha {
+    width: 320px;
   }
 }
 
@@ -10151,8 +10188,18 @@
 .previa-item-aluno__acoes-professor {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--espaco-sm);
-  margin-bottom: var(--espaco-sm);
+}
+
+/* Selo + acoes do professor (Editar/Publicar) lado a lado, a direita do
+   titulo/tipo - docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
+   trilha-versao-b.md, item 4.2 (`acoesCabecalho`). */
+.previa-item-aluno__cabecalho-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
 }
 
 /* Questoes do gabarito em 2 colunas quando a LEITURA (nao a janela) tiver
@@ -10274,8 +10321,77 @@
    vira uma linha rolavel na horizontal acima da questao; a partir dai,
    indice (coluna fixa) e questao ficam lado a lado.
    ------------------------------------------------------------ */
+.avaliacao-gestao > .atividades-curso__navegacao {
+  margin-bottom: calc(var(--espaco-sm) - var(--espaco-lg));
+}
+
+.avaliacao-gestao .modulo-gestao__migalha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--cor-texto-mudo);
+}
+
+.avaliacao-gestao .modulo-gestao__migalha button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  border-radius: var(--raio-sm);
+}
+
+.avaliacao-gestao .modulo-gestao__migalha button:hover,
+.avaliacao-gestao .modulo-gestao__migalha button:focus-visible {
+  color: var(--cor-texto-forte);
+  text-decoration: underline;
+  text-decoration-color: var(--cor-marca-clara);
+  text-underline-offset: 3px;
+}
+
+.avaliacao-gestao .modulo-gestao__migalha button:focus-visible {
+  outline: 2px solid var(--cor-marca-clara);
+  outline-offset: 2px;
+}
+
+.avaliacao-gestao .modulo-gestao__migalha [aria-current="page"] {
+  color: var(--cor-texto-forte);
+  font-weight: 700;
+}
+
+/* .modulo-gestao__cabecalho/-principal/__titulo/__resumo ganharam valores
+   novos para a trilha (item 3 do prompt versao B: 1 linha so, reticencias);
+   esta tela usa as mesmas classes mas precisa do visual anterior (titulo
+   maior, resumo podendo quebrar com os separadores "·"), restaurado aqui. */
+.avaliacao-gestao .modulo-gestao__cabecalho {
+  align-items: flex-start;
+}
+
+.avaliacao-gestao .modulo-gestao__cabecalho-principal {
+  min-width: 14rem;
+}
+
 .avaliacao-gestao .modulo-gestao__titulo {
   flex-wrap: wrap;
+  font-size: 1.5rem;
+}
+
+.avaliacao-gestao .modulo-gestao__resumo {
+  white-space: normal;
+}
+
+.avaliacao-gestao .modulo-gestao__rodape {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
 }
 
 .avaliacao-gestao__resumo-separador {
