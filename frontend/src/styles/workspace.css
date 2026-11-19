@@ -9636,12 +9636,15 @@
 }
 
 /* ------------------------------------------------------------
-   ROTEIRO DA AULA — topo (voltar + acoes do Professor/KPIs do Coordenador)
-   e as 2 colunas (lista de modulos + roteiro). pages/workspace/
-   TelaModuloGestaoProfessor.jsx e TelaModuloGestao.jsx, components/
-   ListaModulosRoteiro.jsx.
+   TELA DO MODULO — "lista + janela" (docs/TelaConteudosProfessor/PROMPT-
+   agente-tela-modulo-lista-e-janela.md): substitui o "roteiro da aula"
+   (linha do tempo com bloco expansivel no lugar) por uma lista de modulos a
+   esquerda (ListaModulosCartoes.jsx) + painel do modulo com linhas grandes
+   a direita (PainelItensModulo.jsx) - clicar numa linha abre
+   JanelaPreviaItem.jsx (janela grande, com zoom/paginacao/quiz formatado),
+   em vez de expandir a linha no lugar.
    ------------------------------------------------------------ */
-.roteiro-tela__topo {
+.modulo-lista-janela__caminho {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -9668,20 +9671,17 @@
   text-underline-offset: 3px;
 }
 
-/* KPIs do Coordenador/Admin (Progresso/Conclusao/Desempenho medio), no
-   lugar dos botoes de criar do Professor - reaproveita CartaoEstatistica,
-   so mais compacto pra caber ao lado do "← curso". */
-.roteiro-tela__kpis {
+.modulo-lista-janela__kpis {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espaco-sm);
 }
 
-.roteiro-tela__kpis .cartao-estatistica {
+.modulo-lista-janela__kpis .cartao-estatistica {
   padding: 0.4rem 0.75rem;
 }
 
-.roteiro-tela__corpo {
+.modulo-lista-janela__corpo {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-lg);
@@ -9689,60 +9689,162 @@
   min-height: 0;
 }
 
-.roteiro-tela__coluna-modulos {
+.modulo-lista-janela__coluna-modulos {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-sm);
   min-width: 0;
 }
 
-/* A lista "de verdade" (nav com botoes) e o seletor mobile convivem no DOM -
-   so 1 dos dois fica visivel por vez, por media query (item 4 do prompt). */
-.roteiro-tela__lista-modulos {
-  display: none;
+.modulo-lista-janela__coluna-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-md);
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (min-width: 768px) {
+  .modulo-lista-janela__corpo {
+    flex-direction: row;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .modulo-lista-janela__coluna-modulos {
+    width: 260px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: var(--espaco-xs);
+  }
+
+  .modulo-lista-janela__coluna-painel {
+    flex: 1;
+    overflow: hidden;
+  }
+}
+
+/* ------------------------------------------------------------
+   CARTAO DO CURSO — topo da tela do modulo, components/CartaoCursoModulo.jsx.
+   Fundo em degrade solido (item 2 do prompt: "sem efeito vazado") pra nao
+   deixar o gradiente da pagina por tras do cartao.
+   ------------------------------------------------------------ */
+.cartao-curso-modulo {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-md);
+  padding: var(--espaco-lg);
+  border: 1px solid var(--borda-card-modulo);
+  border-radius: var(--raio-lg);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cor-marca) 22%, var(--cor-fundo-elevado)), var(--cor-fundo-elevado) 65%);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
+}
+
+.cartao-curso-modulo__icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 4.625rem;
+  height: 4.625rem;
+  overflow: hidden;
+  border-radius: var(--raio-lg);
+  background: linear-gradient(135deg, var(--cor-marca), var(--cor-marca-profunda));
+  color: #fff;
+}
+
+.cartao-curso-modulo__icone img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cartao-curso-modulo__corpo {
+  display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
-.roteiro-tela__item-lista-modulos {
+.cartao-curso-modulo__titulo {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--cor-texto-forte);
+}
+
+.cartao-curso-modulo__descricao {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cartao-curso-modulo__selo {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* ------------------------------------------------------------
+   LISTA DE MODULOS EM CARTOES — coluna da esquerda, components/
+   ListaModulosCartoes.jsx: numero grande + titulo (ate 2 linhas) + resumo +
+   seta; o modulo atual fica com numero/fundo/barra roxos. A lista "de
+   verdade" (nav com botoes) e o seletor mobile convivem no DOM - so 1 dos
+   dois fica visivel por vez, por media query.
+   ------------------------------------------------------------ */
+.lista-modulos-cartoes {
+  display: none;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.lista-modulos-cartoes__item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--espaco-sm);
   width: 100%;
-  padding: var(--espaco-sm);
-  border: 1px solid transparent;
+  padding: var(--espaco-sm) var(--espaco-md);
+  border: 1px solid var(--borda-card-modulo);
+  border-left: 3px solid transparent;
   border-radius: var(--raio-md);
-  background: none;
-  color: var(--cor-texto-suave);
-  font: inherit;
+  background: var(--cor-fundo-elevado);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
+  color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--transicao-rapida), border-color var(--transicao-rapida);
+  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
 }
 
-.roteiro-tela__item-lista-modulos:hover,
-.roteiro-tela__item-lista-modulos:focus-visible {
-  background: var(--cor-fundo-elevado);
-  border-color: var(--cor-borda);
-}
-
-.roteiro-tela__item-lista-modulos[aria-current="true"] {
+.lista-modulos-cartoes__item:hover,
+.lista-modulos-cartoes__item:focus-visible {
   border-color: var(--cor-marca-clara);
-  background: color-mix(in srgb, var(--cor-marca) 10%, transparent);
-  color: var(--cor-texto-forte);
-  box-shadow: inset 2px 0 0 var(--cor-marca-clara);
 }
 
-.roteiro-tela__item-lista-modulos-texto {
+.lista-modulos-cartoes__item[aria-current="true"] {
+  border-left-color: var(--cor-marca-clara);
+  background: color-mix(in srgb, var(--cor-marca) 16%, var(--cor-fundo-elevado));
+}
+
+.lista-modulos-cartoes__item[aria-current="true"] .conteudos-modulo__numero {
+  background: var(--cor-marca-clara);
+}
+
+.lista-modulos-cartoes__texto {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-/* Titulo ate 2 linhas, SEM cortar (diferente da trilha compacta da versao
-   B, que usava 1 linha com reticencias - item 1 do prompt do roteiro). */
-.roteiro-tela__item-lista-modulos-titulo {
+.lista-modulos-cartoes__titulo {
   display: -webkit-box;
   overflow: hidden;
   font-weight: 600;
@@ -9751,17 +9853,23 @@
   -webkit-box-orient: vertical;
 }
 
-.roteiro-tela__item-lista-modulos-resumo {
+.lista-modulos-cartoes__resumo {
   font-size: 0.75rem;
   color: var(--cor-texto-mudo);
 }
 
-.roteiro-tela__seletor-modulos {
+.lista-modulos-cartoes__seta {
+  flex-shrink: 0;
+  color: var(--cor-texto-mudo);
+  transform: rotate(-90deg);
+}
+
+.lista-modulos-cartoes__seletor {
   display: block;
   margin-bottom: var(--espaco-xs);
 }
 
-.roteiro-tela__seletor-modulos select {
+.lista-modulos-cartoes__seletor select {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--cor-borda);
@@ -9771,76 +9879,89 @@
   font: inherit;
 }
 
-.roteiro-tela__vazio {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--espaco-sm);
-  padding: var(--espaco-lg);
-  border: 1px dashed var(--cor-borda);
-  border-radius: var(--raio-lg);
-}
-
 @media (min-width: 768px) {
-  .roteiro-tela__corpo {
-    flex-direction: row;
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  .roteiro-tela__coluna-modulos {
-    width: 220px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: var(--espaco-xs);
-  }
-
-  .roteiro-tela__lista-modulos {
+  .lista-modulos-cartoes {
     display: flex;
   }
 
-  .roteiro-tela__seletor-modulos {
+  .lista-modulos-cartoes__seletor {
     display: none;
-  }
-
-  .modulo-gestao__conteudo {
-    flex: 1;
-    overflow: hidden;
-  }
-}
-
-@media (min-width: 1200px) {
-  .roteiro-tela__coluna-modulos {
-    width: 260px;
   }
 }
 
 /* ------------------------------------------------------------
-   ROTEIRO DO MODULO — components/RoteiroModulo.jsx: cabecalho do modulo
-   (numero/titulo/resumo/barra "% publicado"/"Selecionar") + a linha do
-   tempo vertical com os passos (components/MiniaturaPasso.jsx pro bloco
-   fechado).
+   PAINEL DO MODULO — components/PainelItensModulo.jsx: cabecalho (icone
+   redondo + titulo + contagens + pilula "N itens") e linhas grandes (uma
+   por conteudo/quiz). Fundos SOLIDOS (item 2 do prompt): paginas/cartoes
+   nunca deixam o degrade da pagina aparecer por tras.
    ------------------------------------------------------------ */
-.roteiro-modulo {
+.painel-itens-modulo {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-md);
-  min-width: 0;
   min-height: 0;
+  padding: var(--espaco-lg);
+  border: 1px solid var(--borda-card-modulo);
+  border-radius: var(--raio-lg);
+  background: var(--cor-fundo-alt);
+  box-shadow: var(--relevo-card-base);
   overflow-y: auto;
-  overflow-x: hidden;
 }
 
-.roteiro-modulo__cabecalho {
-  align-items: flex-start;
+.painel-itens-modulo__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
+  flex-shrink: 0;
+  padding-bottom: var(--espaco-md);
+  border-bottom: 1px solid var(--cor-borda);
 }
 
-.roteiro-modulo__cabecalho .modulo-gestao__cabecalho-principal {
-  gap: 0.4rem;
+.painel-itens-modulo__cabecalho-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: var(--raio-circular);
+  background: var(--cor-marca);
+  color: #fff;
 }
 
-.roteiro-modulo__selecionar {
+.painel-itens-modulo__cabecalho-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.painel-itens-modulo__titulo {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--cor-texto-forte);
+}
+
+.painel-itens-modulo__resumo {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel-itens-modulo__pilula {
+  flex-shrink: 0;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.painel-itens-modulo__selecionar {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -9855,314 +9976,159 @@
   cursor: pointer;
 }
 
-.roteiro-modulo__selecionar:hover {
+.painel-itens-modulo__selecionar:hover {
   border-color: var(--cor-marca-clara);
   color: var(--cor-marca-clara);
 }
 
-.roteiro-modulo__linha-tempo {
+.painel-itens-modulo__vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espaco-sm);
+  padding: var(--espaco-lg);
+  border: 1px dashed var(--cor-borda);
+  border-radius: var(--raio-lg);
+}
+
+.painel-itens-modulo__lista {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-sm);
   list-style: none;
 }
 
-.roteiro-passo {
-  display: flex;
-  gap: var(--espaco-sm);
-}
-
-/* Coluna do circulo numerado + linha vertical roxa ligando os passos - o
-   ultimo passo nao continua a linha pra baixo dele (nao ha pra onde ir). */
-.roteiro-passo__marcador {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-  width: 1.75rem;
-}
-
-.roteiro-passo__marcador::before {
-  content: "";
-  order: 2;
-  flex: 1;
-  width: 2px;
-  background: var(--cor-marca-clara);
-}
-
-.roteiro-passo:last-child .roteiro-passo__marcador::before {
-  display: none;
-}
-
-.roteiro-passo__numero {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--raio-circular);
-  background: var(--cor-marca);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.roteiro-passo--aberto .roteiro-passo__numero {
-  background: var(--cor-marca-clara);
-}
-
-.roteiro-passo__corpo {
-  flex: 1;
-  min-width: 0;
-  padding-bottom: var(--espaco-sm);
-}
-
-/* Quiz pendurado no conteudo (sem numero proprio) - recuado, bloco menor,
-   linha tracejada no lugar do circulo cheio. */
-.roteiro-passo--pendurado {
-  margin-left: 1.4rem;
-}
-
-.roteiro-passo--pendurado .roteiro-passo__marcador {
-  width: 0.9rem;
-}
-
-.roteiro-passo--pendurado .roteiro-passo__marcador::before {
-  width: 0;
-  background: none;
-  border-left: 2px dashed var(--cor-borda);
-}
-
-.roteiro-passo__fechado {
+.painel-itens-modulo__linha {
   display: flex;
   align-items: center;
-  gap: var(--espaco-sm);
+  gap: var(--espaco-md);
   width: 100%;
-  min-height: 6.25rem;
+  min-height: 5.25rem;
   padding: var(--espaco-sm) var(--espaco-md);
-  border: 1px solid var(--cor-borda);
+  border: 1px solid var(--borda-card-modulo);
   border-radius: var(--raio-lg);
-  background: var(--cor-fundo-alt);
+  background: var(--cor-fundo-elevado);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
+  transition: border-color var(--transicao-rapida);
 }
 
-.roteiro-passo--pendurado .roteiro-passo__fechado {
-  min-height: 4rem;
-  background: none;
-}
-
-.roteiro-passo__fechado:hover,
-.roteiro-passo__fechado:focus-visible {
+.painel-itens-modulo__linha:hover,
+.painel-itens-modulo__linha:focus-visible {
   border-color: var(--cor-marca-clara);
-  background: var(--cor-fundo-elevado);
 }
 
-.roteiro-passo__miniatura {
+.painel-itens-modulo__icone {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 7.5rem;
-  height: 4.75rem;
-  overflow: hidden;
+  width: 3.625rem;
+  height: 3.625rem;
   border-radius: var(--raio-md);
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-texto-mudo);
+  color: #fff;
 }
 
-.roteiro-passo--pendurado .roteiro-passo__miniatura {
-  width: 3rem;
-  height: 3rem;
+.painel-itens-modulo__icone--verde {
+  background: color-mix(in srgb, var(--cor-sucesso) 70%, var(--cor-fundo-elevado));
 }
 
-.roteiro-passo__miniatura--imagem img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.painel-itens-modulo__icone--roxo {
+  background: var(--cor-marca);
 }
 
-.roteiro-passo__fechado-texto {
+.painel-itens-modulo__texto {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
   min-width: 0;
 }
 
-.roteiro-passo__fechado-titulo {
+.painel-itens-modulo__item-titulo {
   display: -webkit-box;
   overflow: hidden;
   font-size: 0.95rem;
-  line-height: 1.3;
   color: var(--cor-texto-forte);
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
-.roteiro-passo__fechado-meta {
+.painel-itens-modulo__item-descricao {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--cor-texto-suave);
+}
+
+.painel-itens-modulo__item-dados {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.78rem;
   color: var(--cor-texto-mudo);
 }
 
-.roteiro-passo__fechado-direita {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  gap: 0.4rem;
-}
-
-/* Bloco aberto: borda roxa, previa ocupando a largura toda - sem o fundo
-   neutro do fechado (ver PreviaItemAluno.jsx, reaproveitado sem mudar). */
-.roteiro-passo--aberto .roteiro-passo__corpo {
-  padding: var(--espaco-md);
-  border: 1px solid var(--cor-marca-clara);
-  border-radius: var(--raio-lg);
-  background: var(--cor-fundo-alt);
-  container-type: inline-size;
-}
-
-/* Linha do topo do bloco aberto: caixa de selecao (so com modoSelecao, do
-   Professor) a esquerda, "Fechar" sempre a direita. */
-.roteiro-passo__aberto-topo {
+.painel-itens-modulo__direita {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-shrink: 0;
   gap: var(--espaco-sm);
-  margin-bottom: var(--espaco-sm);
 }
 
-.roteiro-passo__fechar {
+.painel-itens-modulo__selo-tipo {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex-shrink: 0;
-  margin-left: auto;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-circular);
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-texto-suave);
-  cursor: pointer;
-}
-
-.roteiro-passo__fechar:hover {
-  border-color: var(--cor-marca-clara);
-  color: var(--cor-marca-clara);
-}
-
-.roteiro-passo__rodape {
-  display: flex;
-  align-items: center;
-  justify-content: space-between !important;
-  gap: var(--espaco-sm);
-  width: 100%;
-  flex-shrink: 0;
-  margin-top: var(--espaco-md);
-}
-
-.roteiro-passo__rodape-contador {
-  flex-shrink: 0;
-  font-size: 0.8rem;
-  color: var(--cor-texto-mudo);
+  gap: 0.25rem;
   white-space: nowrap;
 }
 
-@media (max-width: 480px) {
-  .roteiro-passo__rodape-contador {
-    font-size: 0.72rem;
-  }
-}
-
-/* Miniatura menor abaixo de 768px (item 4 do prompt do roteiro). */
 @media (max-width: 767.98px) {
-  .roteiro-passo__miniatura {
-    width: 4.5rem;
-    height: 3rem;
+  .painel-itens-modulo__icone {
+    width: 2.75rem;
+    height: 2.75rem;
   }
-}
 
-/* Altura minima do bloco aberto (item 1 do prompt do roteiro): 50vh entre
-   768-1199px, 60vh (max ~720px) a partir de 1200px - PDF/imagem ocupam essa
-   altura via a prop `alturaMidia` de PreviaItemAluno.jsx. */
-@media (min-width: 768px) and (max-width: 1199.98px) {
-  .roteiro-passo--aberto .previa-item-aluno {
-    min-height: 50vh;
-  }
-}
-
-@media (min-width: 1200px) {
-  .roteiro-passo--aberto .previa-item-aluno {
-    min-height: 60vh;
-    max-height: 45rem;
+  .painel-itens-modulo__selo-tipo {
+    display: none;
   }
 }
 
 /* ------------------------------------------------------------
-   PREVIA DE UM ITEM COMO O ALUNO VE (material ou quiz) —
-   components/PreviaItemAluno.jsx, reaproveitada pelo bloco aberto do
-   roteiro da aula (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
-   roteiro.md) tanto no Coordenador/Admin (selo "Somente leitura") quanto no
-   Professor (selo Publicado/Rascunho, aviso e acoes no cabecalho).
-   Cabecalho (titulo/tipo/selo) fica fixo; so o corpo (material ou gabarito
-   do quiz) rola - ver .roteiro-passo__rodape, que e o rodape de verdade
-   (Anterior/Proximo) de cada bloco aberto.
+   JANELA DE PREVIA DE UM ITEM — components/JanelaPreviaItem.jsx (docs/
+   TelaConteudosProfessor/PROMPT-agente-tela-modulo-lista-e-janela.md, item
+   4): janela grande (~1080px/90dvh) em cima de Modal.jsx, com
+   `fecharAoClicarFora` (unica tela do app com esse comportamento) e a
+   classe `modal-caixa--janela-item` abaixo (componentes.css). Corpo por
+   tipo: imagem com zoom (ImagemComZoom.jsx), PDF paginado
+   (VisualizadorPdfConteudo.jsx), video/texto/link simples, ou quiz em
+   formato de quiz (lista de questoes + uma questao por vez).
    ------------------------------------------------------------ */
-.previa-item-aluno {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  gap: var(--espaco-sm);
-}
-
-.previa-item-aluno__cabecalho {
-  display: flex;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espaco-sm);
-}
-
-.previa-item-aluno__cabecalho-texto {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.previa-item-aluno__titulo {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--cor-texto-forte);
-  overflow-wrap: anywhere;
-}
-
-.previa-item-aluno__tipo {
-  margin: 0;
-  font-size: 0.8rem;
+.janela-previa-item__titulo-sub {
+  margin: -0.5rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--cor-texto-mudo);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
-.previa-item-aluno__corpo {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+.janela-previa-item__acoes-cabecalho {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--espaco-sm);
 }
 
-.previa-item-aluno__texto {
+.janela-previa-item__vazio {
+  font-size: 0.9rem;
+  color: var(--cor-texto-mudo);
+}
+
+.janela-previa-item__texto {
   font-size: 0.9rem;
   color: var(--cor-texto-suave);
   line-height: 1.6;
@@ -10170,77 +10136,14 @@
   overflow-wrap: anywhere;
 }
 
-.previa-item-aluno__vazio {
-  font-size: 0.9rem;
-  color: var(--cor-texto-mudo);
-}
-
-/* max-height usa a variavel --previa-item-aluno-altura-midia (inline, via a
-   prop `alturaMidia` de PreviaItemAluno.jsx) - padrao 300px (18.75rem),
-   maior quando o bloco aberto do roteiro da aula passa um valor proprio. */
-.previa-item-aluno__imagem {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  max-height: var(--previa-item-aluno-altura-midia, 18.75rem);
-  border-radius: var(--raio-md);
-  background: #000;
-  overflow: hidden;
-}
-
-.previa-item-aluno__imagem-img {
+.janela-previa-item__video {
   width: 100%;
-  max-height: var(--previa-item-aluno-altura-midia, 18.75rem);
-  object-fit: contain;
-}
-
-.previa-item-aluno__ampliar {
-  position: absolute;
-  right: var(--espaco-sm);
-  bottom: var(--espaco-sm);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.4rem 0.7rem;
-  border: none;
-  border-radius: var(--raio-md);
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.previa-item-aluno__ampliar:hover {
-  background: rgba(0, 0, 0, 0.78);
-}
-
-.previa-item-aluno__pdf {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  max-height: var(--previa-item-aluno-altura-midia, 18.75rem);
-  overflow: hidden;
-  border-radius: var(--raio-md);
-  border: 1px solid var(--cor-borda);
-  background: var(--cor-fundo-elevado);
-}
-
-.previa-item-aluno__pdf-indisponivel {
-  padding: var(--espaco-md);
-  font-size: 0.85rem;
-  color: var(--cor-texto-mudo);
-}
-
-.previa-item-aluno__video {
-  width: 100%;
-  max-height: var(--previa-item-aluno-altura-midia, 18.75rem);
+  max-height: 60dvh;
   border-radius: var(--raio-md);
   background: #000;
 }
 
-.previa-item-aluno__link-cartao {
+.janela-previa-item__link-cartao {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -10252,7 +10155,7 @@
   color: var(--cor-texto-suave);
 }
 
-.previa-item-aluno__link-endereco {
+.janela-previa-item__link-endereco {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -10261,45 +10164,207 @@
   font-size: 0.85rem;
 }
 
-.previa-item-aluno__rodape {
+.janela-previa-item__rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between !important;
+  gap: var(--espaco-sm);
+  width: 100%;
+}
+
+.janela-previa-item__rodape-contador {
   flex-shrink: 0;
-  margin-top: var(--espaco-sm);
+  font-size: 0.8rem;
+  color: var(--cor-texto-mudo);
+  white-space: nowrap;
 }
 
-/* Rodape do professor (TelaModuloGestaoProfessor.jsx): Editar/Publicar fica
-   numa linha acima do Anterior/Proximo (que reaproveita .modulo-gestao__
-   painel-rodape, ja compartilhado com o Coordenador). */
-.previa-item-aluno__acoes-professor {
+/* Quiz em formato de quiz: lista de questoes a esquerda (coluna fixa) +
+   uma questao por vez a direita - empilha em 1 coluna abaixo de 700px. */
+.janela-previa-item__quiz {
   display: flex;
-  flex-wrap: wrap;
+  gap: var(--espaco-lg);
+  align-items: flex-start;
+}
+
+.janela-previa-item__quiz-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  width: 11rem;
+}
+
+.janela-previa-item__quiz-item-lista {
+  display: flex;
   align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--borda-card-modulo);
+  border-radius: var(--raio-md);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.janela-previa-item__quiz-item-lista[aria-current="true"] {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-texto-forte);
+}
+
+.janela-previa-item__quiz-numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--raio-circular);
+  background: var(--cor-marca);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.janela-previa-item__quiz-corpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: var(--espaco-sm);
 }
 
-/* Selo + acoes do professor (Editar/Publicar) lado a lado, a direita do
-   titulo/tipo - docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
-   trilha-versao-b.md, item 4.2 (`acoesCabecalho`). */
-.previa-item-aluno__cabecalho-acoes {
-  display: flex;
-  flex-wrap: wrap;
+.janela-previa-item__quiz-toggle {
+  display: inline-flex;
   align-items: center;
-  gap: var(--espaco-sm);
+  gap: 0.4rem;
+  align-self: flex-end;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
 }
 
-/* Questoes do gabarito em 2 colunas quando o BLOCO ABERTO (nao a janela)
-   tiver largura confortavel - container query em .roteiro-passo__corpo
-   aberto (acima), escopado so aqui pra nao alterar GabaritoQuestoes.jsx nem
-   as outras telas que reaproveitam .revisao-avaliacao--gabarito (tentativa
-   do aluno, previa do professor). Formato compacto (mais denso) permite
-   entrar em 2 colunas mais cedo, 760px em vez de 900px - PROMPT-agente-
-   modulo-leitura-compacta.md, item 5. */
-@container (min-width: 760px) {
-  .roteiro-passo--aberto .revisao-avaliacao--gabarito {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: var(--espaco-lg);
+@media (max-width: 43.75rem) {
+  .janela-previa-item__quiz {
+    flex-direction: column;
   }
+
+  .janela-previa-item__quiz-lista {
+    flex-direction: row;
+    overflow-x: auto;
+    width: 100%;
+  }
+}
+
+/* ------------------------------------------------------------
+   IMAGEM COM ZOOM — components/ImagemComZoom.jsx: comeca ajustada a area,
+   barra de zoom no canto inferior direito, arraste acima de 100%.
+   ------------------------------------------------------------ */
+.imagem-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.imagem-zoom__area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 60dvh;
+  overflow: hidden;
+  border-radius: var(--raio-md);
+  background: #000;
+}
+
+.imagem-zoom__area--arrastavel {
+  cursor: grab;
+}
+
+.imagem-zoom__area--arrastavel:active {
+  cursor: grabbing;
+}
+
+.imagem-zoom__img {
+  max-width: 100%;
+  max-height: 60dvh;
+  object-fit: contain;
+  user-select: none;
+}
+
+.imagem-zoom__dica {
+  position: absolute;
+  left: var(--espaco-sm);
+  bottom: var(--espaco-sm);
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--raio-sm);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.72rem;
+}
+
+.imagem-zoom__controles {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.imagem-zoom__controles button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-suave);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.imagem-zoom__controles button:hover:not(:disabled) {
+  border-color: var(--cor-marca-clara);
+  color: var(--cor-marca-clara);
+}
+
+.imagem-zoom__controles button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.imagem-zoom__percentual {
+  min-width: 3rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+/* ------------------------------------------------------------
+   PDF PAGINADO DENTRO DA JANELA — components/VisualizadorPdfConteudo.jsx,
+   reaproveitado por VisualizadorPdf.jsx (modal de "Ampliar" do aluno) e por
+   JanelaPreviaItem.jsx. Barra de pagina/zoom gruda embaixo (sticky) do
+   bloco rolavel, igual o rodape do modal fazia antes da extracao.
+   ------------------------------------------------------------ */
+.visualizador-pdf-conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espaco-sm);
+}
+
+.visualizador-pdf-conteudo__barra {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espaco-sm);
+  padding-top: var(--espaco-sm);
+  background: var(--cor-fundo-elevado);
+  border-top: 1px solid var(--cor-borda);
 }
 
 /* ------------------------------------------------------------

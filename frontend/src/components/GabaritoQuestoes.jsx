@@ -52,8 +52,14 @@ function anexosArquivo(questao) {
      ver workspace.css pra como o CSS poe as duas lado a lado (>= 900px) ou
      a figura logo depois do enunciado (abaixo disso), sem duplicar a figura
      no DOM. Sem imagem (ou sem mostrarFicha), nao tem corpo-figura nenhum -
-     a marcacao fica igual a de antes dessa rodada. */
-export default function GabaritoQuestoes({ compacto = false, mostrarFicha = false, numeroInicial = 0, questoes }) {
+     a marcacao fica igual a de antes dessa rodada.
+   - `mostrarGabarito` (docs/TelaConteudosProfessor/PROMPT-agente-tela-
+     modulo-lista-e-janela.md, item 4): chave da janela de previa do
+     professor/coordenador - ligada (default, compat com todo chamador
+     antigo) marca a alternativa/afirmativa certa e mostra a explicacao;
+     desligada, a questao fica exatamente como o aluno a ve (sem marcas nem
+     explicacao), pra conferir o enunciado sem overlay de resposta. */
+export default function GabaritoQuestoes({ compacto = false, mostrarFicha = false, mostrarGabarito = true, numeroInicial = 0, questoes }) {
   return (
     <div className={`revisao-avaliacao revisao-avaliacao--gabarito${compacto ? " revisao-avaliacao--compacta" : ""}`}>
       {questoes.map((questao, indice) => {
@@ -92,15 +98,17 @@ export default function GabaritoQuestoes({ compacto = false, mostrarFicha = fals
                       <div className="revisao-afirmativas__cabecalho">
                         <span className="revisao-afirmativas__letra">{afirmativa.numero}.</span>
                         <span className="revisao-afirmativas__texto">{afirmativa.texto}</span>
-                        {afirmativa.ehCorreta ? (
-                          <span className="revisao-afirmativas__marca revisao-afirmativas__marca--certo">
-                            <TbCheck aria-hidden="true" size={13} /> Correta
-                          </span>
-                        ) : (
-                          <span className="revisao-afirmativas__marca revisao-afirmativas__marca--errado">
-                            <TbX aria-hidden="true" size={13} /> Incorreta
-                          </span>
-                        )}
+                        {mostrarGabarito ? (
+                          afirmativa.ehCorreta ? (
+                            <span className="revisao-afirmativas__marca revisao-afirmativas__marca--certo">
+                              <TbCheck aria-hidden="true" size={13} /> Correta
+                            </span>
+                          ) : (
+                            <span className="revisao-afirmativas__marca revisao-afirmativas__marca--errado">
+                              <TbX aria-hidden="true" size={13} /> Incorreta
+                            </span>
+                          )
+                        ) : null}
                       </div>
                     </li>
                   ))}
@@ -114,13 +122,13 @@ export default function GabaritoQuestoes({ compacto = false, mostrarFicha = fals
                 <ul className="revisao-alternativas" role="list">
                   {questao.alternativas.map((alternativa) => (
                     <li
-                      className={`revisao-alternativas__item${alternativa.ehCorreta ? " revisao-alternativas__item--correta" : ""}`}
+                      className={`revisao-alternativas__item${mostrarGabarito && alternativa.ehCorreta ? " revisao-alternativas__item--correta" : ""}`}
                       key={alternativa.id}
                     >
                       <div className="revisao-alternativas__cabecalho">
                         <span className="revisao-alternativas__letra">{alternativa.letra}</span>
                         <span className="revisao-alternativas__texto">{alternativa.texto}</span>
-                        {alternativa.ehCorreta ? (
+                        {mostrarGabarito && alternativa.ehCorreta ? (
                           <span className="revisao-alternativas__marca revisao-alternativas__marca--certo">
                             <TbCheck aria-hidden="true" size={13} /> Correta
                           </span>
@@ -132,7 +140,7 @@ export default function GabaritoQuestoes({ compacto = false, mostrarFicha = fals
               </div>
             ) : null}
 
-            {questao.explicacao ? (
+            {questao.explicacao && mostrarGabarito ? (
               compacto ? (
                 <p className="revisao-questao__explicacao revisao-questao__explicacao--compacta">
                   <strong>Explicação:</strong> {questao.explicacao}

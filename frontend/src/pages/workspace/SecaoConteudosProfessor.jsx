@@ -176,6 +176,58 @@ export function SecaoConteudosProfessor({
     [cursoAtivo, modulosPorCursoId]
   );
 
+  // "Visualizar como aluno" (PreviaTrilhaAluno) subiu pra ca (docs/
+  // TelaConteudosProfessor/PROMPT-agente-tela-modulo-lista-e-janela.md, item
+  // 1) pra ficar disponivel tanto na lista de modulos (ListaModulosProfessor)
+  // quanto dentro de um modulo so (TelaModuloGestaoProfessor, botao novo no
+  // topo) - um unico estado/instancia, em vez de cada tela ter a sua.
+  // ListaModulosProfessor continua com seu proprio quizPorConteudoId/
+  // quizzesPorModuloId/conteudosPorModuloId (usados ali tambem pras contagens
+  // dos cartoes de modulo) - os mapas abaixo sao so pra esta previa.
+  const [previaAberta, setPreviaAberta] = useState(false);
+
+  const conteudosDoCursoAtivo = useMemo(
+    () => (cursoAtivo ? conteudos.filter((conteudo) => conteudo.cursoId === cursoAtivo.curso.id) : []),
+    [conteudos, cursoAtivo]
+  );
+  const quizzesDoCursoAtivo = useMemo(
+    () => (cursoAtivo ? avaliacoes.filter((avaliacao) => avaliacao.cursoId === cursoAtivo.curso.id && Number(avaliacao.tipoAvaliacao) === 1) : []),
+    [avaliacoes, cursoAtivo]
+  );
+  const quizPorConteudoIdPrevia = useMemo(() => {
+    const mapa = new Map();
+    quizzesDoCursoAtivo.forEach((quiz) => {
+      if (quiz.conteudoDidaticoId) {
+        mapa.set(quiz.conteudoDidaticoId, quiz);
+      }
+    });
+    return mapa;
+  }, [quizzesDoCursoAtivo]);
+  const quizzesPorModuloIdPrevia = useMemo(() => {
+    const agrupados = new Map();
+    quizzesDoCursoAtivo.forEach((quiz) => {
+      if (quiz.conteudoDidaticoId || !quiz.moduloId) {
+        return;
+      }
+      const atuais = agrupados.get(quiz.moduloId) || [];
+      atuais.push(quiz);
+      agrupados.set(quiz.moduloId, atuais);
+    });
+    return agrupados;
+  }, [quizzesDoCursoAtivo]);
+  const conteudosPorModuloIdPrevia = useMemo(() => {
+    const agrupados = new Map();
+    conteudosDoCursoAtivo.forEach((conteudo) => {
+      const atuais = agrupados.get(conteudo.moduloId) || [];
+      atuais.push(conteudo);
+      agrupados.set(conteudo.moduloId, atuais);
+    });
+    agrupados.forEach((lista) =>
+      lista.sort((left, right) => (left.ordemExibicao ?? 0) - (right.ordemExibicao ?? 0) || (left.titulo || "").localeCompare(right.titulo || "", "pt-BR"))
+    );
+    return agrupados;
+  }, [conteudosDoCursoAtivo]);
+
   // Tela do modulo do professor (docs/TelaConteudosProfessor/PROMPT-agente-
   // fluxo-professor-igual-coordenador.md, etapas 2/3): mesmo padrao de
   // PainelCursoGestao/TelaModuloGestao (Coordenador/Admin) - moduloIdSelecionado
@@ -696,6 +748,7 @@ export function SecaoConteudosProfessor({
           onNovoConteudo={abrirFormularioNovoConteudo}
           onReordenar={reordenarConteudo}
           onSessionExpired={onSessionExpired}
+          onVisualizarComoAluno={() => setPreviaAberta(true)}
         />
       ) : (
         <ListaModulosProfessor
@@ -713,9 +766,21 @@ export function SecaoConteudosProfessor({
           onRestaurarRascunho={restaurarConteudoParaRascunho}
           onRestaurarRascunhoQuiz={restaurarQuizParaRascunho}
           onSessionExpired={onSessionExpired}
+          onVisualizarComoAluno={() => setPreviaAberta(true)}
           onVoltar={onNavigate ? voltarParaCursos : null}
         />
       )}
+
+      {previaAberta && cursoAtivo ? (
+        <PreviaTrilhaAluno
+          conteudosPorModuloId={conteudosPorModuloIdPrevia}
+          cursoTitulo={cursoAtivo.curso.titulo}
+          modulosDoCurso={modulosDisponiveis}
+          onFechar={() => setPreviaAberta(false)}
+          quizPorConteudoId={quizPorConteudoIdPrevia}
+          quizzesPorModuloId={quizzesPorModuloIdPrevia}
+        />
+      ) : null}
 
       {assistenteQuizAberto ? (
         <AssistenteQuizAvaliacao
@@ -1024,10 +1089,10 @@ function ListaModulosProfessor({
   onRestaurarRascunho,
   onRestaurarRascunhoQuiz,
   onSessionExpired,
+  onVisualizarComoAluno,
   onVoltar
 }) {
   const { mostrarToast } = useToast();
-  const [previaAberta, setPreviaAberta] = useState(false);
   const [modalArquivadosAberto, setModalArquivadosAberto] = useState(false);
   const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
   const [concluindoCurso, setConcluindoCurso] = useState(false);
@@ -1072,33 +1137,6 @@ function ListaModulosProfessor({
     () => avaliacoes.filter((avaliacao) => avaliacao.cursoId === cursoAtivo.curso.id && Number(avaliacao.tipoAvaliacao) === 1),
     [avaliacoes, cursoAtivo.curso.id]
   );
-
-  // Usado so pela previa do aluno (PreviaTrilhaAluno) - guarda so 1 quiz por
-  // material. A lista de conteudos/quizzes editavel (com mais de 1 quiz por
-  // material) agora mora em TelaModuloGestaoProfessor.jsx, que computa isso
-  // por conta propria a partir de `conteudos`/`avaliacoes`.
-  const quizPorConteudoId = useMemo(() => {
-    const mapa = new Map();
-    quizzesDoCurso.forEach((quiz) => {
-      if (quiz.conteudoDidaticoId) {
-        mapa.set(quiz.conteudoDidaticoId, quiz);
-      }
-    });
-    return mapa;
-  }, [quizzesDoCurso]);
-
-  const quizzesPorModuloId = useMemo(() => {
-    const agrupados = new Map();
-    quizzesDoCurso.forEach((quiz) => {
-      if (quiz.conteudoDidaticoId || !quiz.moduloId) {
-        return;
-      }
-      const atuais = agrupados.get(quiz.moduloId) || [];
-      atuais.push(quiz);
-      agrupados.set(quiz.moduloId, atuais);
-    });
-    return agrupados;
-  }, [quizzesDoCurso]);
 
   // Todos os quizzes do modulo (vinculados a um material ou soltos), pra
   // listar como item editavel na trilha do professor — diferente de
@@ -1214,7 +1252,7 @@ function ListaModulosProfessor({
             </Botao>
           ) : null}
           {cursoAceitaConclusao && cursoJaConcluido && !cursoEncerrado ? <Insignia texto="Concluído, aguardando o coordenador" /> : null}
-          <Botao onClick={() => setPreviaAberta(true)} tamanho="pequeno" variante="fantasma">
+          <Botao onClick={onVisualizarComoAluno} tamanho="pequeno" variante="fantasma">
             <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
           </Botao>
         </div>
@@ -1392,17 +1430,6 @@ function ListaModulosProfessor({
             ))
           )}
         </Modal>
-      ) : null}
-
-      {previaAberta ? (
-        <PreviaTrilhaAluno
-          conteudosPorModuloId={conteudosPorModuloId}
-          cursoTitulo={cursoAtivo.curso.titulo}
-          modulosDoCurso={modulosDoCurso}
-          onFechar={() => setPreviaAberta(false)}
-          quizPorConteudoId={quizPorConteudoId}
-          quizzesPorModuloId={quizzesPorModuloId}
-        />
       ) : null}
 
       <ModaisModulo

@@ -1,26 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbArrowRight, TbAward, TbChartBar, TbChevronUp, TbCircleCheck } from "react-icons/tb";
+import { TbArrowLeft, TbArrowRight, TbAward, TbChartBar, TbCircleCheck, TbListDetails, TbTrophy } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
+import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
-import ListaModulosRoteiro from "../../components/ListaModulosRoteiro.jsx";
-import MiniaturaPasso from "../../components/MiniaturaPasso.jsx";
-import NumeroModulo from "../../components/NumeroModulo.jsx";
-import PreviaItemAluno from "../../components/PreviaItemAluno.jsx";
-import RoteiroModulo from "../../components/RoteiroModulo.jsx";
+import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
+import ListaModulosCartoes from "../../components/ListaModulosCartoes.jsx";
+import PainelItensModulo from "../../components/PainelItensModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { obterIconeTipoConteudo } from "../../components/PreviaTrilhaAluno.jsx";
 import { formatGrade, formatPercent, normalizeContentType } from "../../lib/format.js";
-import { tituloQuizEhGenerico } from "../../lib/trilhaConteudos.js";
+import { obterSituacaoCurso, tituloQuizEhGenerico } from "../../lib/trilhaConteudos.js";
 
 const TIPO_AVALIACAO_QUIZ = 1;
 const STATUS_PUBLICADO = 2;
 
-// Mesma altura passada pro bloco aberto do Professor (TelaModuloGestaoProfessor.jsx)
-// - PDF/imagem ocupam o bloco grande do roteiro, em vez do tamanho padrao.
-const ALTURA_MIDIA_ROTEIRO = 560;
-
 function montarItensDoModulo(moduloRevisao) {
   if (!moduloRevisao) {
-    return { conteudos: [], passos: [] };
+    return { conteudos: [], itens: [] };
   }
 
   const conteudosPublicados = moduloRevisao.conteudos.filter(
@@ -51,9 +47,9 @@ function montarItensDoModulo(moduloRevisao) {
     conteudo
   }));
 
-  const passos = [];
+  const itens = [];
   conteudosPublicados.forEach((conteudo) => {
-    passos.push({ id: `conteudo-${conteudo.id}`, tipo: "material", titulo: conteudo.titulo, conteudo, pendurado: false });
+    itens.push({ id: `conteudo-${conteudo.id}`, tipo: "material", titulo: conteudo.titulo, conteudo });
 
     const quizVinculado = quizPorConteudoId.get(conteudo.id);
     if (!quizVinculado) {
@@ -61,25 +57,24 @@ function montarItensDoModulo(moduloRevisao) {
     }
 
     const titulo = tituloQuizEhGenerico(quizVinculado.titulo, conteudo.titulo) ? "Quiz do conteúdo" : quizVinculado.titulo;
-    passos.push({
+    itens.push({
       id: `quiz-${quizVinculado.id}`,
       tipo: "quiz",
       titulo,
       tituloReal: quizVinculado.titulo,
       quiz: quizVinculado,
-      questoes: quizVinculado.questoes,
-      pendurado: true
+      questoes: quizVinculado.questoes
     });
   });
   quizzesSoltos.forEach((quiz) => {
-    passos.push({ id: `quiz-${quiz.id}`, tipo: "quiz", titulo: quiz.titulo, tituloReal: quiz.titulo, quiz, questoes: quiz.questoes, pendurado: false });
+    itens.push({ id: `quiz-${quiz.id}`, tipo: "quiz", titulo: quiz.titulo, tituloReal: quiz.titulo, quiz, questoes: quiz.questoes });
   });
 
-  return { conteudos, passos };
+  return { conteudos, itens };
 }
 
 // Resumo (so "N itens", sem rascunho - o Coordenador/Admin nunca ve
-// rascunho) de TODOS os modulos do curso, pra ListaModulosRoteiro.
+// rascunho) de TODOS os modulos do curso, pra ListaModulosCartoes.
 function montarResumosPorModuloId(revisaoConteudo) {
   const mapa = new Map();
   (revisaoConteudo?.modulos || []).forEach((moduloRevisao) => {
@@ -92,16 +87,19 @@ function montarResumosPorModuloId(revisaoConteudo) {
   return mapa;
 }
 
-/* Tela do modulo (Admin/Coordenador) - "roteiro da aula" (docs/
-   TelaConteudosProfessor/PROMPT-agente-tela-modulo-roteiro.md): mesmo
-   roteiro em linha do tempo do Professor (RoteiroModulo/ListaModulosRoteiro,
+/* Tela do modulo (Admin/Coordenador), docs/TelaConteudosProfessor/PROMPT-
+   agente-tela-modulo-lista-e-janela.md: mesma tela de lista+janela do
+   Professor (ListaModulosCartoes/PainelItensModulo/JanelaPreviaItem,
    compartilhados), so que so leitura - sem menu, sem selecao, sem botoes de
-   criar. No lugar deles, os KPIs do modulo (Progresso/Conclusao/Desempenho
-   medio) vindos de `desempenho` (GET /Cursos/{id}/desempenho, carregado por
-   PainelCursoGestao.jsx). A lista de itens vem de `revisaoConteudo` (GET
-   /Cursos/{id}/revisao-conteudo: todos os modulos do curso, so o que esta
-   Publicado, com questoes pro gabarito) - carregada uma vez e reaproveitada
-   enquanto o curso continuar aberto, mesmo trocando de modulo pela lista. */
+   criar; o selo do cartao do curso e a situacao do curso (Em andamento/
+   Aguardando encerramento/Encerrado/A venda) e a barra usa o progresso medio
+   dos alunos (`desempenho`, GET /Cursos/{id}/desempenho, carregado por
+   PainelCursoGestao.jsx) em vez do % publicado. Os KPIs do modulo
+   (Progresso/Conclusao/Desempenho medio) ficam no topo, como antes. A lista
+   de itens vem de `revisaoConteudo` (GET /Cursos/{id}/revisao-conteudo:
+   todos os modulos do curso, so o que esta Publicado, com questoes pro
+   gabarito) - carregada uma vez e reaproveitada enquanto o curso continuar
+   aberto, mesmo trocando de modulo pela lista. */
 export default function TelaModuloGestao({
   curso,
   desempenho,
@@ -114,10 +112,6 @@ export default function TelaModuloGestao({
   revisaoConteudoCarregando
 }) {
   const [itemAbertoId, setItemAbertoId] = useState(null);
-  // Fechar o bloco aberto (seta ⌃) nao pode reabrir ele sozinho de novo - so
-  // controla se o efeito abaixo (1o passo ja vem aberto) pode agir; vira
-  // false de novo ao trocar de modulo.
-  const [fechadoManualmente, setFechadoManualmente] = useState(false);
 
   const indiceModuloAtual = modulosOrdenados.findIndex((modulo) => modulo.id === moduloId);
   const moduloAtual = indiceModuloAtual >= 0 ? modulosOrdenados[indiceModuloAtual] : null;
@@ -129,30 +123,16 @@ export default function TelaModuloGestao({
     () => revisaoConteudo?.modulos.find((modulo) => modulo.id === moduloId) || null,
     [revisaoConteudo, moduloId]
   );
-  const { conteudos, passos: passosBrutos } = useMemo(() => montarItensDoModulo(moduloRevisao), [moduloRevisao]);
-  const quizzes = useMemo(() => passosBrutos.filter((passo) => passo.tipo === "quiz"), [passosBrutos]);
+  const { conteudos, itens: itensOrdenados } = useMemo(() => montarItensDoModulo(moduloRevisao), [moduloRevisao]);
+  const quizzes = useMemo(() => itensOrdenados.filter((item) => item.tipo === "quiz"), [itensOrdenados]);
   const resumosPorModuloId = useMemo(() => montarResumosPorModuloId(revisaoConteudo), [revisaoConteudo]);
-
-  const itensOrdenados = passosBrutos;
 
   useEffect(() => {
     setItemAbertoId(null);
-    setFechadoManualmente(false);
   }, [moduloId]);
 
-  // Ao entrar no modulo (ou trocar pra outro), o 1o passo ja vem aberto -
-  // sem gate de largura: o bloco abre no lugar em qualquer tamanho de tela,
-  // sem a tela cheia separada da versao B. So nao reabre sozinho se o
-  // bloco foi fechado de proposito (seta ⌃).
-  useEffect(() => {
-    if (fechadoManualmente || itemAbertoId || itensOrdenados.length === 0) {
-      return;
-    }
-
-    setItemAbertoId(itensOrdenados[0].id);
-  }, [fechadoManualmente, itemAbertoId, itensOrdenados]);
-
   const indiceItemAberto = itensOrdenados.findIndex((item) => item.id === itemAbertoId);
+  const itemAberto = indiceItemAberto >= 0 ? itensOrdenados[indiceItemAberto] : null;
   const itemAnterior = indiceItemAberto > 0 ? itensOrdenados[indiceItemAberto - 1] : null;
   const itemProximo =
     indiceItemAberto >= 0 && indiceItemAberto < itensOrdenados.length - 1 ? itensOrdenados[indiceItemAberto + 1] : null;
@@ -176,119 +156,85 @@ export default function TelaModuloGestao({
 
   const desempenhoModulo = desempenho?.modulos?.find((modulo) => modulo.moduloId === moduloId) || null;
 
-  let proximoNumero = 0;
-  const passos = itensOrdenados.map((item) => {
-    const numerado = !item.pendurado;
-    if (numerado) {
-      proximoNumero += 1;
+  const linhas = itensOrdenados.map((item) => {
+    const tituloReal = item.tipo === "material" ? item.conteudo.titulo : item.tituloReal || item.titulo;
+
+    if (item.tipo === "material") {
+      const tipoTexto = normalizeContentType(item.conteudo.tipoConteudo);
+      return {
+        id: item.id,
+        tituloReal,
+        tituloExibicao: item.titulo,
+        descricao: item.conteudo.descricao || "",
+        corIcone: "verde",
+        iconeTipo: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "1.6rem"),
+        dadosLinha: (
+          <>
+            {obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem")} {tipoTexto}
+          </>
+        ),
+        seloTipo: { icone: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem"), texto: tipoTexto },
+        menuItens: null,
+        onAbrir: () => setItemAbertoId(item.id)
+      };
     }
 
-    const tituloReal = item.tipo === "material" ? item.conteudo.titulo : item.tituloReal || item.titulo;
-    const detalhe =
-      item.tipo === "quiz"
-        ? `Quiz${item.quiz.totalQuestoes ? ` · ${item.quiz.totalQuestoes} questão${item.quiz.totalQuestoes === 1 ? "" : "ões"}` : ""}`
-        : normalizeContentType(item.conteudo.tipoConteudo);
-
+    const totalQuestoesQuiz = item.quiz.totalQuestoes || 0;
     return {
       id: item.id,
-      numero: numerado ? proximoNumero : null,
-      pendurado: Boolean(item.pendurado),
-      renderFechado: () => (
-        <button
-          aria-label={`Ver ${tituloReal}`}
-          className="roteiro-passo__fechado"
-          onClick={() => setItemAbertoId(item.id)}
-          type="button"
-        >
-          <MiniaturaPasso item={item} />
-          <div className="roteiro-passo__fechado-texto">
-            <strong className="roteiro-passo__fechado-titulo" title={tituloReal}>
-              {item.titulo}
-            </strong>
-            <span className="roteiro-passo__fechado-meta">{detalhe}</span>
-          </div>
-        </button>
-      ),
-      renderAberto: () => (
+      tituloReal,
+      tituloExibicao: item.titulo,
+      descricao: "",
+      corIcone: "verde",
+      iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,
+      dadosLinha: (
         <>
-          <button
-            aria-label="Fechar"
-            className="roteiro-passo__fechar"
-            onClick={() => {
-              setItemAbertoId(null);
-              setFechadoManualmente(true);
-            }}
-            type="button"
-          >
-            <TbChevronUp aria-hidden="true" size={18} />
-          </button>
-          <PreviaItemAluno
-            alturaMidia={ALTURA_MIDIA_ROTEIRO}
-            item={item}
-            questoes={item.questoes}
-            rodape={
-              <footer className="modal-rodape roteiro-passo__rodape">
-                <Botao
-                  aria-label="Item anterior"
-                  disabled={!itemAnterior}
-                  onClick={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
-                  title={itemAnterior?.titulo}
-                  type="button"
-                  variante="secundario"
-                >
-                  <TbArrowLeft aria-hidden="true" size={16} /> Anterior
-                </Botao>
-                <span className="roteiro-passo__rodape-contador">
-                  Item {indiceItemAberto + 1} de {itensOrdenados.length}
-                </span>
-                <Botao
-                  aria-label="Próximo item"
-                  disabled={!itemProximo}
-                  onClick={() => itemProximo && setItemAbertoId(itemProximo.id)}
-                  title={itemProximo?.titulo}
-                  type="button"
-                  variante="primario"
-                >
-                  Próximo <TbArrowRight aria-hidden="true" size={16} />
-                </Botao>
-              </footer>
-            }
-            selo="Somente leitura"
-          />
+          <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} questão{totalQuestoesQuiz === 1 ? "" : "ões"}
         </>
-      )
+      ),
+      seloTipo: { icone: <TbTrophy aria-hidden="true" size="0.85rem" />, texto: "Quiz" },
+      menuItens: null,
+      onAbrir: () => setItemAbertoId(item.id)
     };
   });
 
-  return (
-    <div className="modulo-gestao roteiro-tela">
-      <div className="roteiro-tela__topo">
-        <button className="roteiro-tela__voltar" onClick={voltarParaModulos} type="button">
-          <TbArrowLeft aria-hidden="true" size={16} /> {curso.titulo}
-        </button>
+  const numeroModuloTexto = `Módulo ${String(indiceModuloAtual + 1).padStart(2, "0")}`;
 
-        <div className="roteiro-tela__kpis">
-          <CartaoEstatistica
-            icone={<TbChartBar size={18} />}
-            rotulo="Progresso"
-            valor={desempenhoModulo ? formatPercent(desempenhoModulo.progressoMedio) : "—"}
-          />
-          <CartaoEstatistica
-            icone={<TbCircleCheck size={18} />}
-            rotulo="Conclusão"
-            valor={desempenhoModulo ? formatPercent(desempenhoModulo.percentualConclusao) : "—"}
-          />
-          <CartaoEstatistica
-            icone={<TbAward size={18} />}
-            rotulo="Desempenho médio"
-            valor={desempenhoModulo ? formatGrade(desempenhoModulo.desempenhoMedio) : "—"}
-          />
-        </div>
+  return (
+    <div className="modulo-gestao modulo-lista-janela">
+      <div className="modulo-lista-janela__caminho">
+        <button className="roteiro-tela__voltar" onClick={voltarParaModulos} type="button">
+          <TbArrowLeft aria-hidden="true" size={16} /> Cursos › {curso.titulo} › {moduloAtual.titulo}
+        </button>
       </div>
 
-      <div className="roteiro-tela__corpo">
-        <aside aria-label="Módulos do curso" className="roteiro-tela__coluna-modulos">
-          <ListaModulosRoteiro
+      <CartaoCursoModulo
+        curso={curso}
+        percentual={desempenhoModulo ? Math.round(desempenhoModulo.progressoMedio) : 0}
+        selo={obterSituacaoCurso(curso)}
+      />
+
+      <div className="modulo-lista-janela__kpis">
+        <CartaoEstatistica
+          icone={<TbChartBar size={18} />}
+          rotulo="Progresso"
+          valor={desempenhoModulo ? formatPercent(desempenhoModulo.progressoMedio) : "—"}
+        />
+        <CartaoEstatistica
+          icone={<TbCircleCheck size={18} />}
+          rotulo="Conclusão"
+          valor={desempenhoModulo ? formatPercent(desempenhoModulo.percentualConclusao) : "—"}
+        />
+        <CartaoEstatistica
+          icone={<TbAward size={18} />}
+          rotulo="Desempenho médio"
+          valor={desempenhoModulo ? formatGrade(desempenhoModulo.desempenhoMedio) : "—"}
+        />
+      </div>
+
+      <div className="modulo-lista-janela__corpo">
+        <aside aria-label="Módulos do curso" className="modulo-lista-janela__coluna-modulos">
+          <ListaModulosCartoes
             modulosOrdenados={modulosOrdenados}
             moduloId={moduloId}
             onIrParaModulo={irParaModulo}
@@ -296,19 +242,7 @@ export default function TelaModuloGestao({
           />
         </aside>
 
-        <div className="modulo-gestao__conteudo roteiro-tela__coluna-roteiro">
-          <header className="modulo-gestao__cabecalho roteiro-modulo__cabecalho">
-            <div className="modulo-gestao__cabecalho-principal">
-              <h2 className="modulo-gestao__titulo">
-                <NumeroModulo indice={indiceModuloAtual} />
-                <span className="modulo-gestao__titulo-texto" title={moduloAtual.titulo}>
-                  {moduloAtual.titulo}
-                </span>
-              </h2>
-              <p className="modulo-gestao__resumo">{resumoModulo}</p>
-            </div>
-          </header>
-
+        <div className="modulo-lista-janela__coluna-painel">
           {erroRevisaoConteudo ? (
             <>
               <InlineMessage tone="error">{erroRevisaoConteudo}</InlineMessage>
@@ -322,30 +256,53 @@ export default function TelaModuloGestao({
             <p className="texto-vazio" role="status">
               Carregando módulo…
             </p>
-          ) : semConteudoPublicado ? (
-            <div className="roteiro-tela__vazio">
-              <p className="texto-vazio" role="status">
-                Este módulo ainda não tem conteúdo publicado.
-              </p>
-            </div>
           ) : (
-            <RoteiroModulo
-              itemAbertoId={itemAbertoId}
-              passos={passos}
-              rodapeModulos={
-                <footer className="modulo-gestao__rodape">
-                  <Botao disabled={!moduloAnterior} onClick={() => moduloAnterior && irParaModulo(moduloAnterior.id)} variante="secundario">
-                    <TbArrowLeft aria-hidden="true" size={16} /> Módulo anterior
-                  </Botao>
-                  <Botao disabled={!moduloProximo} onClick={() => moduloProximo && irParaModulo(moduloProximo.id)} variante="primario">
-                    {moduloProximo ? `Próximo módulo: ${moduloProximo.titulo}` : "Próximo módulo"} <TbArrowRight aria-hidden="true" size={16} />
-                  </Botao>
-                </footer>
-              }
+            <PainelItensModulo
+              itensSelecionados={null}
+              linhas={linhas}
+              mensagemVazia="Este módulo ainda não tem conteúdo publicado."
+              modoSelecao={false}
+              moduloTitulo={moduloAtual.titulo}
+              moduloVazio={semConteudoPublicado}
+              mostrarSelecionar={false}
+              resumoModulo={resumoModulo}
+              totalItens={totalConteudos + totalQuizzes}
             />
           )}
+
+          <footer className="modulo-gestao__rodape">
+            <Botao disabled={!moduloAnterior} onClick={() => moduloAnterior && irParaModulo(moduloAnterior.id)} variante="secundario">
+              <TbArrowLeft aria-hidden="true" size={16} /> Módulo anterior
+            </Botao>
+            <Botao disabled={!moduloProximo} onClick={() => moduloProximo && irParaModulo(moduloProximo.id)} variante="primario">
+              {moduloProximo ? `Próximo módulo: ${moduloProximo.titulo}` : "Próximo módulo"} <TbArrowRight aria-hidden="true" size={16} />
+            </Botao>
+          </footer>
         </div>
       </div>
+
+      {itemAberto ? (
+        <JanelaPreviaItem
+          carregandoQuestoes={false}
+          indiceAtual={indiceItemAberto + 1}
+          item={{
+            id: itemAberto.id,
+            tipo: itemAberto.tipo,
+            titulo: itemAberto.titulo,
+            conteudo: itemAberto.conteudo,
+            questoes: itemAberto.tipo === "quiz" ? itemAberto.questoes : undefined
+          }}
+          itemAnterior={itemAnterior}
+          itemProximo={itemProximo}
+          numeroModuloTexto={numeroModuloTexto}
+          onAnterior={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
+          onFechar={() => setItemAbertoId(null)}
+          onProximo={() => itemProximo && setItemAbertoId(itemProximo.id)}
+          publicado
+          somenteLeitura
+          totalItens={itensOrdenados.length}
+        />
+      ) : null}
     </div>
   );
 }

@@ -82,7 +82,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     vi.clearAllMocks();
   });
 
-  test("quiz vinculado a um material renderiza recuado, logo depois dele, na lista de Conteudos", () => {
+  test("quiz vinculado a um material aparece logo depois dele, na lista de Conteudos", () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -98,10 +98,11 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaDeConteudos = document.querySelector(".roteiro-modulo__linha-tempo");
-    expect(within(listaDeConteudos).getByText("Aula 1")).toBeInTheDocument();
-    const linhaDoQuiz = within(listaDeConteudos).getByText("Quiz da Aula 1").closest(".roteiro-passo");
-    expect(linhaDoQuiz).toHaveClass("roteiro-passo--pendurado");
+    const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
+    const titulos = within(listaDeConteudos)
+      .getAllByRole("button", { name: /^Ver / })
+      .map((botao) => botao.getAttribute("aria-label"));
+    expect(titulos).toEqual(["Ver Aula 1", "Ver Quiz da Aula 1"]);
   });
 
   test("dois quizzes vinculados ao mesmo material aparecem os dois", () => {
@@ -129,7 +130,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaDeConteudos = document.querySelector(".roteiro-modulo__linha-tempo");
+    const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
     expect(within(listaDeConteudos).getByText("Quiz A da Aula 1")).toBeInTheDocument();
     expect(within(listaDeConteudos).getByText("Quiz B da Aula 1")).toBeInTheDocument();
   });
@@ -200,8 +201,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
   // (text-overflow), mas o nome completo precisa continuar acessivel no
   // `title` (tooltip nativo) - inclusive pro quiz dentro de um conteudo e
   // pro quiz solto, nao so pro material.
-  test("titulo longo mantem o nome completo no atributo title, em material e quiz", async () => {
-    const usuario = userEvent.setup();
+  test("titulo longo mantem o nome completo no atributo title, em material e quiz", () => {
     renderTrilha({
       conteudos: [
         { id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "ANALISE_DESENVOLV_SISTEMA_01", turmaId: TURMA_ID, cursoId: CURSO_ID }
@@ -212,12 +212,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // O 1o passo ja vem aberto (titulo sem reticencias, sem title) - fecha
-    // pra conferir o atributo title do bloco FECHADO, que e onde o titulo
-    // pode cortar.
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
-    const lista = document.querySelector(".roteiro-modulo__linha-tempo");
+    const lista = document.querySelector(".painel-itens-modulo__lista");
     expect(within(lista).getByText("ANALISE_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "ANALISE_DESENVOLV_SISTEMA_01");
     expect(within(lista).getByText("QUIZ_VINCULADO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_VINCULADO_DESENVOLV_SISTEMA_01");
     expect(within(lista).getByText("QUIZ_SOLTO_DESENVOLV_SISTEMA_01")).toHaveAttribute("title", "QUIZ_SOLTO_DESENVOLV_SISTEMA_01");
@@ -245,8 +240,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     });
 
     await usuario.click(screen.getByText("Sem descricao"));
-    const painel = document.querySelector(".roteiro-passo--aberto .roteiro-passo__corpo");
-    expect(within(painel).getByRole("heading", { name: "Sem descricao" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Sem descricao" })).toBeInTheDocument();
   });
 
   test("quiz vinculado com titulo generico (igual ou \"Quiz - {conteudo}\") exibe \"Quiz do conteúdo\"", () => {
@@ -265,7 +259,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaDeConteudos = document.querySelector(".roteiro-modulo__linha-tempo");
+    const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
     expect(within(listaDeConteudos).getByText("Quiz do conteúdo")).toBeInTheDocument();
     expect(within(listaDeConteudos).queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
   });
@@ -286,7 +280,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const listaDeConteudos = document.querySelector(".roteiro-modulo__linha-tempo");
+    const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
     expect(within(listaDeConteudos).getByText("Revisão de Variáveis")).toBeInTheDocument();
     expect(within(listaDeConteudos).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
   });
@@ -321,13 +315,13 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     // "Quiz do conteúdo" - o quiz 200 so por coincidencia tem titulo real
     // identico ao do material ("Aula 1"), entao o texto aparece 2x na
     // mesma lista (material + esse quiz), o que e esperado.
-    const listaDeConteudos = document.querySelector(".roteiro-modulo__linha-tempo");
+    const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
     expect(within(listaDeConteudos).getAllByText("Aula 1")).toHaveLength(2);
     expect(within(listaDeConteudos).getByText("Quiz: Aula 1")).toBeInTheDocument();
     expect(within(listaDeConteudos).queryByText("Quiz do conteúdo")).not.toBeInTheDocument();
   });
 
-  test("aria-label de selecao do quiz vinculado mantem o titulo real mesmo com nome generico exibido, e Editar e a 1a opcao do menu", async () => {
+  test("aria-label de selecao do quiz vinculado mantem o titulo real mesmo com nome generico exibido, e Editar abre a edicao", async () => {
     const usuario = userEvent.setup();
     apiRequest.mockImplementation((url) => Promise.resolve(url.endsWith("/questoes") ? [] : {}));
     renderTrilha({
@@ -349,18 +343,14 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(screen.getByLabelText("Selecionar Quiz - Aula 1")).toBeInTheDocument();
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz - Aula 1" }));
-    const opcoes = screen.getAllByRole("menuitem");
-    expect(opcoes[0]).toHaveTextContent("Editar");
-
-    await usuario.click(opcoes[0]);
+    await usuario.click(screen.getByRole("menuitem", { name: "Editar" }));
     expect(screen.getByRole("dialog", { name: "Editar Quiz" })).toBeInTheDocument();
   });
 
   // "Editar" continua so dentro do menu ⋮ de cada linha da lista - o unico
   // botao "Editar" solto que existe agora e o do rodape da previa (a direita,
   // fora da lista), que estas linhas nao tocam.
-  test('linhas FECHADAS da lista nao tem mais botao "Editar" solto', async () => {
-    const usuario = userEvent.setup();
+  test('linhas FECHADAS da lista nao tem mais botao "Editar" solto', () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
       avaliacoes: [
@@ -369,33 +359,24 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // Fecha o 1o passo (aberto sozinho ao entrar) - com ele fechado, nenhum
-    // bloco da lista mostra a previa (que tem seu proprio botao "Editar" no
-    // cabecalho); so sobra o ⋮ de cada linha.
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
-    const lista = document.querySelector(".roteiro-modulo__linha-tempo");
+    // A janela de previa (com seu proprio botao "Editar" no cabecalho) nao
+    // abre sozinha - as linhas da lista ficam todas fechadas, so com o ⋮.
+    const lista = document.querySelector(".painel-itens-modulo__lista");
     expect(within(lista).queryByRole("button", { name: /^Editar/ })).not.toBeInTheDocument();
   });
 
-  test('"Editar" e a 1a opcao do menu do conteudo e abre a edicao do conteudo', async () => {
+  test('"Editar" no menu do conteudo abre a edicao do conteudo', async () => {
     const usuario = userEvent.setup();
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
-    const opcoes = screen.getAllByRole("menuitem");
-    expect(opcoes[0]).toHaveTextContent("Editar");
-
-    await usuario.click(opcoes[0]);
+    await usuario.click(screen.getByRole("menuitem", { name: "Editar" }));
     expect(screen.getByRole("dialog", { name: "Editar conteúdo" })).toBeInTheDocument();
   });
 
-  test('"Editar" e a 1a opcao do menu do quiz do modulo e abre o assistente de quiz', async () => {
+  test('"Editar" no menu do quiz do modulo abre o assistente de quiz', async () => {
     const usuario = userEvent.setup();
     apiRequest.mockImplementation((url) => Promise.resolve(url.endsWith("/questoes") ? [] : {}));
     renderTrilha({
@@ -405,14 +386,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
-    const opcoes = screen.getAllByRole("menuitem");
-    expect(opcoes[0]).toHaveTextContent("Editar");
-
-    await usuario.click(opcoes[0]);
+    await usuario.click(screen.getByRole("menuitem", { name: "Editar" }));
     expect(screen.getByRole("dialog", { name: "Editar Quiz" })).toBeInTheDocument();
   });
 
@@ -424,9 +399,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 1, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
-
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
@@ -468,8 +440,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const linhaQuizVinculado = screen.getByText("Quiz da Aula 1").closest(".roteiro-passo__fechado");
-    const linhaQuizDoModulo = screen.getByText("Quiz do Módulo").closest(".roteiro-passo__fechado");
+    const linhaQuizVinculado = screen.getByText("Quiz da Aula 1").closest(".painel-itens-modulo__linha");
+    const linhaQuizDoModulo = screen.getByText("Quiz do Módulo").closest(".painel-itens-modulo__linha");
     [linhaQuizVinculado, linhaQuizDoModulo].forEach((linha) => {
       expect(within(linha).getByText("Publicado")).toBeInTheDocument();
     });
@@ -579,9 +551,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir" }));
     await usuario.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
@@ -598,9 +567,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Arquivar" }));
 
@@ -613,9 +579,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
   });
 
   test("publicar quiz sem questoes mostra toast de erro dispensavel, sem faixa fixa no topo", async () => {
-    // O quiz abre sozinho na previa (unico item do modulo) e busca as questoes
-    // nela (GET .../questoes) - mockImplementation por URL evita que esse
-    // fetch "roube" o mockRejectedValueOnce que o PUT de publicar precisa.
+    // mockImplementation por URL evita que um eventual GET .../questoes
+    // "roube" o mockRejectedValueOnce que o PUT de publicar precisa.
     apiRequest.mockImplementation((url, options) =>
       url.endsWith("/questoes")
         ? Promise.resolve([])
@@ -631,10 +596,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // O quiz ja busca as questoes enquanto aberto sozinho (unico item do
-    // modulo); fecha pra acessar o ⋮ (so existe no bloco FECHADO).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
 
@@ -646,9 +607,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
   });
 
   test('"Excluir" no menu do quiz abre confirmacao e mostra toast de arquivamento quando o backend arquiva', async () => {
-    // Mesmo motivo do teste de publicar acima: o quiz abre sozinho na previa e
-    // busca as questoes - mockImplementation por URL/metodo evita que esse
-    // fetch "roube" a resposta que o DELETE precisa.
+    // Mesmo motivo do teste de publicar acima.
     apiRequest.mockImplementation((url, options) =>
       url.endsWith("/questoes") ? Promise.resolve([]) : options?.method === "DELETE" ? Promise.resolve({ arquivado: true }) : Promise.resolve({})
     );
@@ -659,10 +618,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
         { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
       ]
     });
-
-    // O quiz ja busca as questoes enquanto aberto sozinho (unico item do
-    // modulo); fecha pra acessar o ⋮ (so existe no bloco FECHADO).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz do Módulo" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir" }));
@@ -709,12 +664,12 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    const topo = document.querySelector(".roteiro-tela__topo");
+    const topo = document.querySelector(".modulo-lista-janela__caminho");
     expect(within(topo).getByRole("button", { name: "Novo conteúdo" })).toBeInTheDocument();
     expect(within(topo).getByRole("button", { name: "Adicionar Quiz" })).toBeInTheDocument();
     expect(within(topo).getByRole("button", { name: "Gerar quiz com IA" })).toBeInTheDocument();
 
-    const lista = document.querySelector(".roteiro-modulo__linha-tempo");
+    const lista = document.querySelector(".painel-itens-modulo__lista");
     expect(within(lista).queryByRole("button", { name: "Novo conteúdo" })).not.toBeInTheDocument();
     expect(within(lista).queryByRole("button", { name: "Adicionar Quiz" })).not.toBeInTheDocument();
   });
@@ -754,6 +709,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 2 (ultima)" }));
     let menu = screen.getByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Visualizar",
       "Editar",
       "Voltar para rascunho",
       "Mover para cima",
@@ -766,6 +722,7 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     await usuario.click(screen.getByRole("button", { name: "Opções de Quiz da Aula 1" }));
     menu = screen.getByRole("menu");
     expect(within(menu).getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "Visualizar",
       "Editar",
       "Voltar para rascunho",
       "Arquivar",
@@ -779,15 +736,13 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     const botaoMenu = screen.getByRole("button", { name: "Opções de Aula 1" });
     botaoMenu.focus();
     await usuario.keyboard("{Enter}");
 
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
+    await usuario.keyboard("{ArrowDown}");
     await usuario.keyboard("{ArrowDown}");
     await usuario.keyboard("{ArrowDown}");
     const itemExcluir = screen.getByRole("menuitem", { name: "Excluir" });
@@ -812,9 +767,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getAllByRole("menu")).toHaveLength(1);
 
@@ -830,9 +782,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
@@ -847,9 +796,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     const botaoMenu = screen.getByRole("button", { name: "Opções de Aula 1" });
     await usuario.click(botaoMenu);
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -863,9 +809,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     renderTrilha({
       conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
     });
-
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Voltar para rascunho" }));
@@ -891,9 +834,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
-
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
@@ -902,13 +842,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  // A previa inline dentro da propria linha nao existe mais - o 1o item do
-  // modulo ja abre sozinho na previa a direita (PreviaItemAluno), igual
-  // TelaModuloGestao.jsx (Coordenador/Admin). O que importa agora e que abrir
-  // o menu ⋮ de uma linha nao fecha nem troca a previa aberta.
-  // O 1o passo (Aula 1) ja vem aberto sozinho - ⋮ so existe no bloco
-  // FECHADO, entao abrir o menu de outra linha (Aula 2, que fica fechada)
-  // nao pode mexer na previa do passo que ja estava aberto.
+  // Abrir o menu ⋮ de uma linha nao fecha nem troca a janela de previa de
+  // outro item ja aberta.
   test("abrir o menu de outra linha nao fecha a previa ja aberta", async () => {
     const usuario = userEvent.setup();
     renderTrilha({
@@ -927,12 +862,13 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const painel = document.querySelector(".roteiro-passo--aberto .roteiro-passo__corpo");
-    expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
+    const janela = await screen.findByRole("dialog");
+    expect(within(janela).getByText("Texto da previa")).toBeInTheDocument();
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 2" }));
 
-    expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
+    expect(within(janela).getByText("Texto da previa")).toBeInTheDocument();
   });
 
   test('"Selecionar tudo" marca, desmarca e fica indeterminado', async () => {
@@ -1022,14 +958,15 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
       ]
     });
 
-    const painel = document.querySelector(".roteiro-passo--aberto .roteiro-passo__corpo");
-    expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
+    const janela = await screen.findByRole("dialog");
+    expect(within(janela).getByText("Texto da previa")).toBeInTheDocument();
 
     await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     await usuario.click(screen.getByLabelText("Selecionar Aula 1"));
 
     expect(screen.getByLabelText("Selecionar Aula 1").checked).toBe(true);
-    expect(within(painel).getByText("Texto da previa")).toBeInTheDocument();
+    expect(within(janela).getByText("Texto da previa")).toBeInTheDocument();
   });
 
   test('linha de "Quizzes do modulo" tem uma unica caixa de selecao', async () => {
@@ -1051,8 +988,8 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
 
-    const lista = document.querySelector(".roteiro-modulo__linha-tempo");
-    const linhaDoQuiz = within(lista).getByText("Quiz do Módulo").closest(".roteiro-passo");
+    const lista = document.querySelector(".painel-itens-modulo__lista");
+    const linhaDoQuiz = within(lista).getByText("Quiz do Módulo").closest(".painel-itens-modulo__item");
     expect(within(linhaDoQuiz).getAllByRole("checkbox")).toHaveLength(1);
   });
 
@@ -1064,9 +1001,6 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
         { id: 2, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 2", turmaId: TURMA_ID, cursoId: CURSO_ID }
       ]
     });
-
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Aula 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Mover para baixo" }));
@@ -1328,9 +1262,6 @@ describe("TrilhaConteudosProfessor - edicao travada (curso concluido ou encerrad
   test("menu do conteudo fica com Editar/Publicar/Excluir desabilitados; botoes 'Novo conteúdo'/'Adicionar Quiz' somem", async () => {
     const usuario = userEvent.setup();
     renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_CONCLUIDO });
-
-    // ⋮ so existe no bloco FECHADO - fecha o 1o passo (aberto sozinho).
-    await usuario.click(screen.getByRole("button", { name: "Fechar" }));
 
     await usuario.click(screen.getByRole("button", { name: `Opções de ${CONTEUDO.titulo}` }));
     const menu = screen.getByRole("menu");

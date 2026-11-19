@@ -107,6 +107,24 @@ export function montarModulosPublicados(modulosDoCurso, conteudosPorModuloId, qu
     .filter(({ itens, quizzesDoModulo }) => itens.length > 0 || quizzesDoModulo.length > 0);
 }
 
+// Situacao do curso pro cartao do topo da tela do modulo (Coordenador/Admin,
+// docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-lista-e-janela.md,
+// item 1) - mesma regra de rotulo da tela Inscricoes (SecaoMatriculas.jsx,
+// ROTULO_SITUACAO_CURSO), calculada aqui a partir do proprio Curso (sem
+// endpoint novo): encerrado > a venda > aguardando encerramento > andamento.
+export function obterSituacaoCurso(curso) {
+  if (curso.encerradoEm) {
+    return "Encerrado";
+  }
+  if (curso.publicadoParaVendaEm) {
+    return "À venda";
+  }
+  if (curso.concluidoPeloProfessorEm) {
+    return "Aguardando encerramento";
+  }
+  return "Em andamento";
+}
+
 export function montarNomesExibicaoQuizzesVinculados(quizzes, tituloConteudo) {
   const genericos = quizzes.filter((quiz) => tituloQuizEhGenerico(quiz.titulo, tituloConteudo));
   const usarNomeGenerico = genericos.length === 1;

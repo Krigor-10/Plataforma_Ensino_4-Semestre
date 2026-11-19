@@ -8,7 +8,7 @@ import { TbArrowLeft, TbX } from "react-icons/tb";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { useBloqueioScroll } from "../hooks/useBloqueioScroll.js";
 
-export default function Modal({ titulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false }) {
+export default function Modal({ titulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false, fecharAoClicarFora = false }) {
   const refModal = useFocusTrap();
 
   useEffect(() => {
@@ -27,12 +27,23 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-titulo"
-      /* Nao fecha o modal (clicar fora nao tem esse comportamento aqui, so
-         Escape/botao fecham) — isola qualquer clique dentro do modal (incluindo
-         o fundo) de listeners de "clique fora" em document, como os menus de
-         contexto "..." de SecaoCursos/SecaoModulos/SecaoAvaliacoesProfessor
-         e o TooltipGlobal, que senao fechariam/escondiam ao interagir com o modal. */
-      onClick={(e) => e.stopPropagation()}
+      /* Por padrao nao fecha o modal (clicar fora nao tem esse comportamento
+         aqui, so Escape/botao fecham) — isola qualquer clique dentro do modal
+         (incluindo o fundo) de listeners de "clique fora" em document, como
+         os menus de contexto "..." de SecaoCursos/SecaoModulos/
+         SecaoAvaliacoesProfessor e o TooltipGlobal, que senao fechariam/
+         esconderiam ao interagir com o modal. `fecharAoClicarFora` (janela de
+         previa do modulo, docs/TelaConteudosProfessor/PROMPT-agente-tela-
+         modulo-lista-e-janela.md) inverte isso so quando o clique bate
+         exatamente no fundo (target === currentTarget, nunca borbulhado de
+         dentro da caixa) - cliques dentro continuam so fechando pelo X/Esc. */
+      onClick={(e) => {
+        if (fecharAoClicarFora && e.target === e.currentTarget) {
+          onFechar();
+          return;
+        }
+        e.stopPropagation();
+      }}
     >
       <article ref={refModal} className={`modal-caixa${className ? ` ${className}` : ""}`}>
         <header className="modal-cabecalho">
