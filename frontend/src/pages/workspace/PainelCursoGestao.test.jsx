@@ -510,13 +510,13 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(screen.queryByRole("button", { name: /Ver conteúdo/ })).not.toBeInTheDocument();
   });
 
-  test("trilha substitui a migalha, cabecalho mostra titulo e resumo (singular/plural), sem Media/participante", async () => {
+  test("roteiro substitui a migalha, cabecalho mostra titulo e resumo (singular/plural), sem Media/participante", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    // "← {curso}" no topo da trilha substitui o BotaoVoltar + migalha
-    // (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-trilha-versao-b.md).
+    // "← {curso}" no topo substitui o BotaoVoltar + migalha (docs/
+    // TelaConteudosProfessor/PROMPT-agente-tela-modulo-roteiro.md).
     expect(await screen.findByRole("button", { name: "Curso Teste" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Caminho até o módulo" })).not.toBeInTheDocument();
 
@@ -525,16 +525,19 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(within(cabecalho).getByText("Modulo A")).toBeInTheDocument();
     expect(within(cabecalho).getByText("1 conteúdo · 1 quiz")).toBeInTheDocument();
 
-    expect(screen.getByRole("heading", { level: 3, name: /Conteúdos/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 3, name: /Quizzes/ })).toBeInTheDocument();
+    // O modulo aberto fica destacado (aria-current) na lista a esquerda.
+    const lista = document.querySelector(".roteiro-tela__lista-modulos");
+    expect(within(lista).getByText("Modulo A").closest(".roteiro-tela__item-lista-modulos")).toHaveAttribute(
+      "aria-current",
+      "true"
+    );
 
     expect(screen.queryByText(/alunos? conclu[ií]u?ram?/)).not.toBeInTheDocument();
     expect(screen.queryByText(/participante/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Média/)).not.toBeInTheDocument();
 
-    // Desktop (jsdom default >= 768px): o 1o item (Material revisado) ja
-    // abre sozinho, sem precisar clicar - prompt-agente-modulo-tela-
-    // melhorias.md, item 5.
+    // O 1o passo (Material revisado) ja vem aberto sozinho ao entrar no
+    // modulo, em qualquer tamanho de tela (item 1 do prompt do roteiro).
     expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
   });
 
@@ -586,22 +589,22 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
 
-    const botaoAnterior = screen.getByRole("button", { name: "Item anterior" });
-    const botaoProximo = screen.getByRole("button", { name: "Próximo item" });
-
-    expect(botaoAnterior).toHaveTextContent("Anterior");
-    expect(botaoProximo).toHaveTextContent("Próximo");
-    expect(botaoAnterior).toBeDisabled();
-    expect(botaoAnterior).not.toHaveAttribute("title");
-    expect(botaoProximo).not.toBeDisabled();
-    expect(botaoProximo).toHaveAttribute("title", "Quiz publicado");
+    expect(screen.getByRole("button", { name: "Item anterior" })).toHaveTextContent("Anterior");
+    expect(screen.getByRole("button", { name: "Próximo item" })).toHaveTextContent("Próximo");
+    expect(screen.getByRole("button", { name: "Item anterior" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Item anterior" })).not.toHaveAttribute("title");
+    expect(screen.getByRole("button", { name: "Próximo item" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Próximo item" })).toHaveAttribute("title", "Quiz publicado");
     expect(screen.getByText("Item 1 de 2")).toBeInTheDocument();
 
-    await userEvent.click(botaoProximo);
+    // Cada passo tem seu proprio rodape (bloco aberto diferente, nao mais um
+    // painel unico persistente) - os botoes capturados antes de trocar de
+    // item ficam obsoletos, por isso a consulta e refeita depois do clique.
+    await userEvent.click(screen.getByRole("button", { name: "Próximo item" }));
     expect(await screen.findByRole("heading", { name: "Quiz publicado" })).toBeInTheDocument();
-    expect(botaoAnterior).not.toBeDisabled();
-    expect(botaoAnterior).toHaveAttribute("title", "Material revisado");
-    expect(botaoProximo).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Item anterior" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "Item anterior" })).toHaveAttribute("title", "Material revisado");
+    expect(screen.getByRole("button", { name: "Próximo item" })).toBeDisabled();
     expect(screen.getByText("Item 2 de 2")).toBeInTheDocument();
   });
 
@@ -616,7 +619,11 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
   });
 
-  test("celular (< 768px): nenhum item abre sozinho, e Fechar fecha sem reabrir", async () => {
+  // Item 4 do prompt do roteiro: abaixo de 768px nao existe mais tela cheia
+  // separada - o roteiro ocupa a largura toda (so o CSS muda, nao testavel
+  // no jsdom) e o 1o passo abre sozinho igual ao desktop. "Fechar" fecha o
+  // bloco sem reabrir sozinho de novo.
+  test("celular (< 768px): o 1o passo abre sozinho igual ao desktop, e Fechar fecha sem reabrir", async () => {
     const larguraOriginal = window.innerWidth;
     window.innerWidth = 480;
     window.dispatchEvent(new Event("resize"));
@@ -624,15 +631,14 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     mockApi(DESEMPENHO);
     renderPainel({ moduloIdSelecionado: 1 });
 
-    await waitFor(() => expect(screen.getByText("Material revisado")).toBeInTheDocument());
-    expect(screen.queryByText("Somente leitura")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByText("Material revisado"));
-    expect(await screen.findByText("Somente leitura")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Material revisado" })).toBeInTheDocument();
+    expect(screen.getByText("Somente leitura")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
     expect(screen.queryByText("Somente leitura")).not.toBeInTheDocument();
-    expect(screen.getByText("Escolha um conteúdo ou quiz para ver aqui.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fechar" })).not.toBeInTheDocument();
+    // O bloco fica fechado (miniatura + titulo), nao reabre sozinho de novo.
+    expect(screen.getByRole("button", { name: "Ver Material revisado" })).toBeInTheDocument();
 
     window.innerWidth = larguraOriginal;
     window.dispatchEvent(new Event("resize"));

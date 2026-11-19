@@ -14,14 +14,15 @@ const TIPO_CONTEUDO_VIDEO = 3;
 const TIPO_CONTEUDO_LINK = 4;
 const TIPO_CONTEUDO_IMAGEM = 5;
 
-const ALTURA_MIDIA_INLINE = 300;
+const ALTURA_MIDIA_INLINE_PADRAO = 300;
 
 const MENSAGEM_SEM_ARQUIVO = "Este item ainda não tem arquivo.";
 
-function PreviaMaterial({ conteudo }) {
+function PreviaMaterial({ alturaMidia, conteudo }) {
   const [visualizadorAberto, setVisualizadorAberto] = useState(false);
   const tipo = Number(conteudo.tipoConteudo);
   const linkArquivo = obterLinkArquivoConteudo(conteudo);
+  const estiloAltura = { "--previa-item-aluno-altura-midia": `${alturaMidia}px` };
 
   if (tipo === TIPO_CONTEUDO_IMAGEM) {
     if (!linkArquivo) {
@@ -30,7 +31,7 @@ function PreviaMaterial({ conteudo }) {
 
     return (
       <>
-        <div className="previa-item-aluno__imagem">
+        <div className="previa-item-aluno__imagem" style={estiloAltura}>
           <img alt={conteudo.titulo} className="previa-item-aluno__imagem-img" src={linkArquivo} />
           <button aria-label="Ampliar imagem" className="previa-item-aluno__ampliar" onClick={() => setVisualizadorAberto(true)} type="button">
             <TbMaximize aria-hidden="true" size="1rem" /> Ampliar
@@ -50,7 +51,7 @@ function PreviaMaterial({ conteudo }) {
 
     return (
       <>
-        <div className="previa-item-aluno__pdf">
+        <div className="previa-item-aluno__pdf" style={estiloAltura}>
           <Document
             error={
               <div className="previa-item-aluno__pdf-indisponivel">
@@ -60,7 +61,7 @@ function PreviaMaterial({ conteudo }) {
             file={linkArquivo}
             loading="Carregando PDF…"
           >
-            <Page height={ALTURA_MIDIA_INLINE} pageNumber={1} />
+            <Page height={alturaMidia} pageNumber={1} />
           </Document>
           <button aria-label="Ampliar PDF" className="previa-item-aluno__ampliar" onClick={() => setVisualizadorAberto(true)} type="button">
             <TbMaximize aria-hidden="true" size="1rem" /> Ampliar
@@ -79,7 +80,7 @@ function PreviaMaterial({ conteudo }) {
     }
 
     return (
-      <video className="previa-item-aluno__video" controls preload="metadata" src={linkArquivo}>
+      <video className="previa-item-aluno__video" controls preload="metadata" src={linkArquivo} style={estiloAltura}>
         <track kind="captions" />
       </video>
     );
@@ -126,8 +127,12 @@ function PreviaQuiz({ questoes }) {
    (TelaModuloGestao.jsx, selo "Somente leitura", sem rodape) e pelo
    Professor (tela do modulo do professor, selo Publicado/Rascunho, com
    aviso de rascunho e rodape de acoes) - a UNICA diferenca entre as duas
-   e o que cada chamador passa nessas props. */
-export default function PreviaItemAluno({ acoesCabecalho, aviso, item, questoes, rodape, selo }) {
+   e o que cada chamador passa nessas props. `alturaMidia` (px, default
+   300 = comportamento de sempre) deixa o bloco aberto do roteiro da aula
+   (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-roteiro.md)
+   passar uma altura maior pra imagem/PDF/video ocuparem o bloco, sem
+   mudar o padrao de quem nao passa a prop. */
+export default function PreviaItemAluno({ acoesCabecalho, alturaMidia = ALTURA_MIDIA_INLINE_PADRAO, aviso, item, questoes, rodape, selo }) {
   const varianteSelo = selo === "Somente leitura" ? "info" : undefined;
 
   return (
@@ -148,7 +153,7 @@ export default function PreviaItemAluno({ acoesCabecalho, aviso, item, questoes,
       {aviso ? <InlineMessage tone="warning">{aviso}</InlineMessage> : null}
 
       <div className="previa-item-aluno__corpo">
-        {item.tipo === "quiz" ? <PreviaQuiz questoes={questoes} /> : <PreviaMaterial conteudo={item.conteudo} />}
+        {item.tipo === "quiz" ? <PreviaQuiz questoes={questoes} /> : <PreviaMaterial alturaMidia={alturaMidia} conteudo={item.conteudo} />}
       </div>
 
       {rodape ? <div className="previa-item-aluno__rodape">{rodape}</div> : null}
