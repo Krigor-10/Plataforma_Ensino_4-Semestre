@@ -550,6 +550,7 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(screen.queryByRole("button", { name: /Editar/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Publicar/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Excluir/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Opções de/ })).not.toBeInTheDocument();
   });
 
   test("abrir o quiz mostra o gabarito com a alternativa correta marcada", async () => {

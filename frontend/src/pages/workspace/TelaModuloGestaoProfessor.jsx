@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TbArrowLeft,
   TbArrowRight,
@@ -167,6 +167,10 @@ export default function TelaModuloGestaoProfessor({
   const [loteFalhas, setLoteFalhas] = useState([]);
   const [questoesPorAvaliacaoId, setQuestoesPorAvaliacaoId] = useState(() => new Map());
   const [carregandoQuestoesId, setCarregandoQuestoesId] = useState(null);
+  const [erroQuestoesId, setErroQuestoesId] = useState(null);
+  const [tentativaQuestoesId, setTentativaQuestoesId] = useState(0);
+  const quizzesEmAndamentoRef = useRef(new Set());
+  const montadoRef = useRef(true);
 
   const indiceModuloAtual = modulosOrdenados.findIndex((modulo) => modulo.id === moduloId);
   const moduloAtual = indiceModuloAtual >= 0 ? modulosOrdenados[indiceModuloAtual] : null;
@@ -201,48 +205,58 @@ export default function TelaModuloGestaoProfessor({
   const itemProximo =
     indiceItemAberto >= 0 && indiceItemAberto < itensOrdenados.length - 1 ? itensOrdenados[indiceItemAberto + 1] : null;
 
+  useEffect(() => {
+    return () => {
+      montadoRef.current = false;
+    };
+  }, []);
+
   // Questoes do quiz aberto, carregadas sob demanda pelo mesmo endpoint que o
-  // assistente de edicao de quiz ja usa - sem endpoint novo.
+  // assistente de edicao de quiz ja usa - sem endpoint novo. O "ja estou
+  // buscando este quiz" fica num ref (Set), NAO em estado/dependencia do
+  // efeito: colocar `carregandoQuestoesId` nas dependencias fazia o proprio
+  // `setCarregandoQuestoesId` disparar o efeito de novo, cuja limpeza
+  // cancelava (`ativo = false`) a requisicao que tinha acabado de comecar -
+  // a resposta chegava depois mas era descartada, e o "Carregando..." ficava
+  // preso pra sempre (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
+  // correcoes-1.md, item 1). A resposta agora e sempre gravada quando chega
+  // (o item aberto pode ja ter mudado - tudo bem, o Map guarda por quizId),
+  // so nao mexe em estado se o COMPONENTE foi desmontado.
   useEffect(() => {
     if (!itemAberto || itemAberto.tipo !== "quiz") {
-      return undefined;
+      return;
     }
 
     const quizId = itemAberto.quiz.id;
-    if (questoesPorAvaliacaoId.has(quizId) || carregandoQuestoesId === quizId) {
-      return undefined;
+    if (questoesPorAvaliacaoId.has(quizId) || quizzesEmAndamentoRef.current.has(quizId)) {
+      return;
     }
 
-    let ativo = true;
+    quizzesEmAndamentoRef.current.add(quizId);
     setCarregandoQuestoesId(quizId);
+    setErroQuestoesId((atual) => (atual === quizId ? null : atual));
 
     apiRequest(`/Avaliacoes/${quizId}/questoes`)
       .then((questoes) => {
-        if (!ativo) {
-          return;
-        }
         setQuestoesPorAvaliacaoId((atual) => new Map(atual).set(quizId, questoes));
       })
       .catch((err) => {
-        if (!ativo) {
-          return;
-        }
         if (err instanceof ApiError && err.status === 401) {
           onSessionExpired();
           return;
         }
         mostrarToast(err.message || "Não foi possível carregar as questões agora.", "erro", 6000);
+        if (montadoRef.current) {
+          setErroQuestoesId(quizId);
+        }
       })
       .finally(() => {
-        if (ativo) {
-          setCarregandoQuestoesId(null);
+        quizzesEmAndamentoRef.current.delete(quizId);
+        if (montadoRef.current) {
+          setCarregandoQuestoesId((atual) => (atual === quizId ? null : atual));
         }
       });
-
-    return () => {
-      ativo = false;
-    };
-  }, [itemAberto, questoesPorAvaliacaoId, carregandoQuestoesId, onSessionExpired, mostrarToast]);
+  }, [itemAberto, questoesPorAvaliacaoId, onSessionExpired, mostrarToast, tentativaQuestoesId]);
 
   function voltarParaModulos() {
     onNavigate?.(`/app/conteudos/${cursoAtivo.curso.id}`);
@@ -431,11 +445,13 @@ export default function TelaModuloGestaoProfessor({
     }
   ];
 
-  function itensMenuMaterial(conteudo, indiceConteudo, itemId) {
+  // Base das acoes do material, sem "Visualizar" - usada tanto pela linha
+  // (que acrescenta "Visualizar" na frente) quanto pelo ⋮ da janela de
+  // previa (que ja esta com o item aberto, entao nao precisa do atalho).
+  function itensMenuMaterial(conteudo, indiceConteudo) {
     const publicado = Number(conteudo.statusPublicacao) === STATUS_PUBLICADO;
     const processando = acaoEmAndamentoId === conteudo.id;
     return [
-      { chave: "visualizar", rotulo: "Visualizar", onSelecionar: () => setItemAbertoId(itemId) },
       { chave: "editar", rotulo: "Editar", desabilitado: edicaoTravada || processando, onSelecionar: () => onAbrirEdicao(conteudo) },
       {
         chave: "alternar-status",
@@ -459,11 +475,11 @@ export default function TelaModuloGestaoProfessor({
     ];
   }
 
-  function itensMenuQuiz(quiz, itemId) {
+  // Idem acima, sem "Visualizar" na base.
+  function itensMenuQuiz(quiz) {
     const publicado = Number(quiz.statusPublicacao) === STATUS_PUBLICADO;
     const processando = acaoEmAndamentoId === quiz.id;
     return [
-      { chave: "visualizar", rotulo: "Visualizar", onSelecionar: () => setItemAbertoId(itemId) },
       {
         chave: "editar",
         rotulo: "Editar",
@@ -479,22 +495,6 @@ export default function TelaModuloGestaoProfessor({
       { chave: "arquivar", rotulo: "Arquivar", desabilitado: edicaoTravada, onSelecionar: () => onArquivarQuiz(quiz) },
       { chave: "excluir", rotulo: "Excluir", perigo: true, desabilitado: edicaoTravada, onSelecionar: () => onExcluirQuiz(quiz) }
     ];
-  }
-
-  function alternarPublicacaoDoItem(item) {
-    if (item.tipo === "material") {
-      onAlternarPublicacao(item.conteudo);
-    } else {
-      onAlternarPublicacaoQuiz(item.quiz);
-    }
-  }
-
-  function abrirEdicaoDoItem(item) {
-    if (item.tipo === "material") {
-      onAbrirEdicao(item.conteudo);
-    } else {
-      onGerenciarQuizModulo(moduloAtual, item.quiz);
-    }
   }
 
   const nomesQuizzesSoltos = montarNomesExibicaoQuizzesVinculados(quizzesSoltos, moduloAtual.titulo);
@@ -541,7 +541,10 @@ export default function TelaModuloGestaoProfessor({
           </>
         ),
         seloTipo: { icone: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem"), texto: tipoTexto },
-        menuItens: itensMenuMaterial(item.conteudo, conteudosDoModulo.indexOf(item.conteudo), item.id),
+        menuItens: [
+          { chave: "visualizar", rotulo: "Visualizar", onSelecionar: () => setItemAbertoId(item.id) },
+          ...itensMenuMaterial(item.conteudo, conteudosDoModulo.indexOf(item.conteudo))
+        ],
         onAbrir: () => setItemAbertoId(item.id)
       };
     }
@@ -567,7 +570,10 @@ export default function TelaModuloGestaoProfessor({
         </>
       ),
       seloTipo: { icone: <TbTrophy aria-hidden="true" size="0.85rem" />, texto: "Quiz" },
-      menuItens: itensMenuQuiz(item.quiz, item.id),
+      menuItens: [
+        { chave: "visualizar", rotulo: "Visualizar", onSelecionar: () => setItemAbertoId(item.id) },
+        ...itensMenuQuiz(item.quiz)
+      ],
       onAbrir: () => setItemAbertoId(item.id)
     };
   });
@@ -695,6 +701,7 @@ export default function TelaModuloGestaoProfessor({
       {itemAberto ? (
         <JanelaPreviaItem
           carregandoQuestoes={itemAberto.tipo === "quiz" && carregandoQuestoesId === itemAberto.quiz.id}
+          erroQuestoes={itemAberto.tipo === "quiz" && erroQuestoesId === itemAberto.quiz.id}
           indiceAtual={indiceItemAberto + 1}
           item={{
             id: itemAberto.id,
@@ -705,14 +712,18 @@ export default function TelaModuloGestaoProfessor({
           }}
           itemAnterior={itemAnterior}
           itemProximo={itemProximo}
+          menuItens={
+            itemAberto.tipo === "material"
+              ? itensMenuMaterial(itemAberto.conteudo, conteudosDoModulo.indexOf(itemAberto.conteudo))
+              : itensMenuQuiz(itemAberto.quiz)
+          }
           numeroModuloTexto={numeroModuloTexto}
-          onAlternarPublicacao={() => alternarPublicacaoDoItem(itemAberto)}
           onAnterior={() => itemAnterior && setItemAbertoId(itemAnterior.id)}
-          onEditar={() => abrirEdicaoDoItem(itemAberto)}
           onFechar={() => setItemAbertoId(null)}
           onProximo={() => itemProximo && setItemAbertoId(itemProximo.id)}
+          onTentarNovamenteQuestoes={() => setTentativaQuestoesId((atual) => atual + 1)}
           publicado={itemAbertoPublicado}
-          somenteLeitura={edicaoTravada}
+          somenteLeitura={false}
           totalItens={itensOrdenados.length}
         />
       ) : null}

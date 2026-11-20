@@ -45,7 +45,7 @@ export default function ListaModulosCartoes({ modulosOrdenados, moduloId, onIrPa
           >
             <NumeroModulo indice={indice} />
             <span className="lista-modulos-cartoes__texto">
-              <span className="lista-modulos-cartoes__titulo">{modulo.titulo}</span>
+              <span className="lista-modulos-cartoes__titulo" title={modulo.titulo}>{modulo.titulo}</span>
               <span className="lista-modulos-cartoes__resumo">{resumoTexto(modulo)}</span>
             </span>
             <TbChevronDown aria-hidden="true" className="lista-modulos-cartoes__seta" size={16} />

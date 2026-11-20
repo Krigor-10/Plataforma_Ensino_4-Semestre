@@ -1204,6 +1204,128 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     expect(await screen.findByText(/dependencias academicas/)).toBeInTheDocument();
   });
+
+  // docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-correcoes-1.md,
+  // item 1: colocar `carregandoQuestoesId` nas dependencias do efeito fazia
+  // o proprio `setCarregandoQuestoesId` dispara-lo de novo, cuja limpeza
+  // cancelava a requisicao que tinha acabado de comecar - a resposta chegava
+  // depois mas era descartada, e o "Carregando..." ficava preso pra sempre.
+  test("quiz nao fica preso em 'Carregando questões...' ao trocar de item durante a requisicao (corrida)", async () => {
+    const usuario = userEvent.setup();
+    let resolverQuestoes;
+    apiRequest.mockImplementation((url) =>
+      url.endsWith("/questoes") ? new Promise((resolve) => { resolverQuestoes = resolve; }) : Promise.resolve({})
+    );
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Ver Quiz do Módulo" }));
+    expect(await screen.findByText("Carregando questões…")).toBeInTheDocument();
+
+    // Troca pro item anterior e volta pro quiz com a 1a requisicao ainda no ar.
+    await usuario.click(screen.getByRole("button", { name: "Item anterior" }));
+    expect(await screen.findByRole("heading", { name: "Aula 1" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Próximo item" }));
+    expect(await screen.findByRole("heading", { name: "Quiz do Módulo" })).toBeInTheDocument();
+    expect(screen.getByText("Carregando questões…")).toBeInTheDocument();
+
+    resolverQuestoes([
+      { id: 1, enunciado: "Pergunta", alternativas: [{ id: 1, letra: "A", texto: "Resp", ehCorreta: true }], afirmativas: [] }
+    ]);
+
+    expect(await screen.findByText("Pergunta")).toBeInTheDocument();
+    expect(screen.queryByText("Carregando questões…")).not.toBeInTheDocument();
+  });
+
+  test('erro ao carregar as questoes mostra "Tentar de novo", e clicar refaz a busca', async () => {
+    const usuario = userEvent.setup();
+    let chamadasQuestoes = 0;
+    apiRequest.mockImplementation((url) => {
+      if (!url.endsWith("/questoes")) {
+        return Promise.resolve({});
+      }
+      chamadasQuestoes += 1;
+      return chamadasQuestoes === 1
+        ? Promise.reject(new Error("Falhou"))
+        : Promise.resolve([{ id: 1, enunciado: "Pergunta", alternativas: [{ id: 1, letra: "A", texto: "Resp", ehCorreta: true }], afirmativas: [] }]);
+    });
+    renderTrilha({
+      conteudos: [],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Ver Quiz do Módulo" }));
+    expect(await screen.findByText("Não foi possível carregar as questões.")).toBeInTheDocument();
+
+    await usuario.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Pergunta")).toBeInTheDocument();
+  });
+
+  test("trocar de item e voltar usa as questoes ja carregadas, sem buscar de novo", async () => {
+    const usuario = userEvent.setup();
+    apiRequest.mockImplementation((url) =>
+      url.endsWith("/questoes")
+        ? Promise.resolve([{ id: 1, enunciado: "Pergunta", alternativas: [{ id: 1, letra: "A", texto: "Resp", ehCorreta: true }], afirmativas: [] }])
+        : Promise.resolve({})
+    );
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }],
+      avaliacoes: [
+        { id: 200, conteudoDidaticoId: null, moduloId: MODULO_ID, statusPublicacao: 2, tipoAvaliacao: 1, titulo: "Quiz do Módulo", turmaId: TURMA_ID, cursoId: CURSO_ID }
+      ]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Ver Quiz do Módulo" }));
+    expect(await screen.findByText("Pergunta")).toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+
+    await usuario.click(screen.getByRole("button", { name: "Item anterior" }));
+    await screen.findByRole("heading", { name: "Aula 1" });
+    await usuario.click(screen.getByRole("button", { name: "Próximo item" }));
+
+    expect(await screen.findByText("Pergunta")).toBeInTheDocument();
+    expect(apiRequest).toHaveBeenCalledTimes(1);
+  });
+
+  test("rodape da janela de previa tem a classe modal-rodape (nao gruda na borda)", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 2, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
+    const rodape = (await screen.findByRole("button", { name: "Item anterior" })).closest("footer");
+    expect(rodape).toHaveClass("modal-rodape");
+  });
+
+  test("topo da janela nao tem botoes soltos de Publicar/Editar - as acoes ficam no ⋮, que publica sem fechar a janela", async () => {
+    const usuario = userEvent.setup();
+    renderTrilha({
+      conteudos: [{ id: 1, moduloId: MODULO_ID, statusPublicacao: 1, tipoConteudo: 1, titulo: "Aula 1", turmaId: TURMA_ID, cursoId: CURSO_ID }]
+    });
+
+    await usuario.click(screen.getByRole("button", { name: "Ver Aula 1" }));
+    const janela = await screen.findByRole("dialog");
+
+    expect(within(janela).queryByRole("button", { name: "Publicar" })).not.toBeInTheDocument();
+    expect(within(janela).queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+
+    await usuario.click(within(janela).getByRole("button", { name: "Opções de Aula 1" }));
+    const opcoes = screen.getAllByRole("menuitem").map((item) => item.textContent);
+    expect(opcoes).not.toContain("Visualizar");
+    expect(opcoes).toEqual(["Editar", "Publicar", "Mover para cima", "Mover para baixo", "Excluir"]);
+
+    await usuario.click(screen.getByRole("menuitem", { name: "Publicar" }));
+
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/ConteudosDidaticos/1", expect.objectContaining({ method: "PUT" })));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
 });
 
 // PROMPT-agente-progresso-e-trava-ao-concluir.md, Parte A: professor ve a

@@ -214,7 +214,7 @@ export default function TelaModuloGestao({
         selo={obterSituacaoCurso(curso)}
       />
 
-      <div className="modulo-lista-janela__kpis">
+      <div className="atividades-curso__kpis-compactos">
         <CartaoEstatistica
           icone={<TbChartBar size={18} />}
           rotulo="Progresso"

@@ -4,6 +4,7 @@ import Botao from "./Botao.jsx";
 import GabaritoQuestoes from "./GabaritoQuestoes.jsx";
 import ImagemComZoom from "./ImagemComZoom.jsx";
 import Insignia from "./Insignia.jsx";
+import MenuAcoes from "./MenuAcoes.jsx";
 import Modal from "./Modal.jsx";
 import VisualizadorPdfConteudo from "./VisualizadorPdfConteudo.jsx";
 import { InlineMessage } from "./Primitives.jsx";
@@ -57,12 +58,25 @@ function CorpoMaterial({ conteudo }) {
   return texto ? <p className="janela-previa-item__texto">{texto}</p> : <p className="janela-previa-item__vazio">{MENSAGEM_SEM_ARQUIVO}</p>;
 }
 
-function CorpoQuiz({ carregando, indiceQuestao, mostrarGabarito, onMudarMostrarGabarito, onSelecionarQuestao, questoes }) {
+function CorpoQuiz({ carregando, erro, indiceQuestao, mostrarGabarito, onMudarMostrarGabarito, onSelecionarQuestao, onTentarNovamente, questoes }) {
   if (carregando) {
     return (
       <p className="texto-vazio" role="status">
         Carregando questões…
       </p>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div className="janela-previa-item__erro">
+        <p className="janela-previa-item__vazio" role="alert">
+          Não foi possível carregar as questões.
+        </p>
+        <Botao onClick={onTentarNovamente} tamanho="pequeno" variante="secundario">
+          Tentar de novo
+        </Botao>
+      </div>
     );
   }
 
@@ -122,16 +136,17 @@ function CorpoQuiz({ carregando, indiceQuestao, mostrarGabarito, onMudarMostrarG
    igual pros outros tipos. */
 export default function JanelaPreviaItem({
   carregandoQuestoes,
+  erroQuestoes,
   indiceAtual,
   item,
   itemAnterior,
   itemProximo,
+  menuItens,
   numeroModuloTexto,
-  onAlternarPublicacao,
   onAnterior,
-  onEditar,
   onFechar,
   onProximo,
+  onTentarNovamenteQuestoes,
   publicado,
   somenteLeitura,
   totalItens
@@ -181,16 +196,7 @@ export default function JanelaPreviaItem({
       acoes={
         <div className="janela-previa-item__acoes-cabecalho">
           <Insignia texto={somenteLeitura ? "Somente leitura" : publicado ? "Publicado" : "Rascunho"} />
-          {!somenteLeitura ? (
-            <>
-              <Botao onClick={onAlternarPublicacao} tamanho="pequeno" variante="fantasma">
-                {publicado ? "Voltar para rascunho" : "Publicar"}
-              </Botao>
-              <Botao onClick={onEditar} tamanho="pequeno" variante="secundario">
-                Editar
-              </Botao>
-            </>
-          ) : null}
+          {!somenteLeitura && menuItens ? <MenuAcoes itens={menuItens} rotulo={`Opções de ${item.titulo}`} /> : null}
         </div>
       }
       className="modal-caixa--janela-item"
@@ -198,7 +204,7 @@ export default function JanelaPreviaItem({
       onFechar={onFechar}
       titulo={item.titulo}
       rodape={
-        <footer className="janela-previa-item__rodape">
+        <footer className="modal-rodape janela-previa-item__rodape">
           <Botao
             aria-label={anteriorEhQuestao ? "Questão anterior" : "Item anterior"}
             disabled={anteriorDesabilitado}
@@ -236,10 +242,12 @@ export default function JanelaPreviaItem({
       {ehQuiz ? (
         <CorpoQuiz
           carregando={Boolean(carregandoQuestoes)}
+          erro={Boolean(erroQuestoes)}
           indiceQuestao={indiceQuestao}
           mostrarGabarito={mostrarGabarito}
           onMudarMostrarGabarito={setMostrarGabarito}
           onSelecionarQuestao={setIndiceQuestao}
+          onTentarNovamente={onTentarNovamenteQuestoes}
           questoes={questoes}
         />
       ) : (
