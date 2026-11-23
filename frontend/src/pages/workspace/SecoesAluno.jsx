@@ -32,23 +32,22 @@ import { EmptyState, InlineMessage, StatusPill } from "../../components/Primitiv
 import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
+import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
 import Modal from "../../components/Modal.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
-import VisualizadorImagem from "../../components/VisualizadorImagem.jsx";
-import VisualizadorPdf from "../../components/VisualizadorPdf.jsx";
 import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { montarNomesExibicaoQuizzesVinculados, temDescricaoPropria } from "../../lib/trilhaConteudos.js";
+import { montarNomesExibicaoQuizzesVinculados } from "../../lib/trilhaConteudos.js";
 import {
   clampPercent,
-  compactText,
   formatDate,
   formatGrade,
   formatPercent,
@@ -1573,7 +1572,6 @@ export function SecaoConteudosAluno({
   });
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [conteudosConcluidosLocais, setConteudosConcluidosLocais] = useState(() => new Set());
-  const [conteudoSelecionadoId, setConteudoSelecionadoId] = useState(null);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const moduloPorId = useMemo(() => mapById(modulos), [modulos]);
@@ -1819,41 +1817,6 @@ export function SecaoConteudosAluno({
     turmaPorId
   ]);
 
-  const conteudosDaTrilha = useMemo(
-    () =>
-      gruposConteudosPorCurso.flatMap((curso) =>
-        curso.modulos.flatMap((modulo) =>
-          modulo.conteudos.map((conteudo) => ({
-            ...conteudo,
-            cursoAgrupadoId: curso.id,
-            cursoTitulo: curso.titulo,
-            cursoTurmas: curso.turmas,
-            cursoAcento: curso.acento,
-            moduloAgrupadoId: modulo.id,
-            moduloChave: obterChaveModuloConteudo(curso.id, modulo.id),
-            moduloTitulo: modulo.titulo
-          }))
-        )
-      ),
-    [gruposConteudosPorCurso]
-  );
-
-  const conteudoSelecionado = useMemo(
-    () => conteudosDaTrilha.find((conteudo) => conteudo.id === conteudoSelecionadoId) || null,
-    [conteudoSelecionadoId, conteudosDaTrilha]
-  );
-
-  useEffect(() => {
-    if (!conteudosDaTrilha.length) {
-      setConteudoSelecionadoId(null);
-      return;
-    }
-
-    if (conteudoSelecionadoId !== null && !conteudosDaTrilha.some((conteudo) => conteudo.id === conteudoSelecionadoId)) {
-      setConteudoSelecionadoId(null);
-    }
-  }, [conteudoSelecionadoId, conteudosDaTrilha]);
-
   const cursoAtivo = cursoIdSelecionado
     ? gruposConteudosPorCurso.find((curso) => curso.id === cursoIdSelecionado) || null
     : null;
@@ -1884,10 +1847,6 @@ export function SecaoConteudosAluno({
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/conteudos/${cursoId}`);
-  }
-
-  function selecionarConteudoAluno(conteudoId) {
-    setConteudoSelecionadoId((atual) => (atual === conteudoId ? null : conteudoId));
   }
 
   async function marcarConteudoConcluido(conteudoId) {
@@ -1926,14 +1885,12 @@ export function SecaoConteudosAluno({
         <SlideConteudosCurso
           avaliacaoLiberada={avaliacaoLiberadaCursoAtivo}
           conteudoProcessando={conteudoProcessando}
-          conteudoSelecionadoId={conteudoSelecionadoId}
           curso={cursoAtivo}
           key={cursoAtivo.id}
           onAbrirRevisao={abrirRevisaoTentativa}
           onConcluir={marcarConteudoConcluido}
           onIniciarQuiz={abrirConfirmacaoAvaliacao}
           onIrParaAvaliacao={onNavigate ? () => onNavigate(`/app/avaliacoes/${cursoAtivo.id}`) : null}
-          onSelecionar={selecionarConteudoAluno}
           onVoltarConteudos={onNavigate ? abrirListaConteudos : null}
           quizIndisponivel={carregandoQuestoes || enviandoRespostas}
         />
@@ -1964,7 +1921,7 @@ const ICONE_TIPO_CONTEUDO_ALUNO = {
   5: <TbPhoto aria-hidden="true" size="1.75rem" />
 };
 
-function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoSelecionadoId, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onIrParaAvaliacao, onSelecionar, onVoltarConteudos, quizIndisponivel }) {
+function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onIrParaAvaliacao, onVoltarConteudos, quizIndisponivel }) {
   const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
 
   const [modulosAbertos, setModulosAbertos] = useState(() => {
@@ -1972,7 +1929,7 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
     const alvo = primeiroIncompleto || modulosVisiveis[0];
     return alvo ? new Set([alvo.id]) : new Set();
   });
-  const [visualizador, setVisualizador] = useState(null);
+  const [itemAbertoId, setItemAbertoId] = useState(null);
 
   function marcarConcluidoAoAbrir(conteudo) {
     if (!conteudo.concluido) {
@@ -1980,13 +1937,9 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
     }
   }
 
-  function abrirVisualizador(conteudo, acao) {
+  function abrirItem(conteudo) {
     marcarConcluidoAoAbrir(conteudo);
-    setVisualizador({ tipo: acao.visualizador, titulo: conteudo.titulo, url: acao.href });
-  }
-
-  function fecharVisualizador() {
-    setVisualizador(null);
+    setItemAbertoId(conteudo.id);
   }
 
   function alternarModulo(moduloId) {
@@ -2003,17 +1956,37 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
 
   const percentualCurso = clampPercent(curso.progresso);
 
+  // Item aberto na janela grande (JanelaPreviaItem): procurado em TODOS os
+  // modulos visiveis (nao so no aberto no acordeao), porque o proprio
+  // Anterior/Proximo da janela pode levar o aluno pro ultimo item de um
+  // modulo e o primeiro do seguinte.
+  let moduloDoItemAberto = null;
+  let indiceItemAberto = -1;
+  if (itemAbertoId != null) {
+    for (const modulo of modulosVisiveis) {
+      const indice = modulo.conteudos.findIndex((conteudo) => conteudo.id === itemAbertoId);
+      if (indice >= 0) {
+        moduloDoItemAberto = modulo;
+        indiceItemAberto = indice;
+        break;
+      }
+    }
+  }
+  const itemAberto = moduloDoItemAberto ? moduloDoItemAberto.conteudos[indiceItemAberto] : null;
+  const itemAnterior = itemAberto && indiceItemAberto > 0 ? moduloDoItemAberto.conteudos[indiceItemAberto - 1] : null;
+  // So oferece "Proximo" quando o item atual ja esta concluido (mesma regra
+  // de desbloqueio da lista: o seguinte so abre depois que o anterior foi
+  // marcado concluido ao abrir).
+  const itemProximo =
+    itemAberto && itemAberto.concluido && indiceItemAberto < moduloDoItemAberto.conteudos.length - 1
+      ? moduloDoItemAberto.conteudos[indiceItemAberto + 1]
+      : null;
+
   return (
     <div className="conteudos-aluno trilha-conteudos">
       {onVoltarConteudos ? <BotaoVoltar destino="Conteúdos" onClick={onVoltarConteudos} /> : null}
 
-      <header className="atividades-curso__cabecalho">
-        <h2 className="atividades-curso__titulo">{curso.titulo}</h2>
-        <div className="atividades-curso__progresso">
-          <span className="atividades-curso__progresso-texto">{percentualCurso}% concluido</span>
-          <BarraProgresso mostrarTexto={false} percentual={percentualCurso} />
-        </div>
-      </header>
+      <CartaoCursoModulo curso={curso} percentual={percentualCurso} selo={percentualCurso >= 100 ? "Concluído" : "Curso em andamento"} />
 
       {avaliacaoLiberada ? (
         <AvisoAvaliacaoLiberada avaliacao={avaliacaoLiberada} onIrParaAvaliacao={onIrParaAvaliacao} />
@@ -2119,18 +2092,16 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
                         <ul aria-label={`Atividades de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
                           {modulo.conteudos.map((conteudo, indiceConteudo) => {
                             const itemBloqueado = indiceConteudo > 0 && !modulo.conteudos[indiceConteudo - 1].concluido;
-                            const conteudoAtivo = conteudoSelecionadoId === conteudo.id;
                             const processando = conteudoProcessando === conteudo.id;
-                            const acao = obterAcaoConteudoAluno(conteudo);
-                            const previaConteudo = obterPreviaConteudoAluno(conteudo);
+                            const indisponivel = itemBloqueado || processando;
                             const nomesQuizzesDoConteudo = montarNomesExibicaoQuizzesVinculados(conteudo.quizzes, conteudo.titulo);
 
-                            function alternarConteudoPeloTeclado(event) {
+                            function abrirConteudoPeloTeclado(event) {
                               if (event.key !== "Enter" && event.key !== " ") {
                                 return;
                               }
                               event.preventDefault();
-                              onSelecionar(conteudo.id);
+                              abrirItem(conteudo);
                             }
 
                             return (
@@ -2140,13 +2111,12 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
                               >
                                 <div className="atividades-curso__item-aberto">
                                 <div
-                                  aria-expanded={itemBloqueado ? undefined : conteudoAtivo}
                                   aria-label={itemBloqueado ? undefined : `Ver ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
-                                  className={`atividades-curso__linha${conteudoAtivo ? " atividades-curso__linha--ativa" : ""}`}
-                                  onClick={itemBloqueado ? undefined : () => onSelecionar(conteudo.id)}
-                                  onKeyDown={itemBloqueado ? undefined : alternarConteudoPeloTeclado}
+                                  className="atividades-curso__linha"
+                                  onClick={indisponivel ? undefined : () => abrirItem(conteudo)}
+                                  onKeyDown={indisponivel ? undefined : abrirConteudoPeloTeclado}
                                   role={itemBloqueado ? undefined : "button"}
-                                  tabIndex={itemBloqueado ? undefined : 0}
+                                  tabIndex={indisponivel ? undefined : 0}
                                 >
                                   {itemBloqueado ? (
                                     <span aria-label="Conteúdo bloqueado" className="atividades-curso__icone atividades-curso__icone--bloqueado">
@@ -2158,17 +2128,7 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
                                     </span>
                                   )}
                                   <div className="atividades-curso__corpo">
-                                    <span className="atividades-curso__item-titulo-linha">
-                                      <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
-                                      {!itemBloqueado ? (
-                                        <span
-                                          aria-hidden="true"
-                                          className={`atividades-curso__chevron${conteudoAtivo ? " atividades-curso__chevron--aberto" : ""}`}
-                                        >
-                                          ▾
-                                        </span>
-                                      ) : null}
-                                    </span>
+                                    <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
                                     <p className="atividades-curso__meta">
                                       <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
                                     </p>
@@ -2183,51 +2143,8 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
                                         <Insignia texto={normalizeProgressStatus(conteudo.statusProgresso)} />
                                       )}
                                     </span>
-                                    <span className="atividades-curso__acao-coluna">
-                                      {itemBloqueado ? null : acao && acao.visualizador ? (
-                                        <button
-                                          className="atividades-curso__link atividades-curso__link--botao"
-                                          disabled={processando}
-                                          onClick={() => abrirVisualizador(conteudo, acao)}
-                                          type="button"
-                                        >
-                                          {acao.label}
-                                        </button>
-                                      ) : acao ? (
-                                        <a
-                                          className="atividades-curso__link"
-                                          href={acao.href}
-                                          onClick={() => marcarConcluidoAoAbrir(conteudo)}
-                                          rel="noreferrer"
-                                          target="_blank"
-                                        >
-                                          {acao.label}
-                                        </a>
-                                      ) : null}
-                                    </span>
                                   </div>
                                 </div>
-
-                                <AnimatePresence initial={false}>
-                                  {conteudoAtivo ? (
-                                    <motion.div
-                                      animate={{ height: "auto", opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      initial={{ height: 0, opacity: 0 }}
-                                      key={`previa-${conteudo.id}`}
-                                      style={{ overflow: "hidden" }}
-                                      transition={{ duration: 0.22, ease: "easeInOut" }}
-                                    >
-                                      <div className="atividades-curso__previa">
-                                        {temDescricaoPropria(previaConteudo, conteudo.titulo) ? <p>{previaConteudo}</p> : null}
-                                        {conteudo.corpoTexto ? <p>{conteudo.corpoTexto}</p> : null}
-                                        <span>
-                                          {conteudo.publicadoEm ? `Publicado em ${formatDate(conteudo.publicadoEm)}` : `Atualizado em ${formatDate(conteudo.atualizadoEm || conteudo.criadoEm)}`}
-                                        </span>
-                                      </div>
-                                    </motion.div>
-                                  ) : null}
-                                </AnimatePresence>
                                 </div>
 
                                 {!itemBloqueado && conteudo.quizzes.length ? (
@@ -2361,11 +2278,20 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
         </div>
       )}
 
-      {visualizador?.tipo === "imagem" ? (
-        <VisualizadorImagem onFechar={fecharVisualizador} titulo={visualizador.titulo} url={visualizador.url} />
-      ) : null}
-      {visualizador?.tipo === "pdf" ? (
-        <VisualizadorPdf onFechar={fecharVisualizador} titulo={visualizador.titulo} url={visualizador.url} />
+      {itemAberto ? (
+        <JanelaPreviaItem
+          indiceAtual={indiceItemAberto + 1}
+          item={{ id: itemAberto.id, tipo: "material", titulo: itemAberto.titulo, conteudo: itemAberto }}
+          itemAnterior={itemAnterior}
+          itemProximo={itemProximo}
+          numeroModuloTexto={`Módulo ${String(modulosVisiveis.indexOf(moduloDoItemAberto) + 1).padStart(2, "0")}`}
+          onAnterior={() => itemAnterior && abrirItem(itemAnterior)}
+          onFechar={() => setItemAbertoId(null)}
+          onProximo={() => itemProximo && abrirItem(itemProximo)}
+          publicado
+          somenteLeitura={false}
+          totalItens={moduloDoItemAberto.conteudos.length}
+        />
       ) : null}
     </div>
   );
@@ -2656,10 +2582,6 @@ function obterDisponibilidadeAvaliacao(avaliacao) {
   };
 }
 
-function obterChaveModuloConteudo(cursoId, moduloId) {
-  return `${cursoId || "curso"}-${moduloId || "modulo"}`;
-}
-
 function agruparModulosPorCurso(modulos) {
   const grupos = new Map();
 
@@ -2743,49 +2665,3 @@ function estaConcluido(progresso) {
   );
 }
 
-function obterPreviaConteudoAluno(conteudo) {
-  const tipo = Number(conteudo.tipoConteudo);
-
-  if (tipo === 1) {
-    return compactText(conteudo.descricao || conteudo.corpoTexto || "Texto liberado para leitura nesta turma.", 260);
-  }
-
-  if (tipo === 2) {
-    return compactText(conteudo.descricao || conteudo.arquivoUrl || "PDF publicado para consulta ou download.", 220);
-  }
-
-  if (tipo === 3) {
-    return compactText(conteudo.descricao || conteudo.arquivoUrl || "Video publicado para esta turma.", 220);
-  }
-
-  if (tipo === 5) {
-    return compactText(conteudo.descricao || conteudo.arquivoUrl || "Imagem publicada para esta turma.", 220);
-  }
-
-  return compactText(
-    conteudo.descricao || conteudo.linkUrl || conteudo.arquivoUrl || "Recurso externo liberado para complementar o modulo.",
-    220
-  );
-}
-
-function obterAcaoConteudoAluno(conteudo) {
-  const tipo = Number(conteudo.tipoConteudo);
-
-  if (tipo === 2 && conteudo.arquivoUrl) {
-    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir PDF", visualizador: "pdf" };
-  }
-
-  if (tipo === 3 && conteudo.arquivoUrl) {
-    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Abrir video" };
-  }
-
-  if (tipo === 4 && conteudo.linkUrl) {
-    return { href: conteudo.linkUrl, label: "Abrir recurso" };
-  }
-
-  if (tipo === 5 && conteudo.arquivoUrl) {
-    return { href: resolverUrlArquivo(conteudo.arquivoUrl), label: "Ver imagem", visualizador: "imagem" };
-  }
-
-  return null;
-}
