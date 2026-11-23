@@ -8,7 +8,7 @@ import { TbArrowLeft, TbX } from "react-icons/tb";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { useBloqueioScroll } from "../hooks/useBloqueioScroll.js";
 
-export default function Modal({ titulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false, fecharAoClicarFora = false }) {
+export default function Modal({ titulo, subtitulo, onFechar, children, className, acoes, rodape, fecharComoVoltar = false, fecharAoClicarFora = false }) {
   const refModal = useFocusTrap();
 
   useEffect(() => {
@@ -47,7 +47,10 @@ export default function Modal({ titulo, onFechar, children, className, acoes, ro
     >
       <article ref={refModal} className={`modal-caixa${className ? ` ${className}` : ""}`}>
         <header className="modal-cabecalho">
-          <h2 className="modal-titulo" id="modal-titulo">{titulo}</h2>
+          <div className="modal-cabecalho__titulos">
+            <h2 className="modal-titulo" id="modal-titulo">{titulo}</h2>
+            {subtitulo ? <p className="modal-subtitulo">{subtitulo}</p> : null}
+          </div>
           {acoes && <div className="modal-cabecalho__acoes">{acoes}</div>}
           <button
             className="modal-fechar"

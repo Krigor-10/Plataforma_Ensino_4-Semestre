@@ -956,9 +956,29 @@ select.campo__entrada option {
   padding: var(--espaco-xl) var(--espaco-xl) var(--espaco-lg);
 }
 
+.modal-cabecalho__titulos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
 .modal-titulo {
   font-size: 1.1rem;
   font-weight: 700;
+}
+
+/* Subtitulo opcional (ex.: "Imagem · Módulo 01" na janela de previa do
+   modulo) - fica no cabecalho, abaixo do titulo, ao inves do corpo, pra nao
+   ser cortado pela borda do cabecalho (docs/TelaConteudosProfessor/PROMPT-
+   agente-tela-modulo-correcoes-1.md, item 11). */
+.modal-subtitulo {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--cor-texto-mudo);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .modal-cabecalho__acoes {

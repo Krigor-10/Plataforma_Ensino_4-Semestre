@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  TbArrowLeft,
-  TbArrowRight,
   TbCircleCheck,
   TbCircleDot,
   TbEye,
@@ -11,9 +9,9 @@ import {
   TbTrophy
 } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
 import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
-import ListaModulosCartoes from "../../components/ListaModulosCartoes.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
 import PainelItensModulo from "../../components/PainelItensModulo.jsx";
@@ -84,30 +82,6 @@ function montarItensOrdenados(conteudosDoModulo, quizzesPorConteudoId, quizzesSo
   return itens;
 }
 
-// Resumo (N itens/N rascunhos) de TODOS os modulos do curso, pra lista da
-// esquerda (ListaModulosCartoes) - diferente de montarDadosDoModulo acima,
-// que so calcula pro modulo ABERTO.
-function montarResumosPorModuloId(modulosOrdenados, conteudos, avaliacoes) {
-  const mapa = new Map();
-  modulosOrdenados.forEach((modulo) => {
-    const materiais = conteudos.filter(
-      (conteudo) => conteudo.moduloId === modulo.id && Number(conteudo.statusPublicacao) !== STATUS_ARQUIVADO
-    );
-    const quizzes = avaliacoes.filter(
-      (avaliacao) =>
-        avaliacao.moduloId === modulo.id &&
-        Number(avaliacao.tipoAvaliacao) === TIPO_AVALIACAO_QUIZ &&
-        Number(avaliacao.statusPublicacao) !== STATUS_ARQUIVADO
-    );
-    const todos = [...materiais, ...quizzes];
-    mapa.set(modulo.id, {
-      totalItens: todos.length,
-      totalRascunhos: todos.filter((item) => Number(item.statusPublicacao) === STATUS_RASCUNHO).length
-    });
-  });
-  return mapa;
-}
-
 // Selo + barra do cartao do curso (professor): % publicado = publicados /
 // (publicados + rascunhos) de TODOS os modulos do curso, nao so do aberto.
 function montarResumoCurso(modulosOrdenados, conteudos, avaliacoes) {
@@ -126,13 +100,17 @@ function montarResumoCurso(modulosOrdenados, conteudos, avaliacoes) {
 }
 
 /* Tela do modulo do professor (docs/TelaConteudosProfessor/PROMPT-agente-
-   tela-modulo-lista-e-janela.md): cartao do curso + modulos em cartoes a
-   esquerda + painel do modulo com linhas grandes a direita - clicar numa
-   linha abre JanelaPreviaItem.jsx (janela grande, com zoom/paginacao/quiz
-   formatado), em vez de expandir a linha no lugar como a versao "roteiro da
-   aula" fazia (RoteiroModulo/PreviaItemAluno, removidos). Os handlers
-   (onAbrirEdicao, onAlternarPublicacao etc.) e os modais que eles abrem
-   (criar/editar conteudo, excluir, assistente de quiz/IA) continuam todos em
+   tela-modulo-lista-e-janela.md + correcoes-1.md, itens 7-8): cartao do
+   curso em linha compacta + painel do modulo com linhas grandes, ocupando a
+   largura toda (sem coluna de modulos nem seletor) - clicar numa linha abre
+   JanelaPreviaItem.jsx (janela grande, com zoom/paginacao/quiz formatado),
+   em vez de expandir a linha no lugar como a versao "roteiro da aula" fazia
+   (RoteiroModulo/PreviaItemAluno, removidos). A unica forma de trocar de
+   modulo e o "← Voltar" (BotaoVoltar), que leva pra lista de modulos do
+   curso - ListaModulosCartoes.jsx (coluna lateral) e "Modulo anterior/
+   Próximo módulo" foram removidos. Os handlers (onAbrirEdicao,
+   onAlternarPublicacao etc.) e os modais que eles abrem (criar/editar
+   conteudo, excluir, assistente de quiz/IA) continuam todos em
    SecaoConteudosProfessor.jsx, compartilhados com ListaModulosProfessor -
    esta tela so os aciona. */
 export default function TelaModuloGestaoProfessor({
@@ -174,9 +152,6 @@ export default function TelaModuloGestaoProfessor({
 
   const indiceModuloAtual = modulosOrdenados.findIndex((modulo) => modulo.id === moduloId);
   const moduloAtual = indiceModuloAtual >= 0 ? modulosOrdenados[indiceModuloAtual] : null;
-  const moduloAnterior = indiceModuloAtual > 0 ? modulosOrdenados[indiceModuloAtual - 1] : null;
-  const moduloProximo =
-    indiceModuloAtual >= 0 && indiceModuloAtual < modulosOrdenados.length - 1 ? modulosOrdenados[indiceModuloAtual + 1] : null;
 
   const { conteudosDoModulo, quizzesDoModulo, quizzesPorConteudoId, quizzesSoltos } = useMemo(
     () => montarDadosDoModulo(moduloId, conteudos, avaliacoes),
@@ -185,10 +160,6 @@ export default function TelaModuloGestaoProfessor({
   const itensOrdenados = useMemo(
     () => montarItensOrdenados(conteudosDoModulo, quizzesPorConteudoId, quizzesSoltos),
     [conteudosDoModulo, quizzesPorConteudoId, quizzesSoltos]
-  );
-  const resumosPorModuloId = useMemo(
-    () => montarResumosPorModuloId(modulosOrdenados, conteudos, avaliacoes),
-    [modulosOrdenados, conteudos, avaliacoes]
   );
   const resumoCurso = useMemo(() => montarResumoCurso(modulosOrdenados, conteudos, avaliacoes), [modulosOrdenados, conteudos, avaliacoes]);
 
@@ -260,10 +231,6 @@ export default function TelaModuloGestaoProfessor({
 
   function voltarParaModulos() {
     onNavigate?.(`/app/conteudos/${cursoAtivo.curso.id}`);
-  }
-
-  function irParaModulo(id) {
-    onNavigate?.(`/app/conteudos/${cursoAtivo.curso.id}/modulos/${id}`);
   }
 
   function sairDoModoSelecao() {
@@ -532,9 +499,11 @@ export default function TelaModuloGestaoProfessor({
         iconeTipo: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "1.6rem"),
         dadosLinha: (
           <>
-            <span>{obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem")} {tipoTexto}</span>
+            <span className="painel-itens-modulo__item-dados-parte">
+              {obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem")} {tipoTexto}
+            </span>
             <span aria-hidden="true">|</span>
-            <span>
+            <span className="painel-itens-modulo__item-dados-parte">
               {publicado ? <TbCircleCheck aria-hidden="true" size="0.85rem" /> : <TbCircleDot aria-hidden="true" size="0.85rem" />}{" "}
               {publicado ? "Publicado" : "Rascunho"}
             </span>
@@ -559,11 +528,11 @@ export default function TelaModuloGestaoProfessor({
       iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,
       dadosLinha: (
         <>
-          <span>
-            <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} questão{totalQuestoesQuiz === 1 ? "" : "ões"}
+          <span className="painel-itens-modulo__item-dados-parte">
+            <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} {totalQuestoesQuiz === 1 ? "questão" : "questões"}
           </span>
           <span aria-hidden="true">|</span>
-          <span>
+          <span className="painel-itens-modulo__item-dados-parte">
             {publicado ? <TbCircleCheck aria-hidden="true" size="0.85rem" /> : <TbCircleDot aria-hidden="true" size="0.85rem" />}{" "}
             {publicado ? "Publicado" : "Rascunho"}
           </span>
@@ -584,9 +553,10 @@ export default function TelaModuloGestaoProfessor({
   return (
     <div className="modulo-gestao modulo-lista-janela">
       <div className="modulo-lista-janela__caminho">
-        <button className="roteiro-tela__voltar" onClick={voltarParaModulos} type="button">
-          <TbArrowLeft aria-hidden="true" size={16} /> Acadêmico › Conteúdos › {moduloAtual.titulo}
-        </button>
+        <div className="modulo-lista-janela__caminho-navegacao">
+          <BotaoVoltar destino="Conteúdos" onClick={voltarParaModulos} />
+          <span className="modulo-lista-janela__caminho-texto">Acadêmico › Conteúdos › {moduloAtual.titulo}</span>
+        </div>
 
         {!edicaoTravada ? (
           <div className="atividades-curso__cabecalho-acoes">
@@ -613,89 +583,70 @@ export default function TelaModuloGestaoProfessor({
       ) : null}
 
       <CartaoCursoModulo
+        compacto
         curso={cursoAtivo.curso}
         percentual={resumoCurso.percentualPublicado}
         selo={`${resumoCurso.percentualPublicado}% publicado · ${resumoCurso.totalRascunhos} rascunho${resumoCurso.totalRascunhos === 1 ? "" : "s"}`}
       />
 
-      <div className="modulo-lista-janela__corpo">
-        <aside aria-label="Módulos do curso" className="modulo-lista-janela__coluna-modulos">
-          <ListaModulosCartoes
-            modulosOrdenados={modulosOrdenados}
-            moduloId={moduloId}
-            onIrParaModulo={irParaModulo}
-            resumosPorModuloId={resumosPorModuloId}
-          />
-        </aside>
-
-        <div className="modulo-lista-janela__coluna-painel">
-          <PainelItensModulo
-            barraSelecao={
-              modoSelecao || loteFalhas.length > 0 ? (
-                <>
-                  {modoSelecao ? (
-                    <div className="atividades-curso__barra-selecao">
-                      <label className="atividades-curso__selecionar-tudo">
-                        <span className="atividades-curso__checkbox-alvo">
-                          <input
-                            checked={todosSelecionados}
-                            className="tabela-checkbox"
-                            onChange={() => alternarSelecaoTudo(chavesSelecionaveis)}
-                            ref={(elemento) => {
-                              if (elemento) {
-                                elemento.indeterminate = algunsSelecionados;
-                              }
-                            }}
-                            type="checkbox"
-                          />
-                        </span>
-                        Selecionar tudo
-                      </label>
-                      <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
-                      <span aria-live="polite" className="atividades-curso__contagem-selecao">
-                        {totalSelecionado} selecionado{totalSelecionado === 1 ? "" : "s"}
+      <div className="modulo-lista-janela__painel">
+        <PainelItensModulo
+          barraSelecao={
+            modoSelecao || loteFalhas.length > 0 ? (
+              <>
+                {modoSelecao ? (
+                  <div className="atividades-curso__barra-selecao">
+                    <label className="atividades-curso__selecionar-tudo">
+                      <span className="atividades-curso__checkbox-alvo">
+                        <input
+                          checked={todosSelecionados}
+                          className="tabela-checkbox"
+                          onChange={() => alternarSelecaoTudo(chavesSelecionaveis)}
+                          ref={(elemento) => {
+                            if (elemento) {
+                              elemento.indeterminate = algunsSelecionados;
+                            }
+                          }}
+                          type="checkbox"
+                        />
                       </span>
-                      <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
-                      <Botao onClick={sairDoModoSelecao} tamanho="pequeno" variante="fantasma">
-                        Cancelar
-                      </Botao>
-                    </div>
-                  ) : null}
-                  {loteFalhas.length > 0 ? (
-                    <InlineMessage tone="error">
-                      <strong>{loteFalhas.length} {loteFalhas.length === 1 ? "item não foi processado" : "itens não foram processados"}:</strong>
-                      <ul className="atividades-curso__lote-falhas-lista">
-                        {loteFalhas.map((falha, indiceFalha) => (
-                          <li key={indiceFalha}>{falha.titulo} — {falha.motivo}</li>
-                        ))}
-                      </ul>
-                    </InlineMessage>
-                  ) : null}
-                </>
-              ) : null
-            }
-            itensSelecionados={itensSelecionados}
-            linhas={linhas}
-            mensagemVazia="Este módulo ainda não tem conteúdo. Use os botões no topo para criar o primeiro."
-            modoSelecao={modoSelecao}
-            moduloTitulo={moduloAtual.titulo}
-            moduloVazio={moduloVazio}
-            mostrarSelecionar={!edicaoTravada}
-            onEntrarSelecao={() => setModoSelecao(true)}
-            onSelecionarItem={alternarSelecaoItem}
-            resumoModulo={resumoModulo}
-            totalItens={totalItensModulo}
-          />
-
-          <footer className="modulo-gestao__rodape">
-            <Botao disabled={!moduloAnterior} onClick={() => moduloAnterior && irParaModulo(moduloAnterior.id)} variante="secundario">
-              <TbArrowLeft aria-hidden="true" size={16} /> Módulo anterior
-            </Botao>
-            <Botao disabled={!moduloProximo} onClick={() => moduloProximo && irParaModulo(moduloProximo.id)} variante="primario">
-              {moduloProximo ? `Próximo módulo: ${moduloProximo.titulo}` : "Próximo módulo"} <TbArrowRight aria-hidden="true" size={16} />
-            </Botao>
-          </footer>
-        </div>
+                      Selecionar tudo
+                    </label>
+                    <span aria-hidden="true" className="atividades-curso__barra-divisoria" />
+                    <span aria-live="polite" className="atividades-curso__contagem-selecao">
+                      {totalSelecionado} selecionado{totalSelecionado === 1 ? "" : "s"}
+                    </span>
+                    <MenuAcoes itens={itensMaisAcoes} rotulo="Mais ações" textoBotao="Mais ações" varianteBotao="fantasma" />
+                    <Botao onClick={sairDoModoSelecao} tamanho="pequeno" variante="fantasma">
+                      Cancelar
+                    </Botao>
+                  </div>
+                ) : null}
+                {loteFalhas.length > 0 ? (
+                  <InlineMessage tone="error">
+                    <strong>{loteFalhas.length} {loteFalhas.length === 1 ? "item não foi processado" : "itens não foram processados"}:</strong>
+                    <ul className="atividades-curso__lote-falhas-lista">
+                      {loteFalhas.map((falha, indiceFalha) => (
+                        <li key={indiceFalha}>{falha.titulo} — {falha.motivo}</li>
+                      ))}
+                    </ul>
+                  </InlineMessage>
+                ) : null}
+              </>
+            ) : null
+          }
+          itensSelecionados={itensSelecionados}
+          linhas={linhas}
+          mensagemVazia="Este módulo ainda não tem conteúdo. Use os botões no topo para criar o primeiro."
+          modoSelecao={modoSelecao}
+          moduloTitulo={moduloAtual.titulo}
+          moduloVazio={moduloVazio}
+          mostrarSelecionar={!edicaoTravada}
+          onEntrarSelecao={() => setModoSelecao(true)}
+          onSelecionarItem={alternarSelecaoItem}
+          resumoModulo={resumoModulo}
+          totalItens={totalItensModulo}
+        />
       </div>
 
       {itemAberto ? (

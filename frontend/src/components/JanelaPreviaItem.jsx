@@ -202,6 +202,7 @@ export default function JanelaPreviaItem({
       className="modal-caixa--janela-item"
       fecharAoClicarFora
       onFechar={onFechar}
+      subtitulo={`${tituloTipo} · ${numeroModuloTexto}`}
       titulo={item.titulo}
       rodape={
         <footer className="modal-rodape janela-previa-item__rodape">
@@ -231,10 +232,6 @@ export default function JanelaPreviaItem({
         </footer>
       }
     >
-      <p className="janela-previa-item__titulo-sub">
-        {tituloTipo} · {numeroModuloTexto}
-      </p>
-
       {!somenteLeitura && !publicado ? (
         <InlineMessage tone="warning">Rascunho — os alunos ainda não veem este item.</InlineMessage>
       ) : null}

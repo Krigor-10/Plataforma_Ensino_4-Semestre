@@ -9637,12 +9637,14 @@
 
 /* ------------------------------------------------------------
    TELA DO MODULO — "lista + janela" (docs/TelaConteudosProfessor/PROMPT-
-   agente-tela-modulo-lista-e-janela.md): substitui o "roteiro da aula"
-   (linha do tempo com bloco expansivel no lugar) por uma lista de modulos a
-   esquerda (ListaModulosCartoes.jsx) + painel do modulo com linhas grandes
-   a direita (PainelItensModulo.jsx) - clicar numa linha abre
-   JanelaPreviaItem.jsx (janela grande, com zoom/paginacao/quiz formatado),
-   em vez de expandir a linha no lugar.
+   agente-tela-modulo-lista-e-janela.md + correcoes-1.md, itens 7-8):
+   substitui o "roteiro da aula" (linha do tempo com bloco expansivel no
+   lugar) por um painel do modulo com linhas grandes, ocupando a largura
+   toda (PainelItensModulo.jsx) - clicar numa linha abre JanelaPreviaItem.jsx
+   (janela grande, com zoom/paginacao/quiz formatado), em vez de expandir a
+   linha no lugar. Sem coluna de modulos nem seletor (ListaModulosCartoes.jsx
+   foi removido) - a unica forma de trocar de modulo e o "← Voltar"
+   (BotaoVoltar), à esquerda do caminho.
    ------------------------------------------------------------ */
 .modulo-lista-janela__caminho {
   display: flex;
@@ -9652,67 +9654,28 @@
   gap: var(--espaco-md);
 }
 
-.roteiro-tela__voltar {
-  display: inline-flex;
+.modulo-lista-janela__caminho-navegacao {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0;
-  border: none;
-  background: none;
-  color: var(--cor-marca-clara);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.roteiro-tela__voltar:hover,
-.roteiro-tela__voltar:focus-visible {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.modulo-lista-janela__corpo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-lg);
-  flex: 1;
-  min-height: 0;
-}
-
-.modulo-lista-janela__coluna-modulos {
-  display: flex;
-  flex-direction: column;
   gap: var(--espaco-sm);
   min-width: 0;
 }
 
-.modulo-lista-janela__coluna-painel {
+.modulo-lista-janela__caminho-texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+.modulo-lista-janela__painel {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-md);
-  min-width: 0;
+  flex: 1;
   min-height: 0;
-}
-
-@media (min-width: 768px) {
-  .modulo-lista-janela__corpo {
-    flex-direction: row;
-    align-items: stretch;
-    overflow: hidden;
-  }
-
-  .modulo-lista-janela__coluna-modulos {
-    width: 260px;
-    flex-shrink: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: var(--espaco-xs);
-  }
-
-  .modulo-lista-janela__coluna-painel {
-    flex: 1;
-    overflow: hidden;
-  }
 }
 
 /* ------------------------------------------------------------
@@ -9782,114 +9745,64 @@
   align-self: flex-start;
 }
 
-/* ------------------------------------------------------------
-   LISTA DE MODULOS EM CARTOES — coluna da esquerda, components/
-   ListaModulosCartoes.jsx: numero grande + titulo (ate 2 linhas) + resumo +
-   seta; o modulo atual fica com numero/fundo/barra roxos. A lista "de
-   verdade" (nav com botoes) e o seletor mobile convivem no DOM - so 1 dos
-   dois fica visivel por vez, por media query.
-   ------------------------------------------------------------ */
-.lista-modulos-cartoes {
-  display: none;
-  flex-direction: column;
-  gap: var(--espaco-sm);
-}
-
-.lista-modulos-cartoes__item {
-  display: flex;
+/* Variante compacta (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
+   correcoes-1.md, item 8): linha unica (~60px) no topo da tela do modulo,
+   ja que o cartao grande repetia o cabecalho da tela anterior (lista de
+   modulos do curso). Mesmo icone/titulo/barra/selo, so que lado a lado e
+   sem a descricao. */
+.cartao-curso-modulo--compacto {
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--espaco-sm);
-  width: 100%;
-  min-height: 4.75rem;
-  padding: var(--espaco-sm) var(--espaco-md);
-  border: 1px solid var(--borda-card-modulo);
-  border-left: 3px solid transparent;
+  gap: var(--espaco-md);
+  min-height: 3.75rem;
+  padding: 0.6rem var(--espaco-md);
+}
+
+.cartao-curso-modulo--compacto .cartao-curso-modulo__icone {
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: var(--raio-md);
-  background: var(--cor-fundo-elevado);
-  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
 }
 
-.lista-modulos-cartoes__item:hover,
-.lista-modulos-cartoes__item:focus-visible {
-  border-color: var(--cor-marca-clara);
+.cartao-curso-modulo--compacto .cartao-curso-modulo__corpo {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--espaco-md);
+  flex: 1 1 auto;
 }
 
-.lista-modulos-cartoes__item[aria-current="true"] {
-  border-left-color: var(--cor-marca-clara);
-  background: color-mix(in srgb, var(--cor-marca) 16%, var(--cor-fundo-elevado));
-}
-
-.lista-modulos-cartoes__item[aria-current="true"] .conteudos-modulo__numero {
-  background: var(--cor-marca);
-  border-color: var(--cor-marca-clara);
-  color: #fff;
-}
-
-.lista-modulos-cartoes__texto {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.lista-modulos-cartoes__titulo {
-  display: -webkit-box;
-  overflow: hidden;
-  font-weight: 600;
-  line-height: 1.3;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.lista-modulos-cartoes__resumo {
-  font-size: 0.75rem;
-  color: var(--cor-texto-mudo);
-}
-
-.lista-modulos-cartoes__seta {
+.cartao-curso-modulo--compacto .cartao-curso-modulo__titulo {
   flex-shrink: 0;
-  color: var(--cor-texto-mudo);
-  transform: rotate(-90deg);
+  overflow: hidden;
+  max-width: 14rem;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.lista-modulos-cartoes__seletor {
-  display: block;
-  margin-bottom: var(--espaco-xs);
+.cartao-curso-modulo--compacto .barra-progresso-wrapper {
+  flex: 1;
+  min-width: 4rem;
 }
 
-.lista-modulos-cartoes__seletor select {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-md);
-  background: var(--cor-fundo-elevado);
-  color: var(--cor-texto-forte);
-  font: inherit;
-}
-
-@media (min-width: 768px) {
-  .lista-modulos-cartoes {
-    display: flex;
-  }
-
-  .lista-modulos-cartoes__seletor {
-    display: none;
-  }
+.cartao-curso-modulo--compacto .cartao-curso-modulo__selo {
+  align-self: center;
 }
 
 /* ------------------------------------------------------------
    PAINEL DO MODULO — components/PainelItensModulo.jsx: cabecalho (icone
    redondo + titulo + contagens + pilula "N itens") e linhas grandes (uma
    por conteudo/quiz). Fundos SOLIDOS (item 2 do prompt): paginas/cartoes
-   nunca deixam o degrade da pagina aparecer por tras.
+   nunca deixam o degrade da pagina aparecer por tras. `flex: 1` (docs/
+   TelaConteudosProfessor/PROMPT-agente-tela-modulo-correcoes-1.md, item 7):
+   desde que a coluna de modulos saiu, este e o unico filho flexivel de
+   .modulo-lista-janela__painel - precisa esticar pra preencher a altura e
+   deixar o `overflow-y: auto` daqui rolar a lista, em vez de empurrar a
+   pagina inteira.
    ------------------------------------------------------------ */
 .painel-itens-modulo {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--espaco-md);
   min-height: 0;
@@ -10065,6 +9978,17 @@
   color: var(--cor-texto-mudo);
 }
 
+/* Icone + texto de cada parte da linha de dados (ex.: "▤ Texto", "✓
+   Publicado") lado a lado, na mesma linha (docs/TelaConteudosProfessor/
+   PROMPT-agente-tela-modulo-correcoes-1.md, item 9) - preciso porque
+   svg/picture/canvas sao `display: block` no reset global (base.css), o que
+   empurraria o icone pra cima do texto dentro de um <span> comum. */
+.painel-itens-modulo__item-dados-parte {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .painel-itens-modulo__direita {
   display: flex;
   align-items: center;
@@ -10100,15 +10024,6 @@
    (VisualizadorPdfConteudo.jsx), video/texto/link simples, ou quiz em
    formato de quiz (lista de questoes + uma questao por vez).
    ------------------------------------------------------------ */
-.janela-previa-item__titulo-sub {
-  margin: -0.5rem 0 0;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--cor-texto-mudo);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
 .janela-previa-item__acoes-cabecalho {
   display: flex;
   flex-wrap: wrap;

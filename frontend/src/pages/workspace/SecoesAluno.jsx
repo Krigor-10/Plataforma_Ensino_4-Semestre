@@ -2310,7 +2310,7 @@ function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, conteudoS
                                   <div className="atividades-curso__corpo">
                                     <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
                                     <p className="atividades-curso__meta">
-                                      <span>{quiz.totalQuestoes || 0} questão{quiz.totalQuestoes === 1 ? "" : "ões"}</span>
+                                      <span>{quiz.totalQuestoes || 0} {quiz.totalQuestoes === 1 ? "questão" : "questões"}</span>
                                     </p>
                                   </div>
                                   <div className="atividades-curso__acoes">

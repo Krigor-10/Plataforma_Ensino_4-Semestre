@@ -515,20 +515,17 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     renderPainel({ moduloIdSelecionado: 1 });
 
-    // "← Cursos › {curso} › {modulo}" no topo substitui o BotaoVoltar + migalha.
-    expect(await screen.findByRole("button", { name: /Curso Teste/ })).toBeInTheDocument();
+    // BotaoVoltar (correcoes-1.md, item 7) + "Cursos › {curso} › {modulo}" em texto, a direita.
+    expect(await screen.findByRole("button", { name: "Voltar para Módulos" })).toBeInTheDocument();
+    expect(screen.getByText("Cursos › Curso Teste › Modulo A")).toBeInTheDocument();
 
     const cabecalho = screen.getByRole("heading", { level: 2 }).closest("header");
     expect(cabecalho).toHaveClass("painel-itens-modulo__cabecalho");
     expect(within(cabecalho).getByText("Modulo A")).toBeInTheDocument();
     expect(within(cabecalho).getByText("1 conteúdo · 1 quiz")).toBeInTheDocument();
 
-    // O modulo aberto fica destacado (aria-current) na lista a esquerda.
-    const lista = document.querySelector(".lista-modulos-cartoes");
-    expect(within(lista).getByText("Modulo A").closest(".lista-modulos-cartoes__item")).toHaveAttribute(
-      "aria-current",
-      "true"
-    );
+    // Sem coluna de modulos nem seletor (correcoes-1.md, item 7).
+    expect(document.querySelector(".lista-modulos-cartoes")).not.toBeInTheDocument();
 
     expect(screen.queryByText(/alunos? conclu[ií]u?ram?/)).not.toBeInTheDocument();
     expect(screen.queryByText(/participante/)).not.toBeInTheDocument();
@@ -623,7 +620,7 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     expect(linha).toHaveFocus();
   });
 
-  test("modulo sem nada publicado mostra o aviso e clicar em outro modulo fechado na lista navega para ele", async () => {
+  test("modulo sem nada publicado mostra o aviso; '← Voltar' e a unica forma de trocar de modulo", async () => {
     mockApi(DESEMPENHO);
     const onNavigate = vi.fn();
 
@@ -631,9 +628,8 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
 
     expect(await screen.findByText("Este módulo ainda não tem conteúdo publicado.")).toBeInTheDocument();
 
-    const lista = document.querySelector(".lista-modulos-cartoes");
-    await userEvent.click(within(lista).getByRole("button", { name: /Modulo A/ }));
-    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10/modulos/1");
+    await userEvent.click(screen.getByRole("button", { name: "Voltar para Módulos" }));
+    expect(onNavigate).toHaveBeenCalledWith("/app/cursos/10");
   });
 
   test("moduloId que nao pertence ao curso volta pra lista de modulos (replace)", async () => {

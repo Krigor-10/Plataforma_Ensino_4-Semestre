@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { TbArrowLeft, TbArrowRight, TbAward, TbChartBar, TbCircleCheck, TbListDetails, TbTrophy } from "react-icons/tb";
+import { TbAward, TbChartBar, TbCircleCheck, TbListDetails, TbTrophy } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
+import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
-import ListaModulosCartoes from "../../components/ListaModulosCartoes.jsx";
 import PainelItensModulo from "../../components/PainelItensModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { obterIconeTipoConteudo } from "../../components/PreviaTrilhaAluno.jsx";
@@ -73,33 +73,22 @@ function montarItensDoModulo(moduloRevisao) {
   return { conteudos, itens };
 }
 
-// Resumo (so "N itens", sem rascunho - o Coordenador/Admin nunca ve
-// rascunho) de TODOS os modulos do curso, pra ListaModulosCartoes.
-function montarResumosPorModuloId(revisaoConteudo) {
-  const mapa = new Map();
-  (revisaoConteudo?.modulos || []).forEach((moduloRevisao) => {
-    const totalConteudos = moduloRevisao.conteudos.filter((conteudo) => Number(conteudo.statusPublicacao) === STATUS_PUBLICADO).length;
-    const totalQuizzes = moduloRevisao.avaliacoes.filter(
-      ({ avaliacao }) => Number(avaliacao.tipoAvaliacao) === TIPO_AVALIACAO_QUIZ && Number(avaliacao.statusPublicacao) === STATUS_PUBLICADO
-    ).length;
-    mapa.set(moduloRevisao.id, { totalItens: totalConteudos + totalQuizzes, totalRascunhos: null });
-  });
-  return mapa;
-}
-
 /* Tela do modulo (Admin/Coordenador), docs/TelaConteudosProfessor/PROMPT-
-   agente-tela-modulo-lista-e-janela.md: mesma tela de lista+janela do
-   Professor (ListaModulosCartoes/PainelItensModulo/JanelaPreviaItem,
-   compartilhados), so que so leitura - sem menu, sem selecao, sem botoes de
-   criar; o selo do cartao do curso e a situacao do curso (Em andamento/
-   Aguardando encerramento/Encerrado/A venda) e a barra usa o progresso medio
-   dos alunos (`desempenho`, GET /Cursos/{id}/desempenho, carregado por
+   agente-tela-modulo-lista-e-janela.md + correcoes-1.md, itens 7-8: mesma
+   tela do Professor (PainelItensModulo/JanelaPreviaItem, compartilhados),
+   so que so leitura - sem menu, sem selecao, sem botoes de criar; cartao do
+   curso em linha compacta, ocupando a largura toda (sem coluna de modulos
+   nem seletor) - a unica forma de trocar de modulo e o "← Voltar"
+   (BotaoVoltar), que leva pra aba Modulos da tela do curso. O selo do
+   cartao e a situacao do curso (Em andamento/Aguardando encerramento/
+   Encerrado/A venda) e a barra usa o progresso medio dos alunos
+   (`desempenho`, GET /Cursos/{id}/desempenho, carregado por
    PainelCursoGestao.jsx) em vez do % publicado. Os KPIs do modulo
    (Progresso/Conclusao/Desempenho medio) ficam no topo, como antes. A lista
    de itens vem de `revisaoConteudo` (GET /Cursos/{id}/revisao-conteudo:
    todos os modulos do curso, so o que esta Publicado, com questoes pro
    gabarito) - carregada uma vez e reaproveitada enquanto o curso continuar
-   aberto, mesmo trocando de modulo pela lista. */
+   aberto, mesmo trocando de modulo. */
 export default function TelaModuloGestao({
   curso,
   desempenho,
@@ -115,9 +104,6 @@ export default function TelaModuloGestao({
 
   const indiceModuloAtual = modulosOrdenados.findIndex((modulo) => modulo.id === moduloId);
   const moduloAtual = indiceModuloAtual >= 0 ? modulosOrdenados[indiceModuloAtual] : null;
-  const moduloAnterior = indiceModuloAtual > 0 ? modulosOrdenados[indiceModuloAtual - 1] : null;
-  const moduloProximo =
-    indiceModuloAtual >= 0 && indiceModuloAtual < modulosOrdenados.length - 1 ? modulosOrdenados[indiceModuloAtual + 1] : null;
 
   const moduloRevisao = useMemo(
     () => revisaoConteudo?.modulos.find((modulo) => modulo.id === moduloId) || null,
@@ -125,7 +111,6 @@ export default function TelaModuloGestao({
   );
   const { conteudos, itens: itensOrdenados } = useMemo(() => montarItensDoModulo(moduloRevisao), [moduloRevisao]);
   const quizzes = useMemo(() => itensOrdenados.filter((item) => item.tipo === "quiz"), [itensOrdenados]);
-  const resumosPorModuloId = useMemo(() => montarResumosPorModuloId(revisaoConteudo), [revisaoConteudo]);
 
   useEffect(() => {
     setItemAbertoId(null);
@@ -139,10 +124,6 @@ export default function TelaModuloGestao({
 
   function voltarParaModulos() {
     onNavigate(`/app/cursos/${curso.id}`);
-  }
-
-  function irParaModulo(id) {
-    onNavigate(`/app/cursos/${curso.id}/modulos/${id}`);
   }
 
   if (!moduloAtual) {
@@ -169,9 +150,9 @@ export default function TelaModuloGestao({
         corIcone: "verde",
         iconeTipo: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "1.6rem"),
         dadosLinha: (
-          <>
+          <span className="painel-itens-modulo__item-dados-parte">
             {obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem")} {tipoTexto}
-          </>
+          </span>
         ),
         seloTipo: { icone: obterIconeTipoConteudo(item.conteudo.tipoConteudo, "0.85rem"), texto: tipoTexto },
         menuItens: null,
@@ -188,9 +169,9 @@ export default function TelaModuloGestao({
       corIcone: "verde",
       iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,
       dadosLinha: (
-        <>
-          <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} questão{totalQuestoesQuiz === 1 ? "" : "ões"}
-        </>
+        <span className="painel-itens-modulo__item-dados-parte">
+          <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} {totalQuestoesQuiz === 1 ? "questão" : "questões"}
+        </span>
       ),
       seloTipo: { icone: <TbTrophy aria-hidden="true" size="0.85rem" />, texto: "Quiz" },
       menuItens: null,
@@ -203,12 +184,14 @@ export default function TelaModuloGestao({
   return (
     <div className="modulo-gestao modulo-lista-janela">
       <div className="modulo-lista-janela__caminho">
-        <button className="roteiro-tela__voltar" onClick={voltarParaModulos} type="button">
-          <TbArrowLeft aria-hidden="true" size={16} /> Cursos › {curso.titulo} › {moduloAtual.titulo}
-        </button>
+        <div className="modulo-lista-janela__caminho-navegacao">
+          <BotaoVoltar destino="Módulos" onClick={voltarParaModulos} />
+          <span className="modulo-lista-janela__caminho-texto">Cursos › {curso.titulo} › {moduloAtual.titulo}</span>
+        </div>
       </div>
 
       <CartaoCursoModulo
+        compacto
         curso={curso}
         percentual={desempenhoModulo ? Math.round(desempenhoModulo.progressoMedio) : 0}
         selo={obterSituacaoCurso(curso)}
@@ -232,53 +215,33 @@ export default function TelaModuloGestao({
         />
       </div>
 
-      <div className="modulo-lista-janela__corpo">
-        <aside aria-label="Módulos do curso" className="modulo-lista-janela__coluna-modulos">
-          <ListaModulosCartoes
-            modulosOrdenados={modulosOrdenados}
-            moduloId={moduloId}
-            onIrParaModulo={irParaModulo}
-            resumosPorModuloId={resumosPorModuloId}
+      <div className="modulo-lista-janela__painel">
+        {erroRevisaoConteudo ? (
+          <>
+            <InlineMessage tone="error">{erroRevisaoConteudo}</InlineMessage>
+            <Botao onClick={onTentarNovamenteRevisaoConteudo} tamanho="pequeno" variante="secundario">
+              Tentar de novo
+            </Botao>
+          </>
+        ) : null}
+
+        {revisaoConteudoCarregando ? (
+          <p className="texto-vazio" role="status">
+            Carregando módulo…
+          </p>
+        ) : (
+          <PainelItensModulo
+            itensSelecionados={null}
+            linhas={linhas}
+            mensagemVazia="Este módulo ainda não tem conteúdo publicado."
+            modoSelecao={false}
+            moduloTitulo={moduloAtual.titulo}
+            moduloVazio={semConteudoPublicado}
+            mostrarSelecionar={false}
+            resumoModulo={resumoModulo}
+            totalItens={totalConteudos + totalQuizzes}
           />
-        </aside>
-
-        <div className="modulo-lista-janela__coluna-painel">
-          {erroRevisaoConteudo ? (
-            <>
-              <InlineMessage tone="error">{erroRevisaoConteudo}</InlineMessage>
-              <Botao onClick={onTentarNovamenteRevisaoConteudo} tamanho="pequeno" variante="secundario">
-                Tentar de novo
-              </Botao>
-            </>
-          ) : null}
-
-          {revisaoConteudoCarregando ? (
-            <p className="texto-vazio" role="status">
-              Carregando módulo…
-            </p>
-          ) : (
-            <PainelItensModulo
-              itensSelecionados={null}
-              linhas={linhas}
-              mensagemVazia="Este módulo ainda não tem conteúdo publicado."
-              modoSelecao={false}
-              moduloTitulo={moduloAtual.titulo}
-              moduloVazio={semConteudoPublicado}
-              mostrarSelecionar={false}
-              resumoModulo={resumoModulo}
-              totalItens={totalConteudos + totalQuizzes}
-            />
-          )}
-
-          <footer className="modulo-gestao__rodape">
-            <Botao disabled={!moduloAnterior} onClick={() => moduloAnterior && irParaModulo(moduloAnterior.id)} variante="secundario">
-              <TbArrowLeft aria-hidden="true" size={16} /> Módulo anterior
-            </Botao>
-            <Botao disabled={!moduloProximo} onClick={() => moduloProximo && irParaModulo(moduloProximo.id)} variante="primario">
-              {moduloProximo ? `Próximo módulo: ${moduloProximo.titulo}` : "Próximo módulo"} <TbArrowRight aria-hidden="true" size={16} />
-            </Botao>
-          </footer>
-        </div>
+        )}
       </div>
 
       {itemAberto ? (
