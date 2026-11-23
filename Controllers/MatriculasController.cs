@@ -133,6 +133,7 @@ public class MatriculasController : ControllerBase
             TurmaId = matricula.TurmaId,
             DataSolicitacao = matricula.DataSolicitacao,
             NotaFinal = matricula.NotaFinal,
-            Status = matricula.Status
+            Status = matricula.Status,
+            CertificadoEmitidoEm = matricula.CertificadoEmitidoEm
         };
 }

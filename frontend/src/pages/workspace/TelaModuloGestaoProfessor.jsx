@@ -374,7 +374,7 @@ export default function TelaModuloGestaoProfessor({
   const totalRascunhosModulo = [...conteudosDoModulo, ...quizzesDoModulo].filter(
     (item) => Number(item.statusPublicacao) === STATUS_RASCUNHO
   ).length;
-  const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"}${totalRascunhosModulo > 0 ? ` · ${totalRascunhosModulo} rascunho${totalRascunhosModulo === 1 ? "" : "s"}` : ""}`;
+  const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"}`;
 
   const chavesSelecionaveis = [
     ...conteudosDoModulo.map((item) => chaveItem("material", item.id)),
@@ -583,10 +583,12 @@ export default function TelaModuloGestaoProfessor({
       ) : null}
 
       <CartaoCursoModulo
-        compacto
         curso={cursoAtivo.curso}
+        legendaProgresso={`${resumoCurso.percentualPublicado}% publicado`}
         percentual={resumoCurso.percentualPublicado}
-        selo={`${resumoCurso.percentualPublicado}% publicado · ${resumoCurso.totalRascunhos} rascunho${resumoCurso.totalRascunhos === 1 ? "" : "s"}`}
+        selo={resumoCurso.totalRascunhos > 0 ? `${resumoCurso.totalRascunhos} rascunho${resumoCurso.totalRascunhos === 1 ? "" : "s"}` : null}
+        seloVariante="aviso"
+        variante="medio"
       />
 
       <div className="modulo-lista-janela__painel">
@@ -642,10 +644,12 @@ export default function TelaModuloGestaoProfessor({
           moduloTitulo={moduloAtual.titulo}
           moduloVazio={moduloVazio}
           mostrarSelecionar={!edicaoTravada}
+          moduloIndice={indiceModuloAtual}
           onEntrarSelecao={() => setModoSelecao(true)}
           onSelecionarItem={alternarSelecaoItem}
           resumoModulo={resumoModulo}
           totalItens={totalItensModulo}
+          totalRascunhosModulo={totalRascunhosModulo}
         />
       </div>
 

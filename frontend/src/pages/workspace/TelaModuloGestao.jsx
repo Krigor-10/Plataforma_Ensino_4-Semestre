@@ -3,7 +3,6 @@ import { TbAward, TbChartBar, TbCircleCheck, TbListDetails, TbTrophy } from "rea
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
-import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
 import PainelItensModulo from "../../components/PainelItensModulo.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
@@ -74,21 +73,22 @@ function montarItensDoModulo(moduloRevisao) {
 }
 
 /* Tela do modulo (Admin/Coordenador), docs/TelaConteudosProfessor/PROMPT-
-   agente-tela-modulo-lista-e-janela.md + correcoes-1.md, itens 7-8: mesma
-   tela do Professor (PainelItensModulo/JanelaPreviaItem, compartilhados),
-   so que so leitura - sem menu, sem selecao, sem botoes de criar; cartao do
-   curso em linha compacta, ocupando a largura toda (sem coluna de modulos
-   nem seletor) - a unica forma de trocar de modulo e o "← Voltar"
-   (BotaoVoltar), que leva pra aba Modulos da tela do curso. O selo do
-   cartao e a situacao do curso (Em andamento/Aguardando encerramento/
-   Encerrado/A venda) e a barra usa o progresso medio dos alunos
-   (`desempenho`, GET /Cursos/{id}/desempenho, carregado por
-   PainelCursoGestao.jsx) em vez do % publicado. Os KPIs do modulo
-   (Progresso/Conclusao/Desempenho medio) ficam no topo, como antes. A lista
-   de itens vem de `revisaoConteudo` (GET /Cursos/{id}/revisao-conteudo:
-   todos os modulos do curso, so o que esta Publicado, com questoes pro
-   gabarito) - carregada uma vez e reaproveitada enquanto o curso continuar
-   aberto, mesmo trocando de modulo. */
+   agente-tela-modulo-lista-e-janela.md + correcoes-1.md (itens 7-8) +
+   hierarquia-curso-kpis.md: mesma tela do Professor (PainelItensModulo/
+   JanelaPreviaItem, compartilhados), so que so leitura - sem menu, sem
+   selecao, sem botoes de criar; cartao do curso na variante `medio`,
+   ocupando a largura toda (sem coluna de modulos nem seletor) - a unica
+   forma de trocar de modulo e o "← Voltar" (BotaoVoltar), que leva pra aba
+   Modulos da tela do curso. O selo do cartao e a situacao do curso (Em
+   andamento/Aguardando encerramento/Encerrado/A venda) e a barra usa o
+   progresso medio dos alunos (`desempenho`, GET /Cursos/{id}/desempenho,
+   carregado por PainelCursoGestao.jsx) em vez do % publicado. Os KPIs do
+   modulo (Progresso/Conclusao/Desempenho medio) ficam DENTRO do cartao do
+   curso, a direita (`kpis`), nao mais numa faixa separada esticada na
+   largura toda. A lista de itens vem de `revisaoConteudo` (GET /Cursos/{id}/
+   revisao-conteudo: todos os modulos do curso, so o que esta Publicado, com
+   questoes pro gabarito) - carregada uma vez e reaproveitada enquanto o
+   curso continuar aberto, mesmo trocando de modulo. */
 export default function TelaModuloGestao({
   curso,
   desempenho,
@@ -136,6 +136,27 @@ export default function TelaModuloGestao({
   const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"}`;
 
   const desempenhoModulo = desempenho?.modulos?.find((modulo) => modulo.moduloId === moduloId) || null;
+  const percentualProgressoMedio = desempenhoModulo ? Math.round(desempenhoModulo.progressoMedio) : 0;
+  const kpisCurso = [
+    {
+      id: "progresso",
+      icone: <TbChartBar aria-hidden="true" size={16} />,
+      rotulo: "Progresso",
+      valor: desempenhoModulo ? formatPercent(desempenhoModulo.progressoMedio) : "—"
+    },
+    {
+      id: "conclusao",
+      icone: <TbCircleCheck aria-hidden="true" size={16} />,
+      rotulo: "Conclusão",
+      valor: desempenhoModulo ? formatPercent(desempenhoModulo.percentualConclusao) : "—"
+    },
+    {
+      id: "desempenho",
+      icone: <TbAward aria-hidden="true" size={16} />,
+      rotulo: "Desempenho médio",
+      valor: desempenhoModulo ? formatGrade(desempenhoModulo.desempenhoMedio) : "—"
+    }
+  ];
 
   const linhas = itensOrdenados.map((item) => {
     const tituloReal = item.tipo === "material" ? item.conteudo.titulo : item.tituloReal || item.titulo;
@@ -191,29 +212,13 @@ export default function TelaModuloGestao({
       </div>
 
       <CartaoCursoModulo
-        compacto
         curso={curso}
-        percentual={desempenhoModulo ? Math.round(desempenhoModulo.progressoMedio) : 0}
+        kpis={kpisCurso}
+        legendaProgresso={`${percentualProgressoMedio}% de progresso dos alunos`}
+        percentual={percentualProgressoMedio}
         selo={obterSituacaoCurso(curso)}
+        variante="medio"
       />
-
-      <div className="atividades-curso__kpis-compactos">
-        <CartaoEstatistica
-          icone={<TbChartBar size={18} />}
-          rotulo="Progresso"
-          valor={desempenhoModulo ? formatPercent(desempenhoModulo.progressoMedio) : "—"}
-        />
-        <CartaoEstatistica
-          icone={<TbCircleCheck size={18} />}
-          rotulo="Conclusão"
-          valor={desempenhoModulo ? formatPercent(desempenhoModulo.percentualConclusao) : "—"}
-        />
-        <CartaoEstatistica
-          icone={<TbAward size={18} />}
-          rotulo="Desempenho médio"
-          valor={desempenhoModulo ? formatGrade(desempenhoModulo.desempenhoMedio) : "—"}
-        />
-      </div>
 
       <div className="modulo-lista-janela__painel">
         {erroRevisaoConteudo ? (
@@ -235,6 +240,7 @@ export default function TelaModuloGestao({
             linhas={linhas}
             mensagemVazia="Este módulo ainda não tem conteúdo publicado."
             modoSelecao={false}
+            moduloIndice={indiceModuloAtual}
             moduloTitulo={moduloAtual.titulo}
             moduloVazio={semConteudoPublicado}
             mostrarSelecionar={false}

@@ -12,4 +12,5 @@ public class MatriculaResponseDto
     public DateTime DataSolicitacao { get; set; }
     public decimal NotaFinal { get; set; }
     public StatusMatricula Status { get; set; }
+    public DateTime? CertificadoEmitidoEm { get; set; }
 }

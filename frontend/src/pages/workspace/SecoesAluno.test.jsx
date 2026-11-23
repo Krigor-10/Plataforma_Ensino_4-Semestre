@@ -314,7 +314,7 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
   });
 });
 
-describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos do aluno)", () => {
+describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no mesmo fluxo do professor)", () => {
   const CURSO_ID = 10;
   const TURMA_ID = 77;
   const MATRICULA_ID = 5;
@@ -328,7 +328,7 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     vi.clearAllMocks();
   });
 
-  function renderConteudosAluno({ avaliacoes = [], conteudos = [], modulos, progressos } = {}) {
+  function renderConteudosAluno({ avaliacoes = [], conteudos = [], moduloIdSelecionado = null, modulos, onNavigate = vi.fn(), progressos } = {}) {
     return render(
       <ToastProvider>
         <SecaoConteudosAluno
@@ -337,8 +337,9 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
           cursoIdSelecionado={CURSO_ID}
           cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
           matriculas={[{ id: MATRICULA_ID, cursoId: CURSO_ID, turmaId: TURMA_ID, status: "Aprovada" }]}
+          moduloIdSelecionado={moduloIdSelecionado}
           modulos={modulos || [{ id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" }]}
-          onNavigate={vi.fn()}
+          onNavigate={onNavigate}
           onRefresh={vi.fn()}
           onSessionExpired={vi.fn()}
           progressos={progressos || { conteudos: [], modulos: [], cursos: [] }}
@@ -348,7 +349,7 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     );
   }
 
-  test('contagem inclui quizzes, com singular em "1/1 concluído"', () => {
+  test('cartao do modulo (tela do curso) mostra "N de M concluídos" contando quizzes, com singular', () => {
     const { container } = renderConteudosAluno({
       avaliacoes: [
         {
@@ -365,35 +366,57 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
       ]
     });
 
-    const contagem = container.querySelector(".conteudos-modulo__contagem");
-    expect(contagem.textContent).toMatch(/1\/1 concluído$/);
+    const contagem = container.querySelector(".modulos-curso-aluno__contagem");
+    expect(contagem.textContent).toMatch(/1 de 1 concluído$/);
   });
 
-  test("módulo concluído mostra check e seta, e abre e fecha", async () => {
+  test("módulo concluído mostra check verde no cartão, e clicar navega para a tela do módulo", async () => {
     const usuario = userEvent.setup();
+    const onNavigate = vi.fn();
     renderConteudosAluno({
       conteudos: [
         { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
       ],
-      progressos: { conteudos: [{ conteudoDidaticoId: 1, percentualConclusao: 100 }], modulos: [], cursos: [] }
+      progressos: { conteudos: [{ conteudoDidaticoId: 1, percentualConclusao: 100 }], modulos: [], cursos: [] },
+      onNavigate
     });
 
-    expect(screen.getByLabelText("Módulo concluído")).toBeInTheDocument();
-    const botaoModulo = screen.getByRole("button", { expanded: true });
-    expect(botaoModulo.querySelector(".conteudos-modulo__chevron")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "Atividades de Módulo 1" })).toBeInTheDocument();
+    const cartaoModulo = screen.getByRole("button", { name: /Módulo 1/ });
+    expect(cartaoModulo.querySelector(".modulos-curso-aluno__check")).toBeInTheDocument();
 
-    await usuario.click(botaoModulo);
-    expect(botaoModulo).toHaveAttribute("aria-expanded", "false");
-
-    await usuario.click(botaoModulo);
-    expect(botaoModulo).toHaveAttribute("aria-expanded", "true");
+    await usuario.click(cartaoModulo);
+    expect(onNavigate).toHaveBeenCalledWith(`/app/conteudos/${CURSO_ID}/modulos/${MODULO_ID}`);
   });
 
-  test('"Ver revisão" aparece com texto e abre a revisão', async () => {
+  test("módulo bloqueado no cartão não é clicável e tem o aviso certo", async () => {
+    const usuario = userEvent.setup();
+    const onNavigate = vi.fn();
+    const MODULO_2 = 101;
+    renderConteudosAluno({
+      modulos: [
+        { id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" },
+        { id: MODULO_2, cursoId: CURSO_ID, titulo: "Módulo 2", dataCriacao: "2026-01-02" }
+      ],
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 },
+        { id: 2, cursoId: CURSO_ID, moduloId: MODULO_2, turmaId: TURMA_ID, titulo: "Aula 2", tipoConteudo: 1, ordemExibicao: 1 }
+      ],
+      onNavigate
+    });
+
+    const cartaoBloqueado = screen.getByRole("button", { name: /Módulo 2/ });
+    expect(cartaoBloqueado).toHaveAttribute("aria-disabled", "true");
+    expect(cartaoBloqueado).toHaveAttribute("title", "Conclua o módulo 01 para liberar");
+
+    await usuario.click(cartaoBloqueado);
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  test('"Ver revisão" aparece na tela do módulo e abre a revisão', async () => {
     const usuario = userEvent.setup();
     apiRequest.mockResolvedValue({ questoes: [], notaBruta: 0, notaMaxima: 10 });
     renderConteudosAluno({
+      moduloIdSelecionado: MODULO_ID,
       avaliacoes: [
         {
           id: 200,
@@ -418,9 +441,10 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     expect(await screen.findByRole("dialog", { name: "Revisao detalhada" })).toBeInTheDocument();
   });
 
-  test('"Iniciar quiz" aparece nos dois tipos de quiz e abre a confirmação', async () => {
+  test('"Iniciar quiz" aparece na tela do módulo nos dois tipos de quiz e abre a confirmação', async () => {
     const usuario = userEvent.setup();
     renderConteudosAluno({
+      moduloIdSelecionado: MODULO_ID,
       conteudos: [
         {
           id: 1,
@@ -466,8 +490,10 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     expect(screen.getByRole("dialog", { name: "Antes de comecar" })).toBeInTheDocument();
   });
 
-  test("item bloqueado mantém cadeado, sem ação e sem quizzes", () => {
+  test("item bloqueado na tela do módulo fica inerte com cadeado, e o quiz vinculado a ele tambem aparece bloqueado", async () => {
+    const usuario = userEvent.setup();
     renderConteudosAluno({
+      moduloIdSelecionado: MODULO_ID,
       conteudos: [
         { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 2, arquivoUrl: "a.pdf", ordemExibicao: 1 },
         { id: 2, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 2", tipoConteudo: 2, arquivoUrl: "b.pdf", ordemExibicao: 2 }
@@ -487,14 +513,20 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
       ]
     });
 
-    const itemBloqueado = screen.getByText("Aula 2").closest(".atividades-curso__item");
-    expect(within(itemBloqueado).getByLabelText("Conteúdo bloqueado")).toBeInTheDocument();
-    expect(within(itemBloqueado).queryByRole("button", { name: /Abrir PDF/ })).not.toBeInTheDocument();
-    expect(within(itemBloqueado).queryByText("Quiz da Aula 2")).not.toBeInTheDocument();
+    const itemBloqueado = screen.getByText("Aula 2").closest(".painel-itens-modulo__item");
+    expect(within(itemBloqueado).getByText(/Bloqueado/)).toBeInTheDocument();
+
+    await usuario.click(within(itemBloqueado).getByText("Aula 2"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    const itemQuizBloqueado = screen.getByText("Quiz da Aula 2").closest(".painel-itens-modulo__item");
+    expect(within(itemQuizBloqueado).getByText(/Bloqueado/)).toBeInTheDocument();
+    expect(within(itemQuizBloqueado).queryByRole("button", { name: "Iniciar quiz" })).not.toBeInTheDocument();
   });
 
-  test('quiz com titulo generico exibe "Quiz do conteúdo", e o titulo proprio e mantido', () => {
+  test('quiz com titulo generico exibe "Quiz do conteúdo" na tela do módulo, e o titulo proprio e mantido', () => {
     renderConteudosAluno({
+      moduloIdSelecionado: MODULO_ID,
       conteudos: [
         { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
       ],
@@ -519,14 +551,23 @@ describe("SlideConteudosCurso (SecaoConteudosAluno, prompt padronizar conteudos 
     expect(screen.queryByText("Quiz - Aula 1")).not.toBeInTheDocument();
   });
 
-  test("módulo sem quizzes não mostra a faixa", () => {
+  test("moduloIdSelecionado de um modulo bloqueado redireciona de volta para a tela do curso", async () => {
+    const onNavigate = vi.fn();
+    const MODULO_2 = 101;
     renderConteudosAluno({
+      moduloIdSelecionado: MODULO_2,
+      modulos: [
+        { id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" },
+        { id: MODULO_2, cursoId: CURSO_ID, titulo: "Módulo 2", dataCriacao: "2026-01-02" }
+      ],
       conteudos: [
-        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
-      ]
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 },
+        { id: 2, cursoId: CURSO_ID, moduloId: MODULO_2, turmaId: TURMA_ID, titulo: "Aula 2", tipoConteudo: 1, ordemExibicao: 1 }
+      ],
+      onNavigate
     });
 
-    expect(screen.queryByText("Quizzes do módulo")).not.toBeInTheDocument();
+    await waitFor(() => expect(onNavigate).toHaveBeenCalledWith(`/app/conteudos/${CURSO_ID}`, { replace: true }));
   });
 });
 
@@ -587,6 +628,7 @@ describe("SecaoConteudosAluno - envio de avaliacao alterada durante a resposta",
           cursoIdSelecionado={CURSO_ID}
           cursos={[{ id: CURSO_ID, titulo: "Curso Teste" }]}
           matriculas={[{ id: MATRICULA_ID, cursoId: CURSO_ID, turmaId: TURMA_ID, status: "Aprovada" }]}
+          moduloIdSelecionado={MODULO_ID}
           modulos={[{ id: MODULO_ID, cursoId: CURSO_ID, titulo: "Módulo 1", dataCriacao: "2026-01-01" }]}
           onNavigate={vi.fn()}
           onRefresh={vi.fn()}

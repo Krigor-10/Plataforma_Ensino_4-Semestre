@@ -9,6 +9,7 @@ import {
   TbChartBar,
   TbCheck,
   TbChevronDown,
+  TbChevronRight,
   TbChevronUp,
   TbCircleCheck,
   TbClock,
@@ -36,16 +37,15 @@ import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
-import JanelaPreviaItem from "../../components/JanelaPreviaItem.jsx";
 import Modal from "../../components/Modal.jsx";
 import NumeroModulo from "../../components/NumeroModulo.jsx";
 import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
+import TelaModuloGestaoAluno from "./TelaModuloGestaoAluno.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
-import { montarNomesExibicaoQuizzesVinculados } from "../../lib/trilhaConteudos.js";
 import {
   clampPercent,
   formatDate,
@@ -1558,6 +1558,7 @@ export function SecaoConteudosAluno({
   cursos = [],
   matriculaIdsComPagamentoPendente = EMPTY_SET,
   matriculas,
+  moduloIdSelecionado = null,
   modulos = [],
   onNavigate,
   onRefresh,
@@ -1572,6 +1573,7 @@ export function SecaoConteudosAluno({
   });
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
   const [conteudosConcluidosLocais, setConteudosConcluidosLocais] = useState(() => new Set());
+  const [itemDestaque, setItemDestaque] = useState(null);
   const cursoPorId = useMemo(() => mapById(cursos), [cursos]);
   const turmaPorId = useMemo(() => mapById(turmas), [turmas]);
   const moduloPorId = useMemo(() => mapById(modulos), [modulos]);
@@ -1672,7 +1674,8 @@ export function SecaoConteudosAluno({
         modulos: new Map(),
         totalConteudos: 0,
         concluidos: 0,
-        matriculaId: null
+        matriculaId: null,
+        certificadoEmitidoEm: null
       };
 
       cursosMapeados.set(chaveCurso, curso);
@@ -1704,6 +1707,7 @@ export function SecaoConteudosAluno({
       const cursoId = Number(matricula.cursoId);
       const curso = garantirCurso(cursoId, obterTituloCursoMatricula(matricula, cursoPorId), `matricula-${matricula.id}`);
       curso.matriculaId = matricula.id;
+      curso.certificadoEmitidoEm = matricula.certificadoEmitidoEm || null;
       curso.turmas.add(obterNomeTurmaMatricula(matricula, turmaPorId));
 
       (modulosPorCursoId.get(cursoId) || []).forEach((modulo) => {
@@ -1822,6 +1826,28 @@ export function SecaoConteudosAluno({
     : null;
   const cursoNaoEncontrado = Boolean(cursoIdSelecionado) && gruposConteudosPorCurso.length > 0 && !cursoAtivo;
 
+  // Mesma regra de bloqueio do acordeao de antes (modulo so libera quando o
+  // anterior estiver 100% concluido) - calculada uma vez aqui pra alimentar
+  // tanto os cartoes de modulo (TelaCursoAluno) quanto a validacao de
+  // moduloIdSelecionado abaixo (docs/TelaConteudosAlunos/PROMPT-agente-
+  // trilha-aluno-modulo-em-tela-propria.md).
+  const modulosComEstadoCursoAtivo = useMemo(() => {
+    if (!cursoAtivo) {
+      return [];
+    }
+
+    const modulosVisiveis = cursoAtivo.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
+    return modulosVisiveis.map((modulo, indice) => {
+      const anterior = modulosVisiveis[indice - 1];
+      const bloqueado = Boolean(anterior) && anterior.concluidos < anterior.conteudos.length;
+      return { modulo, indice, bloqueado, concluido: !bloqueado && modulo.concluido };
+    });
+  }, [cursoAtivo]);
+
+  const moduloAtivoComEstado = moduloIdSelecionado
+    ? modulosComEstadoCursoAtivo.find((item) => item.modulo.id === moduloIdSelecionado) || null
+    : null;
+
   // So avaliacoes formais (Prova/Exercicio, tipoAvaliacao !== 1) contam aqui -
   // quizzes (tipoAvaliacao === 1) sao atividade formativa e nao liberam nem
   // contabilizam a avaliacao que vale nota/certificado (ver regra de negocio
@@ -1849,6 +1875,34 @@ export function SecaoConteudosAluno({
     onNavigate?.(`/app/conteudos/${cursoId}`);
   }
 
+  function abrirModulo(moduloId) {
+    onNavigate?.(`/app/conteudos/${cursoAtivo.id}/modulos/${moduloId}`);
+  }
+
+  // "▶ Continuar: {proximo item}" (item 2 do prompt): guarda qual item deve
+  // abrir/ser destacado assim que a tela do modulo montar - TelaCursoAluno e
+  // TelaModuloGestaoAluno vivem na mesma arvore (so trocam de visao via
+  // moduloIdSelecionado), entao um estado local aqui basta, sem precisar de
+  // parametro novo na URL.
+  function continuarParaProximoItem(proximoItem) {
+    setItemDestaque({
+      moduloId: proximoItem.modulo.id,
+      itemId: proximoItem.tipo === "material" ? `material-${proximoItem.item.id}` : `quiz-${proximoItem.item.id}`
+    });
+    abrirModulo(proximoItem.modulo.id);
+  }
+
+  // moduloIdSelecionado que nao existe no curso OU que ainda esta bloqueado
+  // (ordem de modulos) volta pra tela do curso - mesmo padrao do Professor/
+  // Coordenador (SecaoConteudosProfessor.jsx/PainelCursoGestao.jsx).
+  useEffect(() => {
+    if (!cursoAtivo || !moduloIdSelecionado || (moduloAtivoComEstado && !moduloAtivoComEstado.bloqueado)) {
+      return;
+    }
+
+    onNavigate?.(`/app/conteudos/${cursoAtivo.id}`, { replace: true });
+  }, [cursoAtivo, moduloAtivoComEstado, moduloIdSelecionado, onNavigate]);
+
   async function marcarConteudoConcluido(conteudoId) {
     try {
       setConteudoProcessando(conteudoId);
@@ -1873,6 +1927,8 @@ export function SecaoConteudosAluno({
     }
   }
 
+  const moduloValido = moduloAtivoComEstado && !moduloAtivoComEstado.bloqueado ? moduloAtivoComEstado : null;
+
   return (
     <div className="tela-conteudos-aluno">
       {mensagemQuiz.message ? <InlineMessage tone={mensagemQuiz.tone}>{mensagemQuiz.message}</InlineMessage> : null}
@@ -1881,18 +1937,31 @@ export function SecaoConteudosAluno({
         <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
       ) : cursoNaoEncontrado ? (
         <EmptyState message="Este curso nao foi encontrado na sua trilha. Volte para Conteudos e escolha outro." />
-      ) : cursoAtivo ? (
-        <SlideConteudosCurso
-          avaliacaoLiberada={avaliacaoLiberadaCursoAtivo}
+      ) : cursoAtivo && moduloValido ? (
+        <TelaModuloGestaoAluno
           conteudoProcessando={conteudoProcessando}
           curso={cursoAtivo}
-          key={cursoAtivo.id}
+          itemDestaqueId={itemDestaque?.moduloId === moduloValido.modulo.id ? itemDestaque.itemId : null}
+          key={`${cursoAtivo.id}-${moduloValido.modulo.id}`}
+          modulo={moduloValido.modulo}
+          moduloIndice={moduloValido.indice}
           onAbrirRevisao={abrirRevisaoTentativa}
           onConcluir={marcarConteudoConcluido}
+          onConsumirDestaque={() => setItemDestaque(null)}
           onIniciarQuiz={abrirConfirmacaoAvaliacao}
+          onNavigate={onNavigate}
+          quizIndisponivel={carregandoQuestoes || enviandoRespostas}
+        />
+      ) : cursoAtivo ? (
+        <TelaCursoAluno
+          avaliacaoLiberada={avaliacaoLiberadaCursoAtivo}
+          curso={cursoAtivo}
+          key={cursoAtivo.id}
+          modulosComEstado={modulosComEstadoCursoAtivo}
+          onAbrirModulo={onNavigate ? abrirModulo : null}
+          onContinuar={onNavigate ? continuarParaProximoItem : null}
           onIrParaAvaliacao={onNavigate ? () => onNavigate(`/app/avaliacoes/${cursoAtivo.id}`) : null}
           onVoltarConteudos={onNavigate ? abrirListaConteudos : null}
-          quizIndisponivel={carregandoQuestoes || enviandoRespostas}
         />
       ) : (
         <ul aria-label="Cursos ativos" className="catalogo-grade" role="list">
@@ -1913,386 +1982,143 @@ export function SecaoConteudosAluno({
   );
 }
 
-const ICONE_TIPO_CONTEUDO_ALUNO = {
-  1: <TbFileText aria-hidden="true" size="1.75rem" />,
-  2: <TbFile aria-hidden="true" size="1.75rem" />,
-  3: <TbPlayerPlay aria-hidden="true" size="1.75rem" />,
-  4: <TbExternalLink aria-hidden="true" size="1.75rem" />,
-  5: <TbPhoto aria-hidden="true" size="1.75rem" />
-};
-
-function SlideConteudosCurso({ avaliacaoLiberada, conteudoProcessando, curso, onAbrirRevisao, onConcluir, onIniciarQuiz, onIrParaAvaliacao, onVoltarConteudos, quizIndisponivel }) {
-  const modulosVisiveis = curso.modulos.filter((modulo) => modulo.conteudos.length > 0 || modulo.quizzes.length > 0);
-
-  const [modulosAbertos, setModulosAbertos] = useState(() => {
-    const primeiroIncompleto = modulosVisiveis.find((modulo) => modulo.concluidos < modulo.conteudos.length);
-    const alvo = primeiroIncompleto || modulosVisiveis[0];
-    return alvo ? new Set([alvo.id]) : new Set();
-  });
-  const [itemAbertoId, setItemAbertoId] = useState(null);
-
-  function marcarConcluidoAoAbrir(conteudo) {
-    if (!conteudo.concluido) {
-      onConcluir(conteudo.id);
+// Primeiro item NAO concluido e liberado do curso inteiro, na ordem da
+// trilha (material antes do(s) quiz(zes) vinculado(s), depois os quizzes
+// soltos do modulo) - alimenta o botao "▶ Continuar: {proximo item}" do
+// cartao do curso (item 2 do prompt). Um modulo bloqueado encerra a busca
+// (nada depois dele esta liberado); dentro do modulo, um item bloqueado por
+// ordem faz o mesmo. Quiz so conta como "proximo" quando pode ser
+// respondido agora (obterDisponibilidadeAvaliacao) - uma avaliacao
+// agendada/encerrada nao vira destino do botao.
+function obterProximoItemLiberado(modulosComEstado) {
+  for (const { bloqueado, modulo } of modulosComEstado) {
+    if (bloqueado) {
+      break;
     }
-  }
 
-  function abrirItem(conteudo) {
-    marcarConcluidoAoAbrir(conteudo);
-    setItemAbertoId(conteudo.id);
-  }
-
-  function alternarModulo(moduloId) {
-    setModulosAbertos((atual) => {
-      const proximo = new Set(atual);
-      if (proximo.has(moduloId)) {
-        proximo.delete(moduloId);
-      } else {
-        proximo.add(moduloId);
-      }
-      return proximo;
-    });
-  }
-
-  const percentualCurso = clampPercent(curso.progresso);
-
-  // Item aberto na janela grande (JanelaPreviaItem): procurado em TODOS os
-  // modulos visiveis (nao so no aberto no acordeao), porque o proprio
-  // Anterior/Proximo da janela pode levar o aluno pro ultimo item de um
-  // modulo e o primeiro do seguinte.
-  let moduloDoItemAberto = null;
-  let indiceItemAberto = -1;
-  if (itemAbertoId != null) {
-    for (const modulo of modulosVisiveis) {
-      const indice = modulo.conteudos.findIndex((conteudo) => conteudo.id === itemAbertoId);
-      if (indice >= 0) {
-        moduloDoItemAberto = modulo;
-        indiceItemAberto = indice;
+    for (let indice = 0; indice < modulo.conteudos.length; indice += 1) {
+      const conteudo = modulo.conteudos[indice];
+      if (indice > 0 && !modulo.conteudos[indice - 1].concluido) {
         break;
       }
+
+      if (!conteudo.concluido) {
+        return { tipo: "material", item: conteudo, modulo };
+      }
+
+      const quizLiberado = (conteudo.quizzes || []).find(
+        (quiz) => Number(quiz.tentativasRealizadas || 0) === 0 && obterDisponibilidadeAvaliacao(quiz).podeRealizar
+      );
+      if (quizLiberado) {
+        return { tipo: "quiz", item: quizLiberado, modulo };
+      }
+    }
+
+    const quizSoltoLiberado = modulo.quizzes.find(
+      (quiz) => Number(quiz.tentativasRealizadas || 0) === 0 && obterDisponibilidadeAvaliacao(quiz).podeRealizar
+    );
+    if (quizSoltoLiberado) {
+      return { tipo: "quiz", item: quizSoltoLiberado, modulo };
     }
   }
-  const itemAberto = moduloDoItemAberto ? moduloDoItemAberto.conteudos[indiceItemAberto] : null;
-  const itemAnterior = itemAberto && indiceItemAberto > 0 ? moduloDoItemAberto.conteudos[indiceItemAberto - 1] : null;
-  // So oferece "Proximo" quando o item atual ja esta concluido (mesma regra
-  // de desbloqueio da lista: o seguinte so abre depois que o anterior foi
-  // marcado concluido ao abrir).
-  const itemProximo =
-    itemAberto && itemAberto.concluido && indiceItemAberto < moduloDoItemAberto.conteudos.length - 1
-      ? moduloDoItemAberto.conteudos[indiceItemAberto + 1]
-      : null;
+
+  return null;
+}
+
+/* Tela do curso (Aluno), docs/TelaConteudosAlunos/PROMPT-agente-trilha-
+   aluno-modulo-em-tela-propria.md: substitui o acordeao de modulos por uma
+   grade de cartoes (2 colunas a partir de 1024px), igual a lista de
+   modulos do Professor/Coordenador - clicar num cartao liberado abre
+   TelaModuloGestaoAluno.jsx (`/app/conteudos/:cursoId/modulos/:moduloId`).
+   Cartao do curso (CartaoCursoModulo, variante grande) com selo ("🏆
+   Certificado emitido" > "Concluído" > "Curso em andamento",
+   obterSeloCursoAluno) e o botao "▶ Continuar: {proximo item}"
+   (obterProximoItemLiberado) quando sobra algo nao concluido. Aviso de
+   avaliacao liberada, igual a hoje, logo abaixo do cartao. */
+function TelaCursoAluno({ avaliacaoLiberada, curso, modulosComEstado, onAbrirModulo, onContinuar, onIrParaAvaliacao, onVoltarConteudos }) {
+  const percentualCurso = clampPercent(curso.progresso);
+  const selo = obterSeloCursoAluno(curso);
+  const proximoItem = useMemo(() => obterProximoItemLiberado(modulosComEstado), [modulosComEstado]);
+  const indiceEmAndamento = modulosComEstado.findIndex((item) => !item.bloqueado && !item.concluido);
 
   return (
     <div className="conteudos-aluno trilha-conteudos">
       {onVoltarConteudos ? <BotaoVoltar destino="Conteúdos" onClick={onVoltarConteudos} /> : null}
 
-      <CartaoCursoModulo curso={curso} percentual={percentualCurso} selo={percentualCurso >= 100 ? "Concluído" : "Curso em andamento"} />
+      <CartaoCursoModulo
+        curso={curso}
+        extra={
+          proximoItem && onContinuar ? (
+            <Botao className="linha-icone-texto" onClick={() => onContinuar(proximoItem)} tamanho="pequeno" variante="primario">
+              <TbChevronRight aria-hidden="true" size="1rem" /> Continuar: {proximoItem.item.titulo}
+            </Botao>
+          ) : null
+        }
+        percentual={percentualCurso}
+        selo={selo}
+      />
 
       {avaliacaoLiberada ? (
         <AvisoAvaliacaoLiberada avaliacao={avaliacaoLiberada} onIrParaAvaliacao={onIrParaAvaliacao} />
       ) : null}
 
-      {modulosVisiveis.length === 0 ? (
+      {modulosComEstado.length === 0 ? (
         <p className="texto-vazio" role="status">Nenhum material publicado neste curso ainda.</p>
       ) : (
-        <div className="atividades-curso__lista-modulos">
-          {modulosVisiveis.map((modulo, indiceModulo) => {
-            const moduloAnterior = modulosVisiveis[indiceModulo - 1];
-            const bloqueado = Boolean(moduloAnterior) && moduloAnterior.concluidos < moduloAnterior.conteudos.length;
-            const estaAberto = !bloqueado && modulosAbertos.has(modulo.id);
-            const percentualModulo = Math.round(clampPercent(modulo.progresso));
-            const moduloConcluido = !bloqueado && modulo.concluido;
-            const idListaModulo = `conteudos-modulo-lista-${modulo.id}`;
+        <>
+          <h3 className="modulos-curso-aluno__titulo-secao">Módulos do curso</h3>
+          <ul aria-label="Módulos do curso" className="modulos-curso-aluno" role="list">
+            {modulosComEstado.map(({ bloqueado, concluido, indice, modulo }) => {
+              const percentualModulo = Math.round(clampPercent(modulo.progresso));
+              const emAndamento = indice === indiceEmAndamento;
+              const quizzesVinculados = modulo.conteudos.flatMap((conteudo) => conteudo.quizzes || []);
+              const totalItensModulo = modulo.conteudos.length + quizzesVinculados.length + modulo.quizzes.length;
+              const totalConcluidosModulo =
+                modulo.conteudos.filter((conteudo) => conteudo.concluido).length +
+                quizzesVinculados.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length +
+                modulo.quizzes.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length;
+              const textoBloqueio = `Conclua o módulo ${String(indice).padStart(2, "0")} para liberar`;
 
-            // Contagem exibida (bug da auditoria - prompt "padronizar conteudos do
-            // aluno", item 3): modulo.concluidos/modulo.conteudos.length ignorava
-            // quizzes (vinculados e do modulo), mostrando "0/0"/"1/1" em modulos com
-            // mais itens. So o TEXTO muda aqui - bloqueado/moduloConcluido/progresso
-            // (barra acima) continuam vindo de modulo.concluidos/concluido/progresso,
-            // sem alterar a regra de desbloqueio.
-            const quizzesVinculadosDoModulo = modulo.conteudos.flatMap((item) => item.quizzes || []);
-            const totalItensModuloExibido = modulo.conteudos.length + quizzesVinculadosDoModulo.length + modulo.quizzes.length;
-            const totalConcluidosModuloExibido =
-              modulo.conteudos.filter((item) => item.concluido).length +
-              quizzesVinculadosDoModulo.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length +
-              modulo.quizzes.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length;
-
-            return (
-              <section className={`conteudos-modulo conteudos-modulo--cartao${bloqueado ? " conteudos-modulo--bloqueado" : ""}`} id={`conteudos-modulo-${modulo.id}`} key={modulo.id}>
-                <header className="conteudos-modulo__cabecalho">
-                  <h3 className="conteudos-modulo__cabecalho-wrapper">
-                    <button
-                      aria-controls={idListaModulo}
-                      aria-disabled={bloqueado}
-                      aria-expanded={estaAberto}
-                      className={`conteudos-modulo__toggle${bloqueado ? " conteudos-modulo__toggle--bloqueado" : ""}`}
-                      onClick={() => !bloqueado && alternarModulo(modulo.id)}
-                      type="button"
+              return (
+                <li key={modulo.id}>
+                  <button
+                    aria-disabled={bloqueado}
+                    className={`modulos-curso-aluno__item${emAndamento ? " modulos-curso-aluno__item--andamento" : ""}${bloqueado ? " modulos-curso-aluno__item--bloqueado" : ""}`}
+                    onClick={() => !bloqueado && onAbrirModulo?.(modulo.id)}
+                    title={bloqueado ? textoBloqueio : undefined}
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`modulos-curso-aluno__numero${emAndamento ? " modulos-curso-aluno__numero--andamento" : ""}${bloqueado ? " modulos-curso-aluno__numero--bloqueado" : ""}`}
                     >
-                      <div className="conteudos-modulo__info">
-                        <span className="conteudos-modulo__icone conteudos-modulo__numero">
-                          <span className="visualmente-oculto">Módulo</span>{" "}
-                          <span>{String(indiceModulo + 1).padStart(2, "0")}</span>
-                        </span>
-                        <span className="conteudos-modulo__titulo">{modulo.titulo}</span>
-                        {bloqueado ? (
-                          <span className="conteudos-modulo__aviso-bloqueado">Conclua o módulo anterior para desbloquear</span>
-                        ) : (
-                          <span className="conteudos-modulo__contagem">
-                            {totalConcluidosModuloExibido}/{totalItensModuloExibido} concluído{totalItensModuloExibido === 1 ? "" : "s"}
-                          </span>
-                        )}
-                      </div>
-                      {!bloqueado ? (
-                        <div aria-hidden="true" className="conteudos-modulo__barra">
-                          <BarraProgresso mostrarTexto={false} percentual={percentualModulo} />
-                        </div>
-                      ) : null}
+                      {bloqueado ? <TbLock size={16} /> : String(indice + 1).padStart(2, "0")}
+                    </span>
+                    <span className="modulos-curso-aluno__corpo">
+                      <strong className="modulos-curso-aluno__titulo">{modulo.titulo}</strong>
                       {bloqueado ? (
-                        <span aria-hidden="true" className="conteudos-modulo__cadeado">
-                          <TbLock size={16} />
-                        </span>
+                        <span className="modulos-curso-aluno__bloqueio-texto">{textoBloqueio}</span>
                       ) : (
                         <>
-                          {moduloConcluido ? (
-                            <motion.span
-                              animate={{ scale: 1 }}
-                              aria-label="Módulo concluído"
-                              className="check-circular check-circular--concluido"
-                              initial={{ scale: 0 }}
-                              style={{ pointerEvents: "none", width: "18px", height: "18px", fontSize: "0.65rem" }}
-                              transition={{ type: "spring", stiffness: 300, damping: 18 }}
-                            >
-                              <TbCheck aria-hidden="true" size={11} />
-                            </motion.span>
-                          ) : null}
-                          <TbChevronDown
-                            aria-hidden="true"
-                            className={`conteudos-modulo__chevron${estaAberto ? " conteudos-modulo__chevron--aberto" : ""}`}
-                            size="1.1rem"
-                          />
+                          <span className="modulos-curso-aluno__contagem">
+                            {totalConcluidosModulo} de {totalItensModulo} concluído{totalItensModulo === 1 ? "" : "s"}
+                          </span>
+                          <span className="modulos-curso-aluno__barra">
+                            <BarraProgresso mostrarTexto={false} percentual={percentualModulo} />
+                          </span>
                         </>
                       )}
-                    </button>
-                  </h3>
-                </header>
-
-                <AnimatePresence initial={false}>
-                  {estaAberto ? (
-                    <motion.div
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      id={idListaModulo}
-                      initial={{ height: 0, opacity: 0 }}
-                      key={`lista-${modulo.id}`}
-                      style={{ overflow: "hidden" }}
-                      transition={{ duration: 0.28, ease: "easeInOut" }}
-                    >
-                      {modulo.conteudos.length > 0 ? (
-                        <ul aria-label={`Atividades de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
-                          {modulo.conteudos.map((conteudo, indiceConteudo) => {
-                            const itemBloqueado = indiceConteudo > 0 && !modulo.conteudos[indiceConteudo - 1].concluido;
-                            const processando = conteudoProcessando === conteudo.id;
-                            const indisponivel = itemBloqueado || processando;
-                            const nomesQuizzesDoConteudo = montarNomesExibicaoQuizzesVinculados(conteudo.quizzes, conteudo.titulo);
-
-                            function abrirConteudoPeloTeclado(event) {
-                              if (event.key !== "Enter" && event.key !== " ") {
-                                return;
-                              }
-                              event.preventDefault();
-                              abrirItem(conteudo);
-                            }
-
-                            return (
-                              <li
-                                className={`atividades-curso__item${conteudo.concluido ? " atividades-curso__item--concluido" : ""}${itemBloqueado ? " atividades-curso__item--bloqueado" : ""}`}
-                                key={conteudo.id}
-                              >
-                                <div className="atividades-curso__item-aberto">
-                                <div
-                                  aria-label={itemBloqueado ? undefined : `Ver ${normalizeContentType(conteudo.tipoConteudo)}: ${conteudo.titulo}`}
-                                  className="atividades-curso__linha"
-                                  onClick={indisponivel ? undefined : () => abrirItem(conteudo)}
-                                  onKeyDown={indisponivel ? undefined : abrirConteudoPeloTeclado}
-                                  role={itemBloqueado ? undefined : "button"}
-                                  tabIndex={indisponivel ? undefined : 0}
-                                >
-                                  {itemBloqueado ? (
-                                    <span aria-label="Conteúdo bloqueado" className="atividades-curso__icone atividades-curso__icone--bloqueado">
-                                      <TbLock aria-hidden="true" size="1.75rem" />
-                                    </span>
-                                  ) : (
-                                    <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--conteudo">
-                                      {ICONE_TIPO_CONTEUDO_ALUNO[Number(conteudo.tipoConteudo)] || <TbFileText aria-hidden="true" size="1.75rem" />}
-                                    </span>
-                                  )}
-                                  <div className="atividades-curso__corpo">
-                                    <strong className="atividades-curso__item-titulo">{conteudo.titulo}</strong>
-                                    <p className="atividades-curso__meta">
-                                      <span>{normalizeContentType(conteudo.tipoConteudo)}</span>
-                                    </p>
-                                  </div>
-                                  <div className="atividades-curso__acoes" onClick={(event) => event.stopPropagation()}>
-                                    <span className="atividades-curso__status-coluna">
-                                      {itemBloqueado ? null : conteudo.concluido ? (
-                                        <span className="atividades-curso__status-concluido">
-                                          <TbCheck aria-hidden="true" size="1rem" /> Concluído
-                                        </span>
-                                      ) : (
-                                        <Insignia texto={normalizeProgressStatus(conteudo.statusProgresso)} />
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-                                </div>
-
-                                {!itemBloqueado && conteudo.quizzes.length ? (
-                                  <ul aria-label={`Quiz de ${conteudo.titulo}`} className="atividades-curso__quizzes" role="list">
-                                    {conteudo.quizzes.map((quiz) => {
-                                      const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
-                                      const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
-
-                                      return (
-                                        <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-material-${quiz.id}`}>
-                                          <div className="atividades-curso__linha">
-                                            <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                              <TbTrophy aria-hidden="true" size="1.75rem" />
-                                            </span>
-                                            <div className="atividades-curso__corpo">
-                                              <strong className="atividades-curso__item-titulo" title={quiz.titulo}>
-                                                {nomesQuizzesDoConteudo.get(quiz.id)}
-                                              </strong>
-                                            </div>
-                                            <div className="atividades-curso__acoes">
-                                              <span className="atividades-curso__status-coluna">
-                                                {quizConcluido ? (
-                                                  <span className="atividades-curso__status-concluido">
-                                                    <TbCheck aria-hidden="true" size="1rem" /> Concluído
-                                                  </span>
-                                                ) : (
-                                                  <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
-                                                )}
-                                              </span>
-                                              <span className="atividades-curso__acao-coluna">
-                                                {quizConcluido ? (
-                                                  <Botao
-                                                    disabled={quizIndisponivel}
-                                                    onClick={() => onAbrirRevisao(quiz)}
-                                                    tamanho="pequeno"
-                                                    variante="fantasma"
-                                                  >
-                                                    Ver revisão
-                                                  </Botao>
-                                                ) : disponibilidadeQuiz.podeRealizar ? (
-                                                  <Botao
-                                                    disabled={quizIndisponivel}
-                                                    onClick={() => onIniciarQuiz(quiz)}
-                                                    tamanho="pequeno"
-                                                    variante="primario"
-                                                  >
-                                                    Iniciar quiz
-                                                  </Botao>
-                                                ) : null}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                ) : null}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : null}
-
-                      {modulo.quizzes.length > 0 ? (
-                        <div className="atividades-curso__quizzes-modulo">
-                          <h4 className="atividades-curso__quizzes-modulo-titulo">
-                            <TbTrophy aria-hidden="true" size="1rem" /> Quizzes do módulo
-                          </h4>
-                          <ul aria-label={`Quizzes de ${modulo.titulo}`} className="conteudos-modulo__lista atividades-curso__lista" role="list">
-                          {modulo.quizzes.map((quiz) => {
-                            const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
-                            const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
-
-                            return (
-                              <li className="atividades-curso__item atividades-curso__item--quiz" key={`quiz-${quiz.id}`}>
-                                <div className="atividades-curso__linha">
-                                  <span aria-hidden="true" className="atividades-curso__icone atividades-curso__icone--quiz">
-                                    <TbTrophy aria-hidden="true" size="1.75rem" />
-                                  </span>
-                                  <div className="atividades-curso__corpo">
-                                    <strong className="atividades-curso__item-titulo">{quiz.titulo}</strong>
-                                    <p className="atividades-curso__meta">
-                                      <span>{quiz.totalQuestoes || 0} {quiz.totalQuestoes === 1 ? "questão" : "questões"}</span>
-                                    </p>
-                                  </div>
-                                  <div className="atividades-curso__acoes">
-                                    <span className="atividades-curso__status-coluna">
-                                      {quizConcluido ? (
-                                        <span className="atividades-curso__status-concluido">
-                                          <TbCheck aria-hidden="true" size="1rem" /> Concluído
-                                        </span>
-                                      ) : (
-                                        <StatusPill tone={disponibilidadeQuiz.tone}>{disponibilidadeQuiz.label}</StatusPill>
-                                      )}
-                                    </span>
-                                    <span className="atividades-curso__acao-coluna">
-                                      {quizConcluido ? (
-                                        <Botao
-                                          disabled={quizIndisponivel}
-                                          onClick={() => onAbrirRevisao(quiz)}
-                                          tamanho="pequeno"
-                                          variante="fantasma"
-                                        >
-                                          Ver revisão
-                                        </Botao>
-                                      ) : disponibilidadeQuiz.podeRealizar ? (
-                                        <Botao
-                                          disabled={quizIndisponivel}
-                                          onClick={() => onIniciarQuiz(quiz)}
-                                          tamanho="pequeno"
-                                          variante="primario"
-                                        >
-                                          Iniciar quiz
-                                        </Botao>
-                                      ) : null}
-                                    </span>
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          })}
-                          </ul>
-                        </div>
-                      ) : null}
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
-              </section>
-            );
-          })}
-        </div>
+                    </span>
+                    <span aria-hidden="true" className="modulos-curso-aluno__seta">
+                      {concluido ? <TbCheck className="modulos-curso-aluno__check" size={18} /> : <TbChevronRight size={18} />}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
-
-      {itemAberto ? (
-        <JanelaPreviaItem
-          indiceAtual={indiceItemAberto + 1}
-          item={{ id: itemAberto.id, tipo: "material", titulo: itemAberto.titulo, conteudo: itemAberto }}
-          itemAnterior={itemAnterior}
-          itemProximo={itemProximo}
-          numeroModuloTexto={`Módulo ${String(modulosVisiveis.indexOf(moduloDoItemAberto) + 1).padStart(2, "0")}`}
-          onAnterior={() => itemAnterior && abrirItem(itemAnterior)}
-          onFechar={() => setItemAbertoId(null)}
-          onProximo={() => itemProximo && abrirItem(itemProximo)}
-          publicado
-          somenteLeitura={false}
-          totalItens={moduloDoItemAberto.conteudos.length}
-        />
-      ) : null}
     </div>
   );
 }
@@ -2522,7 +2348,20 @@ function formatarTempoRestante(segundosRestantes) {
   return `${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
 }
 
-function obterDisponibilidadeAvaliacao(avaliacao) {
+// Selo do cartao do curso do aluno (docs/TelaConteudosAlunos/PROMPT-agente-
+// trilha-aluno-modulo-em-tela-propria.md, item 3): "Certificado emitido" so
+// quando o certificado foi EMITIDO DE FATO (matricula.certificadoEmitidoEm,
+// preenchido por EmissaoCertificadoService) - nao so por progresso() >= 100,
+// que pode terminar antes da emissao (nota final, criterios do curso etc.).
+export function obterSeloCursoAluno(curso) {
+  if (curso.certificadoEmitidoEm) {
+    return "🏆 Certificado emitido";
+  }
+
+  return clampPercent(curso.progresso) >= 100 ? "Concluído" : "Curso em andamento";
+}
+
+export function obterDisponibilidadeAvaliacao(avaliacao) {
   const agora = new Date();
   const abertura = parseApiDate(avaliacao.dataAbertura);
   const fechamento = parseApiDate(avaliacao.dataFechamento);

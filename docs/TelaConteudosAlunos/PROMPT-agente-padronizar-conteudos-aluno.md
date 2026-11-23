@@ -1,3 +1,5 @@
+> **SUBSTITUÍDO em 2026-11-23** por `PROMPT-agente-trilha-aluno-modulo-em-tela-propria.md`. Não aplicar.
+
 # Prompt — Padronizar a trilha de Conteúdos do aluno com a do professor (web)
 
 ## Contexto

@@ -809,6 +809,7 @@ export default function WorkspaceScreen({
                   cursos={snapshot.cursos}
                   matriculaIdsComPagamentoPendente={matriculaIdsComPagamentoPendente}
                   matriculas={snapshot.matriculas}
+                  moduloIdSelecionado={route.subsecao === "modulos" && route.subparam ? Number(route.subparam) : null}
                   modulos={snapshot.modulos}
                   onNavigate={onNavigate}
                   onRefresh={() => setRefreshKey((current) => current + 1)}

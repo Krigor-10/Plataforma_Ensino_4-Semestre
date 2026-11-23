@@ -4948,11 +4948,6 @@
   color: var(--cor-marca-clara);
 }
 
-.atividades-curso__icone--bloqueado {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .atividades-curso__icone--quiz {
   color: var(--cor-marca-clara);
   background: rgba(123, 47, 247, 0.08);
@@ -5106,16 +5101,6 @@
   justify-content: flex-end;
   min-width: 6rem;
   flex-shrink: 0;
-}
-
-.atividades-curso__status-concluido {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--cor-sucesso);
-  white-space: nowrap;
 }
 
 /* ------------------------------------------------------------
@@ -6443,35 +6428,6 @@
    100% concluido). Sem quiz-por-conteudo (nao existe no modelo
    real — avaliacoes sao entidades separadas, por turma/modulo).
    ------------------------------------------------------------ */
-.check-circular {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 800;
-  transition: border-color 0.15s, background 0.15s;
-  padding: 0;
-}
-
-.check-circular:hover:not(.check-circular--concluido) {
-  border-color: var(--cor-sucesso);
-  background: rgba(34, 197, 94, 0.08);
-}
-
-.check-circular--concluido {
-  background: var(--cor-sucesso);
-  border-color: var(--cor-sucesso);
-}
-
 @keyframes desbloquear-glow {
   0%   { box-shadow: 0 0 0 0 rgba(123, 47, 247, 0);    border-color: var(--cor-borda); }
   15%  { box-shadow: 0 0 0 6px rgba(123, 47, 247, 0.4); border-color: var(--cor-marca); }
@@ -6817,66 +6773,6 @@
   transform: rotate(180deg);
 }
 
-.conteudos-modulo--bloqueado .conteudos-modulo__info,
-.conteudos-modulo--bloqueado .conteudos-modulo__cadeado,
-.conteudos-modulo--bloqueado .conteudos-modulo__barra {
-  opacity: 0.5;
-}
-
-.conteudos-modulo__toggle--bloqueado {
-  cursor: not-allowed;
-  position: relative;
-}
-
-.conteudos-modulo__toggle--bloqueado:hover {
-  background: none;
-}
-
-.conteudos-modulo__toggle--bloqueado::after {
-  content: "Conclua o modulo anterior para desbloquear";
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: var(--cor-fundo-elevado);
-  border: 1px solid var(--cor-borda-forte);
-  color: var(--cor-texto-forte);
-  font-size: 0.78rem;
-  font-style: normal;
-  font-weight: 500;
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--raio-md);
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  z-index: 30;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-}
-
-.conteudos-modulo__toggle--bloqueado:hover::after {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.conteudos-modulo__aviso-bloqueado {
-  font-size: 0.75rem;
-  color: var(--cor-texto-mudo);
-  font-style: italic;
-}
-
-.conteudos-modulo__cadeado {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--cor-texto-mudo);
-}
-
-.conteudos-modulo__cadeado svg {
-  width: 16px;
-  height: 16px;
-}
 
 .conteudos-modulo__lista {
   padding-top: 0.25rem;
@@ -9698,51 +9594,300 @@
 
 .cartao-curso-modulo__selo {
   flex-shrink: 0;
+}
+
+/* Variante media (Professor), sem `kpis`: o selo e filho direto do cartao
+   (sem o wrapper __selo-e-extra, que so a variante grande usa) - continua
+   pinado no topo da linha, nao centralizado. */
+.cartao-curso-modulo--medio > .cartao-curso-modulo__selo {
   align-self: flex-start;
 }
 
-/* Variante compacta (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
-   correcoes-1.md, item 8): linha unica (~60px) no topo da tela do modulo,
-   ja que o cartao grande repetia o cabecalho da tela anterior (lista de
-   modulos do curso). Mesmo icone/titulo/barra/selo, so que lado a lado e
-   sem a descricao. */
-.cartao-curso-modulo--compacto {
-  flex-wrap: nowrap;
+/* Selo + `extra` (so Aluno, botao "Continuar") lado a lado, no canto
+   superior direito do cartao grande. */
+.cartao-curso-modulo__selo-e-extra {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--espaco-md);
-  min-height: 3.75rem;
-  padding: 0.6rem var(--espaco-md);
+  justify-content: flex-end;
+  gap: var(--espaco-sm);
+  flex-shrink: 0;
+  align-self: flex-start;
 }
 
-.cartao-curso-modulo--compacto .cartao-curso-modulo__icone {
+/* ------------------------------------------------------------
+   MODULOS DO CURSO EM CARTOES — tela do curso do Aluno (docs/
+   TelaConteudosAlunos/PROMPT-agente-trilha-aluno-modulo-em-tela-propria.md),
+   no lugar do acordeao de antes. Mesmos tokens de "relevo duplo" e fundo
+   solido do resto do app; 2 colunas a partir de 1024px, 1 coluna abaixo.
+   ------------------------------------------------------------ */
+.modulos-curso-aluno__titulo-secao {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
+.modulos-curso-aluno {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espaco-md);
+  list-style: none;
+}
+
+@media (min-width: 1024px) {
+  .modulos-curso-aluno {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.modulos-curso-aluno__item {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  width: 100%;
+  height: 100%;
+  min-height: 5.5rem;
+  padding: var(--espaco-md) var(--espaco-lg);
+  border: 1px solid var(--borda-card-modulo);
+  border-radius: var(--raio-lg);
+  background: var(--cor-fundo-elevado);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
+}
+
+.modulos-curso-aluno__item:hover,
+.modulos-curso-aluno__item:focus-visible {
+  border-color: var(--cor-marca-clara);
+}
+
+.modulos-curso-aluno__item--andamento {
+  border-color: var(--cor-marca-clara);
+  background: color-mix(in srgb, var(--cor-marca) 16%, var(--cor-fundo-elevado));
+}
+
+.modulos-curso-aluno__item--bloqueado {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.modulos-curso-aluno__item--bloqueado:hover,
+.modulos-curso-aluno__item--bloqueado:focus-visible {
+  border-color: var(--borda-card-modulo);
+}
+
+.modulos-curso-aluno__numero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: var(--raio-md);
+  background: rgba(123, 47, 247, 0.08);
+  border: 1px solid rgba(123, 47, 247, 0.28);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--cor-marca-clara);
 }
 
-.cartao-curso-modulo--compacto .cartao-curso-modulo__corpo {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--espaco-md);
-  flex: 1 1 auto;
+.modulos-curso-aluno__numero--andamento {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca-clara);
+  color: #fff;
 }
 
-.cartao-curso-modulo--compacto .cartao-curso-modulo__titulo {
-  flex-shrink: 0;
+.modulos-curso-aluno__numero--bloqueado {
+  background: var(--cor-fundo-elevado);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-mudo);
+}
+
+.modulos-curso-aluno__corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.modulos-curso-aluno__titulo {
+  display: -webkit-box;
   overflow: hidden;
-  max-width: 14rem;
   font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.modulos-curso-aluno__contagem,
+.modulos-curso-aluno__bloqueio-texto {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+}
+
+.modulos-curso-aluno__barra {
+  display: block;
+  max-width: 14rem;
+  margin-top: 0.15rem;
+}
+
+.modulos-curso-aluno__seta {
+  flex-shrink: 0;
+  color: var(--cor-texto-mudo);
+}
+
+.modulos-curso-aluno__check {
+  color: var(--cor-sucesso);
+}
+
+/* Variante media (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-
+   hierarquia-curso-kpis.md) - sucede a antiga `--compacto` (correcoes-1.md,
+   item 8): o curso volta a ser o bloco mais forte da tela do modulo (o
+   modulo, discreto, fica por baixo - ver PainelItensModulo.jsx). ~96px,
+   rotulo "CURSO", titulo grande numa linha so, descricao numa linha so,
+   barra com legenda de texto ao lado. */
+.cartao-curso-modulo--medio {
+  gap: var(--espaco-lg);
+  min-height: 6rem;
+  padding: 1rem 1.25rem;
+}
+
+.cartao-curso-modulo--medio .cartao-curso-modulo__icone {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: var(--raio-md);
+}
+
+.cartao-curso-modulo--medio .cartao-curso-modulo__corpo {
+  gap: 0.3rem;
+  flex: 1 1 18rem;
+}
+
+.cartao-curso-modulo__rotulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cor-marca-clara);
+}
+
+.cartao-curso-modulo--medio .cartao-curso-modulo__titulo {
+  overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-size: 1.45rem;
+  font-weight: 800;
 }
 
-.cartao-curso-modulo--compacto .barra-progresso-wrapper {
-  flex: 1;
-  min-width: 4rem;
+.cartao-curso-modulo--medio .cartao-curso-modulo__descricao {
+  overflow: hidden;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.86rem;
 }
 
-.cartao-curso-modulo--compacto .cartao-curso-modulo__selo {
-  align-self: center;
+.cartao-curso-modulo__linha-progresso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espaco-sm);
+}
+
+.cartao-curso-modulo__linha-progresso .barra-progresso-wrapper {
+  flex: 1 1 auto;
+  max-width: 40rem;
+}
+
+.cartao-curso-modulo__legenda-progresso {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.cartao-curso-modulo__selo-inline {
+  flex-shrink: 0;
+}
+
+/* KPIs do Coordenador/Admin, dentro do proprio cartao (nao mais a faixa
+   .atividades-curso__kpis-compactos esticada na largura toda - essa classe
+   continua existindo pra quem mais usa). Largura do conteudo (sem flex:1):
+   os 3 ficam lado a lado, separados por linhas verticais finas. */
+.cartao-curso-modulo__kpis {
+  display: flex;
+  align-items: center;
+  gap: var(--espaco-md);
+  flex-shrink: 0;
+  padding-left: var(--espaco-lg);
+  border-left: 1px solid var(--cor-borda);
+}
+
+.cartao-curso-modulo__kpi {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cartao-curso-modulo__kpi + .cartao-curso-modulo__kpi {
+  padding-left: var(--espaco-md);
+  border-left: 1px solid var(--cor-borda);
+}
+
+.cartao-curso-modulo__kpi-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--raio-md);
+  background: color-mix(in srgb, var(--cor-marca) 24%, var(--cor-fundo-elevado));
+  color: var(--cor-marca-clara);
+}
+
+.cartao-curso-modulo__kpi-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  white-space: nowrap;
+}
+
+.cartao-curso-modulo__kpi-texto strong {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--cor-texto-forte);
+}
+
+.cartao-curso-modulo__kpi-texto span {
+  font-size: 0.74rem;
+  color: var(--cor-texto-suave);
+}
+
+/* Abaixo de 1200px, sem espaco pros KPIs ao lado do conteudo: descem pra
+   uma linha dentro do proprio cartao, largura do conteudo (sem flex:1),
+   alinhados a esquerda - nao esticados nem na largura toda. */
+@media (max-width: 1200px) {
+  .cartao-curso-modulo__kpis {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .cartao-curso-modulo__kpis {
+    flex-wrap: wrap;
+  }
 }
 
 /* ------------------------------------------------------------
@@ -9780,37 +9925,48 @@
   border-bottom: 1px solid var(--cor-borda);
 }
 
-.painel-itens-modulo__cabecalho-icone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 3.25rem;
-  height: 3.25rem;
-  border-radius: var(--raio-circular);
-  background: var(--cor-marca);
-  color: #fff;
+/* Numero do modulo discreto (docs/TelaConteudosProfessor/PROMPT-agente-
+   tela-modulo-hierarquia-curso-kpis.md, item 3): reaproveita NumeroModulo.jsx
+   (mesmo quadradinho da trilha), so que 30px em vez do padrao da coluna de
+   conteudo - escopado aqui pra nao afetar os outros usos do componente. */
+.painel-itens-modulo__cabecalho .conteudos-modulo__numero,
+.painel-itens-modulo__cabecalho .conteudos-modulo__icone--caixa {
+  --coluna-icone-conteudo: 1.875rem;
 }
 
 .painel-itens-modulo__cabecalho-texto {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.1rem;
   min-width: 0;
   flex: 1;
 }
 
+.painel-itens-modulo__rotulo-modulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--cor-texto-suave);
+}
+
 .painel-itens-modulo__titulo {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
 }
 
-.painel-itens-modulo__resumo {
-  margin: 0;
-  font-size: 0.82rem;
+.painel-itens-modulo__resumo-inline {
+  font-size: 0.78rem;
+  font-weight: 400;
   color: var(--cor-texto-suave);
+}
+
+.painel-itens-modulo__rascunhos-inline {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--cor-aviso);
 }
 
 .painel-itens-modulo__pilula {
@@ -9901,6 +10057,36 @@
   background: var(--cor-marca);
 }
 
+/* Linha bloqueada (so Aluno, docs/TelaConteudosAlunos/PROMPT-agente-trilha-
+   aluno-modulo-em-tela-propria.md) - bloqueio por ordem, mesma regra do
+   acordeao de antes, so que a linha continua visivel (opacidade reduzida)
+   em vez de sumir. */
+.painel-itens-modulo__linha--bloqueada {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.painel-itens-modulo__icone--bloqueado {
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-mudo);
+}
+
+/* Realce temporario (so Aluno) - o botao "Continuar: {proximo item}" do
+   cartao do curso leva direto pro modulo com o quiz em questao destacado
+   (materiais abrem a janela sozinhos, entao nunca precisam disso). */
+@keyframes painel-itens-modulo-destaque {
+  0%, 100% {
+    box-shadow: none;
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--cor-marca-clara);
+  }
+}
+
+.painel-itens-modulo__item--destaque .painel-itens-modulo__linha {
+  animation: painel-itens-modulo-destaque 1.4s ease-in-out 2;
+}
+
 .painel-itens-modulo__texto {
   display: flex;
   flex: 1;
@@ -9956,6 +10142,16 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  white-space: nowrap;
+}
+
+/* "Abrir ›" (so Aluno, material nao bloqueado) - texto simples, a linha
+   inteira ja e clicavel, so reforça que ha uma acao ali. */
+.painel-itens-modulo__abrir {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--cor-marca-clara);
   white-space: nowrap;
 }
 

@@ -522,7 +522,7 @@ describe("PainelCursoGestao - tela do modulo (docs/fluxo-coordenador/PROMPT-agen
     const cabecalho = screen.getByRole("heading", { level: 2 }).closest("header");
     expect(cabecalho).toHaveClass("painel-itens-modulo__cabecalho");
     expect(within(cabecalho).getByText("Modulo A")).toBeInTheDocument();
-    expect(within(cabecalho).getByText("1 conteúdo · 1 quiz")).toBeInTheDocument();
+    expect(within(cabecalho).getByText("· 1 conteúdo · 1 quiz")).toBeInTheDocument();
 
     // Sem coluna de modulos nem seletor (correcoes-1.md, item 7).
     expect(document.querySelector(".lista-modulos-cartoes")).not.toBeInTheDocument();
