@@ -13,6 +13,7 @@
     "@react-navigation/native-stack": "^7.21.0",
     "@sentry/react-native": "~7.11.0",
     "expo": "~57.0.17",
+    "expo-asset": "~57.0.22",
     "expo-build-properties": "~57.0.17",
     "expo-clipboard": "~57.0.2",
     "expo-file-system": "~57.0.7",
@@ -64,7 +65,9 @@
       "/dist/"
     ],
     "moduleNameMapper": {
-      "^@babel/runtime/(.*)$": "<rootDir>/node_modules/@babel/runtime/$1"
-    }
+      "^@babel/runtime/(.*)$": "<rootDir>/node_modules/@babel/runtime/$1",
+      "^@react-native-async-storage/async-storage$": "<rootDir>/node_modules/@react-native-async-storage/async-storage/jest/async-storage-mock.js"
+    },
+    "resolver": "react-native-worklets/jest/resolver.js"
   }
 }

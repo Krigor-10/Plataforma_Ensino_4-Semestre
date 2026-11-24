@@ -9,6 +9,7 @@ import { agruparConteudosPorCurso } from "../lib/conteudos.js";
 import { obterDisponibilidadeAvaliacao } from "../lib/avaliacoes.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 import { ROUTES } from "../lib/routes.js";
+import { useAlturaBarraAbas } from "../lib/useAlturaBarraAbas.js";
 
 const TouchableOpacityAnimadoRN = AnimatedRN.createAnimatedComponent(TouchableOpacity);
 
@@ -60,6 +61,7 @@ function obterRotuloTentativa(avaliacao) {
    notificacoes/perfil/logout ficam no HeaderGlobal.jsx (persistente em
    todas as abas, nao so aqui). */
 export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
+  const alturaBarraAbas = useAlturaBarraAbas();
   const reduzMovimentoContinuar = useReducedMotion();
   // eslint-disable-next-line react-hooks/refs -- padrao idiomatico useRef(valorInicial).current pra extrair um Animated.Value estavel (mesma instancia em todo render), igual ao ja usado em MenuLateral.jsx.
   const escalaContinuar = useRef(new AnimatedRN.Value(1)).current;
@@ -135,7 +137,7 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={estilos.container}>
+    <ScrollView contentContainerStyle={[estilos.container, { paddingBottom: alturaBarraAbas }]}>
       <Text style={estilos.saudacao}>
         {obterSaudacao()}, {usuario?.nome?.split(" ")[0] || "aluno"} 👋
       </Text>

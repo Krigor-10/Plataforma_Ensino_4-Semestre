@@ -27,6 +27,7 @@ import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib
 import { hapticErro, hapticSucesso } from "../../lib/haptics.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
+import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
@@ -83,6 +84,7 @@ const ICONE_TIPO_CONTEUDO = {
 };
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot }) {
+  const alturaBarraAbas = useAlturaBarraAbas();
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [modulosAbertos, setModulosAbertos] = useState(() => new Set());
   const [conteudoProcessando, setConteudoProcessando] = useState(null);
@@ -457,7 +459,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         <Text style={estilos.cabecalhoPercentual}>{Math.round(Math.max(0, Math.min(cursoAtivo.progresso, 100)))}%</Text>
       </View>
 
-      <ScrollView contentContainerStyle={estilos.corpo}>
+      <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
         {avaliacaoLiberada ? (
           <AvisoAvaliacaoLiberada
             avaliacao={avaliacaoLiberada}

@@ -24,6 +24,11 @@ export const cores = {
   aviso: "#f59e0b",
   informativo: "#3b82f6",
   bloqueado: "#5c5468",
+  // Fundo da barra de navegacao flutuante (docs/redesign-mobile/PROMPT-
+  // agente-barra-navegacao-quadrado-roxo.md) - preto puro, diferente de
+  // `fundo`/`fundoCartao` (que tem um leve tom roxo) de proposito, pra
+  // destacar a barra flutuando sobre o conteudo.
+  fundoBarra: "#000000",
   // Variantes translucidas (~15% opacidade) das cores semanticas acima —
   // mesmo padrao do design system web (--cor-sucesso-fundo etc.), pra fundos
   // suaves de icones/badges sem precisar de rgba(...) solto em cada tela.

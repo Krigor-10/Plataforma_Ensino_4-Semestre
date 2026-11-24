@@ -6,6 +6,7 @@ import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatarTempoRestante, formatGrade, normalizeEvaluationType } from "../../lib/format.js";
 import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
 import CartaoCursoAtivo from "../../components/CartaoCursoAtivo.jsx";
 import EstadoVazio from "../../components/EstadoVazio.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
@@ -51,6 +52,7 @@ const TONE_VISUAL = {
    ja existente (fase "confirmar"), reaproveitado
    sem alteracao. */
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
+  const alturaBarraAbas = useAlturaBarraAbas();
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const [mensagemFeedback, setMensagemFeedback] = useState("");
@@ -273,7 +275,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
       ) : avaliacoesFiltradas.length === 0 ? (
         <EstadoVazio icone="filter-outline" mensagem="Nenhuma avaliação neste filtro." />
       ) : (
-        <ScrollView contentContainerStyle={estilos.corpo}>
+        <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
           {avaliacoesFiltradas.map((avaliacao) => {
             const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
             const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";

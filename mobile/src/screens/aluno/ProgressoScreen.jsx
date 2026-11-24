@@ -8,6 +8,7 @@ import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
 
 // Mesmo valor usado em AvaliacoesScreen.jsx/CertificadoService.
@@ -30,6 +31,7 @@ const NOTA_MINIMA_APROVACAO = 7;
    pelos materiais), entao NAO repete tipo de material nem status por item
    aqui — esse detalhamento continua exclusivo da aba Conteudos. */
 export default function ProgressoScreen({ snapshot }) {
+  const alturaBarraAbas = useAlturaBarraAbas();
   const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
   const navigation = useNavigation();
 
@@ -123,7 +125,7 @@ export default function ProgressoScreen({ snapshot }) {
 
       <CartaoCursoAtivo onTrocar={() => setCursoSelecionadoId(null)} titulo={tituloCursoAtivo} />
 
-      <ScrollView contentContainerStyle={estilos.corpo}>
+      <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
         <View style={estilos.cartaoAnel}>
           <ProgressoCircular espessura={8} percentual={percentualGeral} size={140} />
           <Text style={estilos.anelRotulo}>Progresso Geral</Text>

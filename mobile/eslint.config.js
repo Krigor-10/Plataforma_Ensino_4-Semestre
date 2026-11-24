@@ -13,7 +13,7 @@ module.exports = defineConfig([
   expoConfig,
   ...compat.config(require("eslint-plugin-react-native-a11y").configs.basic),
   {
-    files: ["**/__tests__/**/*.js", "**/*.test.js"],
+    files: ["**/__tests__/**/*.{js,jsx}", "**/*.test.{js,jsx}"],
     languageOptions: {
       globals: globals.jest
     }

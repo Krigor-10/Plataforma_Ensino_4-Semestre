@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import AbasSegmentadas from "../../components/AbasSegmentadas.jsx";
 import Botao from "../../components/Botao.jsx";
 import EstadoVazio from "../../components/EstadoVazio.jsx";
 import { SkeletonCertificados } from "../../components/Skeleton.jsx";
@@ -20,6 +21,7 @@ import { formatDate, formatDayMonth, formatGrade, normalizeStatus } from "../../
 import { hapticSucesso } from "../../lib/haptics.js";
 import { ROUTES } from "../../lib/routes.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
+import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
 
 const SELO_COR_POR_SITUACAO = {
   AguardandoCorrecao: { cor: cores.aviso, fundo: cores.avisoFundo },
@@ -35,14 +37,34 @@ const SELO_COR_POR_SITUACAO = {
    (lib/certificados.js) - nunca mais localmente. O POST .../emitir virou
    so reserva: dispara uma unica vez por matricula com situacao Disponivel
    (caso das antigas, de antes da emissao automatica existir no servidor),
-   e recarrega /meus pra ela aparecer em Conquistados. */
+   e recarrega /meus pra ela aparecer em Conquistados.
+
+   Abas no topo (docs/certificados-mobile/PROMPT-agente-certificados-abas-
+   topo.md) substituem as secoes empilhadas: "Em andamento" e "Conquistados"
+   cada uma com seu conteudo de hoje, sem o titulo repetido nem a linha de
+   numeros (os totais ja aparecem na propria aba). */
+const ABA_EM_ANDAMENTO = "emAndamento";
+const ABA_CONQUISTADOS = "conquistados";
+
 export default function CertificadosScreen({ onSessionExpired, snapshot }) {
+  const alturaBarraAbas = useAlturaBarraAbas();
   const navigation = useNavigation();
+  const route = useRoute();
+  // Vem de uma notificacao "Seu certificado foi emitido" ou do selo
+  // "Certificado emitido" (item 6 do prompt) - ainda nao disparado por
+  // nenhuma tela, mas a aba ja fica pronta pra receber.
+  const abaInicialPorParametro = route.params?.aba;
   const [carregando, setCarregando] = useState(true);
   const [certificadosConquistados, setCertificadosConquistados] = useState([]);
   const [mapaStatusCertificados, setMapaStatusCertificados] = useState(() => construirMapaStatusCertificados([]));
   const [aguardandoPagamentoAberto, setAguardandoPagamentoAberto] = useState(false);
   const [chaveLinkCopiado, setChaveLinkCopiado] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState(abaInicialPorParametro || ABA_EM_ANDAMENTO);
+  // So decide a aba automaticamente (item 4: "Em andamento" vazia + tem
+  // certificado -> abre em "Conquistados") uma vez, depois que os dados
+  // carregam - nunca de novo, pra nao desfazer a escolha do aluno. Com
+  // `aba` vindo por parametro, essa decisao automatica nem entra em jogo.
+  const abaJaDecididaRef = useRef(Boolean(abaInicialPorParametro));
   const requisitadosRef = useRef(new Set());
 
   const carregarConquistados = useCallback(async () => {
@@ -101,6 +123,17 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
     () => agruparAguardandoPagamento(matriculasAprovadas, mapaStatusCertificados, snapshot.pagamentos),
     [matriculasAprovadas, mapaStatusCertificados, snapshot.pagamentos]
   );
+
+  useEffect(() => {
+    if (abaJaDecididaRef.current || carregando) {
+      return;
+    }
+    abaJaDecididaRef.current = true;
+    if (emAndamento.length === 0 && certificadosConquistados.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- de proposito: decide a aba inicial so uma vez, na primeira vez que os dados terminam de carregar (abaJaDecididaRef trava isso). Calcular isso direto no render (sem efeito) faria a aba trocar sozinha debaixo do aluno sempre que emAndamento/certificadosConquistados mudar de novo mais tarde, o que quebraria "lembrar a ultima aba escolhida" (item 4 do prompt).
+      setAbaAtiva(ABA_CONQUISTADOS);
+    }
+  }, [carregando, certificadosConquistados.length, emAndamento.length]);
 
   const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
   const progressoCursoPorMatricula = useMemo(
@@ -166,28 +199,21 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
   }
 
   return (
-    <ScrollView contentContainerStyle={estilos.container}>
-      <View style={estilos.statsLinha}>
-        <View style={estilos.statCartao}>
-          <Text style={estilos.statRotulo}>Conquistados</Text>
-          <View style={estilos.statLinha}>
-            <Text style={estilos.statValor}>{certificadosConquistados.length}</Text>
-            <Ionicons color={cores.destaque} name="ribbon" size={20} />
-          </View>
-        </View>
-        <View style={estilos.statCartao}>
-          <Text style={estilos.statRotulo}>Em andamento</Text>
-          <View style={estilos.statLinha}>
-            <Text style={estilos.statValor}>{emAndamento.length}</Text>
-            <Ionicons color={cores.destaque} name="school" size={20} />
-          </View>
-        </View>
-      </View>
+    <ScrollView contentContainerStyle={[estilos.container, { paddingBottom: alturaBarraAbas }]}>
+      <AbasSegmentadas
+        onSelecionar={setAbaAtiva}
+        opcoes={[
+          { chave: ABA_EM_ANDAMENTO, rotulo: "Em andamento", contador: emAndamento.length },
+          { chave: ABA_CONQUISTADOS, rotulo: "Conquistados", contador: certificadosConquistados.length }
+        ]}
+        valorSelecionado={abaAtiva}
+      />
 
-      {certificadosConquistados.length > 0 ? (
-        <>
-          <Text style={estilos.tituloSecao}>Conquistados</Text>
-          {certificadosConquistados.map((certificado, indice) => {
+      {abaAtiva === ABA_CONQUISTADOS ? (
+        certificadosConquistados.length === 0 ? (
+          <EstadoVazio icone="ribbon-outline" mensagem="Você ainda não tem certificados. Conclua um curso para ganhar o seu." />
+        ) : (
+          certificadosConquistados.map((certificado, indice) => {
             const chave = `${certificado.codigoVerificacao}-${indice}`;
             return (
               <View key={chave} style={estilos.cartaoConquistado}>
@@ -233,13 +259,13 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                 </View>
               </View>
             );
-          })}
-        </>
+          })
+        )
       ) : null}
 
-      {emAndamento.length > 0 ? (
+      {abaAtiva === ABA_EM_ANDAMENTO ? (
         <>
-          <Text style={estilos.tituloSecao}>Em andamento</Text>
+          {emAndamento.length === 0 ? <EstadoVazio icone="school-outline" mensagem="Nenhum curso em andamento." /> : null}
           {emAndamento.map(({ matricula, status }) => {
             const curso = cursoPorId.get(matricula.cursoId);
             const progresso = progressoCursoPorMatricula.get(matricula.id);
@@ -274,42 +300,42 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
               </TouchableOpacity>
             );
           })}
-        </>
-      ) : null}
 
-      {aguardandoPagamento.length > 0 ? (
-        <>
-          <TouchableOpacity
-            accessibilityHint="Mostra ou esconde a lista de cursos com pagamento pendente"
-            accessibilityLabel={`Aguardando pagamento, ${aguardandoPagamento.length}`}
-            accessibilityRole="button"
-            onPress={() => setAguardandoPagamentoAberto((atual) => !atual)}
-            style={estilos.aguardandoPagamentoCabecalho}
-          >
-            <Text style={estilos.tituloSecao}>Aguardando pagamento · {aguardandoPagamento.length}</Text>
-            <Ionicons color={cores.textoSuave} name={aguardandoPagamentoAberto ? "chevron-up" : "chevron-down"} size={18} />
-          </TouchableOpacity>
+          {aguardandoPagamento.length > 0 ? (
+            <>
+              <TouchableOpacity
+                accessibilityHint="Mostra ou esconde a lista de cursos com pagamento pendente"
+                accessibilityLabel={`Aguardando pagamento, ${aguardandoPagamento.length}`}
+                accessibilityRole="button"
+                onPress={() => setAguardandoPagamentoAberto((atual) => !atual)}
+                style={estilos.aguardandoPagamentoCabecalho}
+              >
+                <Text style={estilos.tituloSecao}>Aguardando pagamento · {aguardandoPagamento.length}</Text>
+                <Ionicons color={cores.textoSuave} name={aguardandoPagamentoAberto ? "chevron-up" : "chevron-down"} size={18} />
+              </TouchableOpacity>
 
-          {!aguardandoPagamentoAberto ? (
-            <Text style={estilos.aguardandoPagamentoDica}>
-              Cursos que você começou a comprar e ainda não pagou. Toque para ver e concluir a compra.
-            </Text>
-          ) : (
-            aguardandoPagamento.map((item) => {
-              const curso = cursoPorId.get(item.cursoId);
-              return (
-                <View key={item.cursoId} style={estilos.cartaoAguardandoPagamento}>
-                  <Text numberOfLines={2} style={estilos.aguardandoPagamentoTitulo}>
-                    {curso?.titulo || `Curso #${item.cursoId}`}
-                  </Text>
-                  {item.venceEm ? <Text style={estilos.aguardandoPagamentoPrazo}>Pague até {formatDayMonth(item.venceEm)}</Text> : null}
-                  <Botao onPress={() => abrirCurso(item.cursoId)} style={estilos.botaoConcluirCompra} variante="primario">
-                    Concluir compra
-                  </Botao>
-                </View>
-              );
-            })
-          )}
+              {!aguardandoPagamentoAberto ? (
+                <Text style={estilos.aguardandoPagamentoDica}>
+                  Cursos que você começou a comprar e ainda não pagou. Toque para ver e concluir a compra.
+                </Text>
+              ) : (
+                aguardandoPagamento.map((item) => {
+                  const curso = cursoPorId.get(item.cursoId);
+                  return (
+                    <View key={item.cursoId} style={estilos.cartaoAguardandoPagamento}>
+                      <Text numberOfLines={2} style={estilos.aguardandoPagamentoTitulo}>
+                        {curso?.titulo || `Curso #${item.cursoId}`}
+                      </Text>
+                      {item.venceEm ? <Text style={estilos.aguardandoPagamentoPrazo}>Pague até {formatDayMonth(item.venceEm)}</Text> : null}
+                      <Botao onPress={() => abrirCurso(item.cursoId)} style={estilos.botaoConcluirCompra} variante="primario">
+                        Concluir compra
+                      </Botao>
+                    </View>
+                  );
+                })
+              )}
+            </>
+          ) : null}
         </>
       ) : null}
     </ScrollView>
@@ -318,18 +344,6 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
 
 const estilos = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: cores.fundo, padding: espacamentos.xl, gap: espacamentos.md },
-  statsLinha: { flexDirection: "row", gap: espacamentos.sm },
-  statCartao: {
-    flex: 1,
-    backgroundColor: cores.fundoCartao,
-    borderRadius: raios.lg,
-    borderWidth: 1,
-    borderColor: cores.bordaCartao,
-    padding: espacamentos.md
-  },
-  statRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
-  statLinha: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: espacamentos.xs },
-  statValor: { color: cores.texto, fontSize: tipografia.destaque, fontWeight: "800" },
   tituloSecao: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: espacamentos.sm },
 
   cartaoConquistado: {
