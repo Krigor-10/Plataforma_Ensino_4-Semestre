@@ -9,7 +9,7 @@ import { cores } from "../lib/theme.js";
    CSS sem transform-origin configuravel). strokeDasharray do tamanho da
    circunferencia inteira (repetido) + strokeDashoffset escondendo a parte
    nao preenchida e a tecnica padrao pra isso. */
-export default function ProgressoCircular({ espessura = 4, percentual = 0, size = 48 }) {
+export default function ProgressoCircular({ cor = cores.destaque, espessura = 4, percentual = 0, size = 48 }) {
   const pct = Math.max(0, Math.min(Number(percentual) || 0, 100));
   const raio = (size - espessura) / 2;
   const circunferencia = 2 * Math.PI * raio;
@@ -31,7 +31,7 @@ export default function ProgressoCircular({ espessura = 4, percentual = 0, size 
             origin={`${size / 2}, ${size / 2}`}
             r={raio}
             rotation="-90"
-            stroke={cores.destaque}
+            stroke={cor}
             strokeDasharray={`${circunferencia}, ${circunferencia}`}
             strokeDashoffset={circunferencia - preenchido}
             strokeLinecap="round"

@@ -57,7 +57,7 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
       <Tab.Screen name={ROUTES.PROGRESSO}>
         {() => (
           <TelaComTransicao>
-            <ProgressoScreen snapshot={snapshot} />
+            <ProgressoScreen onSessionExpired={onSessionExpired} snapshot={snapshot} />
           </TelaComTransicao>
         )}
       </Tab.Screen>

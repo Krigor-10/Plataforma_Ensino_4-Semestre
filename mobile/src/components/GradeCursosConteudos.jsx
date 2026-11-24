@@ -27,8 +27,7 @@ function obterStatus(item) {
 
 /* Grade de 2 colunas pra selecao de curso na tela Cursos (redesign, docs/
    redesign-mobile/PROMPT-agente-mobile.md, secao 3, 2a_cursos_grade.png) -
-   isolada de SeletorCurso.jsx (usado por Avaliacoes/Progresso) e
-   CapaCurso.jsx (usado tambem por Home/Catalogo), so a funcao
+   isolada de CapaCurso.jsx (usado tambem por Home/Catalogo), so a funcao
    resolverImagemCurso e compartilhada. Cada item carrega o progresso e, se
    a matricula aprovada ainda nao teve o pagamento confirmado, os dados pra
    mostrar a pilula "Compra pendente" + botao "Concluir compra" (abre

@@ -1,128 +1,127 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
-import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
-import { formatarTempoRestante, formatGrade, normalizeEvaluationType } from "../../lib/format.js";
+import { formatarTempoRestante, formatGrade } from "../../lib/format.js";
 import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
-import CartaoCursoAtivo from "../../components/CartaoCursoAtivo.jsx";
+import AbasSegmentadas from "../../components/AbasSegmentadas.jsx";
+import Botao from "../../components/Botao.jsx";
 import EstadoVazio from "../../components/EstadoVazio.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
-import SeletorCurso from "../../components/SeletorCurso.jsx";
+import RevisaoQuizModal from "../../components/RevisaoQuizModal.jsx";
 import Toast from "../../components/Toast.jsx";
 
 const TIPO_QUIZ = 1;
-// Nota minima de aprovacao do curso (mesmo valor usado pelo backend pra
-// liberar certificado, ver CertificadoService.ObterPendenciasAsync) - usada
-// so pra decidir a cor do "Resultado: Nota X/Y" abaixo, nunca pra calcular
-// aprovacao de verdade (isso e sempre responsabilidade do servidor).
-const NOTA_MINIMA_APROVACAO = 7;
-
-const FILTROS = [
-  { chave: "todas", rotulo: "Todas" },
-  { chave: "disponiveis", rotulo: "Disponíveis" },
-  { chave: "concluidas", rotulo: "Concluídas" }
-];
+const TIPO_EXERCICIO = 3;
+const ABA_DISPONIVEIS = "disponiveis";
+const ABA_CONCLUIDAS = "concluidas";
+const FILTRO_TODOS_OS_CURSOS = null;
 
 // obterDisponibilidadeAvaliacao() ja calcula tone+label pros estados
-// Agendada/Encerrada/Sem questoes, mas o card so usava isso no
-// accessibilityLabel — ninguem enxergava o estado, so quem usa leitor de
-// tela. Esse mapa da uma cor+icone visivel pra cada tone, no mesmo padrao
-// chave->{cor,icone} de statusVisual.js (matricula). Tone "neutro"
-// (tentativas esgotadas) e tratado a parte, ver variavel `concluida` abaixo.
+// Agendada/Encerrada/Sem questoes (nenhum dos tres e "Bloqueada" nem
+// "concluida" - ver classificarAvaliacao). Essa cor so vale pra eles.
 const TONE_VISUAL = {
-  aviso: { cor: cores.aviso, icone: "time-outline" },
-  erro: { cor: cores.erro, icone: "lock-closed-outline" }
+  aviso: { cor: cores.aviso, fundo: cores.avisoFundo },
+  erro: { cor: cores.erro, fundo: cores.erroFundo }
 };
 
-/* Avaliacoes agora segue o mesmo contexto Curso->conteudo ja usado em
-   Conteudos/Progresso: primeiro o aluno escolhe o curso (mesmo cartao
-   CapaCurso+titulo da Home), so depois ve as avaliacoes daquele curso —
-   evita misturar avaliacoes de cursos diferentes na mesma lista. Estado
-   local (cursoSelecionadoId), sem Navigator novo: AlunoWorkspace.jsx ja
-   troca de tela por state, entao uma tela de selecao dedicada seria uma
-   segunda implementacao desnecessaria pro mesmo padrao.
+// Classificacao pura (sem "em andamento", que depende do rascunho local
+// assincrono - ver emAndamentoInfo no componente) - usada tanto no render
+// quanto no useState inicial de abaAtiva (decidir a aba sem esperar efeito,
+// ja que o snapshot chega pronto via prop, sem fetch proprio desta tela).
+function classificarAvaliacao(avaliacao) {
+  const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
+  const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
+  const bloqueada = !disponibilidade.podeRealizar && disponibilidade.label === "Bloqueada";
+  return { disponibilidade, concluida, bloqueada };
+}
 
-   Cards de avaliacao continuam compactos: so identificam a avaliacao
-   (titulo + modulo) e o estado (Play se disponivel, check verde — cores.sucesso
-   — se concluida; card inteiro e clicavel, nao so o icone). Detalhes (tempo,
-   questoes, nota, tentativas) ficam pro Modal de confirmacao, o QuizModal.jsx
-   ja existente (fase "confirmar"), reaproveitado
-   sem alteracao. */
+/* Lista direta, sem passo de selecao de curso (docs/redesign-mobile/
+   PROMPT-agente-avaliacoes-lista-direta.md): snapshot.avaliacoes ja traz
+   as avaliacoes de TODOS os cursos com cursoId/cursoTitulo, entao abrir a
+   aba ja mostra tudo de uma vez - SeletorCurso/CartaoCursoAtivo saem desta
+   tela (removidos do projeto: o prompt-agente-progresso-visao-geral.md
+   tirou o ultimo uso deles em ProgressoScreen.jsx). Abas "Disponiveis |
+   Concluidas"
+   (AbasSegmentadas, criado pelo prompt de Certificados e reaproveitado
+   aqui) substituem os pills "Todas/Disponiveis/Concluidas" de antes; os
+   chips de curso (so cursos com avaliacao formal) filtram as duas abas de
+   uma vez. Regras de disponibilidade/bloqueio/tentativas/nota, o modal de
+   confirmacao (QuizModal) e a revisao (RevisaoQuizModal, ja usada por
+   ConteudosScreen.jsx pro quiz - mesmo endpoint generico por
+   avaliacaoId+tentativaId) continuam exatamente como estavam. */
 export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const alturaBarraAbas = useAlturaBarraAbas();
   const [avaliacaoSelecionada, setAvaliacaoSelecionada] = useState(null);
-  const [cursoSelecionadoId, setCursoSelecionadoId] = useState(null);
+  const [avaliacaoParaRevisar, setAvaliacaoParaRevisar] = useState(null);
+  const [filtroCursoId, setFiltroCursoId] = useState(FILTRO_TODOS_OS_CURSOS);
   const [mensagemFeedback, setMensagemFeedback] = useState("");
-  const [filtro, setFiltro] = useState("todas");
   const route = useRoute();
   const navigation = useNavigation();
 
-  // Resultado de busca (BuscaScreen.jsx) pode navegar aqui ja com um curso
-  // escolhido via route.params — consome o param uma unica vez e limpa com
-  // setParams, senao reabrir essa aba manualmente depois sempre voltaria
-  // forcado pro mesmo curso da ultima busca.
+  const avaliacoesFormaisTodas = useMemo(
+    () => (snapshot.avaliacoes || []).filter((avaliacao) => Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ),
+    [snapshot.avaliacoes]
+  );
+
+  // Aba inicial "Disponiveis", ou "Concluidas" se nao houver nenhuma
+  // avaliacao disponivel/pendente/bloqueada e ja houver concluida (item 4
+  // do prompt) - decidido so na primeira renderizacao (useState, nao
+  // efeito): snapshot chega pronto via prop, sem fetch proprio desta tela,
+  // entao nao ha "carregando" pra esperar. Trocar de aba manualmente depois
+  // nunca e desfeito por essa conta (ela so roda uma vez, no mount).
+  const [abaAtiva, setAbaAtiva] = useState(() => {
+    const haDisponivelOuPendente = avaliacoesFormaisTodas.some((avaliacao) => !classificarAvaliacao(avaliacao).concluida);
+    const haConcluida = avaliacoesFormaisTodas.some((avaliacao) => classificarAvaliacao(avaliacao).concluida);
+    return !haDisponivelOuPendente && haConcluida ? ABA_CONCLUIDAS : ABA_DISPONIVEIS;
+  });
+
+  // Resultado de busca (BuscaScreen.jsx) ou um atalho de curso podem
+  // navegar aqui ja com um curso escolhido via route.params - consome o
+  // param uma unica vez (marca o chip desse curso) e limpa com setParams,
+  // senao reabrir essa aba manualmente depois sempre voltaria forcado pro
+  // mesmo curso da ultima vez.
   useEffect(() => {
     if (route.params?.cursoId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- consome um param de navegacao vindo de fora (BuscaScreen.jsx) uma unica vez; nao e estado derivavel de props/state local, so existe no objeto route.
-      setCursoSelecionadoId(route.params.cursoId);
+      setFiltroCursoId(route.params.cursoId);
       navigation.setParams({ cursoId: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- so quer reagir quando um novo cursoId chega via navegacao, nao a cada render.
   }, [route.params?.cursoId]);
 
-  // Mesmo ajuste de ConteudosScreen.jsx: curso selecionado e estado local,
-  // nao rota — sem isso o voltar fisico do Android pulava direto pra fora
-  // da aba em vez de voltar pra selecao de curso.
-  useEffect(() => {
-    if (!cursoSelecionadoId) {
-      return undefined;
-    }
-
-    const assinatura = BackHandler.addEventListener("hardwareBackPress", () => {
-      setCursoSelecionadoId(null);
-      return true;
-    });
-
-    return () => assinatura.remove();
-  }, [cursoSelecionadoId]);
-
-  // Mesmo ajuste de ConteudosScreen.jsx: reseta a navegacao interna (curso
-  // selecionado + filtro) toda vez que a aba AVALIACOES e tocada na barra
-  // inferior, mesmo se ja estiver nela - `tabPress`, nao useFocusEffect, ver
-  // comentario equivalente em ConteudosScreen.jsx.
+  // Reseta o filtro de curso e a aba toda vez que a aba Avaliacoes e tocada
+  // na barra inferior, mesmo se ja estiver nela - mesmo padrao de
+  // ConteudosScreen.jsx (`tabPress`, nao useFocusEffect).
   useEffect(() => {
     return navigation.addListener("tabPress", () => {
-      setCursoSelecionadoId(null);
-      setFiltro("todas");
+      setFiltroCursoId(FILTRO_TODOS_OS_CURSOS);
+      setAbaAtiva(ABA_DISPONIVEIS);
     });
   }, [navigation]);
 
-  const cursoPorId = useMemo(() => new Map(snapshot.cursos.map((curso) => [curso.id, curso])), [snapshot.cursos]);
+  // Chips: so cursos com pelo menos uma avaliacao formal (item 2) -
+  // cursoTitulo ja vem no proprio DTO da avaliacao, sem precisar de
+  // snapshot.cursos aqui.
+  const cursosComAvaliacao = useMemo(() => {
+    const porId = new Map();
+    avaliacoesFormaisTodas.forEach((avaliacao) => {
+      if (!porId.has(avaliacao.cursoId)) {
+        porId.set(avaliacao.cursoId, avaliacao.cursoTitulo || `Curso #${avaliacao.cursoId}`);
+      }
+    });
+    return [...porId.entries()].map(([id, titulo]) => ({ id, titulo })).sort((a, b) => a.titulo.localeCompare(b.titulo));
+  }, [avaliacoesFormaisTodas]);
 
-  const cursosMatriculados = useMemo(
+  const avaliacoesDoFiltro = useMemo(
     () =>
-      [...(snapshot.progressos.cursos || [])].sort((a, b) => {
-        const tituloA = cursoPorId.get(a.cursoId)?.titulo || "";
-        const tituloB = cursoPorId.get(b.cursoId)?.titulo || "";
-        return tituloA.localeCompare(tituloB);
-      }),
-    [cursoPorId, snapshot.progressos.cursos]
-  );
-
-  // So avaliacoes formais (Prova/Exercicio) aparecem aqui — quiz (tipoAvaliacao
-  // === TIPO_QUIZ) e conteudo de modulo, mora exclusivamente em Conteudos
-  // (ver agruparConteudosPorCurso em lib/conteudos.js, que ja faz o filtro
-  // inverso pra aquela tela). Mesmo campo tipoAvaliacao, mesmo snapshot — so
-  // o criterio de inclusao difere entre as duas telas, sem chamada nova.
-  const avaliacoesDoCurso = useMemo(
-    () =>
-      (snapshot.avaliacoes || [])
-        .filter((avaliacao) => avaliacao.cursoId === cursoSelecionadoId && Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ)
+      avaliacoesFormaisTodas
+        .filter((avaliacao) => filtroCursoId === FILTRO_TODOS_OS_CURSOS || avaliacao.cursoId === filtroCursoId)
         .sort((a, b) => (a.titulo || "").localeCompare(b.titulo || "")),
-    [snapshot.avaliacoes, cursoSelecionadoId]
+    [avaliacoesFormaisTodas, filtroCursoId]
   );
 
   const [emAndamentoInfo, setEmAndamentoInfo] = useState(() => new Map());
@@ -134,14 +133,14 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   // essa avaliacao, com a mesma contagem de tentativas que o servidor
   // conhece agora. Guarda tambem o prazoFinal (quando a avaliacao tem tempo
   // limite) pra poder mostrar o cronometro contando direto no card, sem
-  // precisar abrir o quiz. Reavaliado quando a lista muda ou quando o
-  // QuizModal fecha (versaoVerificacaoRascunho), ja que fechar sem enviar e
-  // justamente o que pode ter criado/atualizado um rascunho.
+  // precisar abrir o quiz. Verificado sobre TODAS as avaliacoes formais
+  // (nao so as do filtro de curso atual), pra trocar de chip nao perder o
+  // rastro de um rascunho que ficou escondido.
   useEffect(() => {
     let ignorar = false;
 
     async function verificarRascunhos() {
-      const candidatas = avaliacoesDoCurso.filter((avaliacao) => obterDisponibilidadeAvaliacao(avaliacao).podeRealizar);
+      const candidatas = avaliacoesFormaisTodas.filter((avaliacao) => obterDisponibilidadeAvaliacao(avaliacao).podeRealizar);
       const resultados = await Promise.all(
         candidatas.map(async (avaliacao) => [avaliacao.id, await rascunhoAvaliacaoValido(avaliacao)])
       );
@@ -162,10 +161,10 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     return () => {
       ignorar = true;
     };
-  }, [avaliacoesDoCurso, versaoVerificacaoRascunho]);
+  }, [avaliacoesFormaisTodas, versaoVerificacaoRascunho]);
 
   // So cronometra (tick a cada 1s) enquanto existir pelo menos uma avaliacao
-  // em andamento com prazo — evita o interval rodando a toa quando nenhuma
+  // em andamento com prazo - evita o interval rodando a toa quando nenhuma
   // avaliacao em andamento tem tempo limite.
   useEffect(() => {
     const temPrazoAtivo = [...emAndamentoInfo.values()].some((info) => info.prazoFinal);
@@ -177,92 +176,133 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     return () => clearInterval(intervalo);
   }, [emAndamentoInfo]);
 
-  if (cursosMatriculados.length === 0) {
+  if (avaliacoesFormaisTodas.length === 0) {
     return (
       <View style={estilos.container}>
-        <EstadoVazio icone="clipboard-outline" mensagem="Você ainda não possui cursos com avaliações disponíveis." />
+        <Text style={estilos.tituloTela}>Avaliações</Text>
+        <Text style={estilos.subtituloTela}>Testes práticos e teóricos do seu curso</Text>
+        <EstadoVazio icone="clipboard-outline" mensagem="Seus cursos ainda não têm avaliações." />
       </View>
     );
   }
 
-  if (!cursoSelecionadoId) {
+  const disponiveisTopo = [];
+  const bloqueadas = [];
+  const concluidas = [];
+  avaliacoesDoFiltro.forEach((avaliacao) => {
+    const { concluida, bloqueada } = classificarAvaliacao(avaliacao);
+    if (concluida) {
+      concluidas.push(avaliacao);
+    } else if (bloqueada) {
+      bloqueadas.push(avaliacao);
+    } else {
+      disponiveisTopo.push(avaliacao);
+    }
+  });
+  // Mais recente pra mais antiga (item 4) - ultimaTentativaId cresce a cada
+  // tentativa nova, e o unico sinal de recencia que o DTO ja traz hoje
+  // (sem endpoint novo, por instrucao do prompt).
+  concluidas.sort((a, b) => (b.ultimaTentativaId || 0) - (a.ultimaTentativaId || 0));
+
+  function abrirAvaliacao(avaliacao) {
+    setAvaliacaoSelecionada(avaliacao);
+  }
+
+  function renderizarCartao(avaliacao, variante) {
+    const { disponibilidade, bloqueada } = classificarAvaliacao(avaliacao);
+    const concluida = variante === "concluida";
+    const infoEmAndamento = disponibilidade.podeRealizar ? emAndamentoInfo.get(avaliacao.id) : undefined;
+    const emAndamento = Boolean(infoEmAndamento);
+    const tempoRestanteEmAndamento = infoEmAndamento?.prazoFinal
+      ? Math.max(0, Math.round((infoEmAndamento.prazoFinal - agora) / 1000))
+      : null;
+    const tentativasRealizadas = Number(avaliacao.tentativasRealizadas || 0);
+    const tentativasPermitidas = avaliacao.tentativasPermitidas || 1;
+    const mostrarNota = tentativasRealizadas > 0 && avaliacao.ultimaNota != null;
+
+    const selo = concluida
+      ? { cor: cores.informativo, fundo: cores.informativoFundo, rotulo: "Concluída" }
+      : emAndamento
+        ? { cor: cores.informativo, fundo: cores.informativoFundo, rotulo: "Em andamento" }
+        : bloqueada
+          ? { cor: cores.textoRotulo, fundo: cores.fundoCartaoAtivo, rotulo: "Bloqueada" }
+          : disponibilidade.podeRealizar
+            ? { cor: cores.sucesso, fundo: cores.sucessoFundo, rotulo: "Disponível" }
+            : { ...(TONE_VISUAL[disponibilidade.tone] || TONE_VISUAL.aviso), rotulo: disponibilidade.label };
+
+    const partesLinha2 = [
+      `${avaliacao.totalQuestoes} questõe${avaliacao.totalQuestoes === 1 ? "" : "s"}`,
+      `${tentativasRealizadas}/${tentativasPermitidas} tentativas`,
+      mostrarNota ? `Nota ${formatGrade(avaliacao.ultimaNota)}` : "Nota —",
+      avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : null
+    ].filter(Boolean);
+
+    const rotuloBotaoAcao = emAndamento ? "▶ Continuar" : tentativasRealizadas > 0 ? "Tentar de novo" : "▶ Iniciar avaliação";
+
+    const iconeTipo = Number(avaliacao.tipoAvaliacao) === TIPO_EXERCICIO ? "create-outline" : "reader-outline";
+
     return (
-      <View style={estilos.container}>
-        <SeletorCurso
-          accessibilityLabelPrefix="Ver avaliações de"
-          itens={cursosMatriculados.map((progresso) => ({ curso: cursoPorId.get(progresso.cursoId), id: progresso.cursoId }))}
-          onSelecionar={setCursoSelecionadoId}
-        />
+      <View key={avaliacao.id} style={estilos.cartao}>
+        <View style={estilos.cartaoCabecalho}>
+          <View style={estilos.cartaoIcone}>
+            <Ionicons color={cores.destaque} name={iconeTipo} size={18} />
+          </View>
+          <View style={estilos.cartaoCabecalhoTextos}>
+            <Text numberOfLines={2} style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
+            {filtroCursoId === FILTRO_TODOS_OS_CURSOS ? (
+              <Text numberOfLines={1} style={estilos.cartaoCurso}>{avaliacao.cursoTitulo}</Text>
+            ) : null}
+          </View>
+          <View style={[estilos.selo, { backgroundColor: selo.fundo }]}>
+            <Text numberOfLines={1} style={[estilos.seloTexto, { color: selo.cor }]}>{selo.rotulo}</Text>
+          </View>
+        </View>
+
+        <Text style={estilos.cartaoLinha2}>{partesLinha2.join(" · ")}</Text>
+
+        {!concluida && !bloqueada && emAndamento && tempoRestanteEmAndamento !== null ? (
+          <Text style={[estilos.cartaoEmAndamento, tempoRestanteEmAndamento <= 60 ? estilos.cartaoEmAndamentoUrgente : null]}>
+            {tempoRestanteEmAndamento > 0 ? `Tempo restante: ${formatarTempoRestante(tempoRestanteEmAndamento)}` : "Tempo esgotado"}
+          </Text>
+        ) : null}
+
+        {bloqueada ? (
+          <Text style={estilos.cartaoStatusTexto}>{disponibilidade.mensagem}</Text>
+        ) : concluida ? (
+          <Botao onPress={() => setAvaliacaoParaRevisar(avaliacao)} style={estilos.botaoPilula} variante="secundario">
+            Ver revisão
+          </Botao>
+        ) : (
+          <Botao onPress={() => abrirAvaliacao(avaliacao)} style={estilos.botaoPilula} variante="primario">
+            {rotuloBotaoAcao}
+          </Botao>
+        )}
       </View>
     );
   }
-
-  const cursoAtivo = cursoPorId.get(cursoSelecionadoId);
-  const tituloCursoAtivo = cursoAtivo?.titulo || `Curso #${cursoSelecionadoId}`;
-
-  // Resumo discreto (redesign, 3_avaliacoes.png) - conta sobre TODAS as
-  // avaliacoes do curso, independente do filtro selecionado abaixo.
-  const resumo = { disponiveis: 0, concluidas: 0, somaNotas: 0, quantidadeNotas: 0 };
-  avaliacoesDoCurso.forEach((avaliacao) => {
-    const disponibilidadeResumo = obterDisponibilidadeAvaliacao(avaliacao);
-    if (disponibilidadeResumo.podeRealizar) {
-      resumo.disponiveis += 1;
-    } else if (disponibilidadeResumo.tone === "neutro") {
-      resumo.concluidas += 1;
-    }
-    if (Number(avaliacao.tentativasRealizadas || 0) > 0 && avaliacao.ultimaNota != null) {
-      resumo.somaNotas += Number(avaliacao.ultimaNota);
-      resumo.quantidadeNotas += 1;
-    }
-  });
-  const mediaResumo = resumo.quantidadeNotas > 0 ? resumo.somaNotas / resumo.quantidadeNotas : null;
-
-  const avaliacoesFiltradas = avaliacoesDoCurso.filter((avaliacao) => {
-    if (filtro === "todas") {
-      return true;
-    }
-    const disponibilidadeFiltro = obterDisponibilidadeAvaliacao(avaliacao);
-    if (filtro === "disponiveis") {
-      return disponibilidadeFiltro.podeRealizar;
-    }
-    return !disponibilidadeFiltro.podeRealizar && disponibilidadeFiltro.tone === "neutro";
-  });
 
   return (
     <View style={estilos.container}>
       <Text style={estilos.tituloTela}>Avaliações</Text>
       <Text style={estilos.subtituloTela}>Testes práticos e teóricos do seu curso</Text>
 
-      <CartaoCursoAtivo onTrocar={() => setCursoSelecionadoId(null)} titulo={tituloCursoAtivo} />
+      <View style={estilos.topoFiltros}>
+        <AbasSegmentadas
+          onSelecionar={setAbaAtiva}
+          opcoes={[
+            { chave: ABA_DISPONIVEIS, rotulo: "Disponíveis", contador: disponiveisTopo.length + bloqueadas.length },
+            { chave: ABA_CONCLUIDAS, rotulo: "Concluídas", contador: concluidas.length }
+          ]}
+          valorSelecionado={abaAtiva}
+        />
 
-      {avaliacoesDoCurso.length > 0 ? (
-        <>
-          <Text style={estilos.resumoLinha}>
-            {resumo.disponiveis} disponíve{resumo.disponiveis === 1 ? "l" : "is"} · {resumo.concluidas} conclu
-            {resumo.concluidas === 1 ? "ída" : "ídas"}
-            {mediaResumo !== null ? ` · Média ${formatGrade(mediaResumo)}` : ""}
-          </Text>
-
-          <View style={estilos.filtroLinha}>
-            {FILTROS.map((opcao) => {
-              const ativo = filtro === opcao.chave;
-              return (
-                <TouchableOpacity
-                  accessibilityHint={`Mostra ${ativo ? "" : "só "}avaliações: ${opcao.rotulo.toLowerCase()}`}
-                  accessibilityLabel={opcao.rotulo}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: ativo }}
-                  key={opcao.chave}
-                  onPress={() => setFiltro(opcao.chave)}
-                  style={[estilos.filtroItem, ativo ? estilos.filtroItemAtivo : null]}
-                >
-                  <Text style={[estilos.filtroItemTexto, ativo ? estilos.filtroItemTextoAtivo : null]}>{opcao.rotulo}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
+        <ScrollView contentContainerStyle={estilos.chipsLinha} horizontal showsHorizontalScrollIndicator={false}>
+          <Chip ativo={filtroCursoId === FILTRO_TODOS_OS_CURSOS} onPress={() => setFiltroCursoId(FILTRO_TODOS_OS_CURSOS)} rotulo="Todos os cursos" />
+          {cursosComAvaliacao.map((curso) => (
+            <Chip ativo={filtroCursoId === curso.id} key={curso.id} onPress={() => setFiltroCursoId(curso.id)} rotulo={curso.titulo} />
+          ))}
+        </ScrollView>
+      </View>
 
       {mensagemFeedback ? (
         <View style={estilos.mensagemContainer}>
@@ -270,141 +310,28 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
         </View>
       ) : null}
 
-      {avaliacoesDoCurso.length === 0 ? (
-        <EstadoVazio icone="clipboard-outline" mensagem="Este curso ainda não possui avaliações disponíveis." />
-      ) : avaliacoesFiltradas.length === 0 ? (
-        <EstadoVazio icone="filter-outline" mensagem="Nenhuma avaliação neste filtro." />
-      ) : (
-        <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
-          {avaliacoesFiltradas.map((avaliacao) => {
-            const disponibilidade = obterDisponibilidadeAvaliacao(avaliacao);
-            const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
-            const infoEmAndamento = disponibilidade.podeRealizar ? emAndamentoInfo.get(avaliacao.id) : undefined;
-            const emAndamento = Boolean(infoEmAndamento);
-            const tempoRestanteEmAndamento = infoEmAndamento?.prazoFinal
-              ? Math.max(0, Math.round((infoEmAndamento.prazoFinal - agora) / 1000))
-              : null;
-            const contexto = avaliacao.moduloTitulo;
-            const temTentativa = Number(avaliacao.tentativasRealizadas || 0) > 0;
-            const mostrarNota = temTentativa && avaliacao.ultimaNota != null;
-            // NotaMaxima varia por avaliacao (o professor configura, default
-            // 10 - ver Models/Avaliacao.cs) - comparar ultimaNota direto
-            // contra NOTA_MINIMA_APROVACAO (escala 0-10) só faria sentido se
-            // notaMaxima fosse sempre 10. Normaliza pra proporcao (ex.: 5,0
-            // de 5,0 = 100% = aprovado, nao "5 < 7 = reprovado").
-            const notaAprovada =
-              mostrarNota &&
-              Number(avaliacao.notaMaxima) > 0 &&
-              (Number(avaliacao.ultimaNota) / Number(avaliacao.notaMaxima)) * 10 >= NOTA_MINIMA_APROVACAO;
-            const mostrarStatusPendente = !disponibilidade.podeRealizar && !concluida && !emAndamento;
-            const statusVisual = TONE_VISUAL[disponibilidade.tone] || TONE_VISUAL.aviso;
-            const tentativasPermitidas = avaliacao.tentativasPermitidas || 1;
-            const tentativaAtual = Math.min(Number(avaliacao.tentativasRealizadas || 0) + 1, tentativasPermitidas);
+      <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
+        {abaAtiva === ABA_DISPONIVEIS ? (
+          <>
+            {disponiveisTopo.length === 0 ? (
+              <EstadoVazio icone="clipboard-outline" mensagem="Nenhuma avaliação disponível agora." />
+            ) : (
+              disponiveisTopo.map((avaliacao) => renderizarCartao(avaliacao, "acao"))
+            )}
 
-            const statusPill = concluida
-              ? { cor: cores.sucesso, corFundo: cores.sucessoFundo, rotulo: "✓ Concluída" }
-              : emAndamento
-                ? { cor: cores.informativo, corFundo: cores.informativoFundo, rotulo: "Em andamento" }
-                : disponibilidade.podeRealizar
-                  ? { cor: cores.destaque, corFundo: cores.bordaCartao, rotulo: "Disponível" }
-                  : { cor: statusVisual.cor, corFundo: statusVisual.cor === cores.erro ? cores.erroFundo : cores.avisoFundo, rotulo: disponibilidade.label };
-
-            // Card inteiro e clicavel pros dois estados com acao real: abre o
-            // quiz se disponivel, ou avisa que ja foi concluida (sem reabrir
-            // o fluxo nem criar tentativa nova). Estados Agendada/Encerrada/
-            // Sem questoes continuam so informativos (ja mostram o motivo via
-            // cartaoStatusLinha abaixo) — nao viram botao pra nao sugerir uma
-            // acao que nao existe.
-            const interativo = disponibilidade.podeRealizar || concluida;
-            const rotuloAcessibilidade = disponibilidade.podeRealizar
-              ? `Iniciar avaliação ${avaliacao.titulo}`
-              : concluida
-                ? `${avaliacao.titulo}. Avaliação concluída.`
-                : `${avaliacao.titulo}. ${contexto}. ${disponibilidade.mensagem}`;
-            const dicaAcessibilidade = disponibilidade.podeRealizar
-              ? "Abre a avaliação para responder"
-              : concluida
-                ? "Mostra que esta avaliação já foi concluída"
-                : undefined;
-
-            return (
-              <TouchableOpacity
-                accessibilityHint={dicaAcessibilidade}
-                accessibilityLabel={rotuloAcessibilidade}
-                accessibilityRole={interativo ? "button" : undefined}
-                activeOpacity={interativo ? 0.75 : 1}
-                disabled={!interativo}
-                key={avaliacao.id}
-                onPress={() => {
-                  if (disponibilidade.podeRealizar) {
-                    setAvaliacaoSelecionada(avaliacao);
-                  } else if (concluida) {
-                    setMensagemFeedback("Esta avaliação já foi concluída.");
-                  }
-                }}
-                style={estilos.cartao}
-              >
-                <View style={estilos.cartaoCabecalho}>
-                  <View style={estilos.seloTipo}>
-                    <Text style={estilos.seloTipoTexto}>{normalizeEvaluationType(avaliacao.tipoAvaliacao).toUpperCase()}</Text>
-                  </View>
-                  <View style={[estilos.statusPill, { backgroundColor: statusPill.corFundo }]}>
-                    <Text numberOfLines={1} style={[estilos.statusPillTexto, { color: statusPill.cor }]}>{statusPill.rotulo}</Text>
-                  </View>
-                </View>
-
-                <Text numberOfLines={2} style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
-                {contexto ? <Text numberOfLines={1} style={estilos.cartaoContexto}>{contexto}</Text> : null}
-
-                {concluida ? (
-                  mostrarNota ? (
-                    <View style={estilos.resultadoLinha}>
-                      <Text style={estilos.resultadoRotulo}>Resultado:</Text>
-                      <View style={[estilos.notaPill, { backgroundColor: notaAprovada ? cores.sucessoFundo : cores.fundoCartaoAtivo }]}>
-                        <Text style={[estilos.notaPillTexto, { color: notaAprovada ? cores.sucesso : cores.textoSuave }]}>
-                          Nota {formatGrade(avaliacao.ultimaNota)} / {formatGrade(avaliacao.notaMaxima)}
-                        </Text>
-                      </View>
-                    </View>
-                  ) : null
-                ) : (
-                  <>
-                    <View style={estilos.divisor} />
-                    <View style={estilos.rodape}>
-                      <Text numberOfLines={1} style={estilos.rodapeTexto}>
-                        {avaliacao.tempoLimiteMinutos > 0 ? `Tempo limite: ${avaliacao.tempoLimiteMinutos} min` : "Sem tempo limite"}
-                        {" · "}Tentativa {tentativaAtual} de {tentativasPermitidas}
-                      </Text>
-                    </View>
-
-                    {disponibilidade.podeRealizar ? (
-                      <View accessibilityElementsHidden importantForAccessibility="no" style={estilos.botaoAcao}>
-                        <Text style={estilos.botaoAcaoTexto}>{emAndamento ? "Continuar" : "Iniciar"}</Text>
-                        <Ionicons color={cores.texto} name="arrow-forward" size={16} />
-                      </View>
-                    ) : mostrarStatusPendente ? (
-                      <Text style={estilos.cartaoStatusTexto}>{disponibilidade.mensagem}</Text>
-                    ) : null}
-
-                    {/* "Em andamento" ja aparece na pilula de status acima -
-                        essa linha so aparece quando ha algo NOVO pra mostrar
-                        (cronometro real), senao duplicava a mesma info a toa. */}
-                    {emAndamento && tempoRestanteEmAndamento !== null ? (
-                      <Text
-                        style={[estilos.cartaoEmAndamento, tempoRestanteEmAndamento <= 60 ? estilos.cartaoEmAndamentoUrgente : null]}
-                      >
-                        {tempoRestanteEmAndamento > 0
-                          ? `Tempo restante: ${formatarTempoRestante(tempoRestanteEmAndamento)}`
-                          : "Tempo esgotado"}
-                      </Text>
-                    ) : null}
-                  </>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
+            {bloqueadas.length > 0 ? (
+              <>
+                <Text style={estilos.subtituloGrupo}>Ainda bloqueadas</Text>
+                {bloqueadas.map((avaliacao) => renderizarCartao(avaliacao, "bloqueada"))}
+              </>
+            ) : null}
+          </>
+        ) : concluidas.length === 0 ? (
+          <EstadoVazio icone="checkmark-done-outline" mensagem="Você ainda não concluiu avaliações." />
+        ) : (
+          concluidas.map((avaliacao) => renderizarCartao(avaliacao, "concluida"))
+        )}
+      </ScrollView>
 
       <QuizModal
         avaliacao={avaliacaoSelecionada}
@@ -416,7 +343,30 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
         onSessionExpired={onSessionExpired}
         visivel={Boolean(avaliacaoSelecionada)}
       />
+
+      <RevisaoQuizModal
+        avaliacaoId={avaliacaoParaRevisar?.id}
+        onFechar={() => setAvaliacaoParaRevisar(null)}
+        onSessionExpired={onSessionExpired}
+        tentativaId={avaliacaoParaRevisar?.ultimaTentativaId}
+        visivel={Boolean(avaliacaoParaRevisar)}
+      />
     </View>
+  );
+}
+
+function Chip({ ativo, onPress, rotulo }) {
+  return (
+    <TouchableOpacity
+      accessibilityHint={`Mostra ${ativo ? "" : "só "}avaliações de ${rotulo.toLowerCase()}`}
+      accessibilityLabel={rotulo}
+      accessibilityRole="button"
+      accessibilityState={{ selected: ativo }}
+      onPress={onPress}
+      style={[estilos.chip, ativo ? estilos.chipAtivo : null]}
+    >
+      <Text numberOfLines={1} style={[estilos.chipTexto, ativo ? estilos.chipTextoAtivo : null]}>{rotulo}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -424,70 +374,49 @@ const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
   tituloTela: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo, paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.xl },
   subtituloTela: { color: cores.textoRotulo, fontSize: tipografia.rotulo, paddingHorizontal: espacamentos.xl, marginTop: 2 },
-  // Resumo discreto (redesign) - de proposito sem cor/icone/cartao, uma
-  // linha fina de texto so pra contexto rapido, nao um indicador chamativo.
-  resumoLinha: {
-    color: cores.textoSuave,
-    fontSize: tipografia.rotulo,
-    paddingHorizontal: espacamentos.xl,
-    marginTop: espacamentos.md
-  },
-  filtroLinha: {
-    flexDirection: "row",
-    gap: espacamentos.xs,
-    paddingHorizontal: espacamentos.xl,
-    marginTop: espacamentos.sm
-  },
-  filtroItem: {
+  topoFiltros: { paddingHorizontal: espacamentos.xl, marginTop: espacamentos.md, gap: espacamentos.sm },
+  chipsLinha: { gap: espacamentos.sm },
+  chip: {
     borderRadius: raios.pilula,
+    borderWidth: 1,
+    borderColor: cores.bordaCartao,
+    backgroundColor: cores.fundoCartao,
     paddingHorizontal: espacamentos.md,
     minHeight: 36,
     alignItems: "center",
     justifyContent: "center"
   },
-  filtroItemAtivo: { backgroundColor: cores.destaque },
-  filtroItemTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.rotulo },
-  filtroItemTextoAtivo: { color: cores.texto, fontWeight: "700" },
+  chipAtivo: { backgroundColor: cores.destaque, borderColor: cores.destaque },
+  chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.rotulo },
+  chipTextoAtivo: { color: "#fff", fontWeight: "700" },
   mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, gap: espacamentos.md },
+  subtituloGrupo: { color: cores.textoRotulo, fontWeight: "700", fontSize: tipografia.rotulo, textTransform: "uppercase", letterSpacing: 0.4, marginTop: espacamentos.sm },
   cartao: {
     backgroundColor: cores.fundoCartao,
     borderRadius: raios.lg,
     borderWidth: 1,
     borderColor: cores.bordaCartao,
-    padding: espacamentos.lg
+    padding: espacamentos.lg,
+    gap: espacamentos.sm
   },
-  cartaoCabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: espacamentos.sm },
-  seloTipo: {
-    backgroundColor: cores.fundoCartaoAtivo,
-    borderRadius: raios.sm,
-    paddingHorizontal: espacamentos.sm,
-    paddingVertical: 3
-  },
-  seloTipoTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700", letterSpacing: 0.5 },
-  statusPill: { borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, flexShrink: 1, marginLeft: espacamentos.sm },
-  statusPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
-  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: espacamentos.sm },
-  cartaoContexto: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 2 },
-  divisor: { height: 1, backgroundColor: cores.divisoria, marginTop: espacamentos.md, marginBottom: espacamentos.sm },
-  rodape: { flexDirection: "row" },
-  rodapeTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, flexShrink: 1 },
-  botaoAcao: {
-    flexDirection: "row",
+  cartaoCabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: espacamentos.sm },
+  cartaoIcone: {
+    width: 32,
+    height: 32,
+    borderRadius: raios.md,
+    backgroundColor: cores.bordaCartao,
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: cores.destaque,
-    borderRadius: raios.sm,
-    minHeight: 44,
-    marginTop: espacamentos.md
+    justifyContent: "center"
   },
-  botaoAcaoTexto: { color: cores.texto, fontWeight: "700" },
-  resultadoLinha: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, marginTop: espacamentos.md },
-  resultadoRotulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
-  notaPill: { borderRadius: raios.sm, paddingHorizontal: espacamentos.sm, paddingVertical: 4 },
-  notaPillTexto: { fontSize: tipografia.rotulo, fontWeight: "700" },
-  cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, marginTop: espacamentos.sm, fontWeight: "700" },
+  cartaoCabecalhoTextos: { flex: 1, gap: 2 },
+  cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
+  cartaoCurso: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  selo: { borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, flexShrink: 1 },
+  seloTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
+  cartaoLinha2: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, fontWeight: "700" },
   cartaoEmAndamentoUrgente: { color: cores.erro },
-  cartaoStatusTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md }
+  cartaoStatusTexto: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  botaoPilula: { borderRadius: raios.pilula, alignSelf: "stretch" }
 });
