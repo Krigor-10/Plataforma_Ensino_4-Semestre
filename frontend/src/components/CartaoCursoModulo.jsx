@@ -48,7 +48,7 @@ export default function CartaoCursoModulo({ curso, extra, kpis, legendaProgresso
           <div className="cartao-curso-modulo__linha-progresso">
             <BarraProgresso mostrarTexto={false} percentual={percentual} rotuloAria={`${percentual}% concluído`} />
             {legendaProgresso ? <span className="cartao-curso-modulo__legenda-progresso">{legendaProgresso}</span> : null}
-            {!kpis && selo ? <Insignia className="cartao-curso-modulo__selo-inline" texto={selo} variante={seloVariante} /> : null}
+            {kpis && selo ? <Insignia className="cartao-curso-modulo__selo-inline" texto={selo} variante={seloVariante} /> : null}
           </div>
         </div>
         {kpis ? (

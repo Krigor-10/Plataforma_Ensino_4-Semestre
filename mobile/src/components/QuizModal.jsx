@@ -9,6 +9,7 @@ import { apiRequest, ApiError, obterTokenValido } from "../lib/api.js";
 import { resolverUrlArquivo } from "../lib/arquivos.js";
 import { criarRespostasIniciais } from "../lib/avaliacoes.js";
 import { formatarTempoRestante, formatPercent, formatScore, normalizeEvaluationType, normalizeQuestionType } from "../lib/format.js";
+import { hapticErro, hapticSelecao, hapticSucesso } from "../lib/haptics.js";
 import { rascunhoAvaliacaoValido, removerRascunhoAvaliacao, salvarRascunhoAvaliacao } from "../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../lib/theme.js";
 
@@ -107,11 +108,13 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
       setFase("resultado");
       removerRascunhoAvaliacao(avaliacao.id);
       onConcluido?.();
+      hapticSucesso();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
+      hapticErro();
       setErro(
         ehErroDeRede(err)
           ? "Sem conexão com o servidor. Verifique sua internet e tente novamente — suas respostas continuam salvas neste dispositivo."
@@ -237,6 +240,7 @@ export default function QuizModal({ avaliacao, onConcluido, onFechar, onSessionE
   }
 
   function selecionarAlternativa(questaoId, alternativaId) {
+    hapticSelecao();
     setRespostas((atual) => ({ ...atual, [questaoId]: { ...(atual[questaoId] || { questaoId }), alternativaId, respostaTexto: "" } }));
   }
 

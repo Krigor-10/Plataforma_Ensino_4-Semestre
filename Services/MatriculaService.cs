@@ -12,17 +12,23 @@ public class MatriculaService : IMatriculaService
     private readonly IMatriculaRepository _matriculaRepository;
     private readonly IGenericRepository<Aluno> _alunoRepository;
     private readonly ICursoService _cursoService;
+    private readonly ICertificadoService? _certificadoService;
 
+    // certificadoService opcional so pra nao obrigar os testes existentes
+    // (que instanciam MatriculaService direto) a passar um fake - ver o
+    // mesmo padrao em CertificadoService/ProgressoAlunoService/PagamentoService.
     public MatriculaService(
         IMatriculaRepository matriculaRepository,
         IGenericRepository<Aluno> alunoRepository,
         PlataformaContext context,
-        ICursoService cursoService)
+        ICursoService cursoService,
+        ICertificadoService? certificadoService = null)
     {
         _context = context;
         _matriculaRepository = matriculaRepository;
         _alunoRepository = alunoRepository;
         _cursoService = cursoService;
+        _certificadoService = certificadoService;
     }
 
     /// <summary>
@@ -136,6 +142,11 @@ public class MatriculaService : IMatriculaService
                 pagamentoRecente.ConfirmarPagamento();
                 await SalvarComProtecaoDeConcorrenciaAsync();
             }
+        }
+
+        if (_certificadoService is not null)
+        {
+            await _certificadoService.TentarEmitirAutomaticamenteAsync(matriculaId);
         }
 
         if (transaction is not null)

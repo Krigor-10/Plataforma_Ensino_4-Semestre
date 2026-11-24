@@ -118,6 +118,38 @@ public class PagamentoServiceTests
         Assert.Equal(TipoNotificacao.PagamentoConfirmado, notificacao.Tipo);
     }
 
+    // docs/certificados-mobile/PROMPT-agente-certificados-mobile.md, item 0:
+    // confirmar o pagamento de um curso que o aluno ja tinha concluido
+    // (so faltava o pagamento pra liberar o acesso de verdade) emite o
+    // certificado automaticamente na mesma chamada.
+    [Fact]
+    public async Task ConfirmarPagamentoAsync_CursoJaCemPorCentoConcluido_EmiteCertificadoAutomaticamente()
+    {
+        var context = TestContextFactory.Criar();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Pagamentos:DiasParaVencer"] = "3" })
+            .Build();
+        var certificadoService = new CertificadoService(context, new AcessoAcademicoService(context));
+        var service = new PagamentoService(
+            context,
+            new NotificacaoService(context, NullLogger<NotificacaoService>.Instance),
+            configuration,
+            certificadoService);
+
+        var curso = CriarCurso(context);
+        var aluno = CriarAluno(context);
+        var matricula = CriarMatricula(context, aluno.Id, curso.Id);
+        matricula.DefinirValorNaMatricula(curso.Preco);
+        matricula.Aprovar();
+        context.ProgressosCursosAlunos.Add(new ProgressoCursoAluno { MatriculaId = matricula.Id, CursoId = curso.Id, PercentualConclusao = 100 });
+        context.SaveChanges();
+        CriarPagamentoPendente(context, matricula.Id, curso.Preco);
+
+        await service.ConfirmarPagamentoAsync(matricula.Id, aluno.Id);
+
+        Assert.NotNull(matricula.CertificadoEmitidoEm);
+    }
+
     [Fact]
     public async Task ConfirmarPagamentoAsync_MatriculaDeOutroAluno_LancaKeyNotFound()
     {

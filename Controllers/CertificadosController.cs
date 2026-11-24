@@ -62,7 +62,9 @@ public class CertificadosController : ControllerBase
             MatriculaId = item.Matricula.Id,
             CursoId = item.Matricula.CursoId,
             CertificadoDisponivel = item.CertificadoDisponivel,
-            PendenciasCertificado = item.Pendencias.ToList()
+            PendenciasCertificado = item.Pendencias.ToList(),
+            CertificadoEmitidoEm = item.Matricula.CertificadoEmitidoEm,
+            Situacao = item.Situacao
         }));
     }
 

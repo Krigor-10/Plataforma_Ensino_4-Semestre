@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import CapaCurso from "../../components/CapaCurso.jsx";
+import EstadoVazio from "../../components/EstadoVazio.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
@@ -23,6 +24,7 @@ import { abrirArquivoSeguro } from "../../lib/abrirArquivoSeguro";
 import { ehArquivoProprio, extrairNomeArquivo, resolverUrlArquivo, resolverUrlArquivoAbsoluta } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
 import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib/format.js";
+import { hapticErro, hapticSucesso } from "../../lib/haptics.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
@@ -312,11 +314,13 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
       await apiRequest(`/Progressos/conteudos/${conteudoId}/concluir`, { method: "PUT" });
       await onRecarregar();
       setMensagem({ tipo: "sucesso", texto: "Conteúdo concluído." });
+      hapticSucesso();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
         return;
       }
+      hapticErro();
       setMensagem({ tipo: "erro", texto: err.message || "Não foi possível atualizar o progresso." });
     } finally {
       setConteudoProcessando(null);
@@ -364,7 +368,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   if (grupos.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Quando uma matrícula for aprovada, os cursos e módulos da sua trilha aparecerão aqui.</Text>
+        <EstadoVazio icone="school-outline" mensagem="Quando uma matrícula for aprovada, os cursos e módulos da sua trilha aparecerão aqui." />
       </View>
     );
   }
@@ -997,6 +1001,5 @@ const estilos = StyleSheet.create({
   },
   statusPillSucesso: { backgroundColor: cores.sucessoFundo },
   statusPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
-  vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
+  vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md }
 });

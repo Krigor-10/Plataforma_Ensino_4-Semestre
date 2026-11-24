@@ -808,6 +808,10 @@ public class AvaliacaoService : IAvaliacaoService
             .Include(item => item.Respostas)
                 .ThenInclude(resposta => resposta.QuestaoPublicada!)
                     .ThenInclude(questao => questao.Afirmativas)
+            .Include(item => item.Respostas)
+                .ThenInclude(resposta => resposta.QuestaoPublicada!)
+                    .ThenInclude(questao => questao.QuestaoBanco!)
+                        .ThenInclude(banco => banco!.Anexos)
             .FirstOrDefaultAsync(item => item.Id == tentativaId)
             ?? throw new KeyNotFoundException("Tentativa nao encontrada.");
 
@@ -862,6 +866,17 @@ public class AvaliacaoService : IAvaliacaoService
                             Texto = afirmativa.Texto,
                             EhCorreta = afirmativa.EhCorreta,
                             Justificativa = afirmativa.JustificativaSnapshot
+                        })
+                        .ToList(),
+                    Anexos = (questao.QuestaoBanco?.Anexos ?? new List<AnexoQuestaoBanco>())
+                        .OrderBy(anexo => anexo.Ordem)
+                        .Select(anexo => new AnexoQuestaoBancoResponseDto
+                        {
+                            Id = anexo.Id,
+                            Titulo = anexo.Titulo,
+                            TipoAnexo = anexo.TipoAnexo,
+                            ArquivoUrl = anexo.ArquivoUrl,
+                            Ordem = anexo.Ordem
                         })
                         .ToList()
                 };

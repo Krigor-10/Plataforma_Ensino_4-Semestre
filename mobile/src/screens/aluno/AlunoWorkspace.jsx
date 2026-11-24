@@ -8,6 +8,7 @@ import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
 import AlunoTabsNavigator from "./AlunoTabsNavigator.jsx";
 import BuscaScreen from "./BuscaScreen.jsx";
 import CatalogoScreen from "./CatalogoScreen.jsx";
+import CertificadoDetalheScreen from "./CertificadoDetalheScreen.jsx";
 import PerfilScreen from "./PerfilScreen.jsx";
 import NotificacoesScreen from "./NotificacoesScreen.jsx";
 import { ApiError } from "../../lib/api.js";
@@ -24,7 +25,8 @@ const AlunoStack = createNativeStackNavigator();
 const TITULOS_CABECALHO_SIMPLES = {
   [ROUTES.PERFIL]: "Meu perfil",
   [ROUTES.CATALOGO]: "Catálogo",
-  [ROUTES.NOTIFICACOES]: "Notificações"
+  [ROUTES.NOTIFICACOES]: "Notificações",
+  [ROUTES.CERTIFICADO_DETALHE]: "Certificado"
 };
 
 export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAtualizado, usuario }) {
@@ -175,6 +177,7 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
         <AlunoStack.Screen name={ROUTES.BUSCA}>
           {({ navigation }) => <BuscaScreen navigation={navigation} onVoltar={() => navigation.goBack()} snapshot={snapshot} />}
         </AlunoStack.Screen>
+        <AlunoStack.Screen component={CertificadoDetalheScreen} name={ROUTES.CERTIFICADO_DETALHE} />
       </AlunoStack.Navigator>
 
       <MenuLateral

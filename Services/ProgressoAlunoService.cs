@@ -10,11 +10,19 @@ public class ProgressoAlunoService : IProgressoAlunoService
 {
     private readonly PlataformaContext _context;
     private readonly IAcessoAcademicoService _acessoAcademicoService;
+    private readonly ICertificadoService? _certificadoService;
 
-    public ProgressoAlunoService(PlataformaContext context, IAcessoAcademicoService acessoAcademicoService)
+    // certificadoService e opcional so pra nao obrigar os ~20 testes
+    // existentes (que instanciam ProgressoAlunoService direto, sem DI) a
+    // passar um fake - em produção o ASP.NET Core sempre injeta o de
+    // verdade via Program.cs. Quando nulo, a tentativa de emissao
+    // automatica (docs/certificados-mobile/PROMPT-agente-certificados-
+    // mobile.md, item 0) simplesmente nao dispara.
+    public ProgressoAlunoService(PlataformaContext context, IAcessoAcademicoService acessoAcademicoService, ICertificadoService? certificadoService = null)
     {
         _context = context;
         _acessoAcademicoService = acessoAcademicoService;
+        _certificadoService = certificadoService;
     }
 
     public async Task<ProgressoAlunoSnapshotDto> ObterSnapshotAsync(int alunoId)
@@ -118,6 +126,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
         await RecalcularCursoAsync(matricula, now);
         await _context.SaveChangesAsync();
 
+        if (_certificadoService is not null)
+        {
+            await _certificadoService.TentarEmitirAutomaticamenteAsync(matricula.Id);
+        }
+
         return await ObterSnapshotAsync(alunoId);
     }
 
@@ -187,6 +200,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
         await RecalcularMediaCursoAsync(matricula, now);
         await _context.SaveChangesAsync();
+
+        if (_certificadoService is not null)
+        {
+            await _certificadoService.TentarEmitirAutomaticamenteAsync(matriculaId);
+        }
     }
 
     /// <summary>
@@ -205,8 +223,21 @@ public class ProgressoAlunoService : IProgressoAlunoService
             return;
         }
 
-        await RecalcularMatriculasDoCursoAsync(cursoId);
+        var matriculaIds = await RecalcularMatriculasDoCursoAsync(cursoId);
         await _context.SaveChangesAsync();
+
+        // So aqui (o professor mudou algo que pode ter liberado o ultimo
+        // criterio) - nunca na migracao RecalcularProgressoDeCursosNaoEncerradosAsync
+        // abaixo, que e so correcao de dados historicos e nao pode emitir
+        // certificado retroativo (docs/certificados-mobile/PROMPT-agente-
+        // certificados-mobile.md, item 0, "sem retroativo").
+        if (_certificadoService is not null)
+        {
+            foreach (var matriculaId in matriculaIds)
+            {
+                await _certificadoService.TentarEmitirAutomaticamenteAsync(matriculaId);
+            }
+        }
     }
 
     /// <summary>
@@ -236,7 +267,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
         await _context.SaveChangesAsync();
     }
 
-    private async Task RecalcularMatriculasDoCursoAsync(int cursoId)
+    private async Task<List<int>> RecalcularMatriculasDoCursoAsync(int cursoId)
     {
         var matriculas = await _context.Matriculas
             .Where(matricula => matricula.CursoId == cursoId && matricula.Status == StatusMatricula.Aprovada)
@@ -244,7 +275,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
         if (matriculas.Count == 0)
         {
-            return;
+            return new List<int>();
         }
 
         var moduloIds = await _context.Modulos
@@ -263,6 +294,8 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
             await RecalcularCursoAsync(matricula, now);
         }
+
+        return matriculas.Select(matricula => matricula.Id).ToList();
     }
 
     public async Task RecalcularProgressoQuizAsync(int matriculaId, int avaliacaoId)
@@ -290,6 +323,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
 
         await RecalcularCursoAsync(matricula, now);
         await _context.SaveChangesAsync();
+
+        if (_certificadoService is not null)
+        {
+            await _certificadoService.TentarEmitirAutomaticamenteAsync(matriculaId);
+        }
     }
 
     public async Task<LiberacaoAvaliacoesInfo> ObterLiberacaoAvaliacoesAsync(int matriculaId)

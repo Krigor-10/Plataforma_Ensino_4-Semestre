@@ -226,6 +226,150 @@ describe("SecaoCursosAluno (tela Progresso)", () => {
 
     expect(await screen.findByText(/Parabens! Certificado disponivel/i)).toBeInTheDocument();
   });
+
+  // docs/TelaConteudosAlunos/PROMPT-agente-progresso-aluno-cabecalho-curso.md:
+  // titulo + subtitulo de turma + grade-estatisticas (4 cartoes) saem, entra
+  // o mesmo cabecalho CartaoCursoModulo medio da tela do modulo do
+  // coordenador, com 3 KPIs e o selo da trilha do aluno.
+  describe("cabecalho do detalhe (CartaoCursoModulo medio)", () => {
+    function montarCenarioComAvaliacaoFormal({ certificadoEmitidoEm = null, notaFinal = 8.5, percentualConclusao = 100 } = {}) {
+      const cursos = [{ id: 40, titulo: "Curso Completo", descricao: "Descricao do curso completo", imagemUrl: null }];
+      const modulos = [{ id: 400, cursoId: 40, titulo: "Modulo 1", dataCriacao: "2026-01-01" }];
+      const conteudos = [
+        { id: 1, cursoId: 40, moduloId: 400, moduloTitulo: "Modulo 1", turmaId: null, titulo: "Aula 1", ordemExibicao: 1 },
+        { id: 2, cursoId: 40, moduloId: 400, moduloTitulo: "Modulo 1", turmaId: null, titulo: "Aula 2", ordemExibicao: 2 }
+      ];
+      const avaliacoes = [
+        { id: 900, cursoId: 40, moduloId: 400, moduloTitulo: "Modulo 1", titulo: "Prova Final", tipoAvaliacao: 2, statusPublicacao: 2 }
+      ];
+      const matriculas = [{ id: 8, cursoId: 40, turmaId: null, status: "Aprovada", notaFinal, certificadoEmitidoEm }];
+      const progressos = {
+        conteudos: [
+          { conteudoDidaticoId: 1, percentualConclusao: 100 },
+          { conteudoDidaticoId: 2, percentualConclusao: 100 }
+        ],
+        modulos: [{ matriculaId: 8, moduloId: 400, percentualConclusao: 100, statusProgresso: 3 }],
+        cursos: [{ matriculaId: 8, percentualConclusao: percentualConclusao }]
+      };
+
+      return { avaliacoes, conteudos, cursos, matriculas, modulos, progressos };
+    }
+
+    test("mostra o cartao medio com 3 KPIs certos e a legenda da barra, sem a grade-estatisticas nem o texto da turma", () => {
+      const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenarioComAvaliacaoFormal();
+
+      render(
+        <SecaoCursosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={40}
+          cursos={cursos}
+          matriculas={matriculas}
+          modulos={modulos}
+          onNavigate={vi.fn()}
+          progressos={progressos}
+          turmas={[]}
+        />
+      );
+
+      expect(document.querySelector(".cartao-curso-modulo--medio")).not.toBeNull();
+      expect(document.querySelector(".grade-estatisticas")).toBeNull();
+      expect(document.querySelector(".atividades-curso__subtitulo")).toBeNull();
+      expect(screen.getByText("100% do curso concluído")).toBeInTheDocument();
+
+      const kpiModulos = screen.getByText("Módulos concluídos").closest(".cartao-curso-modulo__kpi");
+      const kpiConteudos = screen.getByText("Conteúdos concluídos").closest(".cartao-curso-modulo__kpi");
+      const kpiNota = screen.getByText("Nota final").closest(".cartao-curso-modulo__kpi");
+      expect(within(kpiModulos).getByText("1/1")).toBeInTheDocument();
+      expect(within(kpiConteudos).getByText("2/2")).toBeInTheDocument();
+      expect(within(kpiNota).getByText("8,5")).toBeInTheDocument();
+    });
+
+    test("selo 'Certificado emitido' quando a matricula tem certificadoEmitidoEm", () => {
+      const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenarioComAvaliacaoFormal({
+        certificadoEmitidoEm: "2026-08-28T00:00:00Z"
+      });
+
+      render(
+        <SecaoCursosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={40}
+          cursos={cursos}
+          matriculas={matriculas}
+          modulos={modulos}
+          onNavigate={vi.fn()}
+          progressos={progressos}
+          turmas={[]}
+        />
+      );
+
+      expect(screen.getAllByText("🏆 Certificado emitido")).toHaveLength(1);
+    });
+
+    test("selo 'Concluído' com 100% e sem certificado emitido", () => {
+      const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenarioComAvaliacaoFormal();
+
+      render(
+        <SecaoCursosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={40}
+          cursos={cursos}
+          matriculas={matriculas}
+          modulos={modulos}
+          onNavigate={vi.fn()}
+          progressos={progressos}
+          turmas={[]}
+        />
+      );
+
+      expect(screen.getAllByText("Concluído")).toHaveLength(1);
+    });
+
+    test("selo 'Curso em andamento' abaixo de 100%", () => {
+      const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenarioComAvaliacaoFormal({
+        percentualConclusao: 50
+      });
+
+      render(
+        <SecaoCursosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={40}
+          cursos={cursos}
+          matriculas={matriculas}
+          modulos={modulos}
+          onNavigate={vi.fn()}
+          progressos={progressos}
+          turmas={[]}
+        />
+      );
+
+      expect(screen.getAllByText("Curso em andamento")).toHaveLength(1);
+    });
+
+    test("nota final mostra '—' quando o curso nao tem avaliacao formal", () => {
+      const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos, turmas } = montarCenario();
+
+      render(
+        <SecaoCursosAluno
+          avaliacoes={avaliacoes}
+          conteudos={conteudos}
+          cursoIdSelecionado={10}
+          cursos={cursos}
+          matriculas={matriculas}
+          modulos={modulos}
+          onNavigate={vi.fn()}
+          progressos={progressos}
+          turmas={turmas}
+        />
+      );
+
+      const kpiNota = screen.getByText("Nota final").closest(".cartao-curso-modulo__kpi");
+      expect(within(kpiNota).getByText("—")).toBeInTheDocument();
+    });
+  });
 });
 
 describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () => {
@@ -383,9 +527,24 @@ describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no
 
     const cartaoModulo = screen.getByRole("button", { name: /Módulo 1/ });
     expect(cartaoModulo.querySelector(".modulos-curso-aluno__check")).toBeInTheDocument();
+    expect(cartaoModulo.querySelector(".modulos-curso-aluno__seta")).toBeInTheDocument();
+    expect(cartaoModulo.lastElementChild).toHaveClass("modulos-curso-aluno__seta");
 
     await usuario.click(cartaoModulo);
     expect(onNavigate).toHaveBeenCalledWith(`/app/conteudos/${CURSO_ID}/modulos/${MODULO_ID}`);
+  });
+
+  test("módulo em andamento (não concluído) tem a seta › como último elemento da linha", () => {
+    renderConteudosAluno({
+      conteudos: [
+        { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Aula 1", tipoConteudo: 1, ordemExibicao: 1 }
+      ]
+    });
+
+    const cartaoModulo = screen.getByRole("button", { name: /Módulo 1/ });
+    expect(cartaoModulo.querySelector(".modulos-curso-aluno__check")).not.toBeInTheDocument();
+    expect(cartaoModulo.querySelector(".modulos-curso-aluno__seta")).toBeInTheDocument();
+    expect(cartaoModulo.lastElementChild).toHaveClass("modulos-curso-aluno__seta");
   });
 
   test("módulo bloqueado no cartão não é clicável e tem o aviso certo", async () => {
@@ -407,9 +566,37 @@ describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no
     const cartaoBloqueado = screen.getByRole("button", { name: /Módulo 2/ });
     expect(cartaoBloqueado).toHaveAttribute("aria-disabled", "true");
     expect(cartaoBloqueado).toHaveAttribute("title", "Conclua o módulo 01 para liberar");
+    expect(cartaoBloqueado.querySelector(".modulos-curso-aluno__seta")).not.toBeInTheDocument();
 
     await usuario.click(cartaoBloqueado);
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  test("linha do módulo liberado mostra contagem, barra, % e a seta nessa ordem", () => {
+    renderConteudosAluno({
+      avaliacoes: [
+        {
+          id: 200,
+          cursoId: CURSO_ID,
+          moduloId: MODULO_ID,
+          conteudoDidaticoId: null,
+          tipoAvaliacao: 1,
+          titulo: "Quiz do Módulo",
+          totalQuestoes: 1,
+          tentativasRealizadas: 1,
+          tentativasPermitidas: 1
+        }
+      ]
+    });
+
+    const cartaoModulo = screen.getByRole("button", { name: /Módulo 1/ });
+    const direita = cartaoModulo.querySelector(".modulos-curso-aluno__direita");
+    const ordemClasses = Array.from(direita.children).map((elemento) => elemento.className);
+
+    expect(ordemClasses[0]).toContain("modulos-curso-aluno__contagem");
+    expect(ordemClasses[1]).toContain("modulos-curso-aluno__barra");
+    expect(ordemClasses[2]).toContain("modulos-curso-aluno__percentual");
+    expect(cartaoModulo.lastElementChild).toHaveClass("modulos-curso-aluno__seta");
   });
 
   test('"Ver revisão" aparece na tela do módulo e abre a revisão', async () => {
@@ -438,7 +625,7 @@ describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no
 
     await usuario.click(botaoVerRevisao);
 
-    expect(await screen.findByRole("dialog", { name: "Revisao detalhada" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Revisão detalhada · Quiz do Módulo" })).toBeInTheDocument();
   });
 
   test('"Iniciar quiz" aparece na tela do módulo nos dois tipos de quiz e abre a confirmação', async () => {

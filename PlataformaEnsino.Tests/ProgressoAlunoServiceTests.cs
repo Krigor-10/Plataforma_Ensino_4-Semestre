@@ -197,6 +197,25 @@ public class ProgressoAlunoServiceTests
         Assert.Equal(StatusProgressoAprendizagem.Concluido, cursoProgresso.StatusProgresso);
     }
 
+    // docs/certificados-mobile/PROMPT-agente-certificados-mobile.md, item 0:
+    // concluir o ultimo conteudo do curso (curso so com conteudo, sem
+    // avaliacao formal) emite o certificado automaticamente, sem o aluno
+    // precisar abrir a tela de certificados.
+    [Fact]
+    public async Task MarcarConteudoConcluidoAsync_UltimoConteudoDoCurso_EmiteCertificadoAutomaticamente()
+    {
+        var context = TestContextFactory.Criar();
+        var certificadoService = new CertificadoService(context, new AcessoAcademicoService(context));
+        var service = new ProgressoAlunoService(context, new AcessoAcademicoService(context), certificadoService);
+        var cenario = CriarCenarioAprovado(context);
+        var conteudo = CriarConteudoPublicado(context, cenario.Turma.Id, cenario.Modulo.Id, cenario.Curso.Id, "Aula 1");
+
+        await service.MarcarConteudoConcluidoAsync(cenario.Aluno.Id, conteudo.Id);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == cenario.Matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+    }
+
     [Fact]
     public async Task MarcarConteudoConcluidoAsync_ConteudoNaoPublicado_LancaKeyNotFound()
     {

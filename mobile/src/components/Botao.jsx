@@ -1,6 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { hapticToqueLeve } from "../lib/haptics.js";
 import { cores, raios } from "../lib/theme.js";
+
+// So primario/sucesso vibram ao toque (docs/redesign-mobile/PENDENTE-
+// segunda-23-11-auditoria-ux-ui-mobile.md, Fase 2) - sao as acoes
+// principais de cada tela (Continuar, Enviar, Iniciar...). secundario/
+// perigo/fantasma ficam sem haptic de proposito: sao acoes secundarias ou
+// de saida/cancelamento, e vibrar em toque de navegacao comum (voltar,
+// "Agora nao") vira ruido em vez de reforco.
+const VARIANTES_COM_HAPTIC = new Set(["primario", "sucesso"]);
 
 const COR_TEXTO_POR_VARIANTE = {
   primario: cores.texto,
@@ -28,13 +37,20 @@ export default function Botao({
   const desabilitado = disabled || carregando;
   const corConteudo = COR_TEXTO_POR_VARIANTE[variante] || cores.texto;
 
+  function aoTocar() {
+    if (VARIANTES_COM_HAPTIC.has(variante)) {
+      hapticToqueLeve();
+    }
+    onPress?.();
+  }
+
   return (
     <TouchableOpacity
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled: desabilitado }}
       disabled={desabilitado}
-      onPress={onPress}
+      onPress={aoTocar}
       style={[estilos.base, estilos[variante], desabilitado ? estilos.desabilitado : null, style]}
     >
       {carregando ? (

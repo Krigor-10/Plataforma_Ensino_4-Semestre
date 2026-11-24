@@ -400,11 +400,299 @@ public class CertificadoServiceTests
         Assert.True(statusOk.CertificadoDisponivel);
         Assert.Empty(statusOk.Pendencias);
         Assert.False(statusIncompleto.CertificadoDisponivel);
-        Assert.Contains("O curso ainda nao foi concluido.", statusIncompleto.Pendencias);
+        Assert.Contains("O curso ainda não foi concluído.", statusIncompleto.Pendencias);
 
         // So verifica, nao emite - nenhuma das duas matriculas deve ter sido alterada.
         Assert.Null(statusOk.Matricula.CertificadoEmitidoEm);
         Assert.Null(statusIncompleto.Matricula.CertificadoEmitidoEm);
+    }
+
+    // ---------- Situacao (docs/certificados-mobile/PROMPT-agente-certificados-mobile.md, item 1) ----------
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_SemAcessoLiberado_SituacaoAguardandoPagamento()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.Preco = 500;
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("AguardandoPagamento", status.Situacao);
+        Assert.False(status.CertificadoDisponivel);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_ProgressoIncompleto_SituacaoEmAndamento()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 40);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("EmAndamento", status.Situacao);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_AvaliacaoPublicadaSemCorrecao_SituacaoAguardandoCorrecao()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("AguardandoCorrecao", status.Situacao);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_NotaAbaixoDoMinimo_SituacaoNotaAbaixoDoMinimo()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Final", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        context.SaveChanges();
+
+        var lancamento = new LancamentoNotaAluno { MatriculaId = matricula.Id, AvaliacaoId = avaliacao.Id };
+        lancamento.RegistrarCorrecao(6.99m, 1, OrigemCorrecaoNota.Automatica);
+        context.LancamentosNotasAlunos.Add(lancamento);
+        matricula.LancarNotaFinal(6.99m);
+        context.SaveChanges();
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("NotaAbaixoDoMinimo", status.Situacao);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_AcompanhadoNaoEncerrado_SituacaoAguardandoEncerramento()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("AguardandoEncerramento", status.Situacao);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_SemPagamentoEProgressoIncompleto_SituacaoAguardandoPagamentoTemPrioridade()
+    {
+        // Ordem da situacao (item 1 do prompt): AguardandoPagamento vem antes
+        // de EmAndamento - com os dois sinais verdadeiros ao mesmo tempo, o
+        // primeiro da lista e que vale.
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.Preco = 500;
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 40);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("AguardandoPagamento", status.Situacao);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_TudoCumprido_SituacaoDisponivel()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var service = new CertificadoService(context, new AcessoAcademicoService(context));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("Disponivel", status.Situacao);
+        Assert.True(status.CertificadoDisponivel);
+    }
+
+    [Fact]
+    public async Task ListarStatusCertificadosDoAlunoAsync_CertificadoJaEmitidoComAvaliacaoNovaPendente_ContinuaSituacaoEmitido()
+    {
+        // Bug corrigido (Causa 1 do prompt): um certificado ja emitido nao
+        // pode sumir/ficar bloqueado so porque uma avaliacao nova entrou no
+        // curso depois, sem correcao ainda.
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+        matricula.EmitirCertificado();
+        contextoDeArranjo.SaveChanges();
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Nova", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+        contextoDeArranjo.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+
+        Assert.Equal("Emitido", status.Situacao);
+        Assert.True(status.CertificadoDisponivel);
+        Assert.Empty(status.Pendencias);
+    }
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_JaEmitidoComAvaliacaoNovaPendente_DevolveCertificadoSemLancarExcecao()
+    {
+        // Mesmo bug do teste acima, agora pelo caminho do POST (item 2 do
+        // prompt): idempotente mesmo quando a avaliacao nova ja existe.
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+        matricula.EmitirCertificado();
+        var dataOriginal = matricula.CertificadoEmitidoEm;
+        contextoDeArranjo.SaveChanges();
+
+        var avaliacao = new Avaliacao { Titulo = "Prova Nova", TurmaId = turma.Id, TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirCurso(curso.Id);
+        avaliacao.Publicar();
+        contextoDeArranjo.Avaliacoes.Add(avaliacao);
+        contextoDeArranjo.SaveChanges();
+        contextoDeArranjo.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1 });
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico));
+        var resultado = await service.EmitirCertificadoAsync(aluno.Id, matricula.Id);
+
+        Assert.Equal(dataOriginal, resultado.CertificadoEmitidoEm);
+    }
+
+    // ---------- TentarEmitirAutomaticamenteAsync (item 0) ----------
+
+    [Fact]
+    public async Task TentarEmitirAutomaticamenteAsync_SemPendencia_EmiteENotifica()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var notificacaoService = new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), notificacaoService: notificacaoService);
+
+        await service.TentarEmitirAutomaticamenteAsync(matricula.Id);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.NotNull(matriculaAtualizada.CertificadoEmitidoEm);
+
+        var notificacao = Assert.Single(context.Notificacoes.Where(n => n.UsuarioId == aluno.Id));
+        Assert.Equal(TipoNotificacao.CertificadoEmitido, notificacao.Tipo);
+    }
+
+    [Fact]
+    public async Task TentarEmitirAutomaticamenteAsync_ComPendencia_NaoEmiteNemNotifica()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 40);
+
+        var notificacaoService = new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), notificacaoService: notificacaoService);
+
+        await service.TentarEmitirAutomaticamenteAsync(matricula.Id);
+
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+        Assert.Null(matriculaAtualizada.CertificadoEmitidoEm);
+        Assert.Empty(context.Notificacoes.Where(n => n.UsuarioId == aluno.Id));
+    }
+
+    [Fact]
+    public async Task TentarEmitirAutomaticamenteAsync_ChamadoDuasVezes_NaoDuplicaEmissaoNemNotificacao()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var turma = CriarTurma(context, curso.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var notificacaoService = new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), notificacaoService: notificacaoService);
+
+        await service.TentarEmitirAutomaticamenteAsync(matricula.Id);
+        var dataDaPrimeiraChamada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id).CertificadoEmitidoEm;
+
+        await service.TentarEmitirAutomaticamenteAsync(matricula.Id);
+        var matriculaAtualizada = context.Matriculas.AsNoTracking().Single(m => m.Id == matricula.Id);
+
+        Assert.Equal(dataDaPrimeiraChamada, matriculaAtualizada.CertificadoEmitidoEm);
+        Assert.Single(context.Notificacoes.Where(n => n.UsuarioId == aluno.Id));
+    }
+
+    [Fact]
+    public async Task EmitirCertificadosDoCursoAsync_NovaEmissaoNoLote_Notifica()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var turma = CriarTurma(context, curso.Id);
+        CriarMatriculaAprovada(context, aluno, curso, turma, percentualConclusao: 100);
+
+        var notificacaoService = new NotificacaoService(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<NotificacaoService>.Instance);
+        var service = new CertificadoService(context, new AcessoAcademicoService(context), notificacaoService: notificacaoService);
+
+        var resultado = await service.EmitirCertificadosDoCursoAsync(curso.Id);
+
+        Assert.Equal(1, resultado.Emitidos);
+        var notificacao = Assert.Single(context.Notificacoes.Where(n => n.UsuarioId == aluno.Id));
+        Assert.Equal(TipoNotificacao.CertificadoEmitido, notificacao.Tipo);
     }
 
     [Fact]

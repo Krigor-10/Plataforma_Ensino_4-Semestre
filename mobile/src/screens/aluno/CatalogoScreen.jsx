@@ -5,6 +5,7 @@ import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import Botao from "../../components/Botao.jsx";
 import CapaCurso from "../../components/CapaCurso.jsx";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
+import EstadoVazio from "../../components/EstadoVazio.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatMoney } from "../../lib/format.js";
@@ -91,7 +92,7 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
       </View>
 
       <FlatList
-        ListEmptyComponent={<Text style={estilos.vazio}>Nenhum curso encontrado.</Text>}
+        ListEmptyComponent={<EstadoVazio icone="search-outline" mensagem="Nenhum curso encontrado." />}
         contentContainerStyle={estilos.corpo}
         data={cursosDisponiveis}
         keyExtractor={(curso) => String(curso.id)}
@@ -183,6 +184,5 @@ const estilos = StyleSheet.create({
     marginTop: espacamentos.sm
   },
   seloAcompanhamentoTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700" },
-  botaoAcaoCartao: { marginTop: 12 },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40 }
+  botaoAcaoCartao: { marginTop: 12 }
 });

@@ -135,7 +135,12 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
           turma: matricula.turma,
           percentual,
           nota,
-          desbloqueado: Boolean(status?.certificadoDisponivel),
+          // "Emitido" sempre desbloqueado, mesmo que uma avaliacao nova
+          // publicada depois tenha gerado uma pendencia (docs/certificados-
+          // mobile/PROMPT-agente-certificados-mobile.md, item 13/Causa 1) -
+          // certificadoDisponivel do backend ja reflete isso, aqui so deixa
+          // explicito.
+          desbloqueado: status?.situacao === "Emitido" || Boolean(status?.certificadoDisponivel),
           pendencia: pendencias[0] || null
         };
       }),

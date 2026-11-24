@@ -12,12 +12,17 @@ public class PagamentoService : IPagamentoService
     private readonly PlataformaContext _context;
     private readonly INotificacaoService _notificacaoService;
     private readonly IConfiguration _configuration;
+    private readonly ICertificadoService? _certificadoService;
 
-    public PagamentoService(PlataformaContext context, INotificacaoService notificacaoService, IConfiguration configuration)
+    // certificadoService opcional so pra nao obrigar os testes existentes
+    // (que instanciam PagamentoService direto) a passar um fake - ver o
+    // mesmo padrao em CertificadoService/ProgressoAlunoService.
+    public PagamentoService(PlataformaContext context, INotificacaoService notificacaoService, IConfiguration configuration, ICertificadoService? certificadoService = null)
     {
         _context = context;
         _notificacaoService = notificacaoService;
         _configuration = configuration;
+        _certificadoService = certificadoService;
     }
 
     public async Task<IEnumerable<PagamentoAlunoResponseDto>> ListarPagamentosDoAlunoAsync(int alunoId)
@@ -57,6 +62,11 @@ public class PagamentoService : IPagamentoService
             $"Seu pagamento do curso \"{tituloCurso}\" foi confirmado. Seu acesso ja esta liberado.",
             TipoNotificacao.PagamentoConfirmado,
             "/app/cursos-matriculados");
+
+        if (_certificadoService is not null)
+        {
+            await _certificadoService.TentarEmitirAutomaticamenteAsync(matriculaId);
+        }
 
         return MapResponse(pagamento);
     }

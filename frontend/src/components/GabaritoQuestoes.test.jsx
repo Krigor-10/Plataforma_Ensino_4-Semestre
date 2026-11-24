@@ -39,6 +39,16 @@ describe("GabaritoQuestoes - padrao (usado pela previa do Professor)", () => {
     expect(letra).not.toBe(texto);
   });
 
+  // docs/TelaConteudosAlunos/PROMPT-agente-revisao-aluno-layout-professor.md,
+  // item 4: letra em circulo com borda, cor verde quando correta - a classe
+  // --correta do item (que colore o circulo via CSS) e o que garante isso.
+  test("a letra da alternativa correta fica no circulo verde (classe item--correta no quiz do professor)", () => {
+    render(<GabaritoQuestoes questoes={[QUESTAO_ALTERNATIVAS]} />);
+
+    const itemCorreto = screen.getByText("Alternativa certa").closest(".revisao-alternativas__item");
+    expect(itemCorreto).toHaveClass("revisao-alternativas__item--correta");
+  });
+
   test("afirmativas tambem ficam com o numero e o texto em elementos proprios", () => {
     render(<GabaritoQuestoes questoes={[QUESTAO_AFIRMATIVAS]} />);
 

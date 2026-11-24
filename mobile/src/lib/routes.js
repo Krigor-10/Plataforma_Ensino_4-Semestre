@@ -11,5 +11,6 @@ export const ROUTES = {
   AVALIACOES: "avaliacoes",
   PROGRESSO: "progresso",
   CATALOGO: "catalogo",
-  CERTIFICADOS: "certificados"
+  CERTIFICADOS: "certificados",
+  CERTIFICADO_DETALHE: "CertificadoDetalhe"
 };

@@ -1,7 +1,7 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect } from "react";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
 import HomeScreen from "../HomeScreen.jsx";
@@ -9,6 +9,7 @@ import ConteudosScreen from "./ConteudosScreen.jsx";
 import AvaliacoesScreen from "./AvaliacoesScreen.jsx";
 import ProgressoScreen from "./ProgressoScreen.jsx";
 import CertificadosScreen from "./CertificadosScreen.jsx";
+import { SkeletonInicio } from "../../components/Skeleton.jsx";
 import TelaComTransicao from "../../components/TelaComTransicao.jsx";
 import { ROUTES } from "../../lib/routes.js";
 import { cores, espacamentos, raios } from "../../lib/theme.js";
@@ -102,7 +103,7 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
   const insets = useSafeAreaInsets();
 
   if (carregando) {
-    return <ActivityIndicator color={cores.destaque} style={{ marginTop: 60 }} />;
+    return <SkeletonInicio />;
   }
 
   if (erro) {

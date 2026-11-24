@@ -35,6 +35,7 @@ public class RevisaoQuestaoResponseDto
     public string ReferenciasBibliograficas { get; set; } = string.Empty;
     public List<RevisaoAlternativaResponseDto> Alternativas { get; set; } = new();
     public List<RevisaoAfirmativaResponseDto> Afirmativas { get; set; } = new();
+    public List<AnexoQuestaoBancoResponseDto> Anexos { get; set; } = new();
 }
 
 public class RevisaoTentativaResponseDto

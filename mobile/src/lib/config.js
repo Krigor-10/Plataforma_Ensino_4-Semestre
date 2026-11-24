@@ -14,3 +14,11 @@ const GATEWAY_HOST = Platform.select({
 export const GATEWAY_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL || `http://${GATEWAY_HOST}:4000`;
 export const API_BASE_URL = `${GATEWAY_BASE_URL}/api/v1`;
+
+// Base da web (frontend/, Vite) pra montar o link de verificacao de
+// certificado (/verificar/:codigo) compartilhado/copiado pelo aluno - ao
+// contrario do gateway acima, quem abre esse link e outra pessoa, num
+// navegador comum (nunca o emulador Android), entao o truque do 10.0.2.2
+// nao se aplica aqui. EXPO_PUBLIC_WEB_URL (eas.json) tem prioridade pra
+// builds instalaveis; em dev local o fallback e o Vite na mesma maquina.
+export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:5173";

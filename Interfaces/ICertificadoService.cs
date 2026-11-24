@@ -14,8 +14,13 @@ public record ResultadoEmissaoLoteCertificados(int Emitidos, int Bloqueados);
 /// Matricula (com Curso/Turma/ProgressosCurso carregados), se o certificado
 /// pode ser emitido agora (Pendencias vazia) e as mensagens de pendencia na
 /// mesma ordem/texto que EmitirCertificadoAsync usaria pra lancar excecao.
+/// Situacao resume tudo isso numa unica string pra tela, na ordem definida
+/// em CertificadoService.CalcularSituacao - "Emitido" tem prioridade sobre
+/// qualquer pendencia nova (docs/certificados-mobile/PROMPT-agente-
+/// certificados-mobile.md, item 1): com certificado ja emitido, Pendencias
+/// sempre vem vazia (ObterPendenciasAsync nem checa o resto nesse caso).
 /// </summary>
-public record StatusCertificadoMatricula(Matricula Matricula, IReadOnlyList<string> Pendencias)
+public record StatusCertificadoMatricula(Matricula Matricula, IReadOnlyList<string> Pendencias, string Situacao)
 {
     public bool CertificadoDisponivel => Pendencias.Count == 0;
 }
@@ -49,4 +54,17 @@ public interface ICertificadoService
     /// bloqueado ate corrigir a pendencia.
     /// </summary>
     Task<ResultadoEmissaoLoteCertificados> EmitirCertificadosDoCursoAsync(int cursoId);
+
+    /// <summary>
+    /// Emissao automatica, idempotente e silenciosa: chamada nos pontos em
+    /// que o aluno pode ter acabado de cumprir o ultimo criterio do
+    /// certificado (concluir conteudo/quiz, nota lancada, pagamento
+    /// confirmado, curso editado pelo professor). Se ja emitido ou se ainda
+    /// ha pendencia, nao faz nada. Nunca lanca excecao pra quem chamou -
+    /// efeito colateral best-effort, igual a notificacao (docs/
+    /// certificados-mobile/PROMPT-agente-certificados-mobile.md, item 0).
+    /// Sem emissao retroativa: so e chamada nesses pontos de entrada, nunca
+    /// por um job/migracao que varre matriculas antigas.
+    /// </summary>
+    Task TentarEmitirAutomaticamenteAsync(int matriculaId);
 }

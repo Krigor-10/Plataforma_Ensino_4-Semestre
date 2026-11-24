@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { BackHandler, ScrollView, StyleSheet, Text, View } from "react-native";
 import CartaoCursoAtivo from "../../components/CartaoCursoAtivo.jsx";
+import EstadoVazio from "../../components/EstadoVazio.jsx";
 import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { formatGrade, formatPercent } from "../../lib/format.js";
@@ -84,7 +85,7 @@ export default function ProgressoScreen({ snapshot }) {
   if (progressosPorCurso.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Assim que sua matrícula for aprovada e você começar a trilha, seu progresso aparecerá aqui.</Text>
+        <EstadoVazio icone="trending-up-outline" mensagem="Assim que sua matrícula for aprovada e você começar a trilha, seu progresso aparecerá aqui." />
       </View>
     );
   }
@@ -355,6 +356,5 @@ const estilos = StyleSheet.create({
   moduloProgressoValor: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700" },
   barraFundoFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: 4 },
   barraPreenchidaFina: { height: 6, borderRadius: raios.sm },
-  vazioModulo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic" },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
+  vazioModulo: { color: cores.textoSuave, fontSize: 12, fontStyle: "italic" }
 });

@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react";
 import { Animated as AnimatedRN, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import CapaCurso from "../components/CapaCurso.jsx";
+import EstadoVazio from "../components/EstadoVazio.jsx";
 import ProgressoCircular from "../components/ProgressoCircular.jsx";
 import { agruparConteudosPorCurso } from "../lib/conteudos.js";
 import { obterDisponibilidadeAvaliacao } from "../lib/avaliacoes.js";
@@ -125,9 +126,10 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
         <Text style={estilos.saudacao}>
           {obterSaudacao()}, {usuario?.nome?.split(" ")[0] || "aluno"} 👋
         </Text>
-        <Text style={estilos.vazio}>
-          Você ainda não está matriculado em nenhum curso. Abra o menu e toque em Catálogo para explorar os cursos disponíveis.
-        </Text>
+        <EstadoVazio
+          icone="compass-outline"
+          mensagem="Você ainda não está matriculado em nenhum curso. Abra o menu e toque em Catálogo para explorar os cursos disponíveis."
+        />
       </View>
     );
   }
@@ -381,6 +383,5 @@ const estilos = StyleSheet.create({
   meuCursoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo, minHeight: tipografia.rotulo * 2.4 },
   barraFundo: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: 2 },
   barraPreenchida: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
-  meuCursoMeta: { color: cores.textoSuave, fontSize: tipografia.legenda },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 24 }
+  meuCursoMeta: { color: cores.textoSuave, fontSize: tipografia.legenda }
 });

@@ -6,7 +6,6 @@ import {
   TbArrowRight,
   TbAward,
   TbCertificate,
-  TbChartBar,
   TbCheck,
   TbChevronDown,
   TbChevronRight,
@@ -34,7 +33,6 @@ import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoCursoModulo from "../../components/CartaoCursoModulo.jsx";
-import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -219,7 +217,8 @@ export function SecaoCursosAluno({
             modulos: modulosDoCurso.length || resumoCurso?.modulos.size || 0,
             progresso: progressoCurso?.percentualConclusao || 0,
             ultimaPublicacao: resumoCurso?.ultimaPublicacao || null,
-            notaFinal: matricula.notaFinal ?? 0
+            notaFinal: matricula.notaFinal ?? 0,
+            certificadoEmitidoEm: matricula.certificadoEmitidoEm || null
           };
         }),
     [cursoPorId, matriculaIdsComPagamentoPendente, matriculas, modulosPorCursoId, progressoCursoPorMatricula, resumoConteudosPorCurso, turmaPorId]
@@ -360,13 +359,13 @@ export function SecaoCursosAluno({
           onSelecionar={selecionarCurso}
         />
       ) : (
-        <DetalheProgressoCurso detalhe={detalheCursoSelecionado} onNavigate={onNavigate} onVoltar={voltarParaLista} />
+        <DetalheProgressoCurso cursoPorId={cursoPorId} detalhe={detalheCursoSelecionado} onNavigate={onNavigate} onVoltar={voltarParaLista} />
       )}
     </div>
   );
 }
 
-function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
+function DetalheProgressoCurso({ cursoPorId, detalhe, onNavigate, onVoltar }) {
   const [moduloAbertoId, setModuloAbertoId] = useState(null);
   const percentual = clampPercent(detalhe.progresso);
   // Modulo so com quiz (sem nenhum conteudo) tambem entra - mesmo criterio da
@@ -386,6 +385,34 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
   // minima/correcao pendente/curso Acompanhado ainda nao encerrado.
   // detalhe.certificadoDisponivel vem de GET /Certificados/status.
   const certificadoDesbloqueado = Boolean(detalhe.certificadoDisponivel);
+  // "Nota final" so faz sentido quando o curso tem avaliacao formal (Prova/
+  // Exercicio, tipoAvaliacao !== 1) - sem ela, matricula.notaFinal fica 0 por
+  // padrao (nunca foi lancada), e mostrar "0,0" sugeriria uma nota real.
+  const temAvaliacaoFormal = detalhe.modulos.some((modulo) =>
+    modulo.avaliacoes.some((avaliacao) => Number(avaliacao.tipoAvaliacao) !== 1)
+  );
+  const curso = cursoPorId.get(detalhe.cursoId) || { titulo: detalhe.curso, descricao: "", imagemUrl: "" };
+  const selo = obterSeloCursoAluno({ certificadoEmitidoEm: detalhe.certificadoEmitidoEm, progresso: percentual });
+  const kpisCurso = [
+    {
+      id: "modulos",
+      icone: <TbLayoutGrid aria-hidden="true" size={16} />,
+      rotulo: "Módulos concluídos",
+      valor: `${modulosConcluidos}/${modulosComConteudo.length}`
+    },
+    {
+      id: "conteudos",
+      icone: <TbCircleCheck aria-hidden="true" size={16} />,
+      rotulo: "Conteúdos concluídos",
+      valor: `${conteudosConcluidos}/${totalConteudos}`
+    },
+    {
+      id: "nota",
+      icone: <TbAward aria-hidden="true" size={16} />,
+      rotulo: "Nota final",
+      valor: temAvaliacaoFormal ? formatGrade(detalhe.notaFinal) : "—"
+    }
+  ];
 
   function alternarModulo(moduloId) {
     setModuloAbertoId((atual) => (atual === moduloId ? null : moduloId));
@@ -395,19 +422,14 @@ function DetalheProgressoCurso({ detalhe, onNavigate, onVoltar }) {
     <div className="conteudos-aluno">
       <BotaoVoltar destino="Progresso" onClick={onVoltar} />
 
-      <header className="atividades-curso__cabecalho">
-        <div>
-          <h2 className="atividades-curso__titulo">{detalhe.curso}</h2>
-          <p className="atividades-curso__subtitulo">{detalhe.turma}</p>
-        </div>
-      </header>
-
-      <div className="grade-estatisticas">
-        <CartaoEstatistica icone={<TbChartBar size={22} />} rotulo="Progresso" valor={`${percentual}%`} />
-        <CartaoEstatistica corBorda="var(--cor-info)" icone={<TbLayoutGrid size={22} />} rotulo="Modulos concluidos" valor={`${modulosConcluidos}/${modulosComConteudo.length}`} />
-        <CartaoEstatistica corBorda="var(--cor-sucesso)" icone={<TbCircleCheck size={22} />} rotulo="Conteudos concluidos" valor={`${conteudosConcluidos}/${totalConteudos}`} />
-        <CartaoEstatistica corBorda="var(--cor-marca)" icone={<TbAward size={22} />} rotulo="Nota final" valor={formatGrade(detalhe.notaFinal)} />
-      </div>
+      <CartaoCursoModulo
+        curso={curso}
+        kpis={kpisCurso}
+        legendaProgresso={`${percentual}% do curso concluído`}
+        percentual={percentual}
+        selo={selo}
+        variante="medio"
+      />
 
       {modulosComConteudo.length === 0 ? (
         <EmptyState message="Este curso ainda nao possui modulos publicados." />
@@ -668,7 +690,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
       return;
     }
 
-    setRevisaoDireta({ avaliacaoId: avaliacao.id, tentativaId: avaliacao.ultimaTentativaId });
+    setRevisaoDireta({ avaliacaoId: avaliacao.id, tentativaId: avaliacao.ultimaTentativaId, titulo: avaliacao.titulo });
   }
 
   async function abrirExecucaoAvaliacao(avaliacao) {
@@ -1284,6 +1306,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
             onFechar={() => setRevisaoAberta(false)}
             onSessionExpired={onSessionExpired}
             tentativaId={resultadoTentativa.id}
+            tituloAvaliacao={avaliacaoEmExecucao.titulo}
           />
         ) : null}
         </>
@@ -1296,6 +1319,7 @@ function useExecucaoAvaliacao({ onRefresh, onSessionExpired }) {
           onFechar={() => setRevisaoDireta(null)}
           onSessionExpired={onSessionExpired}
           tentativaId={revisaoDireta.tentativaId}
+          tituloAvaliacao={revisaoDireta.titulo}
         />
       ) : null}
     </>
@@ -2099,19 +2123,23 @@ function TelaCursoAluno({ avaliacaoLiberada, curso, modulosComEstado, onAbrirMod
                       {bloqueado ? (
                         <span className="modulos-curso-aluno__bloqueio-texto">{textoBloqueio}</span>
                       ) : (
-                        <>
+                        <span className="modulos-curso-aluno__direita">
                           <span className="modulos-curso-aluno__contagem">
                             {totalConcluidosModulo} de {totalItensModulo} concluído{totalItensModulo === 1 ? "" : "s"}
                           </span>
                           <span className="modulos-curso-aluno__barra">
                             <BarraProgresso mostrarTexto={false} percentual={percentualModulo} />
                           </span>
-                        </>
+                          <span className="modulos-curso-aluno__percentual">{percentualModulo}%</span>
+                          {concluido ? <TbCheck aria-hidden="true" className="modulos-curso-aluno__check" size={18} /> : null}
+                        </span>
                       )}
                     </span>
-                    <span aria-hidden="true" className="modulos-curso-aluno__seta">
-                      {concluido ? <TbCheck className="modulos-curso-aluno__check" size={18} /> : <TbChevronRight size={18} />}
-                    </span>
+                    {bloqueado ? null : (
+                      <span aria-hidden="true" className="modulos-curso-aluno__seta">
+                        <TbChevronRight size={18} />
+                      </span>
+                    )}
                   </button>
                 </li>
               );

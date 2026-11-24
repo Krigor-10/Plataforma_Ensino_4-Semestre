@@ -9141,6 +9141,8 @@
 
 .revisao-questao__enunciado {
   margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
   color: var(--cor-texto-forte);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -9214,34 +9216,81 @@
   background: color-mix(in srgb, var(--cor-erro) 8%, var(--cor-fundo-elevado));
 }
 
-/* Grade auto 1fr auto (letra/numero | texto | marca "Correta/Incorreta")
-   em vez de flex-wrap: um texto longo nao deixa a letra sozinha na linha de
-   cima - docs/fluxo-coordenador/PROMPT-agente-modulo-leitura-compacta.md,
-   item 3. Vale tambem pra previa do Professor (PreviaTrilhaAluno.jsx), que
-   reaproveita o mesmo GabaritoQuestoes sem a variante compacta. */
+/* Letra/numero num circulo com borda, texto ao lado (nunca numa coluna
+   larga separada) e as marcas ("Correta"/"Sua resposta") no fim da MESMA
+   linha - flex em vez da grade auto 1fr auto de antes, que deixava a letra
+   sozinha numa coluna larga quando o texto da alternativa era longo (docs/
+   TelaConteudosAlunos/PROMPT-agente-revisao-aluno-layout-professor.md,
+   item 4). Vale tambem pra previa do Professor (JanelaPreviaItem/
+   GabaritoQuestoes) e pra tela da avaliacao (TelaAvaliacaoGestao), que
+   reaproveitam as mesmas classes. */
 .revisao-afirmativas__cabecalho,
 .revisao-alternativas__cabecalho {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: 0.4rem;
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   font-size: 0.9rem;
   color: var(--cor-texto-forte);
 }
 
 .revisao-afirmativas__letra,
 .revisao-alternativas__letra {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: var(--raio-circular);
+  border: 1.5px solid var(--cor-borda-forte);
+  font-size: 0.85rem;
   font-weight: 700;
+  color: var(--cor-texto-forte);
+  background: var(--cor-fundo-elevado);
+}
+
+.revisao-alternativas__item--correta .revisao-alternativas__letra,
+.revisao-afirmativas__letra--correta {
+  border-color: var(--cor-sucesso);
+  background: var(--cor-sucesso);
+  color: #fff;
+}
+
+.revisao-alternativas__item--escolhida-errada .revisao-alternativas__letra,
+.revisao-afirmativas__letra--incorreta {
+  border-color: var(--cor-erro);
+  background: var(--cor-erro);
+  color: #fff;
 }
 
 .revisao-afirmativas__texto,
 .revisao-alternativas__texto {
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 8rem;
+  padding-top: 0.2rem;
 }
 
+/* As marcas ("Correta"/"Sua resposta") ficam no fim da linha do cabecalho -
+   o texto (flex:1 acima) empurra este bloco pra direita sozinho, sem
+   precisar de margin-left:auto. Com 2 marcas (escolhida E correta), ficam
+   lado a lado e quebram pra baixo so se nao houver espaco (flex-wrap do
+   cabecalho). */
+.revisao-afirmativas__marcas,
+.revisao-alternativas__marcas {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Alinhada com o TEXTO da alternativa, nao com a letra - mesmo recuo do
+   circulo (largura + gap do cabecalho) em vez de ficar colada na borda. */
 .revisao-afirmativas__justificativa,
 .revisao-alternativas__justificativa {
   margin: 0;
+  padding-left: calc(1.875rem + 0.5rem);
   font-size: 0.85rem;
   color: var(--cor-texto-suave);
   line-height: 1.5;
@@ -9271,16 +9320,120 @@
   background: color-mix(in srgb, var(--cor-erro) 12%, transparent);
 }
 
+/* ------------------------------------------------------------
+   REVISAO DETALHADA DO ALUNO — RevisaoTentativaAvaliacao.jsx, mesma
+   estrutura do quiz do professor (docs/TelaConteudosAlunos/PROMPT-agente-
+   revisao-aluno-layout-professor.md): lista de questoes a esquerda
+   (reaproveita .janela-previa-item__quiz*, de JanelaPreviaItem.jsx) + uma
+   questao por vez a direita (.revisao-questao, compartilhada com
+   GabaritoQuestoes). As classes abaixo sao so o que e exclusivo desta tela:
+   o resumo compacto no cabecalho do modal, o indicador de estado de cada
+   questao na lista, e o visualizador de imagem ampliada.
+   ------------------------------------------------------------ */
+.revisao-avaliacao__resumo-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--cor-texto-suave);
+}
+
+.revisao-avaliacao__resumo-item strong {
+  color: var(--cor-texto-forte);
+}
+
+.revisao-avaliacao__lista-texto {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.revisao-avaliacao__lista-status {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: var(--raio-circular);
+  color: var(--cor-texto-mudo);
+  background: var(--cor-fundo-alt);
+}
+
+.revisao-avaliacao__lista-status--certo {
+  color: #fff;
+  background: var(--cor-sucesso);
+}
+
+.revisao-avaliacao__lista-status--errado {
+  color: #fff;
+  background: var(--cor-erro);
+}
+
+.revisao-avaliacao__lista-status--pendente {
+  color: #fff;
+  background: var(--cor-aviso);
+}
+
+/* Imagem da questao, clicavel pra ampliar (reaproveita .quiz-anexo-imagem,
+   so troca o <a target="_blank"> por um <button> que abre o visualizador
+   com zoom abaixo, em vez de uma aba nova). */
+.revisao-questao__anexo-imagem-botao {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+/* Visualizador de imagem ampliada (ImagemComZoom.jsx) por cima da janela de
+   revisao - sem Modal proprio (evita 2 focus traps encavalados), so um
+   overlay fixo com fechar por X, clique fora ou Esc (capturado aqui dentro,
+   pra nao fechar a janela de revisao inteira junto). */
+.revisao-avaliacao__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--espaco-lg);
+  background: rgba(8, 8, 12, 0.8);
+}
+
+.revisao-avaliacao__lightbox-caixa {
+  position: relative;
+  width: min(900px, 94vw);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: var(--espaco-lg);
+  border-radius: var(--raio-lg);
+  background: var(--cor-fundo-elevado);
+}
+
+.revisao-avaliacao__lightbox-fechar {
+  position: absolute;
+  top: var(--espaco-sm);
+  right: var(--espaco-sm);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-elevado);
+  color: var(--cor-texto-forte);
+  cursor: pointer;
+}
+
 /* Revisao pos-prova — Desktop (telas largas, >= 901px, mesmo breakpoint
    de workspace.css:92). So aqui a tela ganha escala de leitura; abaixo
    disso (tablet, mobile do site, e o app mobile React Native — que nem
    tem essa tela) nada muda. */
 @media (min-width: 901px) {
-  .modal-caixa--revisao-avaliacao {
-    width: min(820px, 92vw);
-    max-width: min(820px, 92vw);
-  }
-
   .revisao-avaliacao {
     gap: var(--espaco-2xl);
   }
@@ -9616,10 +9769,11 @@
 }
 
 /* ------------------------------------------------------------
-   MODULOS DO CURSO EM CARTOES — tela do curso do Aluno (docs/
-   TelaConteudosAlunos/PROMPT-agente-trilha-aluno-modulo-em-tela-propria.md),
-   no lugar do acordeao de antes. Mesmos tokens de "relevo duplo" e fundo
-   solido do resto do app; 2 colunas a partir de 1024px, 1 coluna abaixo.
+   MODULOS DO CURSO EM LISTA — tela do curso do Aluno (docs/
+   TelaConteudosAlunos/PROMPT-agente-trilha-aluno-correcoes-1.md), em pilha
+   (sempre 1 coluna, como a lista de modulos do Professor/Coordenador) no
+   lugar das 2 colunas de antes. Mesmos tokens de "relevo duplo" e fundo
+   solido do resto do app.
    ------------------------------------------------------------ */
 .modulos-curso-aluno__titulo-secao {
   margin: 0;
@@ -9631,16 +9785,10 @@
 }
 
 .modulos-curso-aluno {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--espaco-md);
   list-style: none;
-}
-
-@media (min-width: 1024px) {
-  .modulos-curso-aluno {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 .modulos-curso-aluno__item {
@@ -9648,9 +9796,8 @@
   align-items: center;
   gap: var(--espaco-md);
   width: 100%;
-  height: 100%;
-  min-height: 5.5rem;
-  padding: var(--espaco-md) var(--espaco-lg);
+  min-height: 4rem;
+  padding: var(--espaco-sm) var(--espaco-lg);
   border: 1px solid var(--borda-card-modulo);
   border-radius: var(--raio-lg);
   background: var(--cor-fundo-elevado);
@@ -9711,40 +9858,90 @@
 .modulos-curso-aluno__corpo {
   display: flex;
   flex: 1;
-  flex-direction: column;
-  gap: 0.3rem;
+  align-items: center;
+  gap: var(--espaco-md);
   min-width: 0;
 }
 
 .modulos-curso-aluno__titulo {
-  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.95rem;
   font-weight: 700;
-  line-height: 1.3;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
-.modulos-curso-aluno__contagem,
 .modulos-curso-aluno__bloqueio-texto {
+  flex-shrink: 0;
   font-size: 0.78rem;
   color: var(--cor-texto-suave);
 }
 
-.modulos-curso-aluno__barra {
-  display: block;
-  max-width: 14rem;
-  margin-top: 0.15rem;
+/* Bloco a direita da linha (contagem + barra + % + check), nesta ordem,
+   sempre antes da seta (docs/.../correcoes-1.md, item 2-3). */
+.modulos-curso-aluno__direita {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--espaco-sm);
 }
 
+.modulos-curso-aluno__contagem {
+  font-size: 0.78rem;
+  color: var(--cor-texto-suave);
+  white-space: nowrap;
+}
+
+.modulos-curso-aluno__barra {
+  display: block;
+  width: 6.875rem;
+  flex-shrink: 0;
+}
+
+.modulos-curso-aluno__percentual {
+  flex-shrink: 0;
+  min-width: 2.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--cor-texto-suave);
+  text-align: right;
+}
+
+.modulos-curso-aluno__check {
+  flex-shrink: 0;
+  color: var(--cor-sucesso);
+}
+
+/* Seta sempre o ultimo elemento da linha, inclusive no modulo concluido
+   (que agora mostra check E seta) - so nao existe quando bloqueado. */
 .modulos-curso-aluno__seta {
   flex-shrink: 0;
   color: var(--cor-texto-mudo);
 }
 
-.modulos-curso-aluno__check {
-  color: var(--cor-sucesso);
+@media (max-width: 767.98px) {
+  .modulos-curso-aluno__corpo {
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+
+  .modulos-curso-aluno__titulo {
+    flex: 1 1 100%;
+  }
+
+  .modulos-curso-aluno__direita {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+  }
+
+  .modulos-curso-aluno__item {
+    min-height: auto;
+    padding: var(--espaco-md) var(--espaco-lg);
+  }
 }
 
 /* Variante media (docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-

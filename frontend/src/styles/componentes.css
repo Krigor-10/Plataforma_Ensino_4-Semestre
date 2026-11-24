@@ -889,6 +889,25 @@ select.campo__entrada option {
   }
 }
 
+/* Revisao detalhada do aluno (docs/TelaConteudosAlunos/PROMPT-agente-
+   revisao-aluno-layout-professor.md, item 2): mesmo tamanho da janela do
+   quiz do professor acima, no lugar do min(820px, 92vw) de antes. */
+.modal-caixa--revisao-avaliacao {
+  width: min(1080px, 94vw);
+  max-width: min(1080px, 94vw);
+  max-height: 90dvh;
+}
+
+@media (max-width: 767.98px) {
+  .modal-caixa--revisao-avaliacao {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+}
+
 .modal-caixa--largo {
   max-width: min(40rem, 95vw);
 }

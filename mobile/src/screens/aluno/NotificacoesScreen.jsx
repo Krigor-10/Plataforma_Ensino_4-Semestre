@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import EstadoVazio from "../../components/EstadoVazio.jsx";
 import { apiRequest, ApiError } from "../../lib/api.js";
 import { formatDate } from "../../lib/format.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
@@ -10,7 +11,8 @@ const ICONE_TIPO = {
   MatriculaRejeitada: "close-circle",
   AvaliacaoCorrigida: "clipboard",
   ConteudoPublicado: "book",
-  PagamentoConfirmado: "card"
+  PagamentoConfirmado: "card",
+  CertificadoEmitido: "ribbon"
 };
 
 export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessionExpired }) {
@@ -93,7 +95,7 @@ export default function NotificacoesScreen({ onNotificacoesAtualizadas, onSessio
       ) : erro ? (
         <Text style={estilos.erro}>{erro}</Text>
       ) : notificacoes.length === 0 ? (
-        <Text style={estilos.vazio}>Nenhuma notificação por aqui.</Text>
+        <EstadoVazio icone="notifications-outline" mensagem="Nenhuma notificação por aqui." />
       ) : (
         <FlatList
           contentContainerStyle={estilos.corpo}
@@ -157,6 +159,5 @@ const estilos = StyleSheet.create({
   pillNovaTexto: { color: cores.informativo, fontSize: 10, fontWeight: "800", letterSpacing: 0.3 },
   cartaoMensagem: { color: cores.textoRotulo, fontSize: tipografia.corpo, marginTop: 4 },
   cartaoData: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 6 },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 60 },
   erro: { color: cores.erro, textAlign: "center", marginTop: 40 }
 });

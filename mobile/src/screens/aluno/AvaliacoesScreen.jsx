@@ -7,6 +7,7 @@ import { formatarTempoRestante, formatGrade, normalizeEvaluationType } from "../
 import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import CartaoCursoAtivo from "../../components/CartaoCursoAtivo.jsx";
+import EstadoVazio from "../../components/EstadoVazio.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
 import SeletorCurso from "../../components/SeletorCurso.jsx";
 import Toast from "../../components/Toast.jsx";
@@ -177,7 +178,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   if (cursosMatriculados.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.vazio}>Você ainda não possui cursos com avaliações disponíveis.</Text>
+        <EstadoVazio icone="clipboard-outline" mensagem="Você ainda não possui cursos com avaliações disponíveis." />
       </View>
     );
   }
@@ -268,9 +269,9 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
       ) : null}
 
       {avaliacoesDoCurso.length === 0 ? (
-        <Text style={estilos.vazio}>Este curso ainda não possui avaliações disponíveis.</Text>
+        <EstadoVazio icone="clipboard-outline" mensagem="Este curso ainda não possui avaliações disponíveis." />
       ) : avaliacoesFiltradas.length === 0 ? (
-        <Text style={estilos.vazio}>Nenhuma avaliação neste filtro.</Text>
+        <EstadoVazio icone="filter-outline" mensagem="Nenhuma avaliação neste filtro." />
       ) : (
         <ScrollView contentContainerStyle={estilos.corpo}>
           {avaliacoesFiltradas.map((avaliacao) => {
@@ -486,6 +487,5 @@ const estilos = StyleSheet.create({
   notaPillTexto: { fontSize: tipografia.rotulo, fontWeight: "700" },
   cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, marginTop: espacamentos.sm, fontWeight: "700" },
   cartaoEmAndamentoUrgente: { color: cores.erro },
-  cartaoStatusTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md },
-  vazio: { color: cores.textoSuave, textAlign: "center", marginTop: 40, paddingHorizontal: 24 }
+  cartaoStatusTexto: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: espacamentos.md }
 });

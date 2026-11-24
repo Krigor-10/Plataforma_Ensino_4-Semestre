@@ -18,7 +18,8 @@ public enum TipoNotificacao
     ChamadoNovo = 7,
     ChamadoNovaMensagem = 8,
     ChatbotTetoAtingido = 9,
-    CursoDevolvidoAoProfessor = 10
+    CursoDevolvidoAoProfessor = 10,
+    CertificadoEmitido = 11
 }
 
 public class Notificacao

@@ -933,6 +933,42 @@ public class AvaliacaoServiceTests
         Assert.NotNull(resultado.CorrigidaEm);
     }
 
+    // docs/TelaConteudosAlunos/PROMPT-agente-revisao-aluno-layout-professor.md,
+    // item 1: a revisao do aluno nao trazia os anexos da questao (imagem do
+    // enunciado), diferente da execucao (MapQuestaoAluno), que ja trazia.
+    [Fact]
+    public async Task ObterRevisaoTentativaAsync_QuestaoComAnexoDeImagem_RetornaAnexoNaRevisao()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+
+        context.AnexosQuestoesBanco.Add(new AnexoQuestaoBanco
+        {
+            QuestaoBancoId = questao.QuestaoBancoId,
+            Titulo = "Figura da questao",
+            TipoAnexo = "Imagem",
+            ArquivoUrl = "/uploads/questoes/figura.png"
+        });
+        await context.SaveChangesAsync();
+
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id }
+            }
+        };
+        var tentativa = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
+
+        var revisao = await service.ObterRevisaoTentativaAsync(tentativa.Id, aluno.Id);
+
+        var questaoRevisao = Assert.Single(revisao.Questoes);
+        var anexo = Assert.Single(questaoRevisao.Anexos);
+        Assert.Equal("Imagem", anexo.TipoAnexo);
+        Assert.Equal("/uploads/questoes/figura.png", anexo.ArquivoUrl);
+    }
+
     [Fact]
     public async Task EnviarRespostasAlunoAsync_RespostaErrada_ZeraPontosDaQuestao()
     {
@@ -1927,6 +1963,54 @@ public class AvaliacaoServiceTests
 
         var item = Assert.Single(resultado);
         Assert.False(item.ProgressoLiberado);
+    }
+
+    // docs/certificados-mobile/PROMPT-agente-certificados-mobile.md, item 0:
+    // a nota lancada (via correcao automatica da prova objetiva) que atinge
+    // o minimo de 7 emite o certificado automaticamente, quando o resto do
+    // curso (conteudo) ja estava 100% concluido.
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_NotaDaProvaAtinge7ComConteudoJaConcluido_EmiteCertificadoAutomaticamente()
+    {
+        var context = TestContextFactory.Criar();
+        var certificadoService = new CertificadoService(context, new AcessoAcademicoService(context));
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context), certificadoService);
+        var service = new AvaliacaoService(context, progressoService, new NotificacaoService(context, NullLogger<NotificacaoService>.Instance), new AcessoAcademicoService(context), new ArmazenamentoArquivoServiceFake(), new ExtratorTextoMaterialServiceFake(), new AvaliacaoIAServiceFake(), CriarCursoService(context));
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        var turma = CriarTurma(context, curso.Id, professor.Id);
+        var matricula = CriarMatriculaAprovada(context, aluno.Id, curso.Id, turma.Id);
+        var conteudo = CriarConteudoPublicado(context, turma.Id, modulo.Id, curso.Id, "Aula 1");
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudo.Id);
+
+        var avaliacaoFinal = await service.CriarAvaliacaoAsync(professor.Id, new CriarAvaliacaoDto
+        {
+            Titulo = "Avaliacao Final",
+            CursoId = curso.Id,
+            ModuloId = null,
+            TipoAvaliacao = TipoAvaliacao.Prova,
+            StatusPublicacao = StatusPublicacao.Rascunho,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        });
+        var questao = await service.AdicionarQuestaoAsync(avaliacaoFinal.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 10));
+        avaliacaoFinal.Publicar();
+        context.Avaliacoes.Update(avaliacaoFinal);
+        await context.SaveChangesAsync();
+        var alternativaCorreta = questao.Alternativas.Single(a => a.Letra == "A");
+        var dto = new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = alternativaCorreta.Id } }
+        };
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacaoFinal.Id, aluno.Id, dto);
+
+        Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
+        Assert.NotNull(matricula.CertificadoEmitidoEm);
     }
 
     [Fact]
