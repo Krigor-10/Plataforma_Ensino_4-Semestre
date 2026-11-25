@@ -3734,6 +3734,27 @@
   align-items: center;
 }
 
+/* Atalho discreto no cabecalho (ex.: "Configurar assistente" em Chamados,
+   docs/chatbot/PROMPT-agente-assistente-config-no-perfil.md) - texto pequeno
+   e sem fundo, pra nao competir com o titulo nem parecer uma acao primaria
+   da tela. */
+.cabecalho-pagina__link-discreto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  font-size: var(--texto-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0;
+}
+
+.cabecalho-pagina__link-discreto:hover {
+  color: var(--cor-marca-clara);
+}
+
 /* .barra-filtros e reaproveitada aqui (Turmas) e em Cursos (busca + botao
    "Novo curso") como o agrupamento de acoes do cabecalho; seu margin-bottom
    (pensado pra quando ela fica sozinha, abaixo do cabecalho) nao se aplica
@@ -8872,6 +8893,19 @@
   margin: 0;
 }
 
+/* Linha icone+titulo + switch, lado a lado, dentro de um
+   .perfil-seguranca-item--formulario (que empilha os filhos em coluna) -
+   usado pelo Assistente CodeRyse (docs/chatbot/PROMPT-agente-assistente-
+   config-no-perfil.md), cujo conteudo de baixo (teto/estatisticas) precisa
+   da largura toda, diferente do switch de tema (que fica sozinho na linha). */
+.perfil-seguranca-item__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-md);
+  width: 100%;
+}
+
 @media (max-width: 480px) {
   .perfil-avatar-grande {
     width: 3rem;
@@ -8949,6 +8983,21 @@
 
 .switch-tema--claro .switch-tema__sol {
   color: #7c2d12;
+}
+
+/* Variante generica "ligado" (roxo da marca, sem icones) - pro switch do
+   Assistente CodeRyse e qualquer outro liga/desliga que nao seja o tema. */
+.switch-tema--ativo {
+  background: var(--cor-marca);
+  border-color: var(--cor-marca-profunda);
+}
+
+.switch-tema--ativo:hover {
+  border-color: var(--cor-marca-clara);
+}
+
+.switch-tema--ativo .switch-tema__thumb {
+  left: 30px;
 }
 
 /* ------------------------------------------------------------

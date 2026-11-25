@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { TbArrowLeft, TbCheck, TbSend2 } from "react-icons/tb";
+import { TbArrowLeft, TbCheck, TbSend2, TbSettings } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
-import CartaoAssistenteAdmin from "../../components/chatbot/CartaoAssistenteAdmin.jsx";
 import Insignia from "../../components/Insignia.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
@@ -22,7 +21,7 @@ const ABAS_STATUS = [
 ];
 const ROTULO_POR_STATUS = { 1: "Aberto", 2: "Respondido", 3: "Resolvido" };
 
-export function SecaoChamados({ usuario, ehAdmin, coordenadores = [], chamadoIdSelecionado = null, onRefresh, onSessionExpired }) {
+export function SecaoChamados({ usuario, ehAdmin, coordenadores = [], chamadoIdSelecionado = null, onAbrirConfiguracaoAssistente, onRefresh, onSessionExpired }) {
   const { mostrarToast } = useToast();
   const [abaStatus, setAbaStatus] = useState("abertos");
   const [chamados, setChamados] = useState([]);
@@ -159,9 +158,16 @@ export function SecaoChamados({ usuario, ehAdmin, coordenadores = [], chamadoIdS
               : "Chamados encaminhados para os cursos que voce coordena."}
           </p>
         </div>
+        {ehAdmin ? (
+          <button
+            className="cabecalho-pagina__link-discreto"
+            onClick={onAbrirConfiguracaoAssistente}
+            type="button"
+          >
+            <TbSettings aria-hidden="true" size={14} /> Configurar assistente
+          </button>
+        ) : null}
       </header>
-
-      {ehAdmin ? <CartaoAssistenteAdmin onSessionExpired={onSessionExpired} /> : null}
 
       <nav
         aria-label="Status dos chamados"

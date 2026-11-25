@@ -5,19 +5,12 @@ import { SecaoChamados } from "./SecaoChamados.jsx";
 import { ToastProvider } from "../../hooks/useToast.jsx";
 import { ApiError } from "../../lib/api.js";
 import { listarChamadosParaStaff, obterChamado, resolverChamado, responderChamado } from "../../lib/chamadosApi.js";
-import { obterConfiguracaoChatbot, obterUsoChatbot } from "../../lib/chatbotApi.js";
 
 vi.mock("../../lib/chamadosApi.js", () => ({
   listarChamadosParaStaff: vi.fn(),
   obterChamado: vi.fn(),
   responderChamado: vi.fn(),
   resolverChamado: vi.fn()
-}));
-
-vi.mock("../../lib/chatbotApi.js", () => ({
-  obterConfiguracaoChatbot: vi.fn(),
-  atualizarConfiguracaoChatbot: vi.fn(),
-  obterUsoChatbot: vi.fn()
 }));
 
 const ADMIN = { id: 1, nome: "Admin Teste", tipoUsuario: "Admin" };
@@ -53,21 +46,33 @@ describe("SecaoChamados", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     listarChamadosParaStaff.mockResolvedValue([]);
-    obterConfiguracaoChatbot.mockResolvedValue({ ativo: true, tetoMensalUsd: 20 });
-    obterUsoChatbot.mockResolvedValue({ gastoMesUsd: 4.2, tetoMensalUsd: 20, quantidadePerguntasMes: 128 });
   });
 
-  test("cartao 'Assistente' aparece pro Admin e nao pro Coordenador", async () => {
-    renderSecao();
-    expect(await screen.findByText("Assistente CodeRyse")).toBeInTheDocument();
+  // docs/chatbot/PROMPT-agente-assistente-config-no-perfil.md: a config do
+  // assistente saiu de Chamados e foi pra Meu perfil > Configuracoes - aqui
+  // so fica um atalho discreto que abre o modal la, pro Admin.
+  test("nao mostra mais 'Teto mensal' nem 'Gasto do mes'; so o atalho discreto, so pro Admin", async () => {
+    const onAbrirConfiguracaoAssistente = vi.fn();
+    renderSecao({ onAbrirConfiguracaoAssistente });
+    await waitFor(() => expect(listarChamadosParaStaff).toHaveBeenCalled());
+
+    expect(screen.queryByText("Teto mensal (US$)")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gasto do mês/)).not.toBeInTheDocument();
+
+    const atalho = screen.getByRole("button", { name: /Configurar assistente/ });
+    await userEvent.setup().click(atalho);
+    expect(onAbrirConfiguracaoAssistente).toHaveBeenCalled();
 
     render(
       <ToastProvider>
         <SecaoChamados usuario={COORDENADOR} ehAdmin={false} coordenadores={[]} />
       </ToastProvider>
     );
-    await waitFor(() => expect(listarChamadosParaStaff).toHaveBeenCalled());
-    expect(screen.queryAllByText("Assistente CodeRyse")).toHaveLength(1);
+    await waitFor(() => expect(listarChamadosParaStaff).toHaveBeenCalledTimes(2));
+    // Os dois renders ficam montados (mesmo padrao do teste de "cartao
+    // Assistente" que isto substitui) - so o render do Admin acrescenta o
+    // atalho, entao a contagem continua 1 em vez de virar 2.
+    expect(screen.queryAllByRole("button", { name: /Configurar assistente/ })).toHaveLength(1);
   });
 
   test("carrega a aba Abertos por padrao e lista assunto/curso/aluno", async () => {

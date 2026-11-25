@@ -4,7 +4,9 @@ import { MdSave } from "react-icons/md";
 import Botao from "../../components/Botao.jsx";
 import Modal from "../../components/Modal.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import Switch from "../../components/Switch.jsx";
 import { InlineMessage, MiniList } from "../../components/Primitives.jsx";
+import SecaoAssistenteConfiguracoes from "../../components/chatbot/SecaoAssistenteConfiguracoes.jsx";
 import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatCep, onlyDigits } from "../../lib/format.js";
@@ -47,6 +49,7 @@ export function ModalPerfilWorkspace({
   fatos,
   destaques,
   ehAluno,
+  abaInicial,
   aoFechar,
   perfil,
   nomeUsuario,
@@ -54,7 +57,8 @@ export function ModalPerfilWorkspace({
   onSessionExpired,
   onUsuarioAtualizado
 }) {
-  const [aba, setAba] = useState("informacoes");
+  const [aba, setAba] = useState(abaInicial || "informacoes");
+  const ehAdmin = perfil === "Admin";
   const [temaClaro, setTemaClaro] = usarTemaClaro();
   const refAbas = useRef(null);
   const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
@@ -385,18 +389,16 @@ export function ModalPerfilWorkspace({
                       <p>{temaClaro ? "Tema claro ativado" : "Tema escuro ativado"}</p>
                     </div>
                   </div>
-                  <button
-                    aria-checked={temaClaro}
-                    aria-label={temaClaro ? "Ativar tema escuro" : "Ativar tema claro"}
-                    className={`switch-tema${temaClaro ? " switch-tema--claro" : ""}`}
-                    onClick={() => setTemaClaro((atual) => !atual)}
-                    role="switch"
-                    type="button"
+                  <Switch
+                    ativo={temaClaro}
+                    onAlternar={() => setTemaClaro((atual) => !atual)}
+                    rotulo={temaClaro ? "Ativar tema escuro" : "Ativar tema claro"}
+                    variante="tema"
                   >
                     <TbMoon aria-hidden="true" className="switch-tema__lua" size={12} />
                     <span aria-hidden="true" className="switch-tema__thumb" />
                     <TbSun aria-hidden="true" className="switch-tema__sol" size={12} />
-                  </button>
+                  </Switch>
                 </div>
 
                 <div className="perfil-seguranca-item perfil-seguranca-item--formulario">
@@ -427,6 +429,8 @@ export function ModalPerfilWorkspace({
                     {mensagemSenha.message ? <InlineMessage tone={mensagemSenha.tone}>{mensagemSenha.message}</InlineMessage> : null}
                   </form>
                 </div>
+
+                {ehAdmin ? <SecaoAssistenteConfiguracoes onSessionExpired={onSessionExpired} /> : null}
               </div>
             </section>
           ) : null}

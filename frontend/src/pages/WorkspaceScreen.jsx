@@ -47,7 +47,17 @@ export default function WorkspaceScreen({
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [abaPerfilInicial, setAbaPerfilInicial] = useState("informacoes");
   const [confirmacaoSessao, setConfirmacaoSessao] = useState(null);
+
+  // Abre "Meu perfil" numa aba especifica - usado pelo avatar do topo (aba
+  // padrao "informacoes") e pelo atalho "Configurar assistente" de Chamados
+  // (docs/chatbot/PROMPT-agente-assistente-config-no-perfil.md, direto na
+  // aba "configuracoes").
+  function abrirPerfil(aba = "informacoes") {
+    setAbaPerfilInicial(aba);
+    setIsProfileOpen(true);
+  }
 
   const role = usuario.tipoUsuario || "";
   const isManager = MANAGER_ROLES.has(role);
@@ -603,6 +613,7 @@ export default function WorkspaceScreen({
           fatos={profileFacts}
           destaques={profileHighlights}
           ehAluno={isStudent}
+          abaInicial={abaPerfilInicial}
           aoFechar={() => setIsProfileOpen(false)}
           perfil={role}
           iniciaisUsuario={userInitials}
@@ -625,7 +636,7 @@ export default function WorkspaceScreen({
             : null
         }
         onNavigate={onNavigate}
-        onAbrirPerfil={() => setIsProfileOpen(true)}
+        onAbrirPerfil={() => abrirPerfil("informacoes")}
         onLogoutClick={() => solicitarSaida(isDemoMode && canDisableDemoMode ? "demo" : "sessao")}
         xpAluno={xpAluno}
         contadorChamadosAbertos={contadorChamadosAbertos}
@@ -788,6 +799,7 @@ export default function WorkspaceScreen({
                 ehAdmin={role === "Admin"}
                 coordenadores={snapshot.coordenadores}
                 chamadoIdSelecionado={route.param ? Number(route.param) : null}
+                onAbrirConfiguracaoAssistente={() => abrirPerfil("configuracoes")}
                 onRefresh={() => setRefreshKey((current) => current + 1)}
                 onSessionExpired={onSessionExpired}
               />

@@ -3149,61 +3149,31 @@
   font-family: inherit;
 }
 
-.cartao-assistente-admin {
-  padding: var(--espaco-md) var(--espaco-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--espaco-md);
-}
-
-.cartao-assistente-admin__cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espaco-md);
-  flex-wrap: wrap;
-}
-
-.cartao-assistente-admin__cabecalho h3 {
-  font-size: 0.9375rem;
-  font-weight: 700;
-  color: var(--cor-texto-forte);
-}
-
-.cartao-assistente-admin__interruptor {
-  display: flex;
-  align-items: center;
-  gap: var(--espaco-xs);
-  font-size: 0.8125rem;
-  color: var(--cor-texto-suave);
-  cursor: pointer;
-}
-
-.cartao-assistente-admin__corpo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--espaco-xl);
-}
-
-.cartao-assistente-admin__teto {
+/* Configuracao do Assistente CodeRyse - Meu perfil > Configuracoes, so Admin
+   (docs/chatbot/PROMPT-agente-assistente-config-no-perfil.md). Renomeado de
+   .cartao-assistente-admin*: deixou de ser um cartao avulso em Chamados e
+   virou um item dentro de .perfil-seguranca-item--formulario (que ja cuida
+   do padding/divisor entre itens) - so o miolo (teto, estatisticas, barra de
+   uso) e proprio daqui. */
+.assistente-config__teto {
   display: flex;
   flex-direction: column;
   gap: var(--espaco-xs);
+  margin-top: var(--espaco-sm);
 }
 
-.cartao-assistente-admin__teto label {
+.assistente-config__teto label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--cor-texto-suave);
 }
 
-.cartao-assistente-admin__teto-campo {
+.assistente-config__teto-campo {
   display: flex;
   gap: var(--espaco-sm);
 }
 
-.cartao-assistente-admin__teto-campo input {
+.assistente-config__teto-campo input {
   width: 7rem;
   background: var(--cor-fundo-alt);
   border: 1px solid var(--cor-borda);
@@ -3213,21 +3183,49 @@
   font-size: 0.875rem;
 }
 
-.cartao-assistente-admin__estatisticas {
+.assistente-config__estatisticas {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espaco-xl);
+  margin-top: var(--espaco-md);
 }
 
-.cartao-assistente-admin__estatisticas dt {
+.assistente-config__estatisticas dt {
   font-size: 0.6875rem;
   color: var(--cor-texto-mudo);
 }
 
-.cartao-assistente-admin__estatisticas dd {
+.assistente-config__estatisticas dd {
   font-size: 0.9375rem;
   font-weight: 700;
   color: var(--cor-texto-forte);
+}
+
+.assistente-config__barra-uso {
+  width: 100%;
+  height: 6px;
+  border-radius: var(--raio-circular);
+  background: var(--cor-fundo-alt);
+  overflow: hidden;
+  margin-top: var(--espaco-sm);
+}
+
+.assistente-config__barra-uso-preenchimento {
+  height: 100%;
+  border-radius: var(--raio-circular);
+  transition: width var(--transicao-normal);
+}
+
+.assistente-config__barra-uso-preenchimento--normal {
+  background: var(--cor-marca);
+}
+
+.assistente-config__barra-uso-preenchimento--aviso {
+  background: #f59e0b;
+}
+
+.assistente-config__barra-uso-preenchimento--critico {
+  background: var(--cor-erro);
 }
 
 @media (max-width: 900px) {
