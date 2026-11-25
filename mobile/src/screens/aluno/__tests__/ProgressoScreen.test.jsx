@@ -99,6 +99,16 @@ describe("ProgressoScreen - visao geral direta", () => {
     expect(screen.queryByLabelText(/Ver progresso de/i)).toBeNull();
   });
 
+  // docs/redesign-mobile/PROMPT-agente-avaliacoes-ajustes-1.md, item 6: o
+  // titulo grande "Progresso" (e o subtitulo) saem desta tela.
+  test("nao renderiza mais o titulo grande 'Progresso' nem o subtitulo", async () => {
+    await render(<ProgressoScreen snapshot={montarSnapshot()} />);
+    await screen.findByText("Curso Web");
+
+    expect(screen.queryByText("Progresso")).toBeNull();
+    expect(screen.queryByText("Acompanhamento da sua evolução acadêmica")).toBeNull();
+  });
+
   test("resumo mostra os 4 numeros calculados do snapshot e do status", async () => {
     await render(<ProgressoScreen snapshot={montarSnapshot()} />);
     await screen.findByText("Curso Web");
@@ -135,6 +145,27 @@ describe("ProgressoScreen - visao geral direta", () => {
     await fireEvent.press(screen.getByLabelText("Voltar"));
 
     expect(screen.getByText("Seus cursos")).toBeTruthy();
+  });
+
+  // docs/redesign-mobile/PROMPT-agente-progresso-voltar-margem.md: o Voltar
+  // precisa rolar junto com o conteudo (dentro do ScrollView), senao o
+  // cartao do curso passa por baixo dele e aparece cortado.
+  test("no detalhe do curso, o Voltar fica dentro do ScrollView", async () => {
+    await render(<ProgressoScreen snapshot={montarSnapshot()} />);
+    await screen.findByText("Curso Web");
+
+    await fireEvent.press(screen.getByLabelText("Curso Web. Em andamento."));
+
+    let node = screen.getByLabelText("Voltar");
+    let dentroDoScroll = false;
+    while (node.parent) {
+      node = node.parent;
+      if (node.type === "RCTScrollView") {
+        dentroDoScroll = true;
+        break;
+      }
+    }
+    expect(dentroDoScroll).toBe(true);
   });
 
   test("detalhe: cabecalho com anel/titulo/selo/3 numeros, certificado 'emitido em' quando Emitido, sem a frase fixa antiga", async () => {

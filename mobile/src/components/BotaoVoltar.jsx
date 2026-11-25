@@ -25,6 +25,12 @@ export default function BotaoVoltar({ onPress, style }) {
 }
 
 const estilos = StyleSheet.create({
+  // marginLeft: -6 (ajuste otico do chevron) vence marginHorizontal vindo de
+  // `style` no React Native, seja qual for a ordem no array de estilos -
+  // por isso nao da pra afastar este botao da borda so com marginHorizontal.
+  // Quem precisar de margem deve colocar o botao dentro de um container com
+  // padding (ex.: o `corpo` de uma ScrollView) ou passar marginLeft
+  // explicito em `style`.
   container: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 44, marginLeft: -6 },
   texto: { color: cores.destaque, fontWeight: "600" }
 });

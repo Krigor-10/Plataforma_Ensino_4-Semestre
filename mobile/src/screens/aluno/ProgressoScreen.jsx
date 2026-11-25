@@ -200,9 +200,6 @@ export default function ProgressoScreen({ onSessionExpired, snapshot }) {
 
   return (
     <View style={estilos.container}>
-      <Text style={estilos.tituloTela}>Progresso</Text>
-      <Text style={estilos.subtituloTela}>Acompanhamento da sua evolução acadêmica</Text>
-
       <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
         <LinearGradient colors={CORES_GRADIENTE} style={estilos.cartaoResumo}>
           <ResumoNumero rotulo="Em andamento" valor={String(emAndamentoCount)} />
@@ -279,9 +276,9 @@ function DetalheCurso({ cursoPorId, cursoId, grupo, mapaStatusCertificados, navi
 
   return (
     <View style={estilos.container}>
-      <BotaoVoltar onPress={onVoltar} style={estilos.botaoVoltar} />
-
       <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom }]}>
+        <BotaoVoltar onPress={onVoltar} />
+
         <LinearGradient colors={CORES_GRADIENTE} style={estilos.cabecalhoCurso}>
           <View style={estilos.cabecalhoCursoTopo}>
             <ProgressoCircular cor={percentual >= 100 ? cores.sucesso : cores.destaque} espessura={6} percentual={percentual} size={70} />
@@ -412,10 +409,7 @@ function Metrica({ rotulo, valor }) {
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  tituloTela: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo, paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.xl },
-  subtituloTela: { color: cores.textoRotulo, fontSize: tipografia.rotulo, paddingHorizontal: espacamentos.xl, marginTop: 2 },
   botaoVazioCatalogo: { alignSelf: "center", marginTop: espacamentos.md },
-  botaoVoltar: { marginHorizontal: espacamentos.xl, marginTop: espacamentos.md },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, gap: espacamentos.md },
 
   cartaoResumo: {
