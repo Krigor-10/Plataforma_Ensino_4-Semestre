@@ -102,6 +102,25 @@ describe("PainelAssistente", () => {
     expect(onNavigate).toHaveBeenCalledWith("/app/certificados");
   });
 
+  // Achado da auditoria de bugs/crashes (docs/auditorias/AUDITORIA-BUGS-
+  // CRASH-WEB-MOBILE-2026-11-25.md): antes, qualquer excecao nao prevista
+  // vinda de enviarMensagemChatbotStream (alem das que ela mesma converte em
+  // onErro) deixava setEnviando(false) sem rodar - o campo ficava desabilitado
+  // e nenhuma nova pergunta era aceita pelo resto da sessao.
+  test("enviarMensagemChatbotStream lanca inesperadamente: o campo nao fica travado", async () => {
+    enviarMensagemChatbotStream.mockRejectedValue(new Error("falha inesperada"));
+
+    renderPainel();
+    await waitFor(() => expect(screen.queryByText(/Carregando conversa/)).not.toBeInTheDocument());
+
+    const usuario = userEvent.setup();
+    const campo = screen.getByLabelText("Pergunta para o Assistente CodeRyse");
+    await usuario.type(campo, "Pergunta");
+    await usuario.click(screen.getByRole("button", { name: "Enviar pergunta" }));
+
+    await waitFor(() => expect(campo).not.toBeDisabled());
+  });
+
   test("👍/👎 so aparecem depois da resposta finalizar (id numerico) e chamam o feedback", async () => {
     enviarMensagemChatbotStream.mockImplementation(async (_payload, callbacks) => {
       callbacks.onTexto?.("Resposta.");

@@ -74,18 +74,29 @@ export async function enviarMensagemChatbotStream({ texto, conversaId, contexto 
   const decodificador = new TextDecoder();
   let bufer = "";
 
-  while (true) {
-    const { done, value } = await leitor.read();
-    if (done) break;
+  // Sem try/catch aqui, uma queda de conexao no meio do streaming (wifi,
+  // deploy/restart do backend, timeout de proxy) fazia leitor.read()
+  // rejeitar e a excecao subir sem tratamento - PainelAssistente.jsx nunca
+  // chegava no setEnviando(false) logo apos o await, travando o chat
+  // (indicador "digitando" preso, novo envio bloqueado) pelo resto da
+  // sessao. onErro aqui aciona a MESMA limpeza que o evento SSE "erro" ja
+  // aciona (ver onErro em enviarPergunta, PainelAssistente.jsx).
+  try {
+    while (true) {
+      const { done, value } = await leitor.read();
+      if (done) break;
 
-    bufer += decodificador.decode(value, { stream: true });
+      bufer += decodificador.decode(value, { stream: true });
 
-    let indiceSeparador = bufer.indexOf("\n\n");
-    while (indiceSeparador !== -1) {
-      processarBlocoSse(bufer.slice(0, indiceSeparador), { onTexto, onAcoes, onFim, onErro });
-      bufer = bufer.slice(indiceSeparador + 2);
-      indiceSeparador = bufer.indexOf("\n\n");
+      let indiceSeparador = bufer.indexOf("\n\n");
+      while (indiceSeparador !== -1) {
+        processarBlocoSse(bufer.slice(0, indiceSeparador), { onTexto, onAcoes, onFim, onErro });
+        bufer = bufer.slice(indiceSeparador + 2);
+        indiceSeparador = bufer.indexOf("\n\n");
+      }
     }
+  } catch {
+    onErro?.({ codigo: "rede", mensagem: "A conexão com o assistente foi interrompida. Tente de novo." });
   }
 }
 

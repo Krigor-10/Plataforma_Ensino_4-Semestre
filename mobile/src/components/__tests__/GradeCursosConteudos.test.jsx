@@ -140,6 +140,23 @@ describe("GradeCursosConteudos - cartao", () => {
     expect(onDesistir).toHaveBeenCalledWith(itens[0]);
   });
 
+  // Achado da auditoria de bugs/crashes (docs/auditorias/AUDITORIA-BUGS-
+  // CRASH-WEB-MOBILE-2026-11-25.md): com a confirmacao aberta, tocar na capa
+  // ainda abria o sheet de Detalhes por cima, dois fluxos sobrepostos.
+  test("com a confirmacao de 'Desistir' aberta, tocar na capa nao abre os detalhes por cima", async () => {
+    const onAbrirDetalhe = jest.fn();
+    const itens = [montarItem({ pagamentoPendente: true })];
+
+    await render(<GradeCursosConteudos {...montarProps(itens, { onAbrirDetalhe })} />);
+
+    await fireEvent.press(screen.getByText("Desistir"));
+    await screen.findByText(/Desistir da compra de Curso Padrão/);
+
+    await fireEvent.press(screen.getByLabelText("Ver detalhes de Curso Padrão"));
+
+    expect(onAbrirDetalhe).not.toHaveBeenCalled();
+  });
+
   test("'Comprar' (pagamento cancelado) mostra a etiqueta âmbar e so o botao 'Comprar'", async () => {
     const onConcluirCompra = jest.fn();
     const itens = [montarItem({ acessoLiberado: false, pagamentoPendente: false })];

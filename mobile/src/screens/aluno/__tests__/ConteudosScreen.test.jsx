@@ -96,6 +96,20 @@ describe("ConteudosScreen - painel de detalhes da vitrine", () => {
 
     expect(await screen.findByLabelText("Voltar para a seleção de cursos")).toBeTruthy();
   });
+
+  // Achado da auditoria de bugs/crashes (docs/auditorias/AUDITORIA-BUGS-
+  // CRASH-WEB-MOBILE-2026-11-25.md): se o curso sumir de snapshot.cursos com
+  // a matricula ainda ativa (raro, mas acontece se o curso for excluido no
+  // backend), tocar em "Detalhes" virava um no-op sem nenhum aviso.
+  test("curso sumiu de snapshot.cursos: 'Detalhes' mostra um aviso em vez de nao fazer nada", async () => {
+    const snapshot = { ...montarSnapshot(), cursos: [] };
+
+    await render(<ConteudosScreen onRecarregar={jest.fn()} onSessionExpired={jest.fn()} snapshot={snapshot} />);
+
+    await fireEvent.press(await screen.findByText("Detalhes"));
+
+    expect(await screen.findByText("Não foi possível abrir os detalhes deste curso agora.")).toBeTruthy();
+  });
 });
 
 // Trilha do curso compacta (docs/redesign-mobile/PROMPT-agente-trilha-

@@ -103,4 +103,39 @@ describe("enviarMensagemChatbotStream", () => {
 
     expect(onErro).toHaveBeenCalledWith(expect.objectContaining({ codigo: "rede" }));
   });
+
+  // Achado da auditoria de bugs/crashes (docs/auditorias/AUDITORIA-BUGS-
+  // CRASH-WEB-MOBILE-2026-11-25.md): sem o try/catch em volta do loop,
+  // leitor.read() rejeitando (conexao caiu no meio do streaming) subia sem
+  // tratamento e PainelAssistente.jsx nunca chegava no setEnviando(false)
+  // logo apos o await - o chat travava com o indicador "digitando" preso.
+  test("conexao cai no meio do streaming (leitor.read rejeita): chama onErro e resolve em vez de lancar", async () => {
+    fetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader() {
+          let chamadas = 0;
+          return {
+            read() {
+              chamadas += 1;
+              if (chamadas === 1) {
+                return Promise.resolve({ done: false, value: new TextEncoder().encode('event: texto\ndata: {"texto":"Ol') });
+              }
+              return Promise.reject(new TypeError("network error"));
+            }
+          };
+        }
+      }
+    });
+
+    const onErro = vi.fn();
+    const trechos = [];
+
+    await expect(
+      enviarMensagemChatbotStream({ texto: "oi", conversaId: null, contexto: null }, { onTexto: (t) => trechos.push(t), onErro })
+    ).resolves.toBeUndefined();
+
+    expect(onErro).toHaveBeenCalledWith(expect.objectContaining({ codigo: "rede" }));
+  });
 });

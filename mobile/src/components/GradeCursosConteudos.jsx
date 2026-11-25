@@ -137,7 +137,10 @@ function CardCurso({ accessibilityLabelPrefix, item, onAbrirDetalhe, onConcluirC
       capaAccessibilityLabel={comAcesso ? `${accessibilityLabelPrefix} ${tituloCurso}` : `Ver detalhes de ${tituloCurso}`}
       curso={curso}
       etiqueta={obterEtiquetaSituacao(situacao)}
-      onAbrirCapa={comAcesso ? () => onSelecionar(id) : abrirDetalhe}
+      // Com a confirmacao de "Desistir" aberta, a capa fica sem acao - antes
+      // tocar nela abria o sheet de Detalhes por cima da confirmacao em
+      // andamento, dois fluxos sobrepostos ao mesmo tempo.
+      onAbrirCapa={comAcesso ? () => onSelecionar(id) : confirmandoDesistencia ? undefined : abrirDetalhe}
       rodapeConteudo={
         confirmandoDesistencia ? (
           <View style={estilos.confirmacao}>

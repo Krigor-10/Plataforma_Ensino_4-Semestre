@@ -1,10 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MdSave } from "react-icons/md";
-import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbEye, TbLock, TbSearch, TbSelector, TbX } from "react-icons/tb";
+import { TbCheck, TbChevronDown, TbChevronUp, TbChevronLeft, TbChevronRight, TbLock, TbSearch, TbSelector, TbX } from "react-icons/tb";
 import Botao from "../../components/Botao.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import MenuKebabTabela from "../../components/MenuKebabTabela.jsx";
 import Modal from "../../components/Modal.jsx";
 import { InlineMessage } from "../../components/Primitives.jsx";
+import { useIndicadorRolagemHorizontal } from "../../hooks/useIndicadorRolagemHorizontal.js";
+import { useSelecaoEmLote } from "../../hooks/useSelecaoEmLote.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
@@ -32,21 +35,22 @@ function IconeOrdenacao({ ativo, direcao }) {
   return direcao === "asc" ? <TbChevronUp aria-hidden="true" size={14} /> : <TbChevronDown aria-hidden="true" size={14} />;
 }
 
-/* Editar dados basicos/de contato e inativar/reativar o acesso (docs/alunos-
-   admin/PROMPT-agente-editar-e-inativar-aluno.md) - so o Admin ve os botoes
-   novos no rodape do modal de detalhes; o Coordenador continua so com
-   "Fechar", como antes. `alunoDetalheBase` guarda soh o registro no momento
-   em que o modal abriu - `alunoDetalhe` deriva da lista `alunos` (prop) mais
-   recente pra refletir a edicao/inativacao sem precisar fechar e reabrir o
-   modal, caindo de volta pro snapshot se o id sumir momentaneamente de uma
-   atualizacao em andamento (onRefresh nao e aguardavel, so dispara o refetch
-   no componente pai). */
+/* Tabela no mesmo padrao de SecaoProfessores.jsx (docs/alunos-admin/PROMPT-
+   agente-tabela-alunos-igual-professores.md): abas Ativos/Inativos, selecao
+   em lote e menu kebab, so pro Admin - o Coordenador continua so com "Ver
+   detalhes", sem checkbox nem barra de lote. Editar dados e inativar/
+   reativar (com motivo obrigatorio) vem de PROMPT-agente-editar-e-inativar-
+   aluno.md; aqui so muda COMO se chega nessas acoes (direto pelo kebab/lote,
+   alem de dentro do modal de detalhes). `alunoDetalheBase` guarda so o
+   registro no momento em que o modal abriu - `alunoDetalhe` deriva da lista
+   `alunos` (prop) mais recente pra refletir a edicao/inativacao sem precisar
+   fechar e reabrir o modal. */
 export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, onSessionExpired, usuario }) {
   const { mostrarToast } = useToast();
   const souAdmin = usuario?.tipoUsuario === "Admin";
 
   const [busca, setBusca] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [abaStatus, setAbaStatus] = useState("ativos");
   const [direcao, setDirecao] = useState("asc");
   const [pagina, setPagina] = useState(1);
   const [alunoDetalheBase, setAlunoDetalheBase] = useState(null);
@@ -58,6 +62,11 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
   const [motivoInativar, setMotivoInativar] = useState("");
   const [confirmandoReativar, setConfirmandoReativar] = useState(false);
   const [processandoAcesso, setProcessandoAcesso] = useState(false);
+  const [confirmacaoLote, setConfirmacaoLote] = useState(null);
+  const [motivoLote, setMotivoLote] = useState("");
+  const [executandoLote, setExecutandoLote] = useState(false);
+  const refAbas = useRef(null);
+  const abasTemConteudoEscondido = useIndicadorRolagemHorizontal(refAbas);
 
   const alunoDetalhe = alunoDetalheBase
     ? alunos.find((aluno) => Number(aluno.id) === Number(alunoDetalheBase.id)) || alunoDetalheBase
@@ -92,17 +101,11 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
 
   const termoBusca = useMemo(() => normalizarBusca(busca), [busca]);
   const alunosFiltrados = useMemo(() => {
-    let proximos = alunos;
-
-    if (filtroStatus === "ativos") {
-      proximos = proximos.filter((aluno) => aluno.ativo);
-    } else if (filtroStatus === "inativos") {
-      proximos = proximos.filter((aluno) => !aluno.ativo);
-    }
+    let proximos = alunos.filter((aluno) => Boolean(aluno.ativo) === (abaStatus === "ativos"));
 
     if (termoBusca) {
       proximos = proximos.filter((aluno) => {
-        const campos = [aluno.nome, aluno.email, maskCpf(aluno.cpf)];
+        const campos = [aluno.nome, aluno.email, aluno.matricula];
         return campos.some((campo) => normalizarBusca(campo).includes(termoBusca));
       });
     }
@@ -111,17 +114,33 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
       const comparacao = String(left.nome || "").localeCompare(String(right.nome || ""), "pt-BR");
       return direcao === "asc" ? comparacao : -comparacao;
     });
-  }, [alunos, direcao, filtroStatus, termoBusca]);
+  }, [abaStatus, alunos, direcao, termoBusca]);
 
   const totalPaginas = Math.max(1, Math.ceil(alunosFiltrados.length / ITENS_POR_PAGINA));
   const paginaSegura = Math.min(pagina, totalPaginas);
   const inicio = (paginaSegura - 1) * ITENS_POR_PAGINA;
   const itensPagina = alunosFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA);
   const totalAtivos = alunos.filter((aluno) => aluno.ativo).length;
+  const totalInativos = alunos.length - totalAtivos;
+  const colunas = souAdmin ? 6 : 5;
+
+  const {
+    selecionados,
+    setSelecionados,
+    refCheckboxCabecalho,
+    todosSelecionadosNaPagina,
+    alternarSelecao,
+    alternarSelecaoPagina,
+    limparSelecao
+  } = useSelecaoEmLote(itensPagina);
+
+  function selecionarAbaStatus(aba) {
+    setAbaStatus(aba);
+    setPagina(1);
+  }
 
   function limparFiltros() {
     setBusca("");
-    setFiltroStatus("todos");
     setPagina(1);
   }
 
@@ -146,19 +165,49 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
     setModoEdicao(false);
   }
 
+  function dadosEdicaoDoAluno(aluno) {
+    return {
+      nome: aluno.nome || "",
+      email: aluno.email || "",
+      telefone: maskTelefone(aluno.telefone || ""),
+      matricula: aluno.matricula || ""
+    };
+  }
+
   function abrirEdicao() {
     if (!alunoDetalhe) {
       return;
     }
 
-    setDadosEdicao({
-      nome: alunoDetalhe.nome || "",
-      email: alunoDetalhe.email || "",
-      telefone: alunoDetalhe.telefone || "",
-      matricula: alunoDetalhe.matricula || ""
-    });
+    setDadosEdicao(dadosEdicaoDoAluno(alunoDetalhe));
     setMensagemEdicao({ tone: "", message: "" });
     setModoEdicao(true);
+  }
+
+  // As tres funcoes abaixo abrem a edicao/confirmacao direto pelo menu kebab
+  // da linha, sem passar pelo modal de Detalhes primeiro (item 3 do prompt) -
+  // setam alunoDetalheBase pra essas acoes (que leem de alunoDetalhe) terem o
+  // que precisam.
+  function abrirEdicaoDireta(aluno) {
+    setAlunoDetalheBase(aluno);
+    setConfirmandoInativar(false);
+    setConfirmandoReativar(false);
+    setDadosEdicao(dadosEdicaoDoAluno(aluno));
+    setMensagemEdicao({ tone: "", message: "" });
+    setModoEdicao(true);
+  }
+
+  function abrirConfirmacaoInativarDireta(aluno) {
+    setAlunoDetalheBase(aluno);
+    setModoEdicao(false);
+    setMotivoInativar("");
+    setConfirmandoInativar(true);
+  }
+
+  function abrirConfirmacaoReativarDireta(aluno) {
+    setAlunoDetalheBase(aluno);
+    setModoEdicao(false);
+    setConfirmandoReativar(true);
   }
 
   function fecharEdicao() {
@@ -187,6 +236,16 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
 
     if (!dadosEdicao.nome.trim() || !dadosEdicao.email.trim() || !dadosEdicao.matricula.trim()) {
       setMensagemEdicao({ tone: "error", message: "Preencha nome, e-mail e RA." });
+      return;
+    }
+
+    // Valida o formato aqui porque o 400 do [EmailAddress] do backend vem
+    // como ValidationProblemDetails ({ title, errors }), formato que
+    // lerRespostaOuFalhar (shared/apiClient.js) nao sabe ler - sem isso, um
+    // e-mail mal formatado so mostrava "Nao foi possivel concluir a
+    // operacao.", sem dizer o que estava errado.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dadosEdicao.email.trim())) {
+      setMensagemEdicao({ tone: "error", message: "O e-mail fornecido não é válido." });
       return;
     }
 
@@ -282,14 +341,66 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
     }
   }
 
+  async function executarAcaoLote() {
+    const reativando = confirmacaoLote === "reativar";
+    if (!reativando && motivoLote.trim().length < MOTIVO_MINIMO) {
+      return;
+    }
+
+    const alvos = itensPagina.filter((aluno) => selecionados.has(aluno.id));
+    setExecutandoLote(true);
+
+    let sucesso = 0;
+    let falha = 0;
+
+    for (const aluno of alvos) {
+      try {
+        if (reativando) {
+          await apiRequest(`/Alunos/${aluno.id}/reativar`, { method: "POST" });
+        } else {
+          await apiRequest(`/Alunos/${aluno.id}/inativar`, {
+            method: "POST",
+            body: JSON.stringify({ motivo: motivoLote.trim() })
+          });
+        }
+        sucesso += 1;
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 401) {
+          setExecutandoLote(false);
+          onSessionExpired?.();
+          return;
+        }
+
+        falha += 1;
+      }
+    }
+
+    setExecutandoLote(false);
+    setConfirmacaoLote(null);
+    setMotivoLote("");
+    setSelecionados(new Set());
+    onRefresh?.();
+
+    if (falha === 0) {
+      mostrarToast(
+        reativando
+          ? `${sucesso} aluno${sucesso === 1 ? "" : "s"} reativado${sucesso === 1 ? "" : "s"} com sucesso.`
+          : `${sucesso} aluno${sucesso === 1 ? "" : "s"} inativado${sucesso === 1 ? "" : "s"} com sucesso.`,
+        "sucesso"
+      );
+    } else {
+      mostrarToast(
+        `${sucesso} de ${alvos.length} alunos atualizados; ${falha} falharam e continuam com o status anterior.`,
+        "erro"
+      );
+    }
+  }
+
   return (
     <div className="tela-alunos">
       <header className="cabecalho-pagina cabecalho-pagina--centralizado">
         <div>
           <h2 className="cabecalho-pagina__titulo">Alunos</h2>
-          <p className="cabecalho-pagina__subtitulo">
-            {alunos.length} cadastrado{alunos.length === 1 ? "" : "s"} - {totalAtivos} ativo{totalAtivos === 1 ? "" : "s"}
-          </p>
         </div>
         <div className="campo-busca campo-busca--cabecalho">
           <TbSearch aria-hidden="true" className="campo-busca__icone" size={15} />
@@ -301,36 +412,95 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
               setBusca(event.target.value);
               setPagina(1);
             }}
-            placeholder="Buscar por nome ou e-mail..."
+            placeholder="Buscar por nome, e-mail ou RA..."
             type="search"
             value={busca}
           />
         </div>
       </header>
 
-      <div className="barra-filtros">
-        <select
-          aria-label="Filtrar alunos por status"
-          className="campo__entrada barra-filtros__select"
-          onChange={(event) => {
-            setFiltroStatus(event.target.value);
-            setPagina(1);
-          }}
-          value={filtroStatus}
+      <div className="linha-abas-status">
+        <nav
+          aria-label="Status dos alunos"
+          className={`abas-matriculas${abasTemConteudoEscondido ? " abas-matriculas--mais-a-direita" : ""}`}
+          ref={refAbas}
+          role="tablist"
         >
-          <option value="todos">Todos os status</option>
-          <option value="ativos">Ativos</option>
-          <option value="inativos">Inativos</option>
-        </select>
-        <Botao disabled={!(termoBusca || filtroStatus !== "todos")} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
+          <button
+            aria-selected={abaStatus === "ativos"}
+            className={`abas-matriculas__aba${abaStatus === "ativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("ativos")}
+            role="tab"
+            type="button"
+          >
+            Ativos <span className="abas-matriculas__contagem">{totalAtivos}</span>
+          </button>
+          <button
+            aria-selected={abaStatus === "inativos"}
+            className={`abas-matriculas__aba${abaStatus === "inativos" ? " abas-matriculas__aba--ativa" : ""}`}
+            onClick={() => selecionarAbaStatus("inativos")}
+            role="tab"
+            type="button"
+          >
+            Inativos <span className="abas-matriculas__contagem">{totalInativos}</span>
+          </button>
+        </nav>
+        <div className="indicadores-status">
+          <Insignia texto={`${alunos.length} cadastrado${alunos.length === 1 ? "" : "s"}`} variante="neutro" />
+          <Insignia texto={`${totalAtivos} ativo${totalAtivos === 1 ? "" : "s"}`} variante="sucesso" />
+          <Insignia texto={`${totalInativos} inativo${totalInativos === 1 ? "" : "s"}`} variante="neutro" />
+        </div>
+      </div>
+
+      <div className="barra-filtros">
+        <Botao disabled={!termoBusca} onClick={limparFiltros} tamanho="pequeno" variante="fantasma">
           Limpar filtros
         </Botao>
+
+        {souAdmin && selecionados.size > 0 ? (
+          <div className="barra-filtros__selecao">
+            <span aria-live="polite" className="barra-filtros__selecao-contador">
+              {selecionados.size} aluno{selecionados.size === 1 ? "" : "s"} selecionado{selecionados.size === 1 ? "" : "s"}
+            </span>
+            {abaStatus === "ativos" ? (
+              <Botao
+                onClick={() => {
+                  setMotivoLote("");
+                  setConfirmacaoLote("inativar");
+                }}
+                tamanho="pequeno"
+                variante="secundario"
+              >
+                Inativar selecionados
+              </Botao>
+            ) : (
+              <Botao onClick={() => setConfirmacaoLote("reativar")} tamanho="pequeno" variante="secundario">
+                Reativar selecionados
+              </Botao>
+            )}
+            <Botao onClick={limparSelecao} tamanho="pequeno" variante="fantasma">
+              Limpar seleção
+            </Botao>
+          </div>
+        ) : null}
       </div>
 
       <div className="tabela-dados-container painel-secao">
         <table aria-label="Lista de alunos" className="tabela-dados">
           <thead>
             <tr>
+              {souAdmin ? (
+                <th scope="col">
+                  <input
+                    aria-label="Selecionar todos os alunos desta pagina"
+                    checked={todosSelecionadosNaPagina}
+                    disabled={itensPagina.length === 0}
+                    onChange={alternarSelecaoPagina}
+                    ref={refCheckboxCabecalho}
+                    type="checkbox"
+                  />
+                </th>
+              ) : null}
               <th scope="col">
                 <button className="tabela-dados__th-btn" onClick={alternarOrdenacao} type="button">
                   Aluno <IconeOrdenacao ativo direcao={direcao} />
@@ -345,7 +515,9 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
           <tbody>
             {itensPagina.length === 0 ? (
               <tr className="tabela-dados--sem-dados">
-                <td colSpan={5}>Nenhum aluno encontrado.</td>
+                <td colSpan={colunas}>
+                  {abaStatus === "ativos" ? "Nenhum aluno ativo encontrado." : "Nenhum aluno inativo."}
+                </td>
               </tr>
             ) : (
               itensPagina.map((aluno) => {
@@ -353,6 +525,16 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
 
                 return (
                   <tr className="tabela-linha-clicavel" key={aluno.id} onClick={() => abrirDetalhe(aluno)}>
+                    {souAdmin ? (
+                      <td data-label="" onClick={(event) => event.stopPropagation()}>
+                        <input
+                          aria-label={`Selecionar ${aluno.nome}`}
+                          checked={selecionados.has(aluno.id)}
+                          onChange={() => alternarSelecao(aluno.id)}
+                          type="checkbox"
+                        />
+                      </td>
+                    ) : null}
                     <td data-label="Aluno">
                       <div className="tabela-aluno">
                         <div aria-hidden="true" className="topbar__avatar tabela-aluno__avatar">
@@ -373,17 +555,23 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
                       )}
                     </td>
                     <td data-label="Status">
-                      <Insignia texto={aluno.ativo ? "Ativo" : "Inativo"} variante={aluno.ativo ? "sucesso" : "erro"} />
+                      <Insignia texto={aluno.ativo ? "Ativo" : "Inativo"} variante={aluno.ativo ? "sucesso" : "neutro"} />
                     </td>
                     <td data-label="" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        aria-label={`Ver detalhes de ${aluno.nome}`}
-                        className="kebab-btn"
-                        onClick={() => abrirDetalhe(aluno)}
-                        type="button"
-                      >
-                        <TbEye aria-hidden="true" size={16} />
-                      </button>
+                      <MenuKebabTabela
+                        itens={
+                          souAdmin
+                            ? [
+                                { chave: "ver-detalhes", rotulo: "Ver detalhes", onSelecionar: () => abrirDetalhe(aluno) },
+                                { chave: "editar", rotulo: "Editar dados", onSelecionar: () => abrirEdicaoDireta(aluno) },
+                                aluno.ativo
+                                  ? { chave: "inativar", rotulo: "Inativar acesso", onSelecionar: () => abrirConfirmacaoInativarDireta(aluno) }
+                                  : { chave: "reativar", rotulo: "Reativar acesso", onSelecionar: () => abrirConfirmacaoReativarDireta(aluno) }
+                              ]
+                            : [{ chave: "ver-detalhes", rotulo: "Ver detalhes", onSelecionar: () => abrirDetalhe(aluno) }]
+                        }
+                        rotulo={`Ações para ${aluno.nome}`}
+                      />
                     </td>
                   </tr>
                 );
@@ -609,6 +797,53 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
           <p className="texto-confirmacao-exclusao">
             Reativar o acesso de {alunoDetalhe.nome}? Ele volta a entrar com o mesmo e-mail e senha.
           </p>
+        </Modal>
+      ) : null}
+
+      {confirmacaoLote ? (
+        <Modal
+          onFechar={() => !executandoLote && setConfirmacaoLote(null)}
+          titulo={confirmacaoLote === "reativar" ? "Reativar alunos selecionados" : "Inativar alunos selecionados"}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={executandoLote} onClick={() => setConfirmacaoLote(null)} variante="perigo">
+                <TbX aria-hidden="true" size={15} /> Cancelar
+              </Botao>
+              <Botao
+                disabled={executandoLote || (confirmacaoLote === "inativar" && motivoLote.trim().length < MOTIVO_MINIMO)}
+                onClick={executarAcaoLote}
+                variante={confirmacaoLote === "reativar" ? "sucesso" : "perigo"}
+              >
+                <TbCheck aria-hidden="true" size={15} />{" "}
+                {executandoLote
+                  ? "Processando..."
+                  : confirmacaoLote === "reativar"
+                  ? "Confirmar reativação"
+                  : "Confirmar inativação"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p className="texto-confirmacao-exclusao">
+            {confirmacaoLote === "reativar"
+              ? `Reativar ${selecionados.size} aluno${selecionados.size === 1 ? "" : "s"} selecionado${selecionados.size === 1 ? "" : "s"}?`
+              : `Inativar ${selecionados.size} aluno${selecionados.size === 1 ? "" : "s"} selecionado${selecionados.size === 1 ? "" : "s"}? Eles saem da plataforma imediatamente. Matrículas, progresso e certificados ficam guardados.`}
+          </p>
+          {confirmacaoLote === "inativar" ? (
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="motivo-inativar-lote">Motivo *</label>
+              <textarea
+                className="campo__entrada"
+                disabled={executandoLote}
+                id="motivo-inativar-lote"
+                maxLength={MOTIVO_MAXIMO}
+                onChange={(event) => setMotivoLote(event.target.value)}
+                rows={3}
+                value={motivoLote}
+              />
+              <span className="campo__dica">{motivoLote.trim().length}/{MOTIVO_MAXIMO}</span>
+            </div>
+          ) : null}
         </Modal>
       ) : null}
     </div>

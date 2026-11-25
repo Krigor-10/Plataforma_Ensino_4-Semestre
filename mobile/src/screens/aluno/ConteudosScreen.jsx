@@ -347,6 +347,20 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     }
   }
 
+  // "Detalhes" da vitrine (CartaoVitrineCurso/GradeCursosConteudos) precisa
+  // do curso completo de snapshot.cursos (descricao, modeloCurso) pra
+  // alimentar o DetalheCursoSheet - se ele tiver sumido do snapshot com a
+  // matricula ainda ativa (raro: curso excluido no backend), antes isso
+  // virava um toque sem efeito nenhum, sem nenhum aviso.
+  function abrirDetalheCurso(item) {
+    if (!cursoPorId.get(item.id)) {
+      setMensagem({ tipo: "erro", texto: "Não foi possível abrir os detalhes deste curso agora." });
+      return;
+    }
+
+    setItemGradeDetalhe(item);
+  }
+
   // O aluno desiste da compra (prompt-agente-inscricoes-v3.md, item 11):
   // cancela so o Pagamento Pendente - a matricula continua Aprovada, e o
   // curso volta a mostrar "Comprar" depois do proximo onRecarregar.
@@ -477,7 +491,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         <GradeCursosConteudos
           accessibilityLabelPrefix="Ver conteúdos de"
           itens={itensGrade}
-          onAbrirDetalhe={setItemGradeDetalhe}
+          onAbrirDetalhe={abrirDetalheCurso}
           onConcluirCompra={abrirConfirmacaoCompra}
           onDesistir={desistirDaCompra}
           onSelecionar={setCursoSelecionadoId}

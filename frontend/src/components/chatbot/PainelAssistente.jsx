@@ -149,41 +149,54 @@ export default function PainelAssistente({
       { id: idTemporarioAssistente, papel: PAPEL_ASSISTENTE, texto: "", acoes: [], aguardandoResposta: true }
     ]);
 
-    await enviarMensagemChatbotStream(
-      { texto, conversaId, contexto },
-      {
-        onTexto: (trecho) => {
-          setMensagens((atual) => atual.map((mensagem) =>
-            mensagem.id === idTemporarioAssistente
-              ? { ...mensagem, texto: mensagem.texto + trecho, aguardandoResposta: false }
-              : mensagem
-          ));
-        },
-        onAcoes: (acoes) => {
-          setMensagens((atual) => atual.map((mensagem) =>
-            mensagem.id === idTemporarioAssistente ? { ...mensagem, acoes } : mensagem
-          ));
-        },
-        onFim: ({ conversaId: novaConversaId, mensagemId }) => {
-          setConversaId(novaConversaId);
-          setMensagens((atual) => atual.map((mensagem) =>
-            mensagem.id === idTemporarioAssistente ? { ...mensagem, id: mensagemId } : mensagem
-          ));
-        },
-        onErro: ({ codigo, mensagem }) => {
-          setMensagens((atual) => atual.filter((mensagem) => mensagem.id !== idTemporarioAssistente));
+    // try/catch/finally (nao so o await solto de antes): se
+    // enviarMensagemChatbotStream lancar por qualquer motivo nao previsto
+    // pelos onErro de dentro dela, o catch evita uma rejeicao nao tratada
+    // (disparada sem nada aguardar esta promise) e o finally garante
+    // setEnviando(false) de qualquer forma - sem isso, o chat travava com o
+    // indicador "digitando" preso e o guard `|| enviando` acima bloqueava
+    // qualquer novo envio pelo resto da sessao.
+    try {
+      await enviarMensagemChatbotStream(
+        { texto, conversaId, contexto },
+        {
+          onTexto: (trecho) => {
+            setMensagens((atual) => atual.map((mensagem) =>
+              mensagem.id === idTemporarioAssistente
+                ? { ...mensagem, texto: mensagem.texto + trecho, aguardandoResposta: false }
+                : mensagem
+            ));
+          },
+          onAcoes: (acoes) => {
+            setMensagens((atual) => atual.map((mensagem) =>
+              mensagem.id === idTemporarioAssistente ? { ...mensagem, acoes } : mensagem
+            ));
+          },
+          onFim: ({ conversaId: novaConversaId, mensagemId }) => {
+            setConversaId(novaConversaId);
+            setMensagens((atual) => atual.map((mensagem) =>
+              mensagem.id === idTemporarioAssistente ? { ...mensagem, id: mensagemId } : mensagem
+            ));
+          },
+          onErro: ({ codigo, mensagem }) => {
+            setMensagens((atual) => atual.filter((mensagem) => mensagem.id !== idTemporarioAssistente));
 
-          if (CODIGOS_INDISPONIBILIDADE.has(codigo)) {
-            setIndisponibilidade({ codigo, mensagem });
-          } else {
-            refUltimaPerguntaComErro.current = texto;
-            setErroEnvio(mensagem || "Nao foi possivel falar com o assistente agora.");
+            if (CODIGOS_INDISPONIBILIDADE.has(codigo)) {
+              setIndisponibilidade({ codigo, mensagem });
+            } else {
+              refUltimaPerguntaComErro.current = texto;
+              setErroEnvio(mensagem || "Nao foi possivel falar com o assistente agora.");
+            }
           }
         }
-      }
-    );
-
-    setEnviando(false);
+      );
+    } catch {
+      setMensagens((atual) => atual.filter((mensagem) => mensagem.id !== idTemporarioAssistente));
+      refUltimaPerguntaComErro.current = texto;
+      setErroEnvio("Nao foi possivel falar com o assistente agora.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
   function tentarDeNovo() {
