@@ -1669,6 +1669,47 @@ public class AvaliacaoServiceTests
         Assert.Empty(resultadoNovo);
     }
 
+    // Regressao do achado docs/redesign-mobile/PROMPT-agente-avaliacoes-
+    // ajustes-1.md, item 1: avaliacao sem Modulo (prova/exercicio final do
+    // curso) nao tem Modulo.Curso pra navegar, entao CursoTitulo vinha vazio
+    // e o app mostrava "Curso #id". Agora cai no titulo da matricula do
+    // aluno (ja carregada com .Include(Curso)).
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_AvaliacaoSemModulo_UsaCursoTituloDaMatricula()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var aluno = CriarAluno(context);
+        var curso = CriarCurso(context);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        CriarMatriculaAprovadaSemTurma(context, aluno.Id, curso.Id);
+
+        var dto = new CriarAvaliacaoDto
+        {
+            Titulo = "Avaliacao final",
+            CursoId = curso.Id,
+            ModuloId = null,
+            TipoAvaliacao = TipoAvaliacao.Prova,
+            StatusPublicacao = StatusPublicacao.Rascunho,
+            TentativasPermitidas = 1,
+            NotaMaxima = 10,
+            PesoNota = 1,
+            PesoProgresso = 1
+        };
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, dto);
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao.Publicar();
+        context.Avaliacoes.Update(avaliacao);
+        await context.SaveChangesAsync();
+
+        var resultado = await service.ListarAvaliacoesPorAlunoAsync(aluno.Id);
+
+        var item = Assert.Single(resultado);
+        Assert.Null(item.ModuloId);
+        Assert.Equal(curso.Titulo, item.CursoTitulo);
+    }
+
     // ---------- GerarQuestoesComIaAsync ----------
 
     [Fact]

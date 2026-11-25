@@ -140,6 +140,32 @@ export function normalizarTermoBusca(valor) {
     .replace(/[̀-ͯ]/g, "");
 }
 
+// Chip de curso compacto (docs/redesign-mobile/PROMPT-agente-avaliacoes-
+// ajustes-1.md, item 3): corta na ultima palavra inteira que ainda cabe
+// antes de `max`, nunca no meio de uma palavra. So quando a 1a palavra
+// sozinha ja passa do limite, corta ela mesma no limite de caracteres -
+// melhor um corte no meio dessa palavra do que nao abreviar nada. O nome
+// completo continua disponivel pra quem usa (accessibilityLabel), isto e
+// so o texto visivel.
+export function abreviarNomeCurso(titulo, max = 18) {
+  const texto = String(titulo || "").trim();
+  if (texto.length <= max) {
+    return texto;
+  }
+
+  const palavras = texto.split(/\s+/);
+  let resultado = "";
+  for (const palavra of palavras) {
+    const candidato = resultado ? `${resultado} ${palavra}` : palavra;
+    if (candidato.length > max) {
+      break;
+    }
+    resultado = candidato;
+  }
+
+  return resultado ? `${resultado}…` : `${texto.slice(0, max)}…`;
+}
+
 export function obterIniciais(nome) {
   const partes = String(nome || "").trim().split(/\s+/).filter(Boolean);
 

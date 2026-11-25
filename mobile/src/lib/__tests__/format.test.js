@@ -1,4 +1,5 @@
 import {
+  abreviarNomeCurso,
   formatCep,
   formatDayMonth,
   formatGrade,
@@ -169,6 +170,25 @@ describe("formatCep", () => {
 
   it("retorna o valor original (trim) quando nao tem 8 digitos", () => {
     expect(formatCep("123")).toBe("123");
+  });
+});
+
+describe("abreviarNomeCurso", () => {
+  it("mostra o nome inteiro quando cabe no limite", () => {
+    expect(abreviarNomeCurso("Curso Teste", 18)).toBe("Curso Teste");
+  });
+
+  it("corta na ultima palavra inteira que cabe antes do limite", () => {
+    expect(abreviarNomeCurso("Desenvolvimento Web Full Stack", 18)).toBe("Desenvolvimento…");
+  });
+
+  it("corta no limite de caracteres quando a 1a palavra sozinha ja passa dele", () => {
+    expect(abreviarNomeCurso("Supercalifragilisticexpialidocious", 18)).toBe("Supercalifragilist…");
+  });
+
+  it("trata titulo vazio/ausente", () => {
+    expect(abreviarNomeCurso("")).toBe("");
+    expect(abreviarNomeCurso(null)).toBe("");
   });
 });
 

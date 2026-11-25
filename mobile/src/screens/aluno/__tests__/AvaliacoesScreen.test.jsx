@@ -87,6 +87,7 @@ const PROVA_CONCLUIDA_DADOS = {
   dataFechamento: null,
   ultimaNota: 8,
   ultimaTentativaId: 101,
+  ultimoStatusTentativa: 3,
   notaMaxima: 10,
   tempoLimiteMinutos: 0
 };
@@ -131,8 +132,32 @@ const QUIZ_CURSO_SO_QUIZ = {
   tempoLimiteMinutos: 0
 };
 
-function montarSnapshot(avaliacoes) {
-  return { avaliacoes, cursos: [], matriculas: [], pagamentos: [], progressos: { cursos: [] } };
+function montarSnapshot(avaliacoes, cursos = []) {
+  return { avaliacoes, cursos, matriculas: [], pagamentos: [], progressos: { cursos: [] } };
+}
+
+function montarAvaliacao(sobrescritas) {
+  return {
+    id: 99,
+    cursoId: 40,
+    cursoTitulo: "Curso Qualquer",
+    titulo: "Avaliacao Qualquer",
+    moduloId: null,
+    tipoAvaliacao: 2,
+    totalQuestoes: 3,
+    tentativasPermitidas: 2,
+    tentativasRealizadas: 1,
+    tentativasRestantes: 1,
+    progressoLiberado: true,
+    dataAbertura: null,
+    dataFechamento: null,
+    ultimaNota: 8,
+    ultimaTentativaId: 1,
+    ultimoStatusTentativa: 3,
+    notaMaxima: 10,
+    tempoLimiteMinutos: 0,
+    ...sobrescritas
+  };
 }
 
 describe("AvaliacoesScreen - lista direta", () => {
@@ -167,7 +192,7 @@ describe("AvaliacoesScreen - lista direta", () => {
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
 
-    expect(screen.getByLabelText("Todos os cursos")).toBeTruthy();
+    expect(screen.getByLabelText("Todos")).toBeTruthy();
     expect(screen.getByLabelText("Curso Web")).toBeTruthy();
     expect(screen.getByLabelText("Curso Dados")).toBeTruthy();
     expect(screen.queryByLabelText("Curso Quiz Only")).toBeNull();
@@ -217,5 +242,150 @@ describe("AvaliacoesScreen - lista direta", () => {
     await fireEvent.press(screen.getByText("▶ Iniciar avaliação"));
 
     expect(await screen.findByText("Agora não")).toBeTruthy();
+  });
+
+  // docs/redesign-mobile/PROMPT-agente-avaliacoes-ajustes-1.md, item 2: com
+  // cursoTitulo vazio (prova final sem modulo), o chip e o cartao buscam o
+  // nome em snapshot.cursos - nunca "Curso #id".
+  test("chip e cartao: cursoTitulo vazio cai no nome de snapshot.cursos, nunca 'Curso #id'", async () => {
+    const avaliacaoSemModulo = montarAvaliacao({ id: 40, cursoId: 50, cursoTitulo: "", titulo: "Avaliacao final" });
+    const snapshot = montarSnapshot([avaliacaoSemModulo], [{ id: 50, titulo: "Curso Via Snapshot" }]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByLabelText("Curso Via Snapshot")).toBeTruthy();
+    expect(screen.getAllByText("Curso Via Snapshot").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Curso #50/)).toBeNull();
+  });
+
+  test("selo 'Concluida' renderiza com o icone de check e a cor de sucesso", async () => {
+    const snapshot = montarSnapshot([PROVA_CONCLUIDA_DADOS]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(await screen.findByText("Prova Final")).toBeTruthy();
+    expect(screen.getByText("Concluída")).toBeTruthy();
+    expect(screen.getByTestId("selo-icone-concluida")).toBeTruthy();
+  });
+
+  test("nota 7,0 (limite incluido) fica verde, com 'aprovado'", async () => {
+    const avaliacao = montarAvaliacao({ ultimaNota: 7, notaMaxima: 10 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("✓ Nota 7,0 · aprovado")).toBeTruthy();
+  });
+
+  test("nota 6,9 fica vermelha, abaixo de 7,0", async () => {
+    const avaliacao = montarAvaliacao({ ultimaNota: 6.9, notaMaxima: 10 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("Nota 6,9 · abaixo de 7,0")).toBeTruthy();
+  });
+
+  test("notaMaxima 5 com nota 4 converte pra 8,0 (escala 0-10) e fica verde", async () => {
+    const avaliacao = montarAvaliacao({ ultimaNota: 4, notaMaxima: 5 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("✓ Nota 8,0 · aprovado")).toBeTruthy();
+  });
+
+  test("sem tentativa, nenhuma linha de nota aparece", async () => {
+    const avaliacao = montarAvaliacao({ tentativasRealizadas: 0, ultimaNota: null, ultimaTentativaId: null });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.queryByText(/Nota/)).toBeNull();
+  });
+
+  test("titulo grande da aba nao aparece mais (so o breadcrumb, fora desta tela)", async () => {
+    const snapshot = montarSnapshot([PROVA_DISPONIVEL_WEB]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.queryByText("Avaliações")).toBeNull();
+    expect(screen.queryByText("Testes práticos e teóricos do seu curso")).toBeNull();
+  });
+
+  // docs/redesign-mobile/PROMPT-agente-avaliacoes-ajustes-2-icone.md
+  //
+  // MaterialCommunityIcons renderiza o glifo internamente (name/color nao
+  // sobrevivem como props no no host que o testID aponta) - a cor da
+  // borda do quadrado (vem do mesmo objeto VISUAL_TIPO_AVALIACAO que
+  // escolhe o icone) identifica o tipo sem depender de detalhe interno
+  // da lib de icone.
+  function estiloAchatado(elemento) {
+    return Array.isArray(elemento.props.style) ? Object.assign({}, ...elemento.props.style.flat(Infinity)) : elemento.props.style;
+  }
+
+  test("icone: Prova usa a borda roxa e o rotulo PROVA", async () => {
+    const snapshot = montarSnapshot([montarAvaliacao({ tipoAvaliacao: 2 })]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("PROVA")).toBeTruthy();
+    expect(estiloAchatado(screen.getByTestId("icone-tipo-avaliacao")).borderColor).toBe("rgba(157, 103, 255, 0.45)");
+  });
+
+  test("icone: Exercicio usa a borda azul e o rotulo EXERCÍCIO", async () => {
+    const snapshot = montarSnapshot([montarAvaliacao({ tipoAvaliacao: 3 })]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("EXERCÍCIO")).toBeTruthy();
+    expect(estiloAchatado(screen.getByTestId("icone-tipo-avaliacao")).borderColor).toBe("rgba(96, 165, 250, 0.45)");
+  });
+
+  test("icone: bloqueada usa a cor cinza, independente do tipo", async () => {
+    const bloqueada = montarAvaliacao({ progressoLiberado: false, tentativasRealizadas: 0, ultimaNota: null, ultimoStatusTentativa: null });
+    const snapshot = montarSnapshot([bloqueada]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    const estilo = estiloAchatado(screen.getByTestId("icone-tipo-avaliacao"));
+    expect(estilo.backgroundColor).toBe("rgba(255, 255, 255, 0.06)");
+    expect(estilo.borderColor).toBe("rgba(255, 255, 255, 0.12)");
+  });
+
+  test("nota: ultimoStatusTentativa EmAndamento (1) nao renderiza a linha de nota", async () => {
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 1 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.queryByText(/Nota/)).toBeNull();
+  });
+
+  test("nota: ultimoStatusTentativa Enviada (2) renderiza 'aguardando correcao'", async () => {
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 2 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("Nota: aguardando correção")).toBeTruthy();
+  });
+
+  test("nota: Corrigida (3) com nota 0 renderiza 'Nota 0,0 · abaixo de 7,0', nunca '-'", async () => {
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 0 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("Nota 0,0 · abaixo de 7,0")).toBeTruthy();
+  });
+
+  test("nota: Corrigida (3) com nota 8 renderiza 'aprovado' em verde", async () => {
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 8 });
+    const snapshot = montarSnapshot([avaliacao]);
+
+    await render(<AvaliacoesScreen snapshot={snapshot} />);
+
+    expect(screen.getByText("✓ Nota 8,0 · aprovado")).toBeTruthy();
   });
 });

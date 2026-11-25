@@ -97,6 +97,12 @@ public class AvaliacaoService : IAvaliacaoService
         var matriculaPorCursoId = matriculas
             .GroupBy(matricula => matricula.CursoId)
             .ToDictionary(grupo => grupo.Key, grupo => grupo.First().Id);
+        // Reserva pro CursoTitulo quando a avaliacao nao tem Modulo (prova/
+        // exercicio final do curso, sem Modulo.Curso pra navegar) - as
+        // matriculas acima ja vem com .Include(Curso), sem consulta extra.
+        var tituloCursoPorId = matriculas
+            .GroupBy(matricula => matricula.CursoId)
+            .ToDictionary(grupo => grupo.Key, grupo => grupo.First().Curso?.Titulo ?? string.Empty);
         var matriculaIds = matriculas.Select(matricula => matricula.Id).ToList();
 
         var tentativas = await _context.TentativasAvaliacao
@@ -155,7 +161,8 @@ public class AvaliacaoService : IAvaliacaoService
                 tentativasPorAvaliacao.TryGetValue(avaliacao.Id, out var tentativasAvaliacao)
                     ? tentativasAvaliacao
                     : new List<TentativaAvaliacao>(),
-                progressoLiberado));
+                progressoLiberado,
+                tituloCursoPorId.GetValueOrDefault(avaliacao.CursoId, string.Empty)));
         }
 
         return resultado;
@@ -1702,7 +1709,8 @@ public class AvaliacaoService : IAvaliacaoService
         Avaliacao avaliacao,
         int matriculaId,
         IReadOnlyList<TentativaAvaliacao> tentativas,
-        bool progressoLiberado)
+        bool progressoLiberado,
+        string tituloCursoFallback)
     {
         var ultimaTentativa = tentativas.OrderByDescending(tentativa => tentativa.NumeroTentativa).FirstOrDefault();
         var tentativasRealizadas = tentativas.Count;
@@ -1716,7 +1724,12 @@ public class AvaliacaoService : IAvaliacaoService
             TurmaId = avaliacao.TurmaId,
             TurmaNome = avaliacao.Turma?.NomeTurma ?? string.Empty,
             CursoId = avaliacao.CursoId,
-            CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? string.Empty,
+            // Avaliacao sem Modulo (prova/exercicio final do curso) nao tem
+            // Modulo.Curso pra navegar - cai no titulo da matricula do aluno
+            // (ja carregado em ListarAvaliacoesPorAlunoAsync, sem query
+            // extra). Ver docs/redesign-mobile/PROMPT-agente-avaliacoes-
+            // ajustes-1.md, item 1.
+            CursoTitulo = avaliacao.Modulo?.Curso?.Titulo ?? tituloCursoFallback ?? string.Empty,
             ModuloId = avaliacao.ModuloId,
             ModuloTitulo = avaliacao.Modulo?.Titulo ?? string.Empty,
             ConteudoDidaticoId = avaliacao.ConteudoDidaticoId,

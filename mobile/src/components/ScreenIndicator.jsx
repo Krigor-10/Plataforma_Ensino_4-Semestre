@@ -17,7 +17,15 @@ import { cores, espacamentos } from "../lib/theme.js";
    do header do native-stack mantem um fundo claro padrao do Material Design
    por baixo de qualquer conteudo que nao cubra 100% com cor propria, mesmo
    com header totalmente customizado. Sem isso, a faixa aparecia clara/fora
-   do tema escuro mesmo com o texto certo por cima. */
+   do tema escuro mesmo com o texto certo por cima.
+
+   Regra (docs/redesign-mobile/PROMPT-agente-avaliacoes-ajustes-1.md, item
+   6): este titulo e o UNICO "onde estou" grande das 5 telas de aba
+   (Inicio/Cursos/Avaliacoes/Progresso/Certificados) - nenhuma delas repete
+   um titulo grande igual "Avaliações"/"Progresso"/"Cursos" logo abaixo
+   deste breadcrumb. Telas empilhadas (detalhe do curso, do modulo etc.)
+   continuam com titulo proprio do CONTEUDO (nome do curso, "CURSO" + nome
+   do modulo...), que nao e repeticao do nome da aba. */
 // Placeholder visual pro futuro recurso de gamificacao (medalhas/conquistas/
 // pontuacao) — so o icone por enquanto, sem pontuacao, ranking, notificacao
 // ou destino de navegacao nenhum por tras. Quando o recurso definitivo for

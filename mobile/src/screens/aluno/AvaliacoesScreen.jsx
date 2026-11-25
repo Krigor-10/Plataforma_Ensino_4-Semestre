@@ -1,9 +1,10 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
-import { formatarTempoRestante, formatGrade } from "../../lib/format.js";
+import { obterDisponibilidadeAvaliacao, obterVisualTipoAvaliacao } from "../../lib/avaliacoes.js";
+import { abreviarNomeCurso, formatarTempoRestante, formatScore } from "../../lib/format.js";
 import { rascunhoAvaliacaoValido } from "../../lib/quizRascunho.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
@@ -15,10 +16,17 @@ import RevisaoQuizModal from "../../components/RevisaoQuizModal.jsx";
 import Toast from "../../components/Toast.jsx";
 
 const TIPO_QUIZ = 1;
-const TIPO_EXERCICIO = 3;
 const ABA_DISPONIVEIS = "disponiveis";
 const ABA_CONCLUIDAS = "concluidas";
 const FILTRO_TODOS_OS_CURSOS = null;
+
+// StatusTentativaAvaliacao do backend (mesmo enum do DTO, ver
+// AvaliacaoAlunoResponseDto.UltimoStatusTentativa) - usado so pra decidir
+// quando a linha de nota aparece (item 2 do prompt de ajustes 2). 1
+// (EmAndamento) nunca mostra nota - cai no fallback (nenhuma linha).
+const STATUS_TENTATIVA_ENVIADA = 2;
+const STATUS_TENTATIVA_CORRIGIDA = 3;
+const STATUS_TENTATIVA_EXPIRADA = 4;
 
 // obterDisponibilidadeAvaliacao() ja calcula tone+label pros estados
 // Agendada/Encerrada/Sem questoes (nenhum dos tres e "Bloqueada" nem
@@ -37,6 +45,16 @@ function classificarAvaliacao(avaliacao) {
   const concluida = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
   const bloqueada = !disponibilidade.podeRealizar && disponibilidade.label === "Bloqueada";
   return { disponibilidade, concluida, bloqueada };
+}
+
+// Reserva pro nome do curso (docs/redesign-mobile/PROMPT-agente-avaliacoes-
+// ajustes-1.md, item 2): avaliacao sem modulo (prova/exercicio final) pode
+// chegar com `cursoTitulo` vazio (achado do mesmo prompt, corrigido no
+// backend em AvaliacaoService.MapAvaliacaoAluno, mas o app nao deve
+// depender so disso) - busca em snapshot.cursos pelo cursoId antes de
+// cair no generico "Curso" (nunca "Curso #id").
+function resolverTituloCurso(avaliacao, cursoPorId) {
+  return avaliacao.cursoTitulo || cursoPorId.get(avaliacao.cursoId)?.titulo || "Curso";
 }
 
 /* Lista direta, sem passo de selecao de curso (docs/redesign-mobile/
@@ -61,6 +79,8 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   const [mensagemFeedback, setMensagemFeedback] = useState("");
   const route = useRoute();
   const navigation = useNavigation();
+
+  const cursoPorId = useMemo(() => new Map((snapshot.cursos || []).map((curso) => [curso.id, curso])), [snapshot.cursos]);
 
   const avaliacoesFormaisTodas = useMemo(
     () => (snapshot.avaliacoes || []).filter((avaliacao) => Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ),
@@ -103,18 +123,16 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     });
   }, [navigation]);
 
-  // Chips: so cursos com pelo menos uma avaliacao formal (item 2) -
-  // cursoTitulo ja vem no proprio DTO da avaliacao, sem precisar de
-  // snapshot.cursos aqui.
+  // Chips: so cursos com pelo menos uma avaliacao formal.
   const cursosComAvaliacao = useMemo(() => {
     const porId = new Map();
     avaliacoesFormaisTodas.forEach((avaliacao) => {
       if (!porId.has(avaliacao.cursoId)) {
-        porId.set(avaliacao.cursoId, avaliacao.cursoTitulo || `Curso #${avaliacao.cursoId}`);
+        porId.set(avaliacao.cursoId, resolverTituloCurso(avaliacao, cursoPorId));
       }
     });
     return [...porId.entries()].map(([id, titulo]) => ({ id, titulo })).sort((a, b) => a.titulo.localeCompare(b.titulo));
-  }, [avaliacoesFormaisTodas]);
+  }, [avaliacoesFormaisTodas, cursoPorId]);
 
   const avaliacoesDoFiltro = useMemo(
     () =>
@@ -179,8 +197,6 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   if (avaliacoesFormaisTodas.length === 0) {
     return (
       <View style={estilos.container}>
-        <Text style={estilos.tituloTela}>Avaliações</Text>
-        <Text style={estilos.subtituloTela}>Testes práticos e teóricos do seu curso</Text>
         <EstadoVazio icone="clipboard-outline" mensagem="Seus cursos ainda não têm avaliações." />
       </View>
     );
@@ -218,10 +234,32 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
       : null;
     const tentativasRealizadas = Number(avaliacao.tentativasRealizadas || 0);
     const tentativasPermitidas = avaliacao.tentativasPermitidas || 1;
-    const mostrarNota = tentativasRealizadas > 0 && avaliacao.ultimaNota != null;
+    // So Corrigida/Expirada tem nota de verdade pra mostrar (docs/redesign-
+    // mobile/PROMPT-agente-avaliacoes-ajustes-2-icone.md, item 2) -
+    // UltimaNota vem da ULTIMA tentativa mesmo que ainda esteja em
+    // andamento ou so enviada (sem correcao), entao usar so `ultimaNota !=
+    // null` (como antes) mostrava nota 0/"-" de uma tentativa que ainda nem
+    // foi corrigida. Enviada (2) ganha uma linha neutra propria (aguardando
+    // correcao); EmAndamento (1) ou sem nenhuma tentativa nao mostram nada.
+    const statusUltimaTentativa = Number(avaliacao.ultimoStatusTentativa);
+    const notaDisponivel =
+      (statusUltimaTentativa === STATUS_TENTATIVA_CORRIGIDA || statusUltimaTentativa === STATUS_TENTATIVA_EXPIRADA) &&
+      avaliacao.ultimaNota != null;
+    const notaAguardandoCorrecao = statusUltimaTentativa === STATUS_TENTATIVA_ENVIADA;
+    // Escala 0-10 (ajustes 1): notaMaxima varia por avaliacao (o professor
+    // configura, default 10 - ver Models/Avaliacao.cs). Comparar ultimaNota
+    // direto contra o minimo 7 so faria sentido se notaMaxima fosse sempre
+    // 10.
+    const notaMaxima = Number(avaliacao.notaMaxima) || 10;
+    const notaConvertida = notaDisponivel
+      ? notaMaxima !== 10
+        ? (Number(avaliacao.ultimaNota) / notaMaxima) * 10
+        : Number(avaliacao.ultimaNota)
+      : null;
+    const notaAprovada = notaConvertida !== null && notaConvertida >= 7;
 
     const selo = concluida
-      ? { cor: cores.informativo, fundo: cores.informativoFundo, rotulo: "Concluída" }
+      ? { cor: cores.sucesso, fundo: cores.sucessoFundo, icone: "checkmark-circle", rotulo: "Concluída" }
       : emAndamento
         ? { cor: cores.informativo, fundo: cores.informativoFundo, rotulo: "Em andamento" }
         : bloqueada
@@ -233,32 +271,41 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
     const partesLinha2 = [
       `${avaliacao.totalQuestoes} questõe${avaliacao.totalQuestoes === 1 ? "" : "s"}`,
       `${tentativasRealizadas}/${tentativasPermitidas} tentativas`,
-      mostrarNota ? `Nota ${formatGrade(avaliacao.ultimaNota)}` : "Nota —",
       avaliacao.tempoLimiteMinutos > 0 ? `${avaliacao.tempoLimiteMinutos} min` : null
     ].filter(Boolean);
 
     const rotuloBotaoAcao = emAndamento ? "▶ Continuar" : tentativasRealizadas > 0 ? "Tentar de novo" : "▶ Iniciar avaliação";
 
-    const iconeTipo = Number(avaliacao.tipoAvaliacao) === TIPO_EXERCICIO ? "create-outline" : "reader-outline";
+    const visualTipo = obterVisualTipoAvaliacao(avaliacao.tipoAvaliacao);
 
     return (
       <View key={avaliacao.id} style={estilos.cartao}>
         <View style={estilos.cartaoCabecalho}>
-          <View style={estilos.cartaoIcone}>
-            <Ionicons color={cores.destaque} name={iconeTipo} size={18} />
-          </View>
+          <IconeTipoAvaliacao bloqueada={bloqueada} visual={visualTipo} />
           <View style={estilos.cartaoCabecalhoTextos}>
+            <Text style={[estilos.rotuloTipo, { color: visualTipo.corRotulo }]}>{visualTipo.rotulo}</Text>
             <Text numberOfLines={2} style={estilos.cartaoTitulo}>{avaliacao.titulo}</Text>
             {filtroCursoId === FILTRO_TODOS_OS_CURSOS ? (
-              <Text numberOfLines={1} style={estilos.cartaoCurso}>{avaliacao.cursoTitulo}</Text>
+              <Text numberOfLines={1} style={estilos.cartaoCurso}>{resolverTituloCurso(avaliacao, cursoPorId)}</Text>
             ) : null}
           </View>
           <View style={[estilos.selo, { backgroundColor: selo.fundo }]}>
+            {selo.icone ? <Ionicons color={selo.cor} name={selo.icone} size={12} testID="selo-icone-concluida" /> : null}
             <Text numberOfLines={1} style={[estilos.seloTexto, { color: selo.cor }]}>{selo.rotulo}</Text>
           </View>
         </View>
 
         <Text style={estilos.cartaoLinha2}>{partesLinha2.join(" · ")}</Text>
+
+        {notaDisponivel ? (
+          <Text style={[estilos.notaLinha, { color: notaAprovada ? cores.sucesso : cores.erro }]}>
+            {notaAprovada
+              ? `✓ Nota ${formatScore(notaConvertida)} · aprovado`
+              : `Nota ${formatScore(notaConvertida)} · abaixo de 7,0`}
+          </Text>
+        ) : notaAguardandoCorrecao ? (
+          <Text style={[estilos.notaLinha, estilos.notaAguardandoCorrecao]}>Nota: aguardando correção</Text>
+        ) : null}
 
         {!concluida && !bloqueada && emAndamento && tempoRestanteEmAndamento !== null ? (
           <Text style={[estilos.cartaoEmAndamento, tempoRestanteEmAndamento <= 60 ? estilos.cartaoEmAndamentoUrgente : null]}>
@@ -283,9 +330,6 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
 
   return (
     <View style={estilos.container}>
-      <Text style={estilos.tituloTela}>Avaliações</Text>
-      <Text style={estilos.subtituloTela}>Testes práticos e teóricos do seu curso</Text>
-
       <View style={estilos.topoFiltros}>
         <AbasSegmentadas
           onSelecionar={setAbaAtiva}
@@ -297,7 +341,7 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
         />
 
         <ScrollView contentContainerStyle={estilos.chipsLinha} horizontal showsHorizontalScrollIndicator={false}>
-          <Chip ativo={filtroCursoId === FILTRO_TODOS_OS_CURSOS} onPress={() => setFiltroCursoId(FILTRO_TODOS_OS_CURSOS)} rotulo="Todos os cursos" />
+          <Chip ativo={filtroCursoId === FILTRO_TODOS_OS_CURSOS} onPress={() => setFiltroCursoId(FILTRO_TODOS_OS_CURSOS)} rotulo="Todos" />
           {cursosComAvaliacao.map((curso) => (
             <Chip ativo={filtroCursoId === curso.id} key={curso.id} onPress={() => setFiltroCursoId(curso.id)} rotulo={curso.titulo} />
           ))}
@@ -355,40 +399,71 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
   );
 }
 
+// Icone por tipo, opcao A escolhida pelo usuario (docs/redesign-mobile/
+// PROMPT-agente-avaliacoes-ajustes-2-icone.md, item 1): quadrado 40x40 com
+// degrade diagonal na cor do tipo (Prova = roxo, Exercicio = azul) e borda
+// fina na mesma cor. Bloqueada vira cinza solido (sem bolinha de selo -
+// essa e a opcao C, nao escolhida) independente do tipo - o selo de
+// situacao (a direita, ver `selo` em renderizarCartao) e quem diz "o que
+// esta bloqueado", este icone so diz "o que e" (prova ou exercicio).
+function IconeTipoAvaliacao({ bloqueada, visual }) {
+  if (bloqueada) {
+    return (
+      <View style={[estilos.cartaoIcone, estilos.cartaoIconeBloqueada]} testID="icone-tipo-avaliacao">
+        <MaterialCommunityIcons color={cores.textoRotulo} name={visual.icone} size={22} />
+      </View>
+    );
+  }
+
+  return (
+    <LinearGradient colors={visual.gradiente} style={[estilos.cartaoIcone, { borderColor: visual.corBorda }]} testID="icone-tipo-avaliacao">
+      <MaterialCommunityIcons color={visual.corIcone} name={visual.icone} size={22} />
+    </LinearGradient>
+  );
+}
+
+// Compacto e minimalista (docs/redesign-mobile/PROMPT-agente-avaliacoes-
+// ajustes-1.md, item 3): nome abreviado no texto visivel (abreviarNomeCurso),
+// mas o `rotulo` completo continua no accessibilityLabel pra quem usa
+// leitor de tela.
 function Chip({ ativo, onPress, rotulo }) {
+  const dica = rotulo === "Todos" ? "Mostra avaliações de todos os cursos" : `Mostra só avaliações de ${rotulo.toLowerCase()}`;
+
   return (
     <TouchableOpacity
-      accessibilityHint={`Mostra ${ativo ? "" : "só "}avaliações de ${rotulo.toLowerCase()}`}
+      accessibilityHint={dica}
       accessibilityLabel={rotulo}
       accessibilityRole="button"
       accessibilityState={{ selected: ativo }}
+      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
       onPress={onPress}
       style={[estilos.chip, ativo ? estilos.chipAtivo : null]}
     >
-      <Text numberOfLines={1} style={[estilos.chipTexto, ativo ? estilos.chipTextoAtivo : null]}>{rotulo}</Text>
+      <Text numberOfLines={1} style={[estilos.chipTexto, ativo ? estilos.chipTextoAtivo : null]}>
+        {abreviarNomeCurso(rotulo)}
+      </Text>
     </TouchableOpacity>
   );
 }
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  tituloTela: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo, paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.xl },
-  subtituloTela: { color: cores.textoRotulo, fontSize: tipografia.rotulo, paddingHorizontal: espacamentos.xl, marginTop: 2 },
-  topoFiltros: { paddingHorizontal: espacamentos.xl, marginTop: espacamentos.md, gap: espacamentos.sm },
-  chipsLinha: { gap: espacamentos.sm },
+  topoFiltros: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, gap: espacamentos.sm },
+  chipsLinha: { gap: espacamentos.xs },
+  // Compacto e minimalista (item 3 do prompt): sem borda quando inativo,
+  // roxo translucido (nao o roxo cheio de antes) quando ativo.
   chip: {
     borderRadius: raios.pilula,
-    borderWidth: 1,
-    borderColor: cores.bordaCartao,
     backgroundColor: cores.fundoCartao,
-    paddingHorizontal: espacamentos.md,
-    minHeight: 36,
+    paddingHorizontal: 10,
+    height: 28,
+    maxWidth: 160,
     alignItems: "center",
     justifyContent: "center"
   },
-  chipAtivo: { backgroundColor: cores.destaque, borderColor: cores.destaque },
-  chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.rotulo },
-  chipTextoAtivo: { color: "#fff", fontWeight: "700" },
+  chipAtivo: { backgroundColor: "rgba(123, 47, 247, 0.18)", borderWidth: 1, borderColor: cores.destaque },
+  chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.legenda },
+  chipTextoAtivo: { color: cores.acento, fontWeight: "700" },
   mensagemContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, gap: espacamentos.md },
   subtituloGrupo: { color: cores.textoRotulo, fontWeight: "700", fontSize: tipografia.rotulo, textTransform: "uppercase", letterSpacing: 0.4, marginTop: espacamentos.sm },
@@ -401,20 +476,39 @@ const estilos = StyleSheet.create({
     gap: espacamentos.sm
   },
   cartaoCabecalho: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: espacamentos.sm },
+  // 40x40/raio 12/borda 1px (item 1 do prompt de ajustes 2) - a cor do
+  // degrade e da borda vem de VISUAL_TIPO_AVALIACAO (lib/avaliacoes.js),
+  // aplicada inline no IconeTipoAvaliacao.
   cartaoIcone: {
-    width: 32,
-    height: 32,
-    borderRadius: raios.md,
-    backgroundColor: cores.bordaCartao,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center"
   },
+  cartaoIconeBloqueada: { backgroundColor: "rgba(255, 255, 255, 0.06)", borderColor: "rgba(255, 255, 255, 0.12)" },
   cartaoCabecalhoTextos: { flex: 1, gap: 2 },
+  rotuloTipo: { fontSize: 9.5, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
   cartaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   cartaoCurso: { color: cores.textoSuave, fontSize: tipografia.rotulo },
-  selo: { borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, flexShrink: 1 },
+  selo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.sm,
+    paddingVertical: 3,
+    flexShrink: 1
+  },
   seloTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
   cartaoLinha2: { color: cores.textoSuave, fontSize: tipografia.legenda },
+  // Linha propria da nota (ajustes 1) - cor e texto dependem so da
+  // aprovacao (notaAprovada), nao do tone generico de disponibilidade.
+  notaLinha: { fontSize: tipografia.rotulo, fontWeight: "700" },
+  // Enviada, sem correcao ainda (ajustes 2, item 2) - neutra/ambar, nunca
+  // vermelha: a avaliacao ainda nao foi reprovada, so esta esperando.
+  notaAguardandoCorrecao: { color: cores.aviso },
   cartaoEmAndamento: { color: cores.informativo, fontSize: tipografia.legenda, fontWeight: "700" },
   cartaoEmAndamentoUrgente: { color: cores.erro },
   cartaoStatusTexto: { color: cores.textoSuave, fontSize: tipografia.legenda },
