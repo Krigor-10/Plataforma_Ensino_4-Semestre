@@ -450,19 +450,6 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   if (!cursoAtivo) {
     return (
       <View style={estilos.container}>
-        <View style={estilos.cabecalhoGrade}>
-          <TouchableOpacity
-            accessibilityHint="Abre o catálogo de cursos disponíveis"
-            accessibilityLabel="Ver catálogo"
-            accessibilityRole="button"
-            onPress={() => navigation.navigate(ROUTES.CATALOGO)}
-            style={estilos.botaoCatalogo}
-          >
-            <Ionicons color={cores.destaque} name="compass-outline" size={16} />
-            <Text style={estilos.botaoCatalogoTexto}>Ver catálogo</Text>
-          </TouchableOpacity>
-        </View>
-
         {mensagem ? (
           <View style={estilos.mensagemGradeContainer}>
             <Toast mensagem={mensagem.texto} onFechar={() => setMensagem(null)} tipo={mensagem.tipo} />
@@ -945,28 +932,7 @@ const estilos = StyleSheet.create({
   tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 2 },
   cabecalhoContagem: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
   corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, paddingBottom: 40 },
-  // Linha compacta so com "Ver catalogo", alinhada a direita (docs/
-  // redesign-mobile/PROMPT-agente-avaliacoes-ajustes-1.md, item 6) - sem
-  // titulo "Cursos"/subtitulo repetindo o breadcrumb (ScreenIndicator.jsx).
-  cabecalhoGrade: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.lg,
-    paddingBottom: espacamentos.sm
-  },
-  botaoCatalogo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: cores.bordaCartao,
-    borderRadius: raios.pilula,
-    paddingHorizontal: espacamentos.md,
-    minHeight: 36
-  },
-  botaoCatalogoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo },
-  mensagemGradeContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
+  mensagemGradeContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg },
   // "Continue de onde parou" compacto (item 3 do prompt): 1 linha ~52px, so
   // aparece quando nao ha avaliacao liberada (gating no return principal).
   linhaDestaque: {

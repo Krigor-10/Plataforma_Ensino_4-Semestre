@@ -67,7 +67,8 @@ describe("ConteudosScreen - titulo so no breadcrumb", () => {
   test("nao renderiza mais o titulo grande 'Cursos' nem o subtitulo", async () => {
     await render(<ConteudosScreen onRecarregar={jest.fn()} onSessionExpired={jest.fn()} snapshot={montarSnapshot()} />);
 
-    expect(await screen.findByLabelText("Ver catálogo")).toBeTruthy();
+    expect(await screen.findByText("Curso Teste")).toBeTruthy();
+    expect(screen.queryByLabelText("Ver catálogo")).toBeNull();
     expect(screen.queryByText("Cursos")).toBeNull();
     expect(screen.queryByText("Escolha um curso para continuar sua trilha")).toBeNull();
   });
@@ -110,7 +111,7 @@ describe("ConteudosScreen - trilha do curso compacta: cabecalho", () => {
 
     await fireEvent.press(screen.getByLabelText("Voltar para a seleção de cursos"));
 
-    expect(await screen.findByLabelText("Ver catálogo")).toBeTruthy();
+    expect(await screen.findByText("Curso Web Full Stack")).toBeTruthy();
   });
 });
 

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 import BotaoContornoSeta from "../BotaoContornoSeta.jsx";
 
 // docs/redesign-mobile/PROMPT-agente-inicio-seta-e-catalogo.md, item 1
@@ -27,5 +28,19 @@ describe("BotaoContornoSeta", () => {
     await fireEvent.press(screen.getByLabelText("Ver cursos"));
 
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // Relevo (PROMPT-agente-botao-seta-relevo.md, item 3): texto quase branco
+  // e bem mais pesado que o roxo-sobre-contorno de antes, pra ficar legivel
+  // sobre o degrade preenchido.
+  test("texto em #efe7ff com peso 800", async () => {
+    await render(
+      <BotaoContornoSeta accessibilityHint="Abre o catálogo de cursos" accessibilityLabel="Ver cursos" onPress={jest.fn()} rotulo="Ver cursos" />
+    );
+
+    const estiloTexto = StyleSheet.flatten(screen.getByText("Ver cursos").props.style);
+
+    expect(estiloTexto.color).toBe("#efe7ff");
+    expect(estiloTexto.fontWeight).toBe("800");
   });
 });

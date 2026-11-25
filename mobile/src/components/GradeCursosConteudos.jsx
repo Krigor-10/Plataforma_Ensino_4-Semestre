@@ -198,7 +198,7 @@ function CardCurso({ accessibilityLabelPrefix, item, onConcluirCompra, onDesisti
 }
 
 const estilos = StyleSheet.create({
-  lista: { paddingHorizontal: espacamentos.xl, paddingBottom: espacamentos.xl },
+  lista: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.lg, paddingBottom: espacamentos.xl },
   linha: { justifyContent: "space-between" },
   cartao: {
     width: "48%",
