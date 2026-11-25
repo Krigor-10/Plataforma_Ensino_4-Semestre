@@ -1,12 +1,14 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   ActivityIndicator,
   BackHandler,
   LayoutAnimation,
   Linking,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,14 +17,14 @@ import {
   View
 } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
-import CapaCurso from "../../components/CapaCurso.jsx";
 import EstadoVazio from "../../components/EstadoVazio.jsx";
+import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
 import { abrirArquivoSeguro } from "../../lib/abrirArquivoSeguro";
 import { ehArquivoProprio, extrairNomeArquivo, resolverUrlArquivo, resolverUrlArquivoAbsoluta } from "../../lib/arquivos.js";
-import { obterDisponibilidadeAvaliacao } from "../../lib/avaliacoes.js";
+import { obterDisponibilidadeAvaliacao, TIPO_AVALIACAO_PROVA, VISUAL_TIPO_AVALIACAO } from "../../lib/avaliacoes.js";
 import { formatQuestoes, normalizeContentType, normalizeStatus } from "../../lib/format.js";
 import { hapticErro, hapticSucesso } from "../../lib/haptics.js";
 import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
@@ -82,6 +84,51 @@ const ICONE_TIPO_CONTEUDO = {
   4: "link-outline",
   5: "image-outline"
 };
+
+// Conteudos com cara de clicavel (docs/redesign-mobile/PROMPT-agente-
+// trilha-curso-compacta.md, item 5): icone verde pra material (os 5 tipos
+// acima), roxo pra quiz - reaproveitando VISUAL_TIPO_AVALIACAO (Prova),
+// criado pro mesmo fim na aba Avaliacoes.
+const VISUAL_MATERIAL_CONTEUDO = {
+  gradiente: ["rgba(34, 197, 94, 0.3)", "rgba(34, 197, 94, 0.08)"],
+  corBorda: "rgba(74, 222, 128, 0.4)",
+  corIcone: "#86efac"
+};
+const VISUAL_QUIZ_CONTEUDO = VISUAL_TIPO_AVALIACAO[TIPO_AVALIACAO_PROVA];
+
+function obterRotuloAcaoConteudo(tipoConteudo) {
+  if (Number(tipoConteudo) === TIPO_IMAGEM) {
+    return "Ver";
+  }
+  if (Number(tipoConteudo) === TIPO_VIDEO) {
+    return "Assistir";
+  }
+  return "Abrir";
+}
+
+// "N de M itens", contando conteudos + quiz (vinculado ou solto) - mesma
+// lista plana que ja alimenta a renderizacao do modulo aberto, so que aqui
+// so conta em vez de desenhar (item 1/4 do prompt: cabecalho do curso e
+// cada linha de modulo mostram essa conta coerente com a %).
+function contarItensModulo(modulo) {
+  const linhas = montarLinhasModulo(modulo);
+  let concluidos = 0;
+
+  linhas.forEach((linha) => {
+    if (linha.tipo === "conteudo") {
+      if (linha.dado.concluido) {
+        concluidos += 1;
+      }
+      return;
+    }
+    const disponibilidade = obterDisponibilidadeAvaliacao(linha.dado);
+    if (!disponibilidade.podeRealizar && disponibilidade.tone === "neutro") {
+      concluidos += 1;
+    }
+  });
+
+  return { concluidos, total: linhas.length };
+}
 
 export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapshot }) {
   const alturaBarraAbas = useAlturaBarraAbas();
@@ -165,6 +212,31 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   );
 
   const cursoAtivo = grupos.find((curso) => curso.id === cursoSelecionadoId) || null;
+
+  // "N de M modulos" e "N de M itens" do cabecalho compacto (item 1 do
+  // prompt) - modulos concluidos usa a mesma conta que cada linha de
+  // modulo ja faz (moduloConcluido); itens soma contarItensModulo de cada
+  // um (conteudos + quiz, coerente com a %).
+  const resumoCurso = useMemo(() => {
+    if (!cursoAtivo) {
+      return { itensConcluidos: 0, itensTotal: 0, modulosConcluidos: 0, modulosTotal: 0 };
+    }
+
+    let modulosConcluidos = 0;
+    let itensConcluidos = 0;
+    let itensTotal = 0;
+
+    cursoAtivo.modulos.forEach((modulo) => {
+      const { concluidos, total } = contarItensModulo(modulo);
+      itensConcluidos += concluidos;
+      itensTotal += total;
+      if (total > 0 && modulo.concluido) {
+        modulosConcluidos += 1;
+      }
+    });
+
+    return { itensConcluidos, itensTotal, modulosConcluidos, modulosTotal: cursoAtivo.modulos.length };
+  }, [cursoAtivo]);
 
   // So avaliacao formal (Prova/Exercicio, tipoAvaliacao !== 1) conta aqui -
   // quiz e atividade formativa e nunca libera nem substitui essa avaliacao
@@ -379,10 +451,6 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     return (
       <View style={estilos.container}>
         <View style={estilos.cabecalhoGrade}>
-          <View style={estilos.cabecalhoGradeTextos}>
-            <Text style={estilos.tituloGrade}>Cursos</Text>
-            <Text style={estilos.subtituloGrade}>Escolha um curso para continuar sua trilha</Text>
-          </View>
           <TouchableOpacity
             accessibilityHint="Abre o catálogo de cursos disponíveis"
             accessibilityLabel="Ver catálogo"
@@ -436,30 +504,33 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     );
   }
 
+  const percentualCurso = Math.max(0, Math.min(Number(cursoAtivo.progresso) || 0, 100));
+
   return (
     <View style={estilos.container}>
-      <TouchableOpacity
-        accessibilityLabel="Voltar para a seleção de cursos"
-        onPress={() => setCursoSelecionadoId(null)}
-        style={estilos.voltar}
-      >
-        <Ionicons color={cores.destaque} name="chevron-back" size={18} />
-        <Text style={estilos.voltarTexto}>Voltar</Text>
-      </TouchableOpacity>
-
-      <View style={estilos.cabecalhoCurso}>
-        <CapaCurso curso={cursoAtivo} size={48} />
-        <View style={estilos.cabecalhoCursoTextos}>
-          <Text numberOfLines={2} style={estilos.tituloCursoAtivo}>{cursoAtivo.titulo}</Text>
-          <Text style={estilos.subtituloCurso}>Progresso na trilha</Text>
-          <View style={estilos.cabecalhoBarraFundo}>
-            <View style={[estilos.cabecalhoBarraPreenchida, { width: `${Math.max(0, Math.min(cursoAtivo.progresso, 100))}%` }]} />
-          </View>
-        </View>
-        <Text style={estilos.cabecalhoPercentual}>{Math.round(Math.max(0, Math.min(cursoAtivo.progresso, 100)))}%</Text>
-      </View>
-
       <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: alturaBarraAbas }]}>
+        <View style={estilos.cabecalhoCurso}>
+          <TouchableOpacity
+            accessibilityHint="Volta para a lista de cursos"
+            accessibilityLabel="Voltar para a seleção de cursos"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            onPress={() => setCursoSelecionadoId(null)}
+            style={estilos.botaoVoltarCompacto}
+          >
+            <Ionicons color="#c4b5fd" name="chevron-back" size={18} />
+          </TouchableOpacity>
+
+          <View style={estilos.cabecalhoCursoTextos}>
+            <Text style={estilos.cabecalhoRotuloCurso}>CURSO</Text>
+            <Text numberOfLines={1} style={estilos.tituloCursoAtivo}>{cursoAtivo.titulo}</Text>
+            <Text numberOfLines={1} style={estilos.cabecalhoContagem}>
+              {resumoCurso.modulosConcluidos} de {resumoCurso.modulosTotal} módulos · {resumoCurso.itensConcluidos} de {resumoCurso.itensTotal} itens
+            </Text>
+          </View>
+
+          <ProgressoCircular cor={percentualCurso >= 100 ? cores.sucesso : cores.destaque} espessura={4} percentual={percentualCurso} size={40} />
+        </View>
+
         {avaliacaoLiberada ? (
           <AvisoAvaliacaoLiberada
             avaliacao={avaliacaoLiberada}
@@ -467,36 +538,38 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
           />
         ) : null}
 
-        {cursoAtivo.proximoConteudo ? (
-          <View style={estilos.continuar}>
-            <View style={estilos.continuarIcone}>
-              <Ionicons color={cores.destaque} name="play-circle-outline" size={20} />
+        {!avaliacaoLiberada && cursoAtivo.proximoConteudo ? (
+          <View style={estilos.linhaDestaque}>
+            <View style={estilos.linhaDestaqueIconeRoxo}>
+              <Ionicons color={cores.destaque} name="play-circle-outline" size={16} />
             </View>
-            <View style={estilos.continuarTextos}>
-              <Text style={estilos.continuarRotulo}>Continue de onde parou</Text>
-              <Text numberOfLines={1} style={estilos.continuarTitulo}>{cursoAtivo.proximoConteudo.titulo}</Text>
+            <View style={estilos.linhaDestaqueTextos}>
+              <Text style={estilos.linhaDestaqueTitulo}>Continue de onde parou</Text>
+              <Text numberOfLines={1} style={estilos.linhaDestaqueSubtitulo}>{cursoAtivo.proximoConteudo.titulo}</Text>
             </View>
             <TouchableOpacity
               accessibilityHint="Abre o módulo com o próximo conteúdo pendente"
               accessibilityLabel={`Abrir ${cursoAtivo.proximoConteudo.titulo}`}
               accessibilityRole="button"
               onPress={() => alternarModulo(cursoAtivo.proximoConteudo.moduloId)}
-              style={estilos.continuarBotao}
+              style={[estilos.linhaDestaquePilula, estilos.linhaDestaquePilulaRoxa]}
             >
-              <Text style={estilos.continuarBotaoTexto}>Abrir</Text>
-              <Ionicons color={cores.texto} name="arrow-forward" size={14} />
+              <Text style={estilos.linhaDestaquePilulaTexto}>Abrir</Text>
+              <Ionicons color={cores.texto} name="chevron-forward" size={14} />
             </TouchableOpacity>
           </View>
         ) : null}
 
+        <Text style={estilos.rotuloSecaoModulos}>MÓDULOS</Text>
+
         <Toast mensagem={mensagem?.texto} onFechar={() => setMensagem(null)} tipo={mensagem?.tipo} />
 
-        {cursoAtivo.modulos.map((modulo) => {
+        {cursoAtivo.modulos.map((modulo, indiceModulo) => {
           const aberto = !modulo.bloqueado && modulosAbertos.has(modulo.id);
           const totalConteudos = modulo.conteudos.length;
-          // Modulo so com quiz (sem nenhum conteudo) tambem tem pill/barra -
-          // contar os quizzes aqui tambem, nao so os conteudos (prompt-agente-
-          // progresso-e-trava-ao-concluir.md, Parte B, item 7).
+          // Modulo so com quiz (sem nenhum conteudo) tambem tem contagem/
+          // barra - contar os quizzes aqui tambem, nao so os conteudos
+          // (prompt-agente-progresso-e-trava-ao-concluir.md, Parte B, item 7).
           const totalItensModulo = totalConteudos + modulo.quizzes.length;
           // modulo.concluido/progresso ja vem do backend (ProgressoModuloAluno,
           // ver agruparConteudosPorCurso) e pondera o(s) quiz(zes) do modulo
@@ -504,10 +577,14 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
           const moduloConcluido = totalItensModulo > 0 && modulo.concluido;
           const percentualModulo = totalItensModulo > 0 ? Math.max(0, Math.min(modulo.progresso, 100)) : 0;
           const linhas = montarLinhasModulo(modulo);
+          // "N de M concluidos" contando conteudo + quiz, coerente com a %
+          // (item 4 do prompt) - mesma conta do resumo do cabecalho.
+          const { concluidos: itensConcluidosModulo, total: itensTotalModulo } = contarItensModulo(modulo);
 
           return (
             <View key={modulo.id} style={estilos.modulo}>
               <TouchableOpacity
+                accessibilityHint={modulo.bloqueado ? undefined : aberto ? "Recolhe os itens deste módulo" : "Expande os itens deste módulo"}
                 accessibilityLabel={modulo.titulo}
                 accessibilityRole="button"
                 accessibilityState={{ disabled: modulo.bloqueado, expanded: aberto }}
@@ -515,57 +592,55 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
                 onPress={() => alternarModulo(modulo.id)}
                 style={estilos.moduloCabecalho}
               >
-                {modulo.bloqueado ? (
-                  <View style={estilos.moduloIcone}>
-                    <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={18} />
-                  </View>
-                ) : null}
-                <View style={{ flex: 1 }}>
-                  {!modulo.bloqueado ? (
-                    <View
-                      style={[
-                        estilos.moduloPill,
-                        { backgroundColor: moduloConcluido ? cores.sucessoFundo : cores.informativoFundo }
-                      ]}
-                    >
-                      <Text style={[estilos.moduloPillTexto, { color: moduloConcluido ? cores.sucesso : cores.informativo }]}>
-                        {moduloConcluido ? "✓ Concluído" : "Em andamento"}
-                      </Text>
-                    </View>
-                  ) : null}
+                <View
+                  style={[
+                    estilos.moduloQuadrado,
+                    modulo.bloqueado ? estilos.moduloQuadradoBloqueado : moduloConcluido ? estilos.moduloQuadradoConcluido : null
+                  ]}
+                >
+                  {modulo.bloqueado ? (
+                    <Ionicons color={cores.bloqueado} name="lock-closed" size={14} testID="icone-modulo-bloqueado" />
+                  ) : moduloConcluido ? (
+                    <Ionicons color={cores.sucesso} name="checkmark" size={16} testID="icone-modulo-concluido" />
+                  ) : (
+                    <Text style={estilos.moduloQuadradoTexto}>{String(indiceModulo + 1).padStart(2, "0")}</Text>
+                  )}
+                </View>
+
+                <View style={estilos.moduloTextos}>
                   <Text numberOfLines={2} style={estilos.moduloTitulo}>{modulo.titulo}</Text>
                   {modulo.bloqueado ? (
-                    <Text style={estilos.moduloContagem}>Conclua o módulo anterior para desbloquear</Text>
-                  ) : totalItensModulo > 0 ? (
-                    <>
-                      <View style={estilos.moduloProgressoLinha}>
-                        <Text style={estilos.moduloProgressoRotulo}>Progresso da trilha</Text>
-                        <Text style={estilos.moduloProgressoValor}>{Math.round(percentualModulo)}%</Text>
-                      </View>
-                      <View
-                        accessibilityHint="Representação visual do progresso do módulo em barra"
-                        accessibilityLabel={
-                          // modulo.concluidos so conta conteudo (nao quiz) -
-                          // com quiz no modulo, "X de Y conteudos" ficaria
-                          // incoerente com a porcentagem (que pondera os
-                          // dois); descrever pelo percentual evita isso.
-                          modulo.quizzes.length > 0
-                            ? `${Math.round(percentualModulo)}% do módulo concluído${moduloConcluido ? ". Módulo concluído" : ""}`
-                            : `${modulo.concluidos} de ${totalItensModulo} conteúdos concluídos${moduloConcluido ? ". Módulo concluído" : ""}`
-                        }
-                        accessible
-                        style={estilos.barraFundoFina}
-                      >
-                        <View style={[estilos.barraPreenchidaFina, { width: `${percentualModulo}%` }]} />
-                      </View>
-                    </>
+                    <Text style={estilos.moduloContagem}>Conclua o módulo anterior</Text>
+                  ) : itensTotalModulo > 0 ? (
+                    <Text
+                      accessibilityHint="Quantidade de itens concluídos neste módulo"
+                      accessibilityLabel={`${itensConcluidosModulo} de ${itensTotalModulo} concluídos${moduloConcluido ? ". Módulo concluído" : ""}`}
+                      style={estilos.moduloContagem}
+                    >
+                      {itensConcluidosModulo} de {itensTotalModulo} concluídos
+                    </Text>
                   ) : null}
                 </View>
-                <Ionicons
-                  color={cores.textoSuave}
-                  name={modulo.bloqueado ? "lock-closed" : aberto ? "chevron-up" : "chevron-down"}
-                  size={18}
-                />
+
+                {!modulo.bloqueado && totalItensModulo > 0 ? (
+                  <View style={estilos.moduloMiniBarraFundo}>
+                    <View
+                      style={[
+                        estilos.moduloMiniBarraPreenchida,
+                        { width: `${percentualModulo}%`, backgroundColor: moduloConcluido ? cores.sucesso : cores.destaque }
+                      ]}
+                    />
+                  </View>
+                ) : null}
+
+                {!modulo.bloqueado ? (
+                  <Ionicons
+                    color={cores.textoSuave}
+                    name={aberto ? "chevron-up" : "chevron-down"}
+                    size={18}
+                    testID="icone-chevron-modulo"
+                  />
+                ) : null}
               </TouchableOpacity>
 
               {aberto ? (
@@ -663,37 +738,32 @@ function useEntradaSutil() {
 
 // Avaliacao aqui e sempre a prova/exercicio formal (tipoAvaliacao !== 1) -
 // quiz nunca aparece neste aviso, ver filtro em avaliacaoLiberada no caller.
+// Card unico de ~52px (item 2 do prompt): quando ha avaliacao liberada ela
+// toma prioridade sobre "Continue de onde parou" (ver gating no return
+// principal), entao esse card concentra sozinho "ha algo pra fazer agora".
 function AvisoAvaliacaoLiberada({ avaliacao, onIrParaAvaliacao }) {
   const estiloEntrada = useEntradaSutil();
 
   return (
-    <Animated.View
-      accessibilityHint="Indica que a avaliacao final deste curso foi liberada apos a conclusao do conteudo"
-      accessibilityLabel="Avaliação liberada"
-      accessibilityRole="alert"
-      style={[estilos.avisoAvaliacao, estiloEntrada]}
-    >
-      <View style={estilos.avisoAvaliacaoCabecalho}>
-        <View style={estilos.avisoAvaliacaoIcone}>
-          <Ionicons color={cores.sucesso} name="checkmark-circle" size={22} />
-        </View>
-        <View style={estilos.avisoAvaliacaoTextos}>
-          <Text style={estilos.avisoAvaliacaoTitulo}>🎉 Etapa concluída!</Text>
-          <Text style={estilos.avisoAvaliacaoTexto}>
-            Você concluiu todas as etapas de conteúdo deste curso! A avaliação &ldquo;{avaliacao.titulo}&rdquo; já
-            está disponível para você realizar.
-          </Text>
-        </View>
-      </View>
+    <Animated.View style={estiloEntrada}>
       <TouchableOpacity
         accessibilityHint="Abre a avaliação liberada deste curso"
         accessibilityLabel={`Ir para a avaliação ${avaliacao.titulo}`}
         accessibilityRole="button"
         onPress={onIrParaAvaliacao}
-        style={estilos.avisoAvaliacaoBotao}
+        style={estilos.avisoAvaliacao}
       >
-        <Ionicons color={cores.texto} name="trophy" size={15} />
-        <Text style={estilos.avisoAvaliacaoBotaoTexto}>Ir para a avaliação</Text>
+        <View style={estilos.avisoAvaliacaoIcone}>
+          <Ionicons color={cores.sucesso} name="trophy" size={16} />
+        </View>
+        <View style={estilos.avisoAvaliacaoTextos}>
+          <Text style={estilos.avisoAvaliacaoTitulo}>Avaliação liberada</Text>
+          <Text numberOfLines={1} style={estilos.avisoAvaliacaoTexto}>{avaliacao.titulo}</Text>
+        </View>
+        <View style={estilos.avisoAvaliacaoPilula}>
+          <Text style={estilos.avisoAvaliacaoPilulaTexto}>Iniciar</Text>
+          <Ionicons color={cores.texto} name="chevron-forward" size={14} />
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -706,6 +776,32 @@ function AvisoAvaliacaoLiberada({ avaliacao, onIrParaAvaliacao }) {
 // vira um checkbox proprio a direita (nao some quando a linha tambem abre
 // arquivo — sao duas acoes reais e distintas, nao da pra fundir em uma so
 // sem perder a capacidade de marcar concluido em conteudo sem arquivo).
+// Quadrado de icone com gradiente (verde = material, roxo = quiz, cinza =
+// bloqueado) + selinho de check sobreposto no canto quando concluido (item 5
+// do prompt) - substitui o icone cinza solto + a pilula grande "Concluido".
+function QuadradoIconeConteudo({ bloqueado, concluido, estiloCheck, icone, visual }) {
+  if (bloqueado) {
+    return (
+      <View style={[estilos.conteudoQuadrado, estilos.conteudoQuadradoBloqueado]}>
+        <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={16} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={estilos.conteudoQuadradoWrapper}>
+      <LinearGradient colors={visual.gradiente} style={[estilos.conteudoQuadrado, { borderColor: visual.corBorda }]}>
+        <Ionicons color={visual.corIcone} name={icone} size={17} />
+      </LinearGradient>
+      {concluido ? (
+        <Animated.View accessibilityElementsHidden style={[estilos.conteudoSelinhoCheck, estiloCheck]} testID="selo-concluido">
+          <Ionicons color={cores.texto} name="checkmark" size={10} />
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
 function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConcluido, mostrarDivisor, onAbrirQuiz }) {
   const estiloLinha = [estilos.linha, linha.recuado ? estilos.linhaRecuada : null, mostrarDivisor ? estilos.linhaDivisor : null];
   const estiloCheck = useAnimacaoConclusao(linha.tipo === "conteudo" && linha.dado.concluido);
@@ -715,27 +811,34 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
     const temArquivo = Boolean(conteudo.arquivoUrl || conteudo.linkUrl);
     const processando = conteudoProcessando === conteudo.id;
     const tocavel = temArquivo && !conteudo.bloqueado;
+    const comVisualizadorIntegrado = TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo);
+    const rotuloAcao = obterRotuloAcaoConteudo(conteudo.tipoConteudo);
 
     const corpo = (
       <>
-        <View style={estilos.linhaIcone}>
-          <Ionicons color={cores.textoSuave} name={ICONE_TIPO_CONTEUDO[conteudo.tipoConteudo] || "document-outline"} size={18} />
-        </View>
+        <QuadradoIconeConteudo
+          bloqueado={conteudo.bloqueado}
+          concluido={conteudo.concluido}
+          estiloCheck={estiloCheck}
+          icone={ICONE_TIPO_CONTEUDO[conteudo.tipoConteudo] || "document-outline"}
+          visual={VISUAL_MATERIAL_CONTEUDO}
+        />
         <View style={estilos.linhaTextos}>
           <Text numberOfLines={2} style={estilos.linhaTitulo}>{conteudo.titulo}</Text>
-          <Text style={estilos.linhaMeta}>{normalizeContentType(conteudo.tipoConteudo)}</Text>
+          <Text style={estilos.linhaMeta}>
+            {normalizeContentType(conteudo.tipoConteudo)}
+            {conteudo.concluido ? " · lido" : ""}
+          </Text>
         </View>
-        {conteudo.bloqueado ? (
-          <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
-        ) : conteudo.concluido ? (
-          <Animated.View accessibilityHint="Indica que este conteúdo já foi concluído" accessibilityLabel="Concluído" accessible style={[estilos.statusPill, estilos.statusPillSucesso, estiloCheck]}>
-            <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
-            <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
-          </Animated.View>
+        {conteudo.bloqueado ? null : conteudo.concluido ? (
+          tocavel ? <Text style={estilos.linhaAcaoCinza}>Rever ›</Text> : null
         ) : processando ? (
           <ActivityIndicator color={cores.destaque} size="small" />
-        ) : TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo) ? null : (
+        ) : comVisualizadorIntegrado ? (
+          <Text style={estilos.linhaAcaoRoxa}>{rotuloAcao} ›</Text>
+        ) : (
           <TouchableOpacity
+            accessibilityHint="Marca este conteúdo como concluído"
             accessibilityLabel={`Marcar ${conteudo.titulo} como concluído`}
             accessibilityRole="button"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -750,14 +853,15 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
 
     if (tocavel) {
       return (
-        <TouchableOpacity
+        <Pressable
+          accessibilityHint="Abre o conteúdo para visualização"
           accessibilityLabel={`Abrir ${conteudo.titulo}, ${normalizeContentType(conteudo.tipoConteudo)}`}
           accessibilityRole="button"
           onPress={() => abrirConteudo(conteudo)}
-          style={estiloLinha}
+          style={({ pressed }) => [...estiloLinha, pressed ? estilos.linhaPressionada : null]}
         >
           {corpo}
-        </TouchableOpacity>
+        </Pressable>
       );
     }
 
@@ -773,9 +877,13 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
 
   const corpoQuiz = (
     <>
-      <View style={estilos.linhaIcone}>
-        <Ionicons color={cores.textoSuave} name="clipboard-outline" size={18} />
-      </View>
+      <QuadradoIconeConteudo
+        bloqueado={!disponibilidade.podeRealizar && !concluidoQuiz}
+        concluido={concluidoQuiz}
+        estiloCheck={estiloCheck}
+        icone="clipboard-outline"
+        visual={VISUAL_QUIZ_CONTEUDO}
+      />
       <View style={estilos.linhaTextos}>
         <Text numberOfLines={2} style={estilos.linhaTitulo}>{quiz.titulo}</Text>
         <Text style={estilos.linhaMeta}>Quiz · {formatQuestoes(quiz.totalQuestoes)} · sem nota</Text>
@@ -786,37 +894,27 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
           accessibilityLabel={`Responder quiz ${quiz.titulo}`}
           accessibilityRole="button"
           onPress={() => onAbrirQuiz(quiz)}
-          style={estilos.botaoContorno}
+          style={estilos.botaoResponderPreenchido}
         >
-          <Text style={estilos.botaoContornoTexto}>Responder</Text>
+          <Text style={estilos.botaoResponderPreenchidoTexto}>Responder</Text>
         </TouchableOpacity>
       ) : concluidoQuiz ? (
-        <View
-          accessibilityHint={temRevisaoDisponivel ? "Toque na linha para ver a revisão" : "Indica que este quiz já foi concluído"}
-          accessibilityLabel="Concluído"
-          accessible
-          style={[estilos.statusPill, estilos.statusPillSucesso]}
-        >
-          <Ionicons color={cores.sucesso} name="checkmark-circle" size={14} />
-          <Text style={[estilos.statusPillTexto, { color: cores.sucesso }]}>Concluído</Text>
-        </View>
-      ) : (
-        <Ionicons color={cores.bloqueado} name="lock-closed-outline" size={20} />
-      )}
+        temRevisaoDisponivel ? <Text style={estilos.linhaAcaoRoxa}>Ver revisão ›</Text> : null
+      ) : null}
     </>
   );
 
   if (tocavel) {
     return (
-      <TouchableOpacity
+      <Pressable
         accessibilityHint={temRevisaoDisponivel ? "Mostra a revisão com o gabarito do quiz" : undefined}
         accessibilityLabel={temRevisaoDisponivel ? `Ver revisão do quiz ${quiz.titulo}` : `Abrir quiz ${quiz.titulo}`}
         accessibilityRole="button"
         onPress={() => onAbrirQuiz(quiz)}
-        style={estiloLinha}
+        style={({ pressed }) => [...estiloLinha, pressed ? estilos.linhaPressionada : null]}
       >
         {corpoQuiz}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
@@ -825,45 +923,38 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
 
 const estilos = StyleSheet.create({
   container: { flex: 1, backgroundColor: cores.fundo },
-  voltar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    minHeight: 44,
-    paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.lg,
-    marginLeft: -6
-  },
-  voltarTexto: { color: cores.destaque, fontWeight: "600" },
+  // Cabecalho compacto (item 1 do prompt): rola junto com a tela em vez de
+  // ocupar uma faixa fixa grande no topo - volta ‹, titulo+contagem e o anel
+  // de progresso, tudo em uma unica linha ~56px.
   cabecalhoCurso: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
     gap: espacamentos.md,
-    paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.md,
-    paddingBottom: espacamentos.xl
+    marginBottom: espacamentos.md
   },
-  cabecalhoCursoTextos: { flex: 1, minWidth: 160 },
-  tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
-  subtituloCurso: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4, marginBottom: 6 },
-  cabecalhoBarraFundo: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden" },
-  cabecalhoBarraPreenchida: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
-  cabecalhoPercentual: { color: cores.texto, fontWeight: "800", fontSize: tipografia.subtitulo },
-  corpo: { padding: espacamentos.xl, paddingTop: 0, paddingBottom: 40 },
-  // Cabecalho da grade de selecao de curso (redesign, 2a_cursos_grade.png).
+  botaoVoltarCompacto: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: cores.fundoCartaoAtivo,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  cabecalhoCursoTextos: { flex: 1 },
+  cabecalhoRotuloCurso: { color: cores.textoSuave, fontWeight: "700", fontSize: tipografia.legenda, letterSpacing: 0.5 },
+  tituloCursoAtivo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginTop: 2 },
+  cabecalhoContagem: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
+  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, paddingBottom: 40 },
+  // Linha compacta so com "Ver catalogo", alinhada a direita (docs/
+  // redesign-mobile/PROMPT-agente-avaliacoes-ajustes-1.md, item 6) - sem
+  // titulo "Cursos"/subtitulo repetindo o breadcrumb (ScreenIndicator.jsx).
   cabecalhoGrade: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: espacamentos.md,
+    justifyContent: "flex-end",
     paddingHorizontal: espacamentos.xl,
-    paddingTop: espacamentos.xl,
-    paddingBottom: espacamentos.md
+    paddingTop: espacamentos.lg,
+    paddingBottom: espacamentos.sm
   },
-  cabecalhoGradeTextos: { flex: 1 },
-  tituloGrade: { color: cores.texto, fontWeight: "700", fontSize: tipografia.titulo },
-  subtituloGrade: { color: cores.textoRotulo, fontSize: tipografia.rotulo, marginTop: 4 },
   botaoCatalogo: {
     flexDirection: "row",
     alignItems: "center",
@@ -876,92 +967,109 @@ const estilos = StyleSheet.create({
   },
   botaoCatalogoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo },
   mensagemGradeContainer: { paddingHorizontal: espacamentos.xl, paddingTop: espacamentos.sm },
-  continuar: {
+  // "Continue de onde parou" compacto (item 3 do prompt): 1 linha ~52px, so
+  // aparece quando nao ha avaliacao liberada (gating no return principal).
+  linhaDestaque: {
     flexDirection: "row",
     alignItems: "center",
     gap: espacamentos.md,
     backgroundColor: cores.fundoCartaoAtivo,
     borderRadius: raios.lg,
-    padding: 14,
-    marginBottom: 16,
+    paddingHorizontal: espacamentos.md,
+    paddingVertical: espacamentos.sm,
+    marginBottom: espacamentos.md,
     borderLeftWidth: 3,
-    borderLeftColor: cores.destaque
+    borderLeftColor: cores.destaque,
+    minHeight: 52
   },
-  continuarIcone: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(0, 0, 0, 0.25)",
+  linhaDestaqueIconeRoxo: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: "rgba(123, 47, 247, 0.18)",
     alignItems: "center",
     justifyContent: "center"
   },
-  continuarTextos: { flex: 1 },
-  continuarRotulo: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo, marginBottom: 4 },
-  continuarTitulo: { color: cores.texto, fontWeight: "600" },
-  continuarBotao: {
+  linhaDestaqueTextos: { flex: 1 },
+  linhaDestaqueTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
+  linhaDestaqueSubtitulo: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
+  linhaDestaquePilula: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: cores.destaque,
-    borderRadius: raios.sm,
-    paddingHorizontal: espacamentos.md,
-    minHeight: 36
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.sm,
+    minHeight: 32
   },
-  continuarBotaoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
-  // Aviso "avaliacao liberada" - mesma linguagem visual do card "continuar"
-  // (fundo elevado + borda lateral de destaque), em verde-sucesso em vez de
-  // roxo-destaque, pra marcar conquista sem repetir a cor da acao padrao.
-  // Botao embaixo (nao ao lado) pra caber confortavel em telas estreitas.
+  linhaDestaquePilulaRoxa: { backgroundColor: cores.destaque },
+  linhaDestaquePilulaTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.legenda },
+  // Aviso "avaliacao liberada" (item 2 do prompt): mesma forma de 1 linha
+  // ~52px do card "continuar" acima, em verde-sucesso pra marcar conquista
+  // sem repetir a cor da acao padrao. Toma prioridade sobre o "continuar"
+  // (gating no return principal) - card inteiro e tocavel.
   avisoAvaliacao: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: espacamentos.md,
     backgroundColor: cores.sucessoFundo,
     borderRadius: raios.lg,
-    padding: 14,
-    marginBottom: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: cores.sucesso,
-    gap: espacamentos.md
+    paddingHorizontal: espacamentos.md,
+    paddingVertical: espacamentos.sm,
+    marginBottom: espacamentos.md,
+    borderWidth: 1,
+    borderColor: "rgba(34, 197, 94, 0.4)",
+    minHeight: 52
   },
-  avisoAvaliacaoCabecalho: { flexDirection: "row", alignItems: "flex-start", gap: espacamentos.md },
   avisoAvaliacaoIcone: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
     backgroundColor: "rgba(0, 0, 0, 0.1)",
     alignItems: "center",
     justifyContent: "center"
   },
   avisoAvaliacaoTextos: { flex: 1 },
-  avisoAvaliacaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo, marginBottom: 4 },
-  avisoAvaliacaoTexto: { color: cores.textoRotulo, fontSize: tipografia.rotulo, lineHeight: 18 },
-  avisoAvaliacaoBotao: {
+  avisoAvaliacaoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
+  avisoAvaliacaoTexto: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2 },
+  avisoAvaliacaoPilula: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
+    gap: 4,
     backgroundColor: cores.sucesso,
-    borderRadius: raios.sm,
-    minHeight: 40
+    borderRadius: raios.pilula,
+    paddingHorizontal: espacamentos.sm,
+    minHeight: 32
   },
-  avisoAvaliacaoBotaoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
+  avisoAvaliacaoPilulaTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.legenda },
+  rotuloSecaoModulos: {
+    color: cores.textoSuave,
+    fontWeight: "700",
+    fontSize: tipografia.legenda,
+    letterSpacing: 0.5,
+    marginBottom: espacamentos.sm
+  },
   modulo: { backgroundColor: cores.fundoCartao, borderRadius: raios.lg, marginBottom: 12, overflow: "hidden" },
-  moduloCabecalho: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, padding: 14 },
-  moduloIcone: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: cores.fundoCartaoAtivo,
+  // Modulo em 1 linha ~56px (item 4 do prompt): quadrado numerado/✓/cadeado
+  // + titulo+contagem + mini-barra + chevron, tudo numa linha so.
+  moduloCabecalho: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, padding: 14, minHeight: 56 },
+  moduloQuadrado: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(123, 47, 247, 0.4)",
+    backgroundColor: "rgba(123, 47, 247, 0.12)",
     alignItems: "center",
     justifyContent: "center"
   },
-  moduloPill: { alignSelf: "flex-start", borderRadius: raios.pilula, paddingHorizontal: espacamentos.sm, paddingVertical: 3, marginBottom: 6 },
-  moduloPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
-  moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
-  moduloContagem: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
-  moduloProgressoLinha: { flexDirection: "row", justifyContent: "space-between", marginTop: espacamentos.sm },
-  moduloProgressoRotulo: { color: cores.textoSuave, fontSize: tipografia.legenda },
-  moduloProgressoValor: { color: cores.textoSuave, fontSize: tipografia.legenda, fontWeight: "700" },
-  barraFundoFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden", marginTop: espacamentos.xs },
-  barraPreenchidaFina: { height: 6, borderRadius: raios.sm, backgroundColor: cores.destaque },
+  moduloQuadradoConcluido: { backgroundColor: cores.sucessoFundo, borderColor: cores.sucesso },
+  moduloQuadradoBloqueado: { backgroundColor: cores.fundoCartaoAtivo, borderColor: cores.bordaCartao },
+  moduloQuadradoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.legenda },
+  moduloTextos: { flex: 1 },
+  moduloTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.corpo },
+  moduloContagem: { color: cores.textoSuave, fontSize: tipografia.legenda, marginTop: 2 },
+  moduloMiniBarraFundo: { width: 54, height: 5, borderRadius: raios.sm, backgroundColor: cores.bordaCartao, overflow: "hidden" },
+  moduloMiniBarraPreenchida: { height: 5, borderRadius: raios.sm },
   itensLista: { paddingBottom: espacamentos.xs },
   // Linha de lista unica (Material 3): sem fundo/borda proprios, separadas
   // por divisor fino. Altura minima 56dp (1 linha) crescendo naturalmente
@@ -976,13 +1084,40 @@ const estilos = StyleSheet.create({
     paddingVertical: espacamentos.md
   },
   linhaDivisor: { borderTopWidth: 1, borderTopColor: cores.bordaCartao },
-  // Recuo alinhado ao inicio do texto do item pai (icone 36 + gap md), nao a
-  // borda do card — mesmo recuo pra todo quiz vinculado a um conteudo.
-  linhaRecuada: { paddingLeft: 14 + 36 + espacamentos.md },
-  linhaIcone: { width: 36, height: 36, borderRadius: 18, backgroundColor: cores.fundoCartaoAtivo, alignItems: "center", justifyContent: "center" },
+  // Recuo alinhado ao inicio do texto do item pai (quadrado 34 + gap md), nao
+  // a borda do card — mesmo recuo pra todo quiz vinculado a um conteudo.
+  linhaRecuada: { paddingLeft: 14 + 34 + espacamentos.md },
+  linhaPressionada: { backgroundColor: "rgba(123, 47, 247, 0.08)" },
   linhaTextos: { flex: 1 },
   linhaTitulo: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },
   linhaMeta: { color: cores.textoRotulo, fontSize: tipografia.legenda, marginTop: 2 },
+  linhaAcaoRoxa: { color: "#a78bfa", fontWeight: "700", fontSize: tipografia.rotulo },
+  linhaAcaoCinza: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.rotulo },
+  // Quadrado de icone com gradiente (item 5 do prompt) - wrapper precisa de
+  // position:relative pra o selinho de check ficar sobreposto no canto.
+  conteudoQuadradoWrapper: { width: 34, height: 34, position: "relative" },
+  conteudoQuadrado: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  conteudoQuadradoBloqueado: { backgroundColor: cores.fundoCartaoAtivo, borderColor: cores.bordaCartao },
+  conteudoSelinhoCheck: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: cores.sucesso,
+    borderWidth: 2,
+    borderColor: cores.fundoCartao,
+    alignItems: "center",
+    justifyContent: "center"
+  },
   botaoContorno: {
     borderWidth: 1,
     borderColor: cores.destaque,
@@ -993,15 +1128,14 @@ const estilos = StyleSheet.create({
     justifyContent: "center"
   },
   botaoContornoTexto: { color: cores.destaque, fontWeight: "700", fontSize: tipografia.rotulo },
-  statusPill: {
-    flexDirection: "row",
+  botaoResponderPreenchido: {
+    backgroundColor: cores.destaque,
+    borderRadius: raios.sm,
+    paddingHorizontal: espacamentos.md,
+    minHeight: 36,
     alignItems: "center",
-    gap: 4,
-    borderRadius: raios.pilula,
-    paddingHorizontal: espacamentos.sm,
-    paddingVertical: 4
+    justifyContent: "center"
   },
-  statusPillSucesso: { backgroundColor: cores.sucessoFundo },
-  statusPillTexto: { fontSize: tipografia.legenda, fontWeight: "700" },
+  botaoResponderPreenchidoTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
   vazioModulo: { color: cores.textoSuave, fontSize: tipografia.rotulo, fontStyle: "italic", paddingHorizontal: 14, paddingVertical: espacamentos.md }
 });
