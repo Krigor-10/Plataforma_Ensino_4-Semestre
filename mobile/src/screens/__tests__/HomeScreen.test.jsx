@@ -211,4 +211,37 @@ describe("HomeScreen - estilo da referencia", () => {
     const botaoVerCursos = screen.getByLabelText("Ver cursos");
     expect(within(botaoVerCursos).getByTestId("icone-seta")).toBeTruthy();
   });
+
+  // docs/gamificacao/PROMPT-agente-barra-xp-mobile.md, item 2.
+  describe("linha de XP na saudacao", () => {
+    const XP = { nivel: 2, percentualNivel: 40, xpNoNivel: 200, xpPorNivel: 500, faltamParaProximo: 300, total: 700 };
+
+    test("com xp, renderiza 'Nível N' e 'X/500 XP'", async () => {
+      const snapshot = montarSnapshotComCursoEmAndamento();
+
+      await render(<HomeScreen onAbrirAba={jest.fn()} snapshot={snapshot} usuario={{ nome: "Aluno Demo" }} xp={XP} />);
+
+      expect(screen.getByText("Nível 2")).toBeTruthy();
+      expect(screen.getByText("200/500 XP")).toBeTruthy();
+    });
+
+    test("sem matricula liberada (xp ausente), nao renderiza a linha", async () => {
+      const snapshot = montarSnapshot({});
+
+      await render(<HomeScreen onAbrirAba={jest.fn()} snapshot={snapshot} usuario={{ nome: "Aluno Demo" }} />);
+
+      expect(screen.queryByText(/^Nível /)).toBeNull();
+    });
+
+    test("tocar na linha chama onAbrirXp", async () => {
+      const onAbrirXp = jest.fn();
+      const snapshot = montarSnapshotComCursoEmAndamento();
+
+      await render(<HomeScreen onAbrirAba={jest.fn()} onAbrirXp={onAbrirXp} snapshot={snapshot} usuario={{ nome: "Aluno Demo" }} xp={XP} />);
+
+      await fireEvent.press(screen.getByLabelText("Nível 2: 200 de 500 XP"));
+
+      expect(onAbrirXp).toHaveBeenCalledTimes(1);
+    });
+  });
 });

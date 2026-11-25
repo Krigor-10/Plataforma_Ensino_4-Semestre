@@ -1,10 +1,11 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import AlunoHeaderBar from "../../components/AlunoHeaderBar.jsx";
 import CabecalhoSimples from "../../components/CabecalhoSimples.jsx";
 import MenuLateral from "../../components/MenuLateral.jsx";
 import ModalConfirmarSaida from "../../components/ModalConfirmarSaida.jsx";
+import PainelXp from "../../components/PainelXp.jsx";
 import AlunoTabsNavigator from "./AlunoTabsNavigator.jsx";
 import BuscaScreen from "./BuscaScreen.jsx";
 import CatalogoScreen from "./CatalogoScreen.jsx";
@@ -15,6 +16,7 @@ import { ApiError } from "../../lib/api.js";
 import { EMPTY_SNAPSHOT, loadAlunoSnapshot } from "../../lib/dashboard.js";
 import { cores } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
+import { calcularXp } from "../../../../shared/xp.js";
 
 const AlunoStack = createNativeStackNavigator();
 
@@ -37,6 +39,18 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
   const [menuAberto, setMenuAberto] = useState(false);
   const [rotaAtivaChave, setRotaAtivaChave] = useState(null);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [painelXpAberto, setPainelXpAberto] = useState(false);
+
+  // Mesma lista que a Home ja usa pra "Meus cursos" (snapshot.progressos.
+  // cursos) decide se o aluno tem pelo menos uma matricula com acesso
+  // liberado - sem isso, nem a linha da Inicio nem o chip das outras abas
+  // aparecem (docs/gamificacao/PROMPT-agente-barra-xp-mobile.md, item 2).
+  // Um calculo so aqui, repassado pro chip (AlunoHeaderBar) e pra Inicio
+  // (AlunoTabsNavigator -> HomeScreen) - nada duplicado nas telas.
+  const xp = useMemo(() => {
+    const temMatriculaLiberada = (snapshot.progressos.cursos || []).length > 0;
+    return temMatriculaLiberada ? calcularXp(snapshot.progressos) : null;
+  }, [snapshot.progressos]);
   // Guarda o `navigation` do AlunoStack recebido via screenOptions (o mesmo
   // objeto que cada tela ja recebe) pra poder navegar a partir do menu
   // lateral, que fica fora da arvore do Navigator (nao e um Screen).
@@ -126,8 +140,10 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
                 navigation={navigation}
                 notificacoesVersao={notificacoesVersao}
                 onAbrirMenu={() => setMenuAberto(true)}
+                onAbrirXp={() => setPainelXpAberto(true)}
                 route={route}
                 usuario={usuario}
+                xp={xp}
               />
             )
           };
@@ -138,11 +154,13 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
             <AlunoTabsNavigator
               carregando={carregando}
               erro={erro}
+              onAbrirXp={() => setPainelXpAberto(true)}
               onRecarregar={recarregar}
               onSessionExpired={onSessionExpired}
               snapshot={snapshot}
               tentarNovamente={tentarNovamente}
               usuario={usuario}
+              xp={xp}
             />
           )}
         </AlunoStack.Screen>
@@ -190,6 +208,8 @@ export default function AlunoWorkspace({ onLogout, onSessionExpired, onUsuarioAt
       />
 
       <ModalConfirmarSaida onCancelar={() => setConfirmandoSaida(false)} onConfirmar={onLogout} visivel={confirmandoSaida} />
+
+      <PainelXp onFechar={() => setPainelXpAberto(false)} visivel={painelXpAberto} xp={xp} />
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
-import { cores, espacamentos } from "../lib/theme.js";
+import { LinearGradient } from "expo-linear-gradient";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { cores, espacamentos, raios } from "../lib/theme.js";
 
 /* Indicador de "onde estou" — fica entre HeaderGlobal.jsx (acoes globais)
    e o conteudo da tela trocada por aba em AlunoWorkspace.jsx. Deliberadamente
@@ -26,27 +27,38 @@ import { cores, espacamentos } from "../lib/theme.js";
    deste breadcrumb. Telas empilhadas (detalhe do curso, do modulo etc.)
    continuam com titulo proprio do CONTEUDO (nome do curso, "CURSO" + nome
    do modulo...), que nao e repeticao do nome da aba. */
-// Placeholder visual pro futuro recurso de gamificacao (medalhas/conquistas/
-// pontuacao) — so o icone por enquanto, sem pontuacao, ranking, notificacao
-// ou destino de navegacao nenhum por tras. Quando o recurso definitivo for
-// escolhido, troca-se so esta constante (ou a linha que a usa abaixo); nao
-// ha mais nenhum outro lugar do componente que precise mudar.
-const ICONE_GAMIFICACAO_PLACEHOLDER = "medal-outline";
-
-export default function ScreenIndicator({ icone, titulo }) {
+// O placeholder de medalha (so o icone, sem numero nenhum atras) foi
+// trocado pelo chip de XP real (docs/gamificacao/PROMPT-agente-barra-xp-
+// mobile.md, item 3) - `xp` vem de calcularXp (shared/xp.js), calculado
+// uma unica vez em AlunoWorkspace.jsx e repassado via AlunoHeaderBar.jsx.
+// Sem `xp` (aluno sem matricula liberada, ou na aba Inicio - que mostra o
+// XP na propria saudacao), nao renderiza nada a direita.
+export default function ScreenIndicator({ icone, onAbrirXp, titulo, xp }) {
   return (
     <View style={estilos.container}>
       <View style={estilos.identificacao}>
         {icone ? <Ionicons accessibilityElementsHidden color={cores.destaque} importantForAccessibility="no" name={icone} size={14} /> : null}
         <Text accessibilityRole="header" numberOfLines={1} style={estilos.texto}>{titulo}</Text>
       </View>
-      <Ionicons
-        accessibilityElementsHidden
-        color={cores.textoSuave}
-        importantForAccessibility="no"
-        name={ICONE_GAMIFICACAO_PLACEHOLDER}
-        size={14}
-      />
+      {xp ? (
+        <TouchableOpacity
+          accessibilityHint="Abre o painel com nível, XP e como ganhar mais"
+          accessibilityLabel={`Nível ${xp.nivel}: ${xp.xpNoNivel} de ${xp.xpPorNivel} XP. Toque para ver detalhes.`}
+          accessibilityRole="button"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          onPress={onAbrirXp}
+          style={estilos.chipXp}
+        >
+          <Ionicons color="#d6c8ff" name="flash" size={12} />
+          <Text style={estilos.chipXpTexto}>Nv {xp.nivel}</Text>
+          <View style={estilos.chipXpBarraFundo}>
+            <LinearGradient
+              colors={["#7b2ff7", "#a78bfa"]}
+              style={[estilos.chipXpBarraPreenchida, { width: `${xp.percentualNivel}%` }]}
+            />
+          </View>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -71,5 +83,19 @@ const estilos = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     flexShrink: 1
-  }
+  },
+  chipXp: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 22,
+    borderRadius: raios.pilula,
+    backgroundColor: "rgba(123, 47, 247, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(157, 103, 255, 0.45)",
+    paddingHorizontal: 8
+  },
+  chipXpTexto: { color: "#d6c8ff", fontSize: 10.5, fontWeight: "800" },
+  chipXpBarraFundo: { width: 42, height: 4, borderRadius: 4, backgroundColor: "rgba(255, 255, 255, 0.15)", overflow: "hidden" },
+  chipXpBarraPreenchida: { height: 4, borderRadius: 4 }
 });

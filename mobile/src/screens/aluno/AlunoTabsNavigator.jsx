@@ -14,7 +14,7 @@ import { cores } from "../../lib/theme.js";
 
 const Tab = createBottomTabNavigator();
 
-export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onSessionExpired, snapshot, tentarNovamente, usuario }) {
+export default function AlunoTabsNavigator({ carregando, erro, onAbrirXp, onRecarregar, onSessionExpired, snapshot, tentarNovamente, usuario, xp }) {
   if (carregando) {
     return <SkeletonInicio />;
   }
@@ -36,7 +36,13 @@ export default function AlunoTabsNavigator({ carregando, erro, onRecarregar, onS
       <Tab.Screen name={ROUTES.INICIO}>
         {({ navigation }) => (
           <TelaComTransicao>
-            <HomeScreen onAbrirAba={(aba, params) => navigation.navigate(aba, params)} snapshot={snapshot} usuario={usuario} />
+            <HomeScreen
+              onAbrirAba={(aba, params) => navigation.navigate(aba, params)}
+              onAbrirXp={onAbrirXp}
+              snapshot={snapshot}
+              usuario={usuario}
+              xp={xp}
+            />
           </TelaComTransicao>
         )}
       </Tab.Screen>

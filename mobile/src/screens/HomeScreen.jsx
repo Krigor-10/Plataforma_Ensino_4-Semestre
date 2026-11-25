@@ -62,7 +62,7 @@ function IlustracaoCapelo() {
    existe (categoria do curso, "ultimo acesso", nivel/XP) e omitido, nao
    inventado. Saudacao e acoes de notificacoes/perfil/logout ficam no
    HeaderGlobal.jsx (persistente em todas as abas, nao so aqui). */
-export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
+export default function HomeScreen({ onAbrirAba, onAbrirXp, snapshot, usuario, xp }) {
   const alturaBarraAbas = useAlturaBarraAbas();
   const reduzMovimentoContinuar = useReducedMotion();
   // eslint-disable-next-line react-hooks/refs -- padrao idiomatico useRef(valorInicial).current pra extrair um Animated.Value estavel (mesma instancia em todo render), igual ao ja usado em MenuLateral.jsx.
@@ -132,6 +132,25 @@ export default function HomeScreen({ onAbrirAba, snapshot, usuario }) {
         <View style={estilos.saudacaoTextos}>
           <Text style={estilos.saudacao}>Olá, {primeiroNome}! 👋</Text>
           <Text style={estilos.subtitulo}>Vamos continuar aprendendo?</Text>
+          {xp ? (
+            <TouchableOpacity
+              accessibilityHint="Mostra como ganhar XP e quanto falta para o próximo nível"
+              accessibilityLabel={`Nível ${xp.nivel}: ${xp.xpNoNivel} de ${xp.xpPorNivel} XP`}
+              accessibilityRole="button"
+              onPress={onAbrirXp}
+              style={estilos.linhaXp}
+            >
+              <Ionicons color={cores.destaque} name="flash" size={13} />
+              <Text style={estilos.linhaXpNivel}>Nível {xp.nivel}</Text>
+              <View style={estilos.linhaXpBarraFundo}>
+                <LinearGradient
+                  colors={["#7b2ff7", "#a78bfa"]}
+                  style={[estilos.linhaXpBarraPreenchida, { width: `${xp.percentualNivel}%` }]}
+                />
+              </View>
+              <Text style={estilos.linhaXpContagem}>{xp.xpNoNivel}/{xp.xpPorNivel} XP</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
         <IlustracaoCapelo />
       </View>
@@ -310,6 +329,15 @@ const estilos = StyleSheet.create({
   saudacaoTextos: { flex: 1 },
   saudacao: { color: cores.texto, fontSize: tipografia.titulo, fontWeight: "800" },
   subtitulo: { color: cores.textoSuave, fontSize: tipografia.corpo, marginTop: 2 },
+  // Linha fina de XP (docs/gamificacao/PROMPT-agente-barra-xp-mobile.md,
+  // item 2) - so aparece com `xp` (aluno com matricula liberada); mesmo
+  // calculo do chip das outras abas (ScreenIndicator.jsx), um so por
+  // AlunoWorkspace.jsx.
+  linhaXp: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: espacamentos.sm, minHeight: 18 },
+  linhaXpNivel: { color: cores.texto, fontSize: 12, fontWeight: "800" },
+  linhaXpBarraFundo: { flex: 1, height: 6, borderRadius: 6, backgroundColor: "rgba(255, 255, 255, 0.1)", overflow: "hidden" },
+  linhaXpBarraPreenchida: { height: 6, borderRadius: 6 },
+  linhaXpContagem: { color: cores.textoSuave, fontSize: 10.5, flexShrink: 0 },
   ilustracaoCapeloContainer: { width: 96, height: 80, alignItems: "center", justifyContent: "center" },
   ilustracaoBrilho: { position: "absolute", width: 70, height: 70, borderRadius: 35, backgroundColor: "rgba(123, 47, 247, 0.18)" },
 

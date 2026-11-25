@@ -3,8 +3,9 @@ import { calcularXp } from "./xp.js";
 
 describe("calcularXp", () => {
   test("progressos vazio ou indefinido: total 0, nivel 1, percentualNivel 0", () => {
-    expect(calcularXp()).toEqual({ total: 0, nivel: 1, xpNoNivel: 0, xpPorNivel: 500, percentualNivel: 0 });
-    expect(calcularXp({})).toEqual({ total: 0, nivel: 1, xpNoNivel: 0, xpPorNivel: 500, percentualNivel: 0 });
+    const esperado = { total: 0, nivel: 1, xpNoNivel: 0, xpPorNivel: 500, percentualNivel: 0, faltamParaProximo: 500 };
+    expect(calcularXp()).toEqual(esperado);
+    expect(calcularXp({})).toEqual(esperado);
   });
 
   test("status numerico 3 e texto Concluido contam; Em andamento e Nao iniciado nao", () => {

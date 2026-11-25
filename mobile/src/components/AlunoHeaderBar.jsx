@@ -23,7 +23,11 @@ const TELAS_INFO = {
    focada via getFocusedRouteNameFromRoute. onAbrirMenu vem de
    AlunoWorkspace.jsx (o menu lateral fica fora da arvore do Navigator,
    precisa do estado la). */
-export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrirMenu, route, usuario }) {
+// `xp`/`onAbrirXp` vem de AlunoWorkspace.jsx (um calculo so, ver
+// calcularXp em shared/xp.js) - na aba Inicio o chip some de proposito
+// porque a saudacao da HomeScreen.jsx ja mostra o mesmo XP na propria
+// linha (docs/gamificacao/PROMPT-agente-barra-xp-mobile.md, item 3).
+export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrirMenu, onAbrirXp, route, usuario, xp }) {
   const nomeAtivo = getFocusedRouteNameFromRoute(route) ?? ROUTES.INICIO;
   const info = TELAS_INFO[nomeAtivo];
 
@@ -38,7 +42,12 @@ export default function AlunoHeaderBar({ navigation, notificacoesVersao, onAbrir
         onAbrirPerfil={() => navigation.navigate(ROUTES.PERFIL)}
         usuario={usuario}
       />
-      <ScreenIndicator icone={info?.icone} titulo={info?.titulo || ""} />
+      <ScreenIndicator
+        icone={info?.icone}
+        onAbrirXp={onAbrirXp}
+        titulo={info?.titulo || ""}
+        xp={nomeAtivo === ROUTES.INICIO ? null : xp}
+      />
     </View>
   );
 }
