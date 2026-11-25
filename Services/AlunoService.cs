@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.DTOs;
@@ -11,14 +13,28 @@ public class AlunoService : IAlunoService
 {
     private readonly PlataformaContext _context;
     private readonly IMatriculaService _matriculaService;
+    private readonly IAuthService _authService;
+    private readonly IEmailService _emailService;
+    private readonly IMemoryCache _cache;
+    private readonly ILogger<AlunoService> _logger;
 
-    public AlunoService(PlataformaContext context, IMatriculaService matriculaService)
+    public AlunoService(
+        PlataformaContext context,
+        IMatriculaService matriculaService,
+        IAuthService authService,
+        IEmailService emailService,
+        IMemoryCache cache,
+        ILogger<AlunoService> logger)
     {
         _context = context;
         _matriculaService = matriculaService;
+        _authService = authService;
+        _emailService = emailService;
+        _cache = cache;
+        _logger = logger;
     }
 
-    public async Task<(IEnumerable<AlunoResponseDto> Itens, int TotalItens)> ListarAlunosAsync(int? pagina, int? tamanhoPagina)
+    public async Task<(IEnumerable<AlunoResponseDto> Itens, int TotalItens)> ListarAlunosAsync(int? pagina, int? tamanhoPagina, bool incluirDadosInativacao)
     {
         var query = _context.Alunos
             .AsNoTracking()
@@ -27,20 +43,40 @@ public class AlunoService : IAlunoService
 
         var totalItens = await query.CountAsync();
 
+        List<Aluno> itensDaPagina;
         if (!pagina.HasValue)
         {
-            var todos = await query.ToListAsync();
-            return (todos.Select(MapResponse), totalItens);
+            itensDaPagina = await query.ToListAsync();
+        }
+        else
+        {
+            var tamanho = Math.Clamp(tamanhoPagina ?? 20, 1, 100);
+            var pular = Math.Max(0, (pagina.Value - 1) * tamanho);
+            itensDaPagina = await query.Skip(pular).Take(tamanho).ToListAsync();
         }
 
-        var tamanho = Math.Clamp(tamanhoPagina ?? 20, 1, 100);
-        var pular = Math.Max(0, (pagina.Value - 1) * tamanho);
+        var nomesInativadoPor = incluirDadosInativacao
+            ? await ObterNomesInativadoPorAsync(itensDaPagina)
+            : new Dictionary<int, string>();
 
-        var alunosDaPagina = await query.Skip(pular).Take(tamanho).ToListAsync();
-        return (alunosDaPagina.Select(MapResponse), totalItens);
+        return (itensDaPagina.Select(aluno => MapResponse(aluno, incluirDadosInativacao, nomesInativadoPor)), totalItens);
     }
 
-    private static AlunoResponseDto MapResponse(Aluno aluno)
+    private async Task<Dictionary<int, string>> ObterNomesInativadoPorAsync(IEnumerable<Aluno> alunos)
+    {
+        var ids = alunos.Where(aluno => aluno.InativadoPorId.HasValue).Select(aluno => aluno.InativadoPorId!.Value).Distinct().ToList();
+
+        if (ids.Count == 0)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        return await _context.Usuarios
+            .Where(usuario => ids.Contains(usuario.Id))
+            .ToDictionaryAsync(usuario => usuario.Id, usuario => usuario.Nome);
+    }
+
+    private static string ComputeTurmaAtual(Aluno aluno)
     {
         var turmasAtivas = aluno.Matriculas
             .Where(matricula => matricula.Status == StatusMatricula.Aprovada && matricula.NomeTurmaSnapshot is not null)
@@ -48,11 +84,33 @@ public class AlunoService : IAlunoService
             .Distinct()
             .ToList();
 
-        return new AlunoResponseDto
+        return turmasAtivas.Count > 0 ? string.Join(", ", turmasAtivas) : string.Empty;
+    }
+
+    private static AlunoResponseDto MapResponse(Aluno aluno, bool incluirDadosInativacao, IReadOnlyDictionary<int, string> nomesInativadoPor)
+    {
+        var dto = new AlunoResponseDto
         {
             Matricula = aluno.Matricula,
-            TurmaAtual = turmasAtivas.Count > 0 ? string.Join(", ", turmasAtivas) : string.Empty
+            TurmaAtual = ComputeTurmaAtual(aluno)
         }.PreencherCamposBase(aluno);
+
+        if (incluirDadosInativacao)
+        {
+            dto.InativadoEm = aluno.InativadoEm;
+            dto.MotivoInativacao = aluno.MotivoInativacao ?? string.Empty;
+            dto.InativadoPorNome = aluno.InativadoPorId.HasValue && nomesInativadoPor.TryGetValue(aluno.InativadoPorId.Value, out var nome)
+                ? nome
+                : string.Empty;
+        }
+
+        return dto;
+    }
+
+    private async Task<AlunoResponseDto> MapResponseComInativacaoAsync(Aluno aluno)
+    {
+        var nomesInativadoPor = await ObterNomesInativadoPorAsync(new[] { aluno });
+        return MapResponse(aluno, incluirDadosInativacao: true, nomesInativadoPor);
     }
 
     public async Task<Aluno> CriarAlunoAsync(CriarAlunoDto dto)
@@ -122,6 +180,119 @@ public class AlunoService : IAlunoService
         await transaction.CommitAsync();
 
         return precoCurso <= 0;
+    }
+
+    public async Task<AlunoResponseDto> AtualizarDadosAdminAsync(int id, AtualizarAlunoAdminDto dto)
+    {
+        var aluno = await _context.Alunos.Include(a => a.Matriculas).FirstOrDefaultAsync(a => a.Id == id)
+            ?? throw new KeyNotFoundException("Aluno não encontrado.");
+
+        var emailNormalizado = dto.Email.Trim().ToLower();
+        var emailAntigo = aluno.Email;
+        var emailMudou = !string.Equals(emailAntigo, emailNormalizado, StringComparison.OrdinalIgnoreCase);
+
+        if (emailMudou && await _context.Usuarios.AnyAsync(usuario => usuario.Email.ToLower() == emailNormalizado && usuario.Id != id))
+        {
+            throw new ConflitoDeNegocioException("Este e-mail já está em uso.");
+        }
+
+        var raNormalizado = dto.Matricula.Trim();
+        if (await _context.Alunos.AnyAsync(outroAluno => outroAluno.Matricula == raNormalizado && outroAluno.Id != id))
+        {
+            throw new ConflitoDeNegocioException("Este RA já pertence a outro aluno.");
+        }
+
+        aluno.AlterarDadosBasicos(dto.Nome.Trim(), emailNormalizado, (dto.Telefone ?? string.Empty).Trim());
+        aluno.Matricula = raNormalizado;
+
+        await _context.SaveChangesAsync();
+
+        var avisoEmailEnviado = true;
+
+        if (emailMudou)
+        {
+            await _authService.RevogarTodosOsTokensAsync(aluno.Id);
+
+            try
+            {
+                await EnviarAvisoTrocaEmailAsync(aluno.Nome, emailAntigo, emailNormalizado);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha ao enviar o aviso de troca de e-mail para o aluno {AlunoId}.", aluno.Id);
+                avisoEmailEnviado = false;
+            }
+        }
+
+        var resposta = await MapResponseComInativacaoAsync(aluno);
+        resposta.AvisoEmailEnviado = avisoEmailEnviado;
+        return resposta;
+    }
+
+    public async Task<AlunoResponseDto> InativarAsync(int id, int adminId, string motivo)
+    {
+        var aluno = await _context.Alunos.Include(a => a.Matriculas).FirstOrDefaultAsync(a => a.Id == id)
+            ?? throw new KeyNotFoundException("Aluno não encontrado.");
+
+        if (!aluno.Ativo)
+        {
+            throw new ConflitoDeNegocioException("Este aluno já está inativo.");
+        }
+
+        aluno.Desativar(adminId, motivo);
+        await _context.SaveChangesAsync();
+
+        await _authService.RevogarTodosOsTokensAsync(aluno.Id);
+        _cache.Remove(CacheChaves.UsuarioAtivo(aluno.Id));
+
+        return await MapResponseComInativacaoAsync(aluno);
+    }
+
+    public async Task<AlunoResponseDto> ReativarAsync(int id)
+    {
+        var aluno = await _context.Alunos.Include(a => a.Matriculas).FirstOrDefaultAsync(a => a.Id == id)
+            ?? throw new KeyNotFoundException("Aluno não encontrado.");
+
+        if (aluno.Ativo)
+        {
+            throw new ConflitoDeNegocioException("Este aluno já está ativo.");
+        }
+
+        aluno.Ativar();
+        await _context.SaveChangesAsync();
+
+        _cache.Remove(CacheChaves.UsuarioAtivo(aluno.Id));
+
+        return await MapResponseComInativacaoAsync(aluno);
+    }
+
+    /// <summary>
+    /// "O aluno será desconectado e receberá um aviso no e-mail antigo e no
+    /// novo" (docs/alunos-admin/PROMPT-agente-editar-e-inativar-aluno.md,
+    /// item A2) - preço aqui não importa, o aviso é só informativo.
+    /// </summary>
+    private async Task EnviarAvisoTrocaEmailAsync(string nomeAluno, string emailAntigo, string emailNovo)
+    {
+        const string assunto = "Seu e-mail de acesso ao CodeRyse foi alterado";
+        var corpoHtml =
+            $"<p>Olá, {nomeAluno}.</p>" +
+            "<p>O e-mail usado para entrar na sua conta da CodeRyse Academy foi alterado pela administração. " +
+            $"O novo endereço de login é <strong>{MascararEmail(emailNovo)}</strong>.</p>" +
+            "<p>Se você não reconhece essa mudança, procure a administração o quanto antes.</p>";
+
+        await _emailService.EnviarAsync(emailAntigo, assunto, corpoHtml);
+        await _emailService.EnviarAsync(emailNovo, assunto, corpoHtml);
+    }
+
+    private static string MascararEmail(string email)
+    {
+        var posicaoArroba = email.IndexOf('@');
+        if (posicaoArroba <= 1)
+        {
+            return email;
+        }
+
+        return $"{email[0]}***{email[posicaoArroba..]}";
     }
 
     private Task<string> GerarCodigoAlunoAsync() =>

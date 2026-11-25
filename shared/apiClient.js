@@ -75,12 +75,27 @@ export function createApiClient({ baseUrl, storage }) {
     const response = await fetchComToken(endpoint, options);
 
     if (response.status === 401 && !AUTH_ENDPOINTS_SEM_RETRY.includes(endpoint.toLowerCase())) {
+      const data = await readJson(response);
+
+      // Corte "na hora" de usuario inativado (docs/alunos-admin/PROMPT-
+      // agente-editar-e-inativar-aluno.md, item A4): o token de acesso ainda
+      // e valido, so que Program.cs recusou porque o usuario foi inativado -
+      // renovar so adiaria o mesmo 401 (o refresh tambem nega inativo),
+      // entao encerra a sessao direto em vez de gastar uma chamada de rede a
+      // toa.
+      if (data?.codigo === "USUARIO_INATIVO") {
+        await sessionStore.clearSession();
+        throw new ApiError(data?.erro || data?.mensagem || "Sessão encerrada.", response.status, data.codigo);
+      }
+
       const novoToken = await renovarToken();
 
       if (novoToken) {
         const novaResposta = await fetchComToken(endpoint, options);
         return lerRespostaOuFalhar(novaResposta);
       }
+
+      return falharComDadosJaLidos(response, data);
     }
 
     return lerRespostaOuFalhar(response);
@@ -180,8 +195,13 @@ export function createApiClient({ baseUrl, storage }) {
 }
 
 async function lerRespostaOuFalhar(response) {
-  const data = await readJson(response);
+  return falharComDadosJaLidos(response, await readJson(response));
+}
 
+// Variante de lerRespostaOuFalhar pra quando o corpo ja foi lido antes (ex.:
+// apiRequest espia o `codigo` do 401 pra decidir se tenta o refresh) - o
+// corpo de uma Response so pode ser lido uma vez.
+function falharComDadosJaLidos(response, data) {
   if (!response.ok) {
     const message = data?.mensagem || data?.erro || "Nao foi possivel concluir a operacao.";
     throw new ApiError(message, response.status, data?.codigo);

@@ -56,6 +56,17 @@ public abstract class Usuario
 
     public bool Ativo { get; private set; } = true;
 
+    // Inativacao administrativa (docs/alunos-admin/PROMPT-agente-editar-e-
+    // inativar-aluno.md, item A1) - hoje so usado por Aluno (InativarAsync/
+    // ReativarAsync em AlunoService), mas vive na base Usuario porque
+    // Desativar()/Ativar() ja sao da base. Professor/Coordenador continuam
+    // usando o Desativar() sem argumentos, que nao preenche estes campos.
+    public DateTime? InativadoEm { get; private set; }
+    public int? InativadoPorId { get; private set; }
+
+    [StringLength(300)]
+    public string? MotivoInativacao { get; private set; }
+
     [JsonIgnore]
     public string? TokenRecuperacaoSenhaHash { get; private set; }
 
@@ -83,6 +94,25 @@ public abstract class Usuario
         Bairro = bairro.Trim();
         Cidade = cidade.Trim();
         Estado = estado.Trim();
+    }
+
+    /// <summary>
+    /// Igual a <see cref="AlterarDados"/>, mas so pros dados basicos/de
+    /// contato (nome, e-mail, telefone) - usado pelo PUT /Alunos/{id} do
+    /// Admin, que nao pode tocar em CPF nem endereco (dados pessoais
+    /// sigilosos, decisao do usuario em PROMPT-agente-editar-e-inativar-
+    /// aluno.md).
+    /// </summary>
+    public void AlterarDadosBasicos(string nome, string email, string telefone)
+    {
+        if (string.IsNullOrWhiteSpace(nome))
+        {
+            throw new ArgumentException("O nome é obrigatório.");
+        }
+
+        Nome = nome.Trim();
+        Email = email;
+        Telefone = telefone ?? string.Empty;
     }
 
     public void ConfigurarAcesso(string tipoUsuario, string senhaHash, bool ativo = true)
@@ -124,14 +154,38 @@ public abstract class Usuario
         TokenRecuperacaoSenhaExpiraEm = null;
     }
 
+    /// <summary>Reativa o acesso e limpa o registro de inativacao (se houver).</summary>
     public void Ativar()
     {
         Ativo = true;
+        InativadoEm = null;
+        InativadoPorId = null;
+        MotivoInativacao = null;
     }
 
+    /// <summary>Usado por Professor/Coordenador (toggle "Conta ativa" do formulario) - nao registra quem/por que.</summary>
     public void Desativar()
     {
         Ativo = false;
+    }
+
+    /// <summary>
+    /// Inativacao administrativa de Aluno (docs/alunos-admin/PROMPT-agente-
+    /// editar-e-inativar-aluno.md, item A1): registra quem inativou, quando e
+    /// o motivo (obrigatorio, 5 a 300 caracteres apos o trim).
+    /// </summary>
+    public void Desativar(int porUsuarioId, string motivo)
+    {
+        var motivoTratado = (motivo ?? string.Empty).Trim();
+        if (motivoTratado.Length < 5 || motivoTratado.Length > 300)
+        {
+            throw new ArgumentException("O motivo da inativação deve ter entre 5 e 300 caracteres.");
+        }
+
+        Ativo = false;
+        InativadoEm = DateTime.UtcNow;
+        InativadoPorId = porUsuarioId;
+        MotivoInativacao = motivoTratado;
     }
 
     public virtual string ExibirDados()

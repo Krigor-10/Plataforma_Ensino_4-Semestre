@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.Data;
@@ -161,6 +163,13 @@ builder.Services.AddHostedService<PagamentoVencimentoService>();
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("banco-de-dados");
 
+// Corte "na hora" de usuario inativado (docs/alunos-admin/PROMPT-agente-
+// editar-e-inativar-aluno.md, item A4): cache curto (30s) por usuario pra
+// JwtBearerEvents.OnTokenValidated abaixo nao bater no banco em toda
+// requisicao autenticada. Invalidado ao inativar/reativar (AlunoService,
+// Common/CacheChaves.cs).
+builder.Services.AddMemoryCache();
+
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
@@ -200,6 +209,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
 
+        const string CodigoUsuarioInativo = "USUARIO_INATIVO";
+
         options.Events = new JwtBearerEvents
         {
             // <img>/<a> pro /uploads nao enviam o header Authorization, entao
@@ -213,6 +224,65 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 }
 
                 return Task.CompletedTask;
+            },
+            // Corte "na hora" (item A4): token assinado e dentro da validade
+            // continua sendo aceito ate expirar por padrao no JWT - sem isso,
+            // um aluno inativado so perderia o acesso quando o access token
+            // (20 min) vencesse. So confere a coluna Ativo (AsNoTracking,
+            // Select), com um cache de 30s por usuario pra nao bater no banco
+            // em toda requisicao autenticada - invalidado ao inativar/
+            // reativar (AlunoService, Common/CacheChaves.cs).
+            OnTokenValidated = async context =>
+            {
+                var usuarioId = context.Principal?.ObterUsuarioId();
+                if (usuarioId is null)
+                {
+                    context.Fail(CodigoUsuarioInativo);
+                    return;
+                }
+
+                var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                var chaveCache = CacheChaves.UsuarioAtivo(usuarioId.Value);
+
+                if (!cache.TryGetValue(chaveCache, out bool ativo))
+                {
+                    var dbContext = context.HttpContext.RequestServices.GetRequiredService<PlataformaContext>();
+                    ativo = await dbContext.Usuarios
+                        .AsNoTracking()
+                        .Where(usuario => usuario.Id == usuarioId.Value)
+                        .Select(usuario => usuario.Ativo)
+                        .FirstOrDefaultAsync();
+
+                    cache.Set(chaveCache, ativo, TimeSpan.FromSeconds(30));
+                }
+
+                if (!ativo)
+                {
+                    context.Fail(CodigoUsuarioInativo);
+                }
+            },
+            // Resposta 401 customizada so pro corte de inativo - qualquer
+            // outra falha de autenticacao (token ausente/expirado/invalido)
+            // continua com o 401 padrao do JwtBearer, sem corpo especial.
+            OnChallenge = async context =>
+            {
+                if (context.AuthenticateFailure?.Message != CodigoUsuarioInativo)
+                {
+                    return;
+                }
+
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                context.Response.Headers["codigo"] = CodigoUsuarioInativo;
+
+                var corpo = JsonSerializer.Serialize(new
+                {
+                    erro = "Seu acesso foi inativado. Entre em contato com a administração.",
+                    codigo = CodigoUsuarioInativo
+                });
+
+                await context.Response.WriteAsync(corpo);
             }
         };
     });

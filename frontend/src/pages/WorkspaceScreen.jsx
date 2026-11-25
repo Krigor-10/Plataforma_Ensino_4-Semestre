@@ -735,7 +735,14 @@ export default function WorkspaceScreen({
             ) : null}
 
             {activeSection === "alunos" ? (
-              <SecaoAlunos alunos={snapshot.alunos} cursos={snapshot.cursos} matriculas={snapshot.matriculas} />
+              <SecaoAlunos
+                alunos={snapshot.alunos}
+                cursos={snapshot.cursos}
+                matriculas={snapshot.matriculas}
+                onRefresh={() => setRefreshKey((current) => current + 1)}
+                onSessionExpired={onSessionExpired}
+                usuario={usuario}
+              />
             ) : null}
 
             {activeSection === "professores" ? (

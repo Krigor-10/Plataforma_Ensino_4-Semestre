@@ -1,5 +1,5 @@
 import { createApiClient } from "../../../../shared/apiClient.js";
-import { REFRESH_TOKEN_KEY, TOKEN_KEY } from "../../../../shared/sessionKeys.js";
+import { REFRESH_TOKEN_KEY, TOKEN_KEY, USER_KEY } from "../../../../shared/sessionKeys.js";
 
 // Sem Buffer/atob aqui de proposito - mesma razao de shared/apiClient.js nao
 // usar nenhum dos dois: este arquivo roda sob Jest (Node), mas o codigo real
@@ -123,5 +123,61 @@ describe("createApiClient / obterTokenValido", () => {
     const resultado = await obterTokenValido();
 
     expect(resultado).toBe(tokenVencendo);
+  });
+});
+
+// docs/alunos-admin/PROMPT-agente-editar-e-inativar-aluno.md, item A4: corte
+// "na hora" de usuario inativado - o apiClient e compartilhado entre web e
+// mobile, por isso o teste fica aqui (unico lugar que ja cobre apiRequest).
+describe("createApiClient / apiRequest - USUARIO_INATIVO", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("401 com codigo USUARIO_INATIVO: nao tenta o refresh, limpa a sessao e lanca ApiError com a mensagem", async () => {
+    const storage = criarStorageFake({
+      [TOKEN_KEY]: "token-ainda-valido",
+      [REFRESH_TOKEN_KEY]: "refresh-valido",
+      [USER_KEY]: JSON.stringify({ id: 1, nome: "Aluno Teste" })
+    });
+
+    const fetchMock = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ erro: "Seu acesso foi inativado. Entre em contato com a administração.", codigo: "USUARIO_INATIVO" })
+    });
+
+    const { apiRequest } = createApiClient({ baseUrl: "http://api.teste", storage });
+
+    await expect(apiRequest("/cursos")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 401,
+      codigo: "USUARIO_INATIVO",
+      message: "Seu acesso foi inativado. Entre em contato com a administração."
+    });
+
+    // So a chamada original pra /cursos - nenhuma tentativa de /auth/refresh.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await storage.getItem(TOKEN_KEY)).toBeNull();
+    expect(await storage.getItem(REFRESH_TOKEN_KEY)).toBeNull();
+    expect(await storage.getItem(USER_KEY)).toBeNull();
+  });
+
+  it("401 comum (sem USUARIO_INATIVO) continua tentando o refresh normalmente", async () => {
+    const tokenNovo = "token-novo-fake";
+    const storage = criarStorageFake({ [TOKEN_KEY]: "token-vencido", [REFRESH_TOKEN_KEY]: "refresh-valido" });
+
+    jest
+      .spyOn(global, "fetch")
+      .mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ erro: "Nao autorizado." }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: tokenNovo, refreshToken: "refresh-novo" }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ dados: "ok" }) });
+
+    const { apiRequest } = createApiClient({ baseUrl: "http://api.teste", storage });
+
+    const resultado = await apiRequest("/cursos");
+
+    expect(resultado).toEqual({ dados: "ok" });
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 });

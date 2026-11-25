@@ -1380,6 +1380,16 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
 
+                    b.Property<DateTime?>("InativadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("InativadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MotivoInativacao")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)

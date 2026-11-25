@@ -38,7 +38,15 @@ public class AuthService : IAuthService
 
         if (!usuario.Ativo)
         {
-            throw new UnauthorizedAccessException("Seu cadastro ainda está pendente de liberação.");
+            // InativadoEm so existe em quem ja foi ativado e depois teve o
+            // acesso revogado pelo Admin - distinto de quem nunca chegou a
+            // ser ativado (cadastro novo aguardando liberacao). Ver
+            // docs/alunos-admin/PROMPT-agente-editar-e-inativar-aluno.md,
+            // item A4.
+            throw new UnauthorizedAccessException(
+                usuario.InativadoEm.HasValue
+                    ? "Seu acesso foi inativado. Entre em contato com a administração."
+                    : "Seu cadastro ainda está pendente de liberação.");
         }
 
         return await MontarRespostaAsync(usuario);
@@ -134,10 +142,17 @@ public class AuthService : IAuthService
 
         usuario.AtualizarSenhaHash(BCrypt.Net.BCrypt.HashPassword(novaSenha));
         usuario.LimparTokenRecuperacaoSenha();
+        await _context.SaveChangesAsync();
 
+        await RevogarTodosOsTokensAsync(usuario.Id);
+    }
+
+    public async Task RevogarTodosOsTokensAsync(int usuarioId)
+    {
         var refreshTokensAtivos = await _context.RefreshTokens
-            .Where(r => r.UsuarioId == usuario.Id && r.RevogadoEm == null)
+            .Where(r => r.UsuarioId == usuarioId && r.RevogadoEm == null)
             .ToListAsync();
+
         foreach (var refreshToken in refreshTokensAtivos)
         {
             refreshToken.Revogar();

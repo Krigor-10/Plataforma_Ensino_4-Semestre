@@ -191,3 +191,27 @@ export function maskCpf(value) {
 
   return `***.***.***-${digits.slice(-2)}`;
 }
+
+// Mascara "ao vivo" (cada digito novo reformata o campo inteiro) - diferente
+// de formatCep/maskCpf acima, que so formatam um valor ja completo pra
+// exibicao. Usado so na edicao de aluno pelo Admin (docs/alunos-admin/
+// PROMPT-agente-editar-e-inativar-aluno.md, item B2): 10 digitos vira fixo
+// "(11) 1234-5678", 11 vira celular "(11) 91234-5678".
+export function maskTelefone(value) {
+  const digits = onlyDigits(value).slice(0, 11);
+
+  if (!digits) {
+    return "";
+  }
+  if (digits.length <= 2) {
+    return `(${digits}`;
+  }
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}

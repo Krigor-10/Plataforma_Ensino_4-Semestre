@@ -122,6 +122,39 @@ public class AuthServiceTests
             () => service.LoginAsync(aluno.Email!, "Senha@123"));
     }
 
+    // docs/alunos-admin/PROMPT-agente-editar-e-inativar-aluno.md, item A4:
+    // "pendente de liberacao" so pra quem nunca foi ativado (InativadoEm
+    // nulo) - cadastro novo aguardando aprovacao, nunca teve acesso liberado.
+    [Fact]
+    public async Task LoginAsync_NuncaFoiAtivado_MensagemDePendenteDeLiberacao()
+    {
+        var (service, context) = CriarService();
+        var aluno = CriarAluno(context, "Senha@123", ativo: false);
+
+        var excecao = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.LoginAsync(aluno.Email!, "Senha@123"));
+
+        Assert.Equal("Seu cadastro ainda está pendente de liberação.", excecao.Message);
+    }
+
+    // Distinto do caso acima: ja foi ativado em algum momento e depois teve o
+    // acesso revogado pelo Admin (Usuario.Desativar(porUsuarioId, motivo)
+    // preenche InativadoEm) - mensagem tem que deixar claro que e uma
+    // inativacao, nao um cadastro pendente.
+    [Fact]
+    public async Task LoginAsync_FoiInativadoPeloAdmin_MensagemDeAcessoInativado()
+    {
+        var (service, context) = CriarService();
+        var aluno = CriarAluno(context, "Senha@123");
+        aluno.Desativar(porUsuarioId: 1, motivo: "Pagamento em atraso ha mais de 90 dias.");
+        await context.SaveChangesAsync();
+
+        var excecao = await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.LoginAsync(aluno.Email!, "Senha@123"));
+
+        Assert.Equal("Seu acesso foi inativado. Entre em contato com a administração.", excecao.Message);
+    }
+
     [Fact]
     public async Task RefreshAsync_TokenValido_RotacionaERevogaOAntigo()
     {
@@ -274,6 +307,27 @@ public class AuthServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => service.RedefinirSenhaAsync(string.Empty, "SenhaNova@123"));
+    }
+
+    // Extraido de dentro de RedefinirSenhaAsync (docs/alunos-admin/PROMPT-
+    // agente-editar-e-inativar-aluno.md, item A1) pra ser reaproveitado por
+    // AlunoService ao trocar o e-mail/inativar um aluno - cobre o metodo
+    // isoladamente, sem precisar passar pelo fluxo de redefinicao de senha.
+    [Fact]
+    public async Task RevogarTodosOsTokensAsync_RevogaSoOsAtivosDoUsuarioInformado()
+    {
+        var (service, context) = CriarService();
+        var aluno = CriarAluno(context);
+        var outroAluno = CriarAluno(context);
+        await service.LoginAsync(aluno.Email!, "Senha@123");
+        await service.LoginAsync(outroAluno.Email!, "Senha@123");
+
+        await service.RevogarTodosOsTokensAsync(aluno.Id);
+
+        var tokenDoAluno = context.RefreshTokens.Single(t => t.UsuarioId == aluno.Id);
+        var tokenDoOutroAluno = context.RefreshTokens.Single(t => t.UsuarioId == outroAluno.Id);
+        Assert.False(tokenDoAluno.EstaAtivo);
+        Assert.True(tokenDoOutroAluno.EstaAtivo);
     }
 
     [Fact]
