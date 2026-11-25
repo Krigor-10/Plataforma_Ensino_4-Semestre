@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import CapaCurso from "../../components/CapaCurso.jsx";
+import { FlatList, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import CartaoVitrineCurso from "../../components/CartaoVitrineCurso.jsx";
+import ChipFiltro from "../../components/ChipFiltro.jsx";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
 import DetalheCursoSheet from "../../components/DetalheCursoSheet.jsx";
 import EstadoVazio from "../../components/EstadoVazio.jsx";
@@ -105,6 +106,8 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
     navigation.navigate(ROUTES.ALUNO_TABS, { params: { cursoId }, screen: ROUTES.CONTEUDOS });
   }
 
+  const gratuitoDetalhe = cursoDetalhe ? !(Number(cursoDetalhe.preco) > 0) : false;
+
   return (
     <View style={estilos.container}>
       {mensagem ? (
@@ -157,19 +160,38 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
       />
 
       <DetalheCursoSheet
+        acaoPrincipal={
+          cursoDetalhe
+            ? {
+                accessibilityHint: gratuitoDetalhe
+                  ? `Começa o curso ${cursoDetalhe.titulo} gratuitamente`
+                  : `Abre a confirmação de compra de ${cursoDetalhe.titulo}`,
+                accessibilityLabel: gratuitoDetalhe ? "Confirmar começar grátis no painel de detalhes" : "Confirmar compra no painel de detalhes",
+                icone: gratuitoDetalhe ? undefined : "card",
+                onPress: () => {
+                  const curso = cursoDetalhe;
+                  setCursoDetalhe(null);
+                  if (gratuitoDetalhe) {
+                    comecarGratis(curso);
+                  } else {
+                    setCursoParaComprar(curso);
+                  }
+                },
+                processando: processando === cursoDetalhe.id,
+                rotulo: gratuitoDetalhe ? "Começar grátis" : `Comprar · ${formatMoney(cursoDetalhe.preco)}`,
+                variante: gratuitoDetalhe ? "sucesso" : "primario"
+              }
+            : null
+        }
         curso={cursoDetalhe}
-        onComecarGratis={() => {
-          const curso = cursoDetalhe;
-          setCursoDetalhe(null);
-          comecarGratis(curso);
-        }}
-        onComprar={() => {
-          const curso = cursoDetalhe;
-          setCursoDetalhe(null);
-          setCursoParaComprar(curso);
-        }}
+        etiqueta={
+          cursoDetalhe
+            ? gratuitoDetalhe
+              ? { corFundo: cores.sucesso, corTexto: cores.fundo, rotulo: "Grátis" }
+              : { corFundo: "rgba(0, 0, 0, 0.7)", corTexto: cores.texto, rotulo: formatMoney(cursoDetalhe.preco) }
+            : null
+        }
         onFechar={() => setCursoDetalhe(null)}
-        processando={processando === cursoDetalhe?.id}
         visivel={Boolean(cursoDetalhe)}
       />
 
@@ -185,91 +207,46 @@ export default function CatalogoScreen({ onRecarregar, onSessionExpired, snapsho
   );
 }
 
-function ChipFiltro({ ativo, onPress, rotulo }) {
-  return (
-    <TouchableOpacity
-      accessibilityHint={`Mostra ${rotulo === "Todos" ? "todos os cursos" : `só ${rotulo.toLowerCase()}`}`}
-      accessibilityLabel={rotulo}
-      accessibilityRole="button"
-      accessibilityState={{ selected: ativo }}
-      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-      onPress={onPress}
-      style={[estilos.chip, ativo ? estilos.chipAtivo : null]}
-    >
-      <Text numberOfLines={1} style={[estilos.chipTexto, ativo ? estilos.chipTextoAtivo : null]}>{rotulo}</Text>
-    </TouchableOpacity>
-  );
-}
-
 // Cartao de vitrine (item 2 do prompt): capa grande no topo com a etiqueta
 // de preco e o selo "Com acompanhamento" sobrepostos, corpo compacto com
 // titulo+descricao+rodape ("Detalhes" + botao pilula menor, sem repetir o
 // preco que ja esta na etiqueta). Tocar na capa ou em "Detalhes" abre o
 // DetalheCursoSheet; o botao de acao continua chamando onComecarGratis/
-// onComprar direto, como hoje.
+// onComprar direto, como hoje. CartaoVitrineCurso (docs/redesign-mobile/
+// PROMPT-agente-cursos-vitrine.md) e o mesmo componente reaproveitado pela
+// aba Cursos - aqui so calcula a cor/rotulo que cabe ao Catalogo.
 function ItemCursoCatalogoVitrine({ curso, onAbrirDetalhe, onComecarGratis, onComprar, processando }) {
   const gratuito = !(Number(curso.preco) > 0);
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
 
   return (
-    <View style={estilos.cartaoVitrine}>
-      <Pressable
-        accessibilityHint="Abre os detalhes do curso"
-        accessibilityLabel={`Ver detalhes de ${curso.titulo}`}
-        accessibilityRole="button"
-        onPress={onAbrirDetalhe}
-        style={estilos.capaVitrineContainer}
-      >
-        <CapaCurso altura={118} curso={curso} estilo={estilos.capaVitrineImagem} largura="100%" reservaIniciais />
-
-        <View style={[estilos.etiquetaPreco, gratuito ? estilos.etiquetaPrecoGratis : null]}>
-          <Text style={[estilos.etiquetaPrecoTexto, gratuito ? estilos.etiquetaPrecoTextoGratis : null]}>
-            {gratuito ? "Grátis" : formatMoney(curso.preco)}
-          </Text>
-        </View>
-
-        {ehAcompanhado ? (
-          <View style={estilos.seloAcompanhamentoVitrine}>
-            <Text style={estilos.seloAcompanhamentoVitrineTexto}>Com acompanhamento</Text>
-          </View>
-        ) : null}
-      </Pressable>
-
-      <View style={estilos.corpoVitrine}>
-        <Text numberOfLines={2} style={estilos.tituloVitrine}>{curso.titulo}</Text>
-        {curso.descricao ? <Text numberOfLines={2} style={estilos.descricaoVitrine}>{curso.descricao}</Text> : null}
-
-        <View style={estilos.rodapeVitrine}>
-          <TouchableOpacity
-            accessibilityHint="Abre os detalhes do curso"
-            accessibilityLabel={`Ver detalhes de ${curso.titulo}`}
-            accessibilityRole="button"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            onPress={onAbrirDetalhe}
-            style={estilos.linkDetalhes}
-          >
-            <Text style={estilos.linkDetalhesTexto}>Detalhes</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            accessibilityHint={gratuito ? `Começa o curso ${curso.titulo} gratuitamente` : `Abre a confirmação de compra de ${curso.titulo}`}
-            accessibilityLabel={gratuito ? `Começar grátis ${curso.titulo}` : `Comprar ${curso.titulo}`}
-            accessibilityRole="button"
-            disabled={processando}
-            onPress={gratuito ? onComecarGratis : onComprar}
-            style={[estilos.botaoAcaoVitrine, gratuito ? estilos.botaoAcaoVitrineGratis : estilos.botaoAcaoVitrinePago]}
-          >
-            {processando ? (
-              <ActivityIndicator color={gratuito ? cores.fundo : cores.texto} size="small" />
-            ) : (
-              <Text style={[estilos.botaoAcaoVitrineTexto, gratuito ? estilos.botaoAcaoVitrineTextoGratis : null]}>
-                {gratuito ? "Começar grátis" : "Comprar"}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+    <CartaoVitrineCurso
+      acaoPrincipal={{
+        accessibilityHint: gratuito ? `Começa o curso ${curso.titulo} gratuitamente` : `Abre a confirmação de compra de ${curso.titulo}`,
+        accessibilityLabel: gratuito ? `Começar grátis ${curso.titulo}` : `Comprar ${curso.titulo}`,
+        onPress: gratuito ? onComecarGratis : onComprar,
+        processando,
+        rotulo: gratuito ? "Começar grátis" : "Comprar",
+        variante: gratuito ? "verde" : "roxo"
+      }}
+      acaoSecundaria={{
+        accessibilityHint: "Abre os detalhes do curso",
+        accessibilityLabel: `Ver detalhes de ${curso.titulo}`,
+        onPress: onAbrirDetalhe,
+        rotulo: "Detalhes"
+      }}
+      apoioTexto={curso.descricao}
+      capaAccessibilityHint="Abre os detalhes do curso"
+      capaAccessibilityLabel={`Ver detalhes de ${curso.titulo}`}
+      curso={curso}
+      etiqueta={
+        gratuito
+          ? { corFundo: cores.sucesso, corTexto: cores.fundo, rotulo: "Grátis" }
+          : { corFundo: "rgba(0, 0, 0, 0.7)", corTexto: cores.texto, rotulo: formatMoney(curso.preco) }
+      }
+      onAbrirCapa={onAbrirDetalhe}
+      selo={ehAcompanhado ? { corBorda: "rgba(157, 103, 255, 0.45)", corFundo: "rgba(17, 19, 25, 0.8)", corTexto: "#c4b5fd", rotulo: "Com acompanhamento" } : null}
+    />
   );
 }
 
@@ -289,74 +266,6 @@ const estilos = StyleSheet.create({
   },
   buscaEntrada: { flex: 1, color: cores.texto, paddingVertical: 10, fontSize: tipografia.corpo },
   chipsLinha: { gap: espacamentos.xs },
-  chip: {
-    borderRadius: raios.pilula,
-    backgroundColor: cores.fundoCartao,
-    paddingHorizontal: 10,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  chipAtivo: { backgroundColor: "rgba(123, 47, 247, 0.18)", borderWidth: 1, borderColor: cores.destaque },
-  chipTexto: { color: cores.textoSuave, fontWeight: "600", fontSize: tipografia.legenda },
-  chipTextoAtivo: { color: cores.acento, fontWeight: "700" },
   contagemTexto: { color: cores.textoRotulo, fontSize: 11 },
-  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, gap: espacamentos.md },
-
-  cartaoVitrine: {
-    borderRadius: raios.lg,
-    backgroundColor: cores.fundoCartao,
-    borderWidth: 1,
-    borderColor: "rgba(123, 47, 247, 0.2)",
-    overflow: "hidden"
-  },
-  capaVitrineContainer: { width: "100%", height: 118 },
-  capaVitrineImagem: { borderRadius: 0 },
-  etiquetaPreco: {
-    position: "absolute",
-    top: espacamentos.sm,
-    right: espacamentos.sm,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: raios.pilula,
-    paddingHorizontal: espacamentos.sm,
-    paddingVertical: 4
-  },
-  etiquetaPrecoGratis: { backgroundColor: cores.sucesso },
-  etiquetaPrecoTexto: { color: cores.texto, fontWeight: "800", fontSize: 11.5 },
-  etiquetaPrecoTextoGratis: { color: cores.fundo },
-  seloAcompanhamentoVitrine: {
-    position: "absolute",
-    bottom: espacamentos.sm,
-    left: espacamentos.sm,
-    backgroundColor: "rgba(17, 19, 25, 0.8)",
-    borderWidth: 1,
-    borderColor: "rgba(157, 103, 255, 0.45)",
-    borderRadius: raios.sm,
-    paddingHorizontal: espacamentos.sm,
-    paddingVertical: 3
-  },
-  seloAcompanhamentoVitrineTexto: { color: "#c4b5fd", fontSize: 10, fontWeight: "700" },
-
-  corpoVitrine: { padding: espacamentos.md },
-  tituloVitrine: { color: cores.texto, fontWeight: "700", fontSize: 14 },
-  descricaoVitrine: { color: cores.textoSuave, fontSize: tipografia.rotulo, marginTop: 4 },
-  rodapeVitrine: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: espacamentos.sm
-  },
-  linkDetalhes: { paddingVertical: espacamentos.xs },
-  linkDetalhesTexto: { color: "#c4b5fd", fontWeight: "700", fontSize: tipografia.rotulo },
-  botaoAcaoVitrine: {
-    borderRadius: raios.pilula,
-    paddingHorizontal: 14,
-    minHeight: 34,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  botaoAcaoVitrinePago: { backgroundColor: cores.destaque },
-  botaoAcaoVitrineGratis: { backgroundColor: cores.sucesso },
-  botaoAcaoVitrineTexto: { color: cores.texto, fontWeight: "700", fontSize: tipografia.rotulo },
-  botaoAcaoVitrineTextoGratis: { color: cores.fundo }
+  corpo: { padding: espacamentos.xl, paddingTop: espacamentos.md, gap: espacamentos.md }
 });

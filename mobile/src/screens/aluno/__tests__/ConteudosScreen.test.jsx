@@ -74,6 +74,30 @@ describe("ConteudosScreen - titulo so no breadcrumb", () => {
   });
 });
 
+// Vitrine de "meus cursos" (docs/redesign-mobile/PROMPT-agente-cursos-
+// vitrine.md, item "Detalhes"): o painel reaproveita o DetalheCursoSheet do
+// Catalogo com a descricao inteira e o botao principal da situacao do
+// curso (aqui, "Começar", ja que o snapshot padrao nao tem progresso).
+describe("ConteudosScreen - painel de detalhes da vitrine", () => {
+  test("'Detalhes' abre o painel com a descrição inteira; o botão da situação fecha o painel e abre a trilha", async () => {
+    const descricao = "Descrição completa do curso, com todos os detalhes do conteúdo oferecido.";
+    const snapshot = { ...montarSnapshot(), cursos: [{ id: 10, titulo: "Curso Teste", descricao }] };
+
+    await render(<ConteudosScreen onRecarregar={jest.fn()} onSessionExpired={jest.fn()} snapshot={snapshot} />);
+
+    await fireEvent.press(await screen.findByText("Detalhes"));
+
+    expect(await screen.findByText(descricao)).toBeTruthy();
+
+    // O cartao por baixo do painel continua montado com o mesmo rotulo de
+    // acao - o botao do painel (renderizado depois, no DOM) e o ultimo.
+    const botoesComecar = screen.getAllByLabelText("▶ Começar Curso Teste");
+    await fireEvent.press(botoesComecar[botoesComecar.length - 1]);
+
+    expect(await screen.findByLabelText("Voltar para a seleção de cursos")).toBeTruthy();
+  });
+});
+
 // Trilha do curso compacta (docs/redesign-mobile/PROMPT-agente-trilha-
 // curso-compacta.md) - testes cobrem exatamente a secao "Testes (jest)" do
 // prompt. mockRouteParams simula a navegacao com cursoId (ver BuscaScreen.jsx)

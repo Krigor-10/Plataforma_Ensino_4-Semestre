@@ -22,6 +22,7 @@ import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
 import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
+import { obterRotuloAcaoPrincipal, obterSituacaoCurso, obterVarianteAcaoPrincipalBotao, temAcessoLiberado } from "../../lib/cursosVitrine.js";
 import { abrirArquivoSeguro } from "../../lib/abrirArquivoSeguro";
 import { ehArquivoProprio, extrairNomeArquivo, resolverUrlArquivo, resolverUrlArquivoAbsoluta } from "../../lib/arquivos.js";
 import { obterDisponibilidadeAvaliacao, TIPO_AVALIACAO_PROVA, VISUAL_TIPO_AVALIACAO } from "../../lib/avaliacoes.js";
@@ -31,6 +32,7 @@ import { cores, espacamentos, raios, tipografia } from "../../lib/theme.js";
 import { ROUTES } from "../../lib/routes.js";
 import { useAlturaBarraAbas } from "../../lib/useAlturaBarraAbas.js";
 import ConfirmacaoCompraSheet from "../../components/ConfirmacaoCompraSheet.jsx";
+import DetalheCursoSheet from "../../components/DetalheCursoSheet.jsx";
 import GradeCursosConteudos from "../../components/GradeCursosConteudos.jsx";
 import QuizModal from "../../components/QuizModal.jsx";
 import RevisaoQuizModal from "../../components/RevisaoQuizModal.jsx";
@@ -144,6 +146,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [venceEmParaComprar, setVenceEmParaComprar] = useState(null);
   const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
   const [urlVisualizando, setUrlVisualizando] = useState(null);
+  const [itemGradeDetalhe, setItemGradeDetalhe] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
 
@@ -296,14 +299,27 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         const pagamentosDaMatricula = matricula ? (pagamentosPorMatriculaId.get(matricula.id) || []) : [];
         const pagamentoPago = pagamentosDaMatricula.find((pagamento) => pagamento.status === PAGAMENTO_PAGO);
         const pagamentoPendente = pagamentosDaMatricula.find((pagamento) => pagamento.status === PAGAMENTO_PENDENTE);
+        // "N de M modulos" da vitrine (docs/redesign-mobile/PROMPT-agente-
+        // cursos-vitrine.md, item 2) - mesma conta de modulosTotal/
+        // modulosConcluidos de resumoCurso (cabecalho da trilha), reaplicada
+        // aqui por curso pra nao exigir endpoint novo.
+        let modulosConcluidos = 0;
+        grupo.modulos.forEach((modulo) => {
+          if (contarItensModulo(modulo).total > 0 && modulo.concluido) {
+            modulosConcluidos += 1;
+          }
+        });
 
         return {
-          curso: { imagemUrl: grupo.imagemUrl, titulo: grupo.titulo },
+          curso: { id: grupo.id, imagemUrl: grupo.imagemUrl, titulo: grupo.titulo },
           id: grupo.id,
           matriculaId: matricula?.id ?? null,
           // Gratuito (nenhum pagamento nunca existiu) ou com Pagamento Pago
           // confirmado - "so Cancelado" (desistiu/venceu) NAO libera.
           acessoLiberado: pagamentosDaMatricula.length === 0 || Boolean(pagamentoPago),
+          certificadoEmitidoEm: matricula?.certificadoEmitidoEm ?? null,
+          modulosConcluidos,
+          modulosTotal: grupo.modulos.length,
           pagamentoPendente: Boolean(pagamentoPendente),
           pagamentoVenceEm: pagamentoPendente?.venceEm ?? null,
           progresso: grupo.progresso,
@@ -448,6 +464,8 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   }
 
   if (!cursoAtivo) {
+    const situacaoDetalhe = itemGradeDetalhe ? obterSituacaoCurso(itemGradeDetalhe) : null;
+
     return (
       <View style={estilos.container}>
         {mensagem ? (
@@ -459,9 +477,37 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         <GradeCursosConteudos
           accessibilityLabelPrefix="Ver conteúdos de"
           itens={itensGrade}
+          onAbrirDetalhe={setItemGradeDetalhe}
           onConcluirCompra={abrirConfirmacaoCompra}
           onDesistir={desistirDaCompra}
           onSelecionar={setCursoSelecionadoId}
+        />
+
+        <DetalheCursoSheet
+          acaoPrincipal={
+            itemGradeDetalhe
+              ? {
+                  accessibilityHint: temAcessoLiberado(situacaoDetalhe)
+                    ? `Abre a trilha do curso ${itemGradeDetalhe.curso.titulo}`
+                    : `Abre a confirmação de compra de ${itemGradeDetalhe.curso.titulo}`,
+                  accessibilityLabel: `${obterRotuloAcaoPrincipal(situacaoDetalhe)} ${itemGradeDetalhe.curso.titulo}`,
+                  onPress: () => {
+                    const item = itemGradeDetalhe;
+                    setItemGradeDetalhe(null);
+                    if (temAcessoLiberado(situacaoDetalhe)) {
+                      setCursoSelecionadoId(item.id);
+                    } else {
+                      abrirConfirmacaoCompra(item);
+                    }
+                  },
+                  rotulo: obterRotuloAcaoPrincipal(situacaoDetalhe),
+                  variante: obterVarianteAcaoPrincipalBotao(situacaoDetalhe)
+                }
+              : null
+          }
+          curso={itemGradeDetalhe ? cursoPorId.get(itemGradeDetalhe.id) : null}
+          onFechar={() => setItemGradeDetalhe(null)}
+          visivel={Boolean(itemGradeDetalhe)}
         />
 
         <ConfirmacaoCompraSheet
