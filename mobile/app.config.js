@@ -34,7 +34,7 @@ module.exports = {
         backgroundImage: "./assets/android-icon-background.png",
         monochromeImage: "./assets/android-icon-monochrome.png"
       },
-      versionCode: 6
+      versionCode: 7
     },
     web: {
       favicon: "./assets/favicon.png"
