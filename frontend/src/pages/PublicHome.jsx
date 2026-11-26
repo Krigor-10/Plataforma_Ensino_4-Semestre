@@ -125,7 +125,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
               <p className="secao-cabecalho__subtitulo">
                 {status === "loading"
                   ? "Lendo os cursos publicados..."
-                  : `${courses.length} curso(s) disponivel(is).`}
+                  : `${courses.length} ${courses.length === 1 ? "curso disponível" : "cursos disponíveis"}.`}
               </p>
             </header>
 
@@ -172,7 +172,7 @@ export default function PublicHome({ hasSession, isDemoMode, onNavigate }) {
           <dl className="lista-detalhes">
             <div className="lista-detalhes__item">
               <dt>Investimento</dt>
-              <dd>{cursoModal.ehGratuito ? "Gratis" : formatMoney(cursoModal.preco)}</dd>
+              <dd>{cursoModal.ehGratuito ? "Grátis" : formatMoney(cursoModal.preco)}</dd>
             </div>
             <div className="lista-detalhes__item">
               <dt>Descricao</dt>

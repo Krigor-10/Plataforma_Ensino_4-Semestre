@@ -330,6 +330,7 @@
 
 .secao-cursos__inner .grade-cursos {
   grid-template-columns: repeat(3, 1fr);
+  align-items: stretch;
 }
 
 @media (max-width: 900px) {
@@ -346,10 +347,15 @@
 
 .cartao-curso {
   border-radius: var(--raio-md);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .cartao-curso__acionador {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   width: 100%;
   border: none;
   background: none;
@@ -360,6 +366,17 @@
   text-align: left;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.cartao-curso__descricao {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cartao-curso__rodape {
+  margin-top: auto;
 }
 
 .cartao-curso__acionador:hover {

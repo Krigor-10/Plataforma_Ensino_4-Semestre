@@ -43,7 +43,7 @@ export default function CartaoCursoPublico({ curso, onAbrirDetalhe, onComprar })
       </button>
 
       <footer className="cartao-curso__rodape">
-        <strong className="cartao-curso__preco">{curso.ehGratuito ? "Gratis" : formatMoney(curso.preco)}</strong>
+        <strong className="cartao-curso__preco">{curso.ehGratuito ? "Grátis" : formatMoney(curso.preco)}</strong>
         <Botao
           aria-label={curso.ehGratuito ? `Começar grátis em ${curso.titulo}` : `Comprar ${curso.titulo}`}
           className="linha-icone-texto"
