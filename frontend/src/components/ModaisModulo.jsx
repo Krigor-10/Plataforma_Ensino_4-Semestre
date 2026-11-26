@@ -1,4 +1,4 @@
-import { TbCheck, TbX } from "react-icons/tb";
+import { TbArchive, TbCheck, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import Botao from "./Botao.jsx";
 import Modal from "./Modal.jsx";
@@ -14,6 +14,7 @@ import { InlineMessage } from "./Primitives.jsx";
    salvo, ver useModaisModulo#salvarModulo) - o seletor fica desabilitado
    nesse caso pra nao sugerir o contrario. */
 export default function ModaisModulo({
+  bloqueioExclusao = null,
   cursoFixo = null,
   cursosOrdenados = [],
   dadosFormulario,
@@ -26,30 +27,44 @@ export default function ModaisModulo({
   onFecharExclusao,
   onFecharFormulario,
   onSalvarModulo,
+  onVerArquivados,
   salvando,
   setDadosFormulario
 }) {
+  const exclusaoBloqueada = bloqueioExclusao?.podeExcluir === false;
+
   return (
     <>
       {moduloParaExcluir ? (
         <Modal
           onFechar={onFecharExclusao}
-          titulo="Excluir modulo"
+          titulo="Excluir módulo"
           rodape={
             <footer className="modal-rodape">
-              <Botao disabled={salvando} onClick={onFecharExclusao} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Cancelar
+              <Botao disabled={salvando} onClick={onFecharExclusao} variante={exclusaoBloqueada ? "secundario" : "perigo"}>
+                <TbX aria-hidden="true" size={15} /> {exclusaoBloqueada ? "Fechar" : "Cancelar"}
               </Botao>
-              <Botao disabled={salvando} onClick={onConfirmarExclusao} variante="sucesso">
-                <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusao"}
-              </Botao>
+              {exclusaoBloqueada ? null : (
+                <Botao disabled={salvando} onClick={onConfirmarExclusao} variante="sucesso">
+                  <TbCheck aria-hidden="true" size={15} /> {salvando ? "Excluindo..." : "Confirmar exclusão"}
+                </Botao>
+              )}
             </footer>
           }
         >
           <p className="texto-confirmacao-exclusao">
-            Deseja excluir o modulo <strong>{moduloParaExcluir.titulo}</strong>? Esta acao nao pode ser desfeita.
+            Deseja excluir o módulo <strong>{moduloParaExcluir.titulo}</strong>? Esta ação não pode ser desfeita.
           </p>
-          {mensagemExclusao ? <InlineMessage tone="error">{mensagemExclusao}</InlineMessage> : null}
+          {mensagemExclusao ? (
+            <>
+              <InlineMessage tone={exclusaoBloqueada ? "warning" : "error"}>{mensagemExclusao}</InlineMessage>
+              {exclusaoBloqueada && bloqueioExclusao?.temItemArquivado && onVerArquivados ? (
+                <Botao onClick={onVerArquivados} tamanho="pequeno" variante="secundario">
+                  <TbArchive aria-hidden="true" size={15} /> Ver arquivados
+                </Botao>
+              ) : null}
+            </>
+          ) : null}
         </Modal>
       ) : null}
 

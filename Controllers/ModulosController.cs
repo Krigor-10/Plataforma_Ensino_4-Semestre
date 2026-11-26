@@ -130,6 +130,28 @@ public class ModulosController : ControllerBase
         return NoContent();
     }
 
+    // Pre-checagem pra janela "Excluir modulo" (web) ja abrir sabendo se da pra
+    // excluir - mesma permissao do DELETE (docs/TelaConteudosProfessor/PROMPT-
+    // agente-excluir-modulo-vazio.md).
+    [HttpGet("{id:int}/bloqueios-exclusao")]
+    [Authorize(Roles = "Admin,Coordenador,Professor")]
+    public async Task<IActionResult> ObterBloqueiosExclusao(int id)
+    {
+        if (!await _cursoAutorizacaoService.PodeGerenciarModuloAsync(User, id))
+        {
+            return MensagemAcessoNegado();
+        }
+
+        var bloqueios = await _moduloService.ObterBloqueiosExclusaoAsync(id);
+
+        return Ok(new BloqueiosExclusaoModuloResponseDto
+        {
+            PodeExcluir = bloqueios.PodeExcluir,
+            Motivo = bloqueios.PodeExcluir ? null : _moduloService.MontarMensagemBloqueio(bloqueios),
+            TemItemArquivado = bloqueios.TemItemArquivado
+        });
+    }
+
     private static ModuloResponseDto MapResponse(
         Modulo modulo,
         IReadOnlyDictionary<int, int>? totalConteudosPorModulo = null,

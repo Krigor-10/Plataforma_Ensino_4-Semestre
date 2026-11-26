@@ -14,6 +14,16 @@ public interface IModuloService
     Task ExcluirModuloAsync(int id);
 
     /// <summary>
+    /// Pre-checagem pra janela "Excluir modulo" (web) ja abrir sabendo se da pra
+    /// excluir e, se nao, o motivo especifico - sem precisar que o usuario
+    /// confirme a exclusao so pra descobrir.
+    /// </summary>
+    Task<BloqueiosExclusaoModulo> ObterBloqueiosExclusaoAsync(int id);
+
+    /// <summary>Mesma mensagem usada na excecao de ExcluirModuloAsync, pra pre-checagem reaproveitar sem duplicar o texto.</summary>
+    string MontarMensagemBloqueio(BloqueiosExclusaoModulo bloqueios);
+
+    /// <summary>
     /// Contagem de conteudos didaticos por modulo, usada pra enriquecer listagens
     /// (ex.: tela de Modulos do Admin/Coordenador) sem expor o conteudo em si.
     /// </summary>

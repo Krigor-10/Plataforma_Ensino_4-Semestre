@@ -98,20 +98,97 @@ public class ModuloService : IModuloService
         return modulo;
     }
 
+    public async Task<BloqueiosExclusaoModulo> ObterBloqueiosExclusaoAsync(int id)
+    {
+        _ = await _moduloRepository.ObterPorIdAsync(id)
+            ?? throw new KeyNotFoundException("Modulo nao encontrado.");
+
+        return await _moduloRepository.ObterBloqueiosExclusaoAsync(id);
+    }
+
     public async Task ExcluirModuloAsync(int id)
     {
         var modulo = await _moduloRepository.ObterPorIdAsync(id)
             ?? throw new KeyNotFoundException("Modulo nao encontrado.");
         await _cursoService.GarantirCursoAbertoParaEdicaoAsync(modulo.CursoId);
 
-        if (await _moduloRepository.PossuiDependenciasAsync(id))
+        var bloqueios = await _moduloRepository.ObterBloqueiosExclusaoAsync(id);
+        if (!bloqueios.PodeExcluir)
         {
-            throw new InvalidOperationException("Nao e possivel excluir o modulo porque ele ja possui dependencias academicas.");
+            throw new InvalidOperationException(MontarMensagemBloqueio(bloqueios));
         }
 
+        // ProgressoModuloAluno -> Modulo e DeleteBehavior.Restrict (Data/
+        // Configurations/ProgressoConfiguration.cs) - precisa sair antes do
+        // modulo, na mesma transacao. So chega aqui com bloqueios.PodeExcluir
+        // == true, ou seja, sem avanco real (0% automatico de todas as
+        // matriculas, no maximo).
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        await _moduloRepository.RemoverProgressosModuloAsync(id);
         _moduloRepository.Deletar(modulo);
         await _moduloRepository.SalvarAlteracoesAsync();
+
+        await transaction.CommitAsync();
+
         await _progressoAlunoService.RecalcularProgressoDoCursoAsync(modulo.CursoId);
+    }
+
+    public string MontarMensagemBloqueio(BloqueiosExclusaoModulo bloqueios)
+    {
+        // Defesa: dado antigo/inesperado (nao deveria acontecer num modulo sem
+        // conteudo nem quiz) - nunca apagar historico real de progresso.
+        if (bloqueios.TemProgressoModuloComAvanco)
+        {
+            return "Ha progresso de alunos registrado neste modulo.";
+        }
+
+        if (bloqueios.TemNotasLancadas)
+        {
+            return "Nao e possivel excluir: ja existem notas lancadas neste modulo.";
+        }
+
+        if (bloqueios.TemProgressoConteudo)
+        {
+            return "Nao e possivel excluir: ha progresso de alunos registrado em conteudo deste modulo.";
+        }
+
+        var partes = new List<string>();
+        AdicionarParte(partes, bloqueios.ConteudosAtivos, "conteudo", "conteudos");
+        AdicionarParte(partes, bloqueios.QuizzesAtivos, "quiz", "quizzes");
+        AdicionarParte(partes, bloqueios.AvaliacoesAtivas, "avaliacao", "avaliacoes");
+
+        var partesArquivadas = new List<string>();
+        AdicionarParte(partesArquivadas, bloqueios.ConteudosArquivados, "conteudo arquivado", "conteudos arquivados");
+        AdicionarParte(partesArquivadas, bloqueios.QuizzesArquivados, "quiz arquivado", "quizzes arquivados");
+        AdicionarParte(partesArquivadas, bloqueios.AvaliacoesArquivadas, "avaliacao arquivada", "avaliacoes arquivadas");
+
+        var mensagem = $"Nao e possivel excluir: o modulo tem {JuntarComE(partes.Concat(partesArquivadas).ToList())}.";
+
+        if (partesArquivadas.Count > 0)
+        {
+            mensagem += " Exclua ou restaure o item em 'Ver arquivados' antes.";
+        }
+
+        return mensagem;
+    }
+
+    private static void AdicionarParte(List<string> partes, int quantidade, string singular, string plural)
+    {
+        if (quantidade > 0)
+        {
+            partes.Add($"{quantidade} {(quantidade == 1 ? singular : plural)}");
+        }
+    }
+
+    private static string JuntarComE(IReadOnlyList<string> partes)
+    {
+        if (partes.Count <= 1)
+        {
+            return partes.FirstOrDefault() ?? string.Empty;
+        }
+
+        return string.Join(", ", partes.Take(partes.Count - 1)) + " e " + partes[^1];
     }
 
     public async Task<Dictionary<int, int>> ContarConteudosPorModuloAsync(IEnumerable<int> moduloIds)

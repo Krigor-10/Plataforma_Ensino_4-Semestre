@@ -1178,20 +1178,32 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
   });
 
   test('"Excluir módulo" (cartao da lista) vazio chama o DELETE e atualiza a trilha', async () => {
-    apiRequest.mockResolvedValueOnce({});
+    apiRequest.mockImplementation((url) =>
+      Promise.resolve(url === `/Modulos/${MODULO_ID}/bloqueios-exclusao` ? { podeExcluir: true, motivo: null, temItemArquivado: false } : {})
+    );
     const usuario = userEvent.setup();
     const { onRefresh } = renderTrilha({ conteudos: [], moduloIdSelecionado: null });
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Módulo 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir módulo" }));
-    await usuario.click(screen.getByRole("button", { name: "Confirmar exclusao" }));
+    await usuario.click(await screen.findByRole("button", { name: "Confirmar exclusão" }));
 
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(`/Modulos/${MODULO_ID}`, expect.objectContaining({ method: "DELETE" })));
     await waitFor(() => expect(onRefresh).toHaveBeenCalled());
   });
 
+  // A pre-checagem (GET /Modulos/{id}/bloqueios-exclusao) ja mostra o motivo
+  // ao abrir a janela - nao precisa mais clicar em "Confirmar exclusao" pra
+  // descobrir que esta bloqueado (docs/TelaConteudosProfessor/PROMPT-agente-
+  // excluir-modulo-vazio.md), e o botao nem aparece nesse caso.
   test('"Excluir módulo" (cartao da lista) bloqueado por dependencias mostra a mensagem do backend', async () => {
-    apiRequest.mockRejectedValueOnce(new Error("Nao e possivel excluir o modulo porque ele ja possui dependencias academicas."));
+    apiRequest.mockImplementation((url) =>
+      Promise.resolve(
+        url === `/Modulos/${MODULO_ID}/bloqueios-exclusao`
+          ? { podeExcluir: false, motivo: "Nao e possivel excluir: o modulo tem 1 conteudo.", temItemArquivado: false }
+          : {}
+      )
+    );
     const usuario = userEvent.setup();
     renderTrilha({
       moduloIdSelecionado: null,
@@ -1200,9 +1212,9 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     await usuario.click(screen.getByRole("button", { name: "Opções de Módulo 1" }));
     await usuario.click(screen.getByRole("menuitem", { name: "Excluir módulo" }));
-    await usuario.click(screen.getByRole("button", { name: "Confirmar exclusao" }));
 
-    expect(await screen.findByText(/dependencias academicas/)).toBeInTheDocument();
+    expect(await screen.findByText(/o modulo tem 1 conteudo/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirmar exclusão" })).not.toBeInTheDocument();
   });
 
   // docs/TelaConteudosProfessor/PROMPT-agente-tela-modulo-correcoes-1.md,

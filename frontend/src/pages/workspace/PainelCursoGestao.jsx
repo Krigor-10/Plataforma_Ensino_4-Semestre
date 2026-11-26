@@ -809,6 +809,7 @@ export default function PainelCursoGestao({
       ) : null}
 
       <ModaisModulo
+        bloqueioExclusao={modais.bloqueioExclusao}
         cursoFixo={{ titulo: curso.titulo }}
         dadosFormulario={modais.dadosFormulario}
         formularioAberto={modais.formularioAberto}

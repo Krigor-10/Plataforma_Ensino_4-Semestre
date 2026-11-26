@@ -16,6 +16,13 @@ export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onS
   const [salvando, setSalvando] = useState(false);
   const [moduloParaExcluir, setModuloParaExcluir] = useState(null);
   const [mensagemExclusao, setMensagemExclusao] = useState("");
+  // null enquanto a pre-checagem ainda nao respondeu (ou falhou em silencio -
+  // nesse caso a janela segue como antes, a tentativa de confirmar e que
+  // acaba revelando o motivo via erro do DELETE). Uma vez respondida, guarda
+  // { podeExcluir, temItemArquivado } pra decidir esconder "Confirmar
+  // exclusao" e mostrar o link "Ver arquivados" (docs/TelaConteudosProfessor/
+  // PROMPT-agente-excluir-modulo-vazio.md).
+  const [bloqueioExclusao, setBloqueioExclusao] = useState(null);
 
   function abrirFormularioNovoModulo(cursoIdPadrao) {
     setModuloEmEdicaoId(null);
@@ -88,9 +95,26 @@ export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onS
     }
   }
 
-  function abrirExclusaoModulo(modulo) {
+  async function abrirExclusaoModulo(modulo) {
     setModuloParaExcluir(modulo);
     setMensagemExclusao("");
+    setBloqueioExclusao(null);
+
+    try {
+      const resultado = await apiRequest(`/Modulos/${modulo.id}/bloqueios-exclusao`);
+      setBloqueioExclusao({ podeExcluir: resultado.podeExcluir, temItemArquivado: resultado.temItemArquivado });
+      if (!resultado.podeExcluir) {
+        setMensagemExclusao(resultado.motivo || "Nao e possivel excluir este modulo agora.");
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      // Pre-checagem falhou (ex.: rede) - a janela segue como se nada tivesse
+      // sido checado ainda; "Confirmar exclusao" continua visivel e, se de
+      // fato houver bloqueio, o DELETE abaixo revela o motivo do mesmo jeito.
+    }
   }
 
   function fecharExclusaoModulo() {
@@ -99,6 +123,7 @@ export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onS
     }
 
     setModuloParaExcluir(null);
+    setBloqueioExclusao(null);
   }
 
   async function confirmarExclusao() {
@@ -120,7 +145,9 @@ export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onS
         return;
       }
 
-      setMensagemExclusao(err.message || "Nao foi possivel excluir o modulo agora.");
+      const motivo = err.message || "Nao foi possivel excluir o modulo agora.";
+      setMensagemExclusao(motivo);
+      setBloqueioExclusao({ podeExcluir: false, temItemArquivado: /arquivad/i.test(motivo) });
     } finally {
       setSalvando(false);
     }
@@ -130,6 +157,7 @@ export function useModaisModulo({ cursoFixoId = null, mostrarToast, onSalvo, onS
     abrirEdicaoModulo,
     abrirExclusaoModulo,
     abrirFormularioNovoModulo,
+    bloqueioExclusao,
     confirmarExclusao,
     dadosFormulario,
     fecharExclusaoModulo,

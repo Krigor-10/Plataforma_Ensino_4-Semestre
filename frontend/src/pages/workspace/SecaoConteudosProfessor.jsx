@@ -1436,6 +1436,7 @@ function ListaModulosProfessor({
       ) : null}
 
       <ModaisModulo
+        bloqueioExclusao={modaisModulo.bloqueioExclusao}
         cursoFixo={{ titulo: cursoAtivo.curso.titulo }}
         dadosFormulario={modaisModulo.dadosFormulario}
         formularioAberto={modaisModulo.formularioAberto}
@@ -1447,6 +1448,10 @@ function ListaModulosProfessor({
         onFecharExclusao={modaisModulo.fecharExclusaoModulo}
         onFecharFormulario={modaisModulo.fecharFormulario}
         onSalvarModulo={modaisModulo.salvarModulo}
+        onVerArquivados={() => {
+          modaisModulo.fecharExclusaoModulo();
+          setModalArquivadosAberto(true);
+        }}
         salvando={modaisModulo.salvando}
         setDadosFormulario={modaisModulo.setDadosFormulario}
       />
