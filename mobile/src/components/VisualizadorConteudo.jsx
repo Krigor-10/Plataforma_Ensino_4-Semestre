@@ -22,7 +22,7 @@ const TIPO_IMAGEM = 5;
  * pendencia_auditoria_conteudos_conclusao_exclusao_visualizacao na memoria
  * do projeto, item B.
  */
-export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir, onFechar, url, visivel }) {
+export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir, onErroVideo, onFechar, url, visivel }) {
   const insets = useSafeAreaInsets();
   const tipo = conteudo?.tipoConteudo;
   const concluidoRef = useRef(false);
@@ -125,7 +125,7 @@ export default function VisualizadorConteudo({ conteudo, jaConcluido, onConcluir
           {!visivel || !url ? null : tipo === TIPO_IMAGEM ? (
             <VisualizadorImagem url={url} />
           ) : tipo === TIPO_VIDEO ? (
-            <VisualizadorVideo onComecouAReproduzir={marcarVideoAssistido} url={url} />
+            <VisualizadorVideo onComecouAReproduzir={marcarVideoAssistido} onErro={onErroVideo} url={url} />
           ) : tipo === TIPO_PDF ? (
             <VisualizadorPdf url={url} />
           ) : null}
@@ -156,19 +156,40 @@ function VisualizadorImagem({ url }) {
   );
 }
 
-function VisualizadorVideo({ onComecouAReproduzir, url }) {
+function VisualizadorVideo({ onComecouAReproduzir, onErro, url }) {
+  // Quando `onErro` troca a URL (token renovado), useVideoPlayer recria o
+  // player do zero com a nova fonte (ver expo-video: a factory depende do
+  // source) - guarda aqui a posicao de antes do erro pra retomar assim que
+  // o player novo estiver pronto, no proprio `setup`.
+  const posicaoParaRetomarRef = useRef(null);
+
   const player = useVideoPlayer(url, (instancia) => {
     instancia.loop = false;
+    if (posicaoParaRetomarRef.current != null) {
+      instancia.currentTime = posicaoParaRetomarRef.current;
+      posicaoParaRetomarRef.current = null;
+    }
   });
 
   useEffect(() => {
-    const assinatura = player.addListener("playingChange", (evento) => {
+    const assinaturaPlaying = player.addListener("playingChange", (evento) => {
       if (evento.isPlaying) {
         onComecouAReproduzir();
       }
     });
-    return () => assinatura.remove();
-  }, [player, onComecouAReproduzir]);
+
+    const assinaturaStatus = player.addListener("statusChange", (evento) => {
+      if (evento.status === "error" && onErro) {
+        posicaoParaRetomarRef.current = player.currentTime;
+        onErro();
+      }
+    });
+
+    return () => {
+      assinaturaPlaying.remove();
+      assinaturaStatus.remove();
+    };
+  }, [player, onComecouAReproduzir, onErro]);
 
   return (
     <VideoView

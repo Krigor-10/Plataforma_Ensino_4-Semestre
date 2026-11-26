@@ -48,10 +48,23 @@ public class ArmazenamentoArquivoBlobService : ArmazenamentoArquivoServiceBase
             return null;
         }
 
-        var download = await blobCliente.DownloadStreamingAsync();
-        var contentType = download.Value.Details.ContentType ?? ResolverContentType(nomeArquivo);
+        var propriedades = await blobCliente.GetPropertiesAsync();
+        var contentType = propriedades.Value.ContentType ?? ResolverContentType(nomeArquivo);
 
-        return new ArquivoArmazenado(download.Value.Content, contentType);
+        // OpenReadAsync (em vez de DownloadStreamingAsync) devolve um stream
+        // navegavel (CanSeek) - o DownloadStreamingAsync so entrega o arquivo
+        // inteiro em sequencia, sem suporte a Range, e o player de video
+        // (web e expo-video) depende de Range/206 pra ler os metadados do
+        // MP4 (moov no fim do arquivo) e pra avancar/voltar (ver docs/bugs/
+        // PROMPT-agente-video-nao-carrega-producao.md).
+        var stream = await blobCliente.OpenReadAsync();
+
+        return new ArquivoArmazenado(
+            stream,
+            contentType,
+            propriedades.Value.ContentLength,
+            propriedades.Value.LastModified,
+            propriedades.Value.ETag.ToString());
     }
 
     private static string CaminhoBlob(string subpasta, string nomeArquivo) => $"{subpasta}/{nomeArquivo}";

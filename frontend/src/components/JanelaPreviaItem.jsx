@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TbArrowLeft, TbArrowRight, TbExternalLink } from "react-icons/tb";
 import Botao from "./Botao.jsx";
 import GabaritoQuestoes from "./GabaritoQuestoes.jsx";
@@ -18,6 +18,42 @@ const TIPO_CONTEUDO_IMAGEM = 5;
 
 const MENSAGEM_SEM_ARQUIVO = "Este item ainda não tem arquivo.";
 
+// O token na URL do video (?access_token=, resolverUrlArquivo em lib/api.js)
+// dura 20 min - com a janela aberta por mais tempo, um avanco/retrocesso que
+// peca um novo pedaco (Range) do navegador pode cair com o token ja vencido.
+// aoDarErro recalcula o link (pega o token mais recente do localStorage,
+// que a essa altura ja foi renovado em segundo plano pelo refresh token) e
+// tenta de novo UMA vez so, retomando de onde o video estava (docs/bugs/
+// PROMPT-agente-video-nao-carrega-producao.md).
+function VideoConteudo({ conteudo }) {
+  const [src, setSrc] = useState(() => obterLinkArquivoConteudo(conteudo));
+  const jaTentouNovamente = useRef(false);
+
+  function aoDarErro(evento) {
+    if (jaTentouNovamente.current) {
+      return;
+    }
+    jaTentouNovamente.current = true;
+
+    const video = evento.currentTarget;
+    const posicaoAnterior = video.currentTime;
+
+    function retomarPosicao() {
+      video.currentTime = posicaoAnterior;
+      video.removeEventListener("loadedmetadata", retomarPosicao);
+    }
+
+    video.addEventListener("loadedmetadata", retomarPosicao);
+    setSrc(obterLinkArquivoConteudo(conteudo));
+  }
+
+  return (
+    <video className="janela-previa-item__video" controls onError={aoDarErro} preload="metadata" src={src}>
+      <track kind="captions" />
+    </video>
+  );
+}
+
 function CorpoMaterial({ conteudo }) {
   const tipo = Number(conteudo.tipoConteudo);
   const linkArquivo = obterLinkArquivoConteudo(conteudo);
@@ -35,11 +71,7 @@ function CorpoMaterial({ conteudo }) {
   }
 
   if (tipo === TIPO_CONTEUDO_VIDEO) {
-    return (
-      <video className="janela-previa-item__video" controls preload="metadata" src={linkArquivo}>
-        <track kind="captions" />
-      </video>
-    );
+    return <VideoConteudo conteudo={conteudo} key={conteudo.id} />;
   }
 
   if (tipo === TIPO_CONTEUDO_LINK) {
@@ -160,6 +192,7 @@ export default function JanelaPreviaItem({
   }, [item.id]);
 
   const ehQuiz = item.tipo === "quiz";
+  const ehVideo = !ehQuiz && Number(item.conteudo?.tipoConteudo) === TIPO_CONTEUDO_VIDEO;
   const questoes = ehQuiz ? item.questoes : undefined;
   const totalQuestoes = questoes?.length || 0;
   const temQuestaoAnterior = ehQuiz && indiceQuestao > 0;
@@ -195,7 +228,9 @@ export default function JanelaPreviaItem({
     <Modal
       acoes={
         <div className="janela-previa-item__acoes-cabecalho">
-          <Insignia texto={somenteLeitura ? "Somente leitura" : publicado ? "Publicado" : "Rascunho"} />
+          {somenteLeitura && ehVideo ? null : (
+            <Insignia texto={somenteLeitura ? "Somente leitura" : publicado ? "Publicado" : "Rascunho"} />
+          )}
           {!somenteLeitura && menuItens ? <MenuAcoes itens={menuItens} rotulo={`Opções de ${item.titulo}`} /> : null}
         </div>
       }

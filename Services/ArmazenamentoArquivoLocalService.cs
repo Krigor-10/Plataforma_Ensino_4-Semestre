@@ -40,8 +40,13 @@ public class ArmazenamentoArquivoLocalService : ArmazenamentoArquivoServiceBase
             return Task.FromResult<ArquivoArmazenado?>(null);
         }
 
+        var infoArquivo = new FileInfo(caminhoCompleto);
         Stream stream = new FileStream(caminhoCompleto, FileMode.Open, FileAccess.Read);
-        return Task.FromResult<ArquivoArmazenado?>(new ArquivoArmazenado(stream, ResolverContentType(nomeArquivo)));
+        return Task.FromResult<ArquivoArmazenado?>(new ArquivoArmazenado(
+            stream,
+            ResolverContentType(nomeArquivo),
+            infoArquivo.Length,
+            infoArquivo.LastWriteTimeUtc));
     }
 
     private string CaminhoPasta(string subpasta) =>

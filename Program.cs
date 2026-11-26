@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using System.Text.Json;
 using System.Threading.RateLimiting;
@@ -481,9 +482,25 @@ app.MapGet("/uploads/{subpasta}/{nomeArquivo}", async (
     }
 
     var arquivo = await armazenamento.AbrirArquivoAsync(subpasta, nomeArquivo);
-    return arquivo is null
-        ? Results.NotFound()
-        : Results.Stream(arquivo.Conteudo, arquivo.ContentType);
+    if (arquivo is null)
+    {
+        return Results.NotFound();
+    }
+
+    // enableRangeProcessing: sem isso o player de video (web e expo-video)
+    // fica parado em 0:00 - ele depende de Range/206 pra ler os metadados do
+    // MP4 (moov costuma ficar no fim do arquivo) e pra avancar/voltar (ver
+    // docs/bugs/PROMPT-agente-video-nao-carrega-producao.md). So funciona de
+    // fato quando o stream devolvido por IArmazenamentoArquivoService e
+    // navegavel (CanSeek) e o Tamanho vem preenchido.
+    var etag = arquivo.ETag is { Length: > 0 } valor ? new EntityTagHeaderValue($"\"{valor.Trim('"')}\"") : null;
+
+    return Results.Stream(
+        arquivo.Conteudo,
+        arquivo.ContentType,
+        lastModified: arquivo.UltimaModificacao,
+        entityTag: etag,
+        enableRangeProcessing: true);
 });
 
 app.MapControllers();

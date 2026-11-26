@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using PlataformaEnsino.API.Data;
 using PlataformaEnsino.API.Models;
@@ -88,6 +89,70 @@ public class UploadsEndpointIntegrationTests : IClassFixture<ApiWebApplicationFa
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, resposta.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, resposta.StatusCode);
+    }
+
+    // docs/bugs/PROMPT-agente-video-nao-carrega-producao.md: sem Range (206)
+    // o player de video fica parado em 0:00. "/uploads/cursos" e publico, o
+    // que deixa testar sem precisar de token.
+    [Fact]
+    public async Task GetUploadsCursos_ComRange_Retorna206ComContentRange()
+    {
+        var nomeArquivo = $"{Guid.NewGuid():N}.jpg";
+        var conteudo = System.Text.Encoding.UTF8.GetBytes("conteudo de teste para Range, precisa ter mais de cem bytes de tamanho para o teste de bytes=0-99 fazer sentido de verdade.");
+        var caminhoArquivo = CriarArquivoFisicoEmCursos(nomeArquivo, conteudo);
+
+        try
+        {
+            using var client = _factory.CreateClient();
+            var requisicao = new HttpRequestMessage(HttpMethod.Get, $"/uploads/cursos/{nomeArquivo}");
+            requisicao.Headers.Range = new RangeHeaderValue(0, 99);
+
+            var resposta = await client.SendAsync(requisicao);
+
+            Assert.Equal(HttpStatusCode.PartialContent, resposta.StatusCode);
+            Assert.Equal(100, resposta.Content.Headers.ContentLength);
+            Assert.NotNull(resposta.Content.Headers.ContentRange);
+            Assert.Equal(conteudo.Length, resposta.Content.Headers.ContentRange!.Length);
+            Assert.Equal("bytes", resposta.Headers.AcceptRanges.Single());
+        }
+        finally
+        {
+            File.Delete(caminhoArquivo);
+        }
+    }
+
+    [Fact]
+    public async Task GetUploadsCursos_SemRange_Retorna200ComContentLength()
+    {
+        var nomeArquivo = $"{Guid.NewGuid():N}.jpg";
+        var conteudo = System.Text.Encoding.UTF8.GetBytes("conteudo de teste sem range");
+        var caminhoArquivo = CriarArquivoFisicoEmCursos(nomeArquivo, conteudo);
+
+        try
+        {
+            using var client = _factory.CreateClient();
+
+            var resposta = await client.GetAsync($"/uploads/cursos/{nomeArquivo}");
+
+            Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+            Assert.Equal(conteudo.Length, resposta.Content.Headers.ContentLength);
+            Assert.Equal("bytes", resposta.Headers.AcceptRanges.Single());
+        }
+        finally
+        {
+            File.Delete(caminhoArquivo);
+        }
+    }
+
+    private string CriarArquivoFisicoEmCursos(string nomeArquivo, byte[] conteudo)
+    {
+        var ambiente = _factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var pasta = Path.Combine(ambiente.ContentRootPath, "Storage", "Uploads", "cursos");
+        Directory.CreateDirectory(pasta);
+
+        var caminho = Path.Combine(pasta, nomeArquivo);
+        File.WriteAllBytes(caminho, conteudo);
+        return caminho;
     }
 
     private async Task SemearConteudoAsync(string nomeArquivo, bool criarMatricula, string? emailAluno = null)

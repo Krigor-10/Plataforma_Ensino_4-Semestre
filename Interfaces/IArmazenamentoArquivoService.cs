@@ -2,7 +2,12 @@ using Microsoft.AspNetCore.Http;
 
 namespace PlataformaEnsino.API.Interfaces;
 
-public record ArquivoArmazenado(Stream Conteudo, string ContentType);
+public record ArquivoArmazenado(
+    Stream Conteudo,
+    string ContentType,
+    long? Tamanho = null,
+    DateTimeOffset? UltimaModificacao = null,
+    string? ETag = null);
 
 public interface IArmazenamentoArquivoService
 {

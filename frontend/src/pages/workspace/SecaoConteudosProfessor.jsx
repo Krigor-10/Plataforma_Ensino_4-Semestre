@@ -1001,6 +1001,9 @@ export function SecaoConteudosProfessor({
                   onChange={enviarArquivoConteudo}
                   type="file"
                 />
+                {tipoConteudoSelecionado === 3 ? (
+                  <p className="campo__ajuda">Use MP4 (H.264) para tocar em todos os navegadores e celulares.</p>
+                ) : null}
                 {enviandoArquivo ? (
                   <p className="campo__ajuda">Enviando arquivo...</p>
                 ) : dadosFormulario.arquivoUrl ? (

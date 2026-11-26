@@ -157,6 +157,26 @@ public class ArmazenamentoArquivoLocalServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task AbrirArquivoAsync_ArquivoValido_RetornaStreamNavegavelComTamanho()
+    {
+        // Suporte a Range (206) depende de um stream navegavel (CanSeek) e do
+        // Tamanho preenchido - sem isso o player de video fica parado em 0:00
+        // (docs/bugs/PROMPT-agente-video-nao-carrega-producao.md).
+        var arquivo = CriarArquivoFake("video.pdf", conteudo: "%PDF-1.4\nconteudo de teste maior que zero bytes");
+        var url = await _service.SalvarArquivoAsync(arquivo, "conteudos", new[] { ".pdf" }, 1_000_000);
+        var nomeArquivo = Path.GetFileName(url);
+
+        var resultado = await _service.AbrirArquivoAsync("conteudos", nomeArquivo);
+
+        Assert.NotNull(resultado);
+        Assert.True(resultado!.Conteudo.CanSeek);
+        Assert.NotNull(resultado.Tamanho);
+        Assert.True(resultado.Tamanho > 0);
+        Assert.NotNull(resultado.UltimaModificacao);
+        resultado.Conteudo.Dispose();
+    }
+
+    [Fact]
     public async Task AbrirArquivoAsync_SubpastaForaDoAllowlist_RetornaNulo()
     {
         // Simula tentativa de path traversal via segmento de rota: "/uploads/../appsettings.json/x".

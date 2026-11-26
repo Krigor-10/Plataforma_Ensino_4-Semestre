@@ -146,6 +146,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
   const [venceEmParaComprar, setVenceEmParaComprar] = useState(null);
   const [conteudoVisualizando, setConteudoVisualizando] = useState(null);
   const [urlVisualizando, setUrlVisualizando] = useState(null);
+  const jaTentouNovamenteVideoRef = useRef(false);
   const [itemGradeDetalhe, setItemGradeDetalhe] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
@@ -443,6 +444,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     // vencendo. Ver shared/apiClient.js:obterTokenValido.
     if (TIPOS_COM_VISUALIZADOR_INTEGRADO.has(conteudo.tipoConteudo)) {
       const tokenValido = await obterTokenValido();
+      jaTentouNovamenteVideoRef.current = false;
       setConteudoVisualizando(conteudo);
       setUrlVisualizando(resolverUrlArquivo(caminho, tokenValido));
       return;
@@ -467,6 +469,28 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
     }
 
     Linking.openURL(caminho).catch(() => setMensagem({ tipo: "erro", texto: "Não foi possível abrir o arquivo." }));
+  }
+
+  // O token na URL do video (?access_token=) dura Jwt:ExpireMinutes (20 min)
+  // - com o visualizador aberto por mais tempo, um avanco/retrocesso que
+  // peca um pedaco novo do video pode cair com o token ja vencido. Recalcula
+  // o link (token mais recente, ja renovado em segundo plano pelo refresh
+  // token) e tenta de novo UMA vez so (docs/bugs/PROMPT-agente-video-nao-
+  // carrega-producao.md). useVideoPlayer recria o player sozinho quando a
+  // URL muda (ver expo-video), retomando a posicao via VisualizadorVideo.
+  async function recarregarVideoAposErro() {
+    if (jaTentouNovamenteVideoRef.current || !conteudoVisualizando) {
+      return;
+    }
+    jaTentouNovamenteVideoRef.current = true;
+
+    const caminho = conteudoVisualizando.arquivoUrl;
+    if (!caminho) {
+      return;
+    }
+
+    const tokenValido = await obterTokenValido();
+    setUrlVisualizando(resolverUrlArquivo(caminho, tokenValido));
   }
 
   if (grupos.length === 0) {
@@ -732,6 +756,7 @@ export default function ConteudosScreen({ onRecarregar, onSessionExpired, snapsh
         conteudo={conteudoVisualizando}
         jaConcluido={Boolean(conteudoVisualizando?.concluido)}
         onConcluir={marcarConcluido}
+        onErroVideo={recarregarVideoAposErro}
         onFechar={() => {
           setConteudoVisualizando(null);
           setUrlVisualizando(null);
