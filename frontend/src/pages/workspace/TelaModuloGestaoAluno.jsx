@@ -360,7 +360,7 @@ export default function TelaModuloGestaoAluno({
     <div className="modulo-gestao modulo-lista-janela">
       <div className="modulo-lista-janela__caminho">
         <div className="modulo-lista-janela__caminho-navegacao">
-          <BotaoVoltar destino="Conteúdos" onClick={voltarParaCurso} />
+          <BotaoVoltar destino="Cursos" onClick={voltarParaCurso} />
           <span className="modulo-lista-janela__caminho-texto">Meus cursos › {curso.titulo} › {modulo.titulo}</span>
         </div>
       </div>

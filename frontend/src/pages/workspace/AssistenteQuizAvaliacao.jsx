@@ -1013,7 +1013,7 @@ export function AssistenteQuizAvaliacao({
                           ))}
                         </select>
                         <p className="campo__ajuda">
-                          Vincule o quiz a um material especifico pra ele aparecer dentro desse material em Conteudos, em vez de solto no modulo.
+                          Vincule o quiz a um material especifico pra ele aparecer dentro desse material em Cursos, em vez de solto no modulo.
                         </p>
                       </div>
                     ) : null}

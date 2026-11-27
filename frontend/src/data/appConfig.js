@@ -9,7 +9,10 @@ export const APP_SECTIONS = [
   { key: "coordenadores", label: "Coordenadores", roles: ["Admin"] },
   { key: "cursos", label: "Cursos", roles: ["Admin", "Coordenador"] },
   { key: "chamados", label: "Chamados", roles: ["Admin", "Coordenador"] },
-  { key: "conteudos", label: "Conteudos", roles: ["Professor", "Aluno"] },
+  // Professor/Aluno veem "Cursos" (decisao G1 da auditoria de 26/11): so o
+  // texto muda - a chave/rota continua "conteudos" (/app/conteudos), porque
+  // "cursos" (/app/cursos) ja e a secao do Admin/Coordenador.
+  { key: "conteudos", label: "Cursos", roles: ["Professor", "Aluno"] },
   { key: "avaliacoes", label: "Avaliacoes", roles: ["Professor", "Aluno"] },
   { key: "matriculas", label: "Matriculas", roles: ["Admin", "Aluno"] },
   { key: "turmas", label: "Turmas", roles: ["Professor"] },
@@ -128,7 +131,7 @@ export function getSectionMeta(section, role) {
             : "A mesma base de cursos alimenta a home, o cadastro e o painel."
     },
     conteudos: {
-      title: "Trilha de conteudos",
+      title: "Cursos",
       description:
         role === "Professor"
           ? "Escolha um curso para estruturar e gerenciar materiais por modulo."

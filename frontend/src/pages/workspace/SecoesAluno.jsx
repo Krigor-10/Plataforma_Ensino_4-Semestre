@@ -1960,7 +1960,7 @@ export function SecaoConteudosAluno({
       {gruposConteudosPorCurso.length === 0 ? (
         <EmptyState message="Quando uma matricula for aprovada, os cursos e modulos da sua trilha aparecerao aqui." />
       ) : cursoNaoEncontrado ? (
-        <EmptyState message="Este curso nao foi encontrado na sua trilha. Volte para Conteudos e escolha outro." />
+        <EmptyState message="Este curso nao foi encontrado na sua trilha. Volte para Cursos e escolha outro." />
       ) : cursoAtivo && moduloValido ? (
         <TelaModuloGestaoAluno
           conteudoProcessando={conteudoProcessando}
@@ -2047,7 +2047,7 @@ function TelaCursoAluno({ avaliacaoLiberada, curso, modulosComEstado, onAbrirMod
 
   return (
     <div className="conteudos-aluno trilha-conteudos">
-      {onVoltarConteudos ? <BotaoVoltar destino="Conteúdos" onClick={onVoltarConteudos} /> : null}
+      {onVoltarConteudos ? <BotaoVoltar destino="Cursos" onClick={onVoltarConteudos} /> : null}
 
       <CartaoCursoModulo
         curso={curso}

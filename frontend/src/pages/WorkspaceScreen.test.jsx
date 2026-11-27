@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import WorkspaceScreen from "./WorkspaceScreen.jsx";
 import { ToastProvider } from "../hooks/useToast.jsx";
@@ -214,5 +214,37 @@ describe("WorkspaceScreen - secao 'matriculas' vira 'Inscricoes' so pro Admin", 
 
     expect((await screen.findAllByText("Inscrições")).length).toBeGreaterThan(0);
     expect(screen.queryByText("Fluxo de matriculas")).not.toBeInTheDocument();
+  });
+});
+
+// docs/auditorias/AUDITORIA-PENDENCIAS-REGRAS-2026-11-26.md, item 5 (decisao
+// G1): Professor e Aluno veem "Cursos" no lugar de "Conteudos"; a chave e o
+// endereco continuam "conteudos" (/app/conteudos).
+describe("WorkspaceScreen - 'Conteudos' aparece como 'Cursos' para Professor e Aluno", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test.each([
+    ["Professor", { id: 2, nome: "Professor Teste", email: "prof@test.com", cpf: "", tipoUsuario: "Professor" }],
+    ["Aluno", { id: 3, nome: "Aluno Teste", email: "aluno@test.com", cpf: "", tipoUsuario: "Aluno" }]
+  ])("%s ve 'Cursos' no menu e no titulo, sem 'Conteudos'", async (_perfil, usuario) => {
+    loadWorkspaceSnapshot.mockResolvedValue(snapshotComCursoEModulo());
+    apiRequest.mockResolvedValue([]);
+    window.history.pushState({}, "", "/app/conteudos");
+
+    renderWorkspace({ onNavigate: vi.fn(), route: { kind: "app", section: "conteudos", param: null }, usuario });
+
+    // Barra lateral: o item fica dentro do grupo "Acadêmico" (a barra de baixo
+    // do celular so mostra os grupos, e os itens vem desta mesma lista).
+    const menus = await screen.findAllByRole("navigation", { name: "Navegação principal" });
+    const barraLateral = menus.find((menu) => menu.classList.contains("sidebar__nav"));
+    const grupoAcademico = within(barraLateral).getByRole("button", { name: "Acadêmico" });
+    if (grupoAcademico.getAttribute("aria-expanded") !== "true") {
+      fireEvent.click(grupoAcademico);
+    }
+    expect(within(barraLateral).getByTitle("Cursos")).toBeInTheDocument();
+    expect(within(barraLateral).queryByTitle("Conteudos")).not.toBeInTheDocument();
+    expect(screen.queryByText("Trilha de conteudos")).not.toBeInTheDocument();
   });
 });

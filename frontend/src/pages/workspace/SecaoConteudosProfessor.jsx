@@ -1224,7 +1224,7 @@ function ListaModulosProfessor({
 
   return (
     <div className="conteudos-aluno trilha-conteudos trilha-conteudos--editavel">
-      {onVoltar ? <BotaoVoltar destino="Conteúdos" onClick={onVoltar} /> : null}
+      {onVoltar ? <BotaoVoltar destino="Cursos" onClick={onVoltar} /> : null}
 
       <header className="atividades-curso__cabecalho">
         <div className="atividades-curso__cabecalho-principal">

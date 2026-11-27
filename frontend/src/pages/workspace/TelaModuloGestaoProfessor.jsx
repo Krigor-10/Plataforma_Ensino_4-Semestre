@@ -555,8 +555,8 @@ export default function TelaModuloGestaoProfessor({
     <div className="modulo-gestao modulo-lista-janela">
       <div className="modulo-lista-janela__caminho">
         <div className="modulo-lista-janela__caminho-navegacao">
-          <BotaoVoltar destino="Conteúdos" onClick={voltarParaModulos} />
-          <span className="modulo-lista-janela__caminho-texto">Acadêmico › Conteúdos › {moduloAtual.titulo}</span>
+          <BotaoVoltar destino="Cursos" onClick={voltarParaModulos} />
+          <span className="modulo-lista-janela__caminho-texto">Acadêmico › Cursos › {moduloAtual.titulo}</span>
         </div>
 
         {!edicaoTravada ? (
