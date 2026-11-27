@@ -55,6 +55,20 @@ public class Curso
     /// </summary>
     public DateTime? PublicadoParaVendaEm { get; private set; }
 
+    /// <summary>
+    /// Quando o curso saiu da venda/do catalogo pela ultima vez (pacote 6 da
+    /// auditoria de 26/11): diferencia "Fora de venda" (ja foi vendido e foi
+    /// retirado) de "nunca publicado". Limpa ao publicar de novo.
+    /// </summary>
+    public DateTime? RetiradoDaVendaEm { get; private set; }
+
+    /// <summary>
+    /// Situacao unica do curso (ver <see cref="SituacaoCurso.Calcular"/>):
+    /// abas do Admin, selos e tela Inscricoes leem daqui. Nao persistida.
+    /// </summary>
+    [NotMapped]
+    public string Situacao => SituacaoCurso.Calcular(this);
+
     [JsonIgnore]
     [ValidateNever]
     public Coordenador? Coordenador { get; set; }
@@ -162,10 +176,16 @@ public class Curso
     public void PublicarParaVenda(DateTime? momento = null)
     {
         PublicadoParaVendaEm = momento ?? DateTime.UtcNow;
+        RetiradoDaVendaEm = null;
     }
 
-    public void DespublicarDaVenda()
+    public void DespublicarDaVenda(DateTime? momento = null)
     {
+        if (PublicadoParaVendaEm.HasValue)
+        {
+            RetiradoDaVendaEm = momento ?? DateTime.UtcNow;
+        }
+
         PublicadoParaVendaEm = null;
     }
 }

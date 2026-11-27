@@ -5,6 +5,8 @@
 // Professor.jsx e TelaModuloGestaoProfessor.jsx nao precisarem de import
 // circular um do outro).
 
+import { rotuloSituacaoCurso, situacaoDoCurso } from "./situacaoCurso.js";
+
 export const STATUS_RASCUNHO = 1;
 export const STATUS_PUBLICADO = 2;
 export const STATUS_ARQUIVADO = 3;
@@ -112,17 +114,10 @@ export function montarModulosPublicados(modulosDoCurso, conteudosPorModuloId, qu
 // item 1) - mesma regra de rotulo da tela Inscricoes (SecaoMatriculas.jsx,
 // ROTULO_SITUACAO_CURSO), calculada aqui a partir do proprio Curso (sem
 // endpoint novo): encerrado > a venda > aguardando encerramento > andamento.
+// Pacote 6 da auditoria de 26/11: mesmo texto da situacao unica do curso
+// (lib/situacaoCurso.js), igual em todas as telas.
 export function obterSituacaoCurso(curso) {
-  if (curso.encerradoEm) {
-    return "Encerrado";
-  }
-  if (curso.publicadoParaVendaEm) {
-    return "À venda";
-  }
-  if (curso.concluidoPeloProfessorEm) {
-    return "Aguardando encerramento";
-  }
-  return "Em andamento";
+  return rotuloSituacaoCurso(situacaoDoCurso(curso));
 }
 
 export function montarNomesExibicaoQuizzesVinculados(quizzes, tituloConteudo) {

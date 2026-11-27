@@ -201,6 +201,69 @@ public class CursoServiceTests
         Assert.Single(notificacoes);
     }
 
+    // Decisao D9 da auditoria de 26/11: sem coordenador ninguem encerra o
+    // curso depois, entao o professor nao conclui.
+    [Fact]
+    public async Task ConcluirCursoComoProfessorAsync_CursoSemCoordenador_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id));
+        Assert.Contains("coordenador", erro.Message);
+    }
+
+    // Pacote 6 da auditoria de 26/11: situacao unica do curso.
+    [Fact]
+    public void Situacao_SegueAOrdemUnica_EmAndamentoAguardandoEncerradoAVendaForaDeVenda()
+    {
+        var acompanhado = new Curso { Titulo = "A", ModeloCurso = ModeloCurso.Acompanhado };
+        Assert.Equal(SituacaoCurso.EmAndamento, acompanhado.Situacao);
+
+        acompanhado.ConcluirPeloProfessor(1);
+        Assert.Equal(SituacaoCurso.AguardandoCoordenador, acompanhado.Situacao);
+
+        acompanhado.Encerrar(2);
+        Assert.Equal(SituacaoCurso.Encerrado, acompanhado.Situacao);
+
+        var gratuito = new Curso { Titulo = "G", ModeloCurso = ModeloCurso.Gratuito };
+        gratuito.ConcluirPeloProfessor(1);
+        Assert.Equal(SituacaoCurso.AguardandoCoordenador, gratuito.Situacao);
+        gratuito.PublicarParaVenda();
+        Assert.Equal(SituacaoCurso.NoCatalogo, gratuito.Situacao);
+
+        var pacoteDireto = new Curso { Titulo = "P", ModeloCurso = ModeloCurso.PagoPacote, Preco = 10m };
+        Assert.Equal(SituacaoCurso.EmAndamento, pacoteDireto.Situacao);
+        pacoteDireto.ConcluirPeloProfessor(1);
+        Assert.Equal(SituacaoCurso.ProntoParaPublicar, pacoteDireto.Situacao);
+
+        pacoteDireto.PublicarParaVenda();
+        Assert.Equal(SituacaoCurso.AVenda, pacoteDireto.Situacao);
+
+        pacoteDireto.DespublicarDaVenda();
+        Assert.NotNull(pacoteDireto.RetiradoDaVendaEm);
+        Assert.Equal(SituacaoCurso.ForaDeVenda, pacoteDireto.Situacao);
+
+        pacoteDireto.PublicarParaVenda();
+        Assert.Null(pacoteDireto.RetiradoDaVendaEm);
+        Assert.Equal(SituacaoCurso.AVenda, pacoteDireto.Situacao);
+    }
+
+    [Fact]
+    public void DespublicarDaVenda_CursoNuncaPublicado_NaoMarcaComoRetirado()
+    {
+        var curso = new Curso { Titulo = "P", ModeloCurso = ModeloCurso.PagoPacote };
+
+        curso.DespublicarDaVenda();
+
+        Assert.Null(curso.RetiradoDaVendaEm);
+        Assert.Equal(SituacaoCurso.EmAndamento, curso.Situacao);
+    }
+
     [Fact]
     public async Task ConcluirCursoComoProfessorAsync_ProfessorNaoVinculado_LancaInvalidOperation()
     {

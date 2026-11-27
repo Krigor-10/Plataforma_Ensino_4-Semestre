@@ -214,12 +214,15 @@ public class CursoInscricoesServiceTests
     }
 
     [Theory]
-    [InlineData(true, false, false, SituacaoCursoInscricoes.Encerrado)]
-    [InlineData(false, true, false, SituacaoCursoInscricoes.AVenda)]
-    [InlineData(false, false, true, SituacaoCursoInscricoes.AguardandoEncerramento)]
-    [InlineData(false, false, false, SituacaoCursoInscricoes.EmAndamento)]
-    public async Task ObterInscricoesAsync_Situacao_SeguePrecedenciaEncerradoAVendaAguardandoEmAndamento(
-        bool encerrado, bool aVenda, bool aguardandoEncerramento, SituacaoCursoInscricoes esperado)
+    // Situacao unica (Models/SituacaoCurso.cs): publicado vence encerrado,
+    // e um pacote concluido pelo professor fica "Pronto para publicar".
+    [InlineData(true, false, false, "Encerrado")]
+    [InlineData(false, true, false, "AVenda")]
+    [InlineData(true, true, false, "AVenda")]
+    [InlineData(false, false, true, "ProntoParaPublicar")]
+    [InlineData(false, false, false, "EmAndamento")]
+    public async Task ObterInscricoesAsync_Situacao_UsaASituacaoUnicaDoCurso(
+        bool encerrado, bool aVenda, bool aguardandoEncerramento, string esperado)
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);

@@ -20,6 +20,7 @@ import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
 import Insignia from "../../components/Insignia.jsx";
+import SeloSituacaoCurso from "../../components/SeloSituacaoCurso.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
@@ -722,7 +723,11 @@ export function SecaoConteudosProfessor({
           cursos={cursosDoProfessor.map(({ curso, totalConteudos, totalModulos, totalPublicados }) => ({
             curso,
             resumo: `${totalModulos} módulo${totalModulos === 1 ? "" : "s"} · ${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"}`,
-            rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`
+            rodapeEsquerda: `${totalPublicados} publicado${totalPublicados === 1 ? "" : "s"}`,
+            // Selo de situacao na grade (item 4 da auditoria de 26/11): o
+            // professor ve "Concluído · aguardando coordenador"/"Encerrado"
+            // sem abrir o curso.
+            badge: <SeloSituacaoCurso curso={curso} />
           }))}
           mensagemVazia="Você ainda não está vinculado a nenhum curso."
           onSelecionar={abrirCurso}
@@ -1250,7 +1255,15 @@ function ListaModulosProfessor({
             </Botao>
           ) : null}
           {cursoAceitaConclusao && !cursoJaConcluido && !cursoEncerrado ? (
-            <Botao onClick={() => setConfirmandoConclusao(true)} tamanho="pequeno" variante="primario">
+            // Decisao D9 da auditoria de 26/11: sem coordenador o servidor
+            // recusa a conclusao (ninguem encerraria o curso depois).
+            <Botao
+              disabled={!cursoAtivo.curso.coordenadorId}
+              onClick={() => setConfirmandoConclusao(true)}
+              tamanho="pequeno"
+              title={cursoAtivo.curso.coordenadorId ? undefined : "Peça ao Admin para atribuir um coordenador antes de concluir."}
+              variante="primario"
+            >
               <TbCheck aria-hidden="true" size={15} /> Concluir curso
             </Botao>
           ) : null}
@@ -1260,6 +1273,12 @@ function ListaModulosProfessor({
           </Botao>
         </div>
       </header>
+
+      {cursoAceitaConclusao && !cursoJaConcluido && !cursoEncerrado && !cursoAtivo.curso.coordenadorId ? (
+        <InlineMessage tone="warning">
+          Este curso ainda não tem coordenador. Peça ao Admin para atribuir um coordenador antes de concluir.
+        </InlineMessage>
+      ) : null}
 
       {edicaoTravada ? (
         <InlineMessage tone="warning">

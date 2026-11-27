@@ -528,6 +528,9 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime?>("PublicadoParaVendaEm")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("RetiradoDaVendaEm")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Titulo")
                         .IsRequired()
                         .HasMaxLength(150)

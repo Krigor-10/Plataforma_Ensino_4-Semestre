@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { TbAlertTriangle, TbLock, TbPlus, TbSearch, TbTag, TbX } from "react-icons/tb";
+import { TbPlus, TbSearch, TbTag, TbX } from "react-icons/tb";
 import { MdSave } from "react-icons/md";
 import { InlineMessage } from "../../components/Primitives.jsx";
 import Botao from "../../components/Botao.jsx";
@@ -15,6 +15,8 @@ import { formatGrade, normalizeStatus } from "../../lib/format.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
 import PainelCursoGestao from "./PainelCursoGestao.jsx";
+import SeloSituacaoCurso from "../../components/SeloSituacaoCurso.jsx";
+import { abaAdminDoCurso } from "../../lib/situacaoCurso.js";
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
@@ -38,24 +40,11 @@ function normalizarBusca(valor) {
    "encerrados" (precisa de acao - preparar pra venda), depois "fora da
    venda" (pacote existente mas indisponivel), e por fim "andamento"
    (Acompanhado/Gratuito rodando normalmente). */
+// Pacote 6 da auditoria de 26/11: a aba vem da situacao UNICA do curso
+// (servidor, Models/SituacaoCurso.cs; ver lib/situacaoCurso.js), a mesma
+// usada pelos selos e pela tela Inscricoes.
 function categoriaCicloCurso(curso) {
-  const modeloCurso = Number(curso.modeloCurso);
-  const ehPagoPacote = modeloCurso === MODELO_PAGO_PACOTE;
-  const ehAcompanhadoOuGratuito = modeloCurso === MODELO_ACOMPANHADO || modeloCurso === MODELO_GRATUITO;
-
-  if (ehPagoPacote && curso.publicadoParaVendaEm) {
-    return "a-venda";
-  }
-
-  if ((ehAcompanhadoOuGratuito || ehPagoPacote) && curso.encerradoEm) {
-    return "encerrados";
-  }
-
-  if (ehPagoPacote) {
-    return "fora-da-venda";
-  }
-
-  return "andamento";
+  return abaAdminDoCurso(curso);
 }
 
 // Situacao do Coordenador (docs/fluxo-coordenador/partes/PARTE-1), eixo
@@ -201,10 +190,9 @@ export function SecaoCursos({
     () => cursos.filter((curso) => categoriaCicloCurso(curso) === abaCurso && !curso.coordenadorId).length,
     [abaCurso, cursos]
   );
-  // Abas "A venda"/"Fora da venda" so tem curso Pago - o filtro de Modelo
-  // fica desativado nelas, mostrando "Modelo: Pago" em vez de sumir (rodada
-  // 2, docs/bugs/PROMPT-agente-filtros-cursos-admin-rodada2.md).
-  const modeloDesativadoNaAba = abaCurso === "a-venda" || abaCurso === "fora-da-venda";
+  // Pacote 6 da auditoria de 26/11: Pago e Gratuito aparecem em varias abas
+  // (Pago em montagem em "Em andamento", Gratuito publicado em "A venda"),
+  // entao o filtro de Modelo fica ativo em todas, com a opcao "Pago".
 
   const rotuloFiltroCoordenador = useMemo(() => {
     if (filtroCoordenador === "todos") {
@@ -217,13 +205,14 @@ export function SecaoCursos({
     return `Coordenador: ${coordenador?.nome || "—"}`;
   }, [coordenadorPorId, filtroCoordenador, totalSemCoordenadorNaAba]);
 
-  const rotuloFiltroModelo = modeloDesativadoNaAba
-    ? "Modelo: Pago"
-    : filtroModelo === "todos"
+  const rotuloFiltroModelo =
+    filtroModelo === "todos"
       ? "Modelo: Todos"
       : Number(filtroModelo) === MODELO_GRATUITO
         ? "Modelo: Grátis"
-        : "Modelo: Acompanhado";
+        : Number(filtroModelo) === MODELO_PAGO_PACOTE
+          ? "Modelo: Pago"
+          : "Modelo: Acompanhado";
 
   const cursosFiltrados = useMemo(() => {
     let proximosCursos = cursos;
@@ -314,12 +303,6 @@ export function SecaoCursos({
 
   function selecionarAbaCurso(aba) {
     setAbaCurso(aba);
-
-    // A-venda/fora-da-venda so tem curso Pago - o filtro de modelo nao
-    // aparece nessas abas, entao reseta pra nao ficar aplicado escondido.
-    if (aba === "a-venda" || aba === "fora-da-venda") {
-      setFiltroModelo("todos");
-    }
   }
 
   function abrirModalCoordenadorCurso(curso) {
@@ -905,22 +888,16 @@ export function SecaoCursos({
 
             <label className="visualmente-oculto" htmlFor="filtro-modelo-curso">Modelo</label>
             <select
-              className={`campo__entrada filtro-largura-fixa filtro-largura-fixa--modelo${filtroModelo !== "todos" && !modeloDesativadoNaAba ? " filtro-largura-fixa--ativo" : ""}`}
-              disabled={modeloDesativadoNaAba}
+              className={`campo__entrada filtro-largura-fixa filtro-largura-fixa--modelo${filtroModelo !== "todos" ? " filtro-largura-fixa--ativo" : ""}`}
               id="filtro-modelo-curso"
               onChange={(event) => setFiltroModelo(event.target.value)}
               title={rotuloFiltroModelo}
-              value={modeloDesativadoNaAba ? "pago" : filtroModelo}
+              value={filtroModelo}
             >
-              {modeloDesativadoNaAba ? (
-                <option value="pago">Modelo: Pago</option>
-              ) : (
-                <>
-                  <option value="todos">Modelo: Todos</option>
-                  <option value={MODELO_GRATUITO}>Modelo: Grátis</option>
-                  <option value={MODELO_ACOMPANHADO}>Modelo: Acompanhado</option>
-                </>
-              )}
+              <option value="todos">Modelo: Todos</option>
+              <option value={MODELO_GRATUITO}>Modelo: Grátis</option>
+              <option value={MODELO_PAGO_PACOTE}>Modelo: Pago</option>
+              <option value={MODELO_ACOMPANHADO}>Modelo: Acompanhado</option>
             </select>
 
             <button
@@ -1022,27 +999,8 @@ export function SecaoCursos({
                     </p>
                     <footer className="catalogo-card__rodape-aluno">
                       <span className="catalogo-card__codigo">{curso.codigoRegistro || "Sem codigo"}</span>
-                      {ehAdmin ? (
-                        <Insignia texto={`Media ${formatGrade(media)}`} />
-                      ) : situacaoCoordenador === "aguardando" ? (
-                        <Insignia
-                          texto={
-                            <>
-                              <TbAlertTriangle aria-hidden="true" size={12} /> Aguardando você
-                            </>
-                          }
-                          variante="aviso"
-                        />
-                      ) : situacaoCoordenador === "encerrado" ? (
-                        <Insignia
-                          texto={
-                            <>
-                              <TbLock aria-hidden="true" size={12} /> Encerrado
-                            </>
-                          }
-                          variante="neutro"
-                        />
-                      ) : null}
+                      {ehAdmin ? <Insignia texto={`Media ${formatGrade(media)}`} /> : null}
+                      <SeloSituacaoCurso curso={curso} />
                     </footer>
                   </div>
                 </button>

@@ -37,7 +37,7 @@ export default function GradeCursosProfessor({ cursos, mensagemVazia, onSelecion
               {percentual !== undefined ? <BarraProgresso percentual={percentual} /> : null}
               <footer className="catalogo-card__rodape-aluno">
                 <span className="catalogo-card__codigo">{rodapeEsquerda}</span>
-                {badge ? <Insignia texto={badge} /> : null}
+                {typeof badge === "string" ? <Insignia texto={badge} /> : badge || null}
               </footer>
             </div>
           </button>

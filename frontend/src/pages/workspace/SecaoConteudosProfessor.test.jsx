@@ -1371,6 +1371,21 @@ describe("TrilhaConteudosProfessor - edicao travada (curso concluido ou encerrad
     expect(screen.queryByRole("button", { name: /Concluir curso/ })).not.toBeInTheDocument();
   });
 
+  // Decisao D9 da auditoria de 26/11: sem coordenador, nao conclui.
+  test("curso sem coordenador: 'Concluir curso' desabilitado, com o aviso", () => {
+    renderTrilha({ conteudos: [CONTEUDO], curso: { modeloCurso: 3, coordenadorId: null }, moduloIdSelecionado: null });
+
+    expect(screen.getByRole("button", { name: /Concluir curso/ })).toBeDisabled();
+    expect(screen.getByText(/Peça ao Admin para atribuir um coordenador antes de concluir/)).toBeInTheDocument();
+  });
+
+  test("curso com coordenador: 'Concluir curso' habilitado e sem o aviso", () => {
+    renderTrilha({ conteudos: [CONTEUDO], curso: { modeloCurso: 3, coordenadorId: 7 }, moduloIdSelecionado: null });
+
+    expect(screen.getByRole("button", { name: /Concluir curso/ })).toBeEnabled();
+    expect(screen.queryByText(/atribuir um coordenador/)).not.toBeInTheDocument();
+  });
+
   test("curso encerrado: mostra a faixa de encerrado", () => {
     renderTrilha({ conteudos: [CONTEUDO], curso: CURSO_GRATUITO_ENCERRADO, moduloIdSelecionado: null });
 

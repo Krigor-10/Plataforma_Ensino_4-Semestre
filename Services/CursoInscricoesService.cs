@@ -118,7 +118,7 @@ public class CursoInscricoesService : ICursoInscricoesService
                 Titulo = curso.Titulo,
                 ImagemUrl = curso.ImagemUrl,
                 ModeloCurso = curso.ModeloCurso,
-                Situacao = DefinirSituacao(curso),
+                Situacao = curso.Situacao,
                 Preco = curso.Preco,
                 Inscritos = inscritas.Count,
                 Comecaram = inscritas.Count(matricula => percentualPorMatriculaId.GetValueOrDefault(matricula.Id, 0) > 0),
@@ -141,23 +141,4 @@ public class CursoInscricoesService : ICursoInscricoesService
 
     private sealed record PagamentoResumo(int MatriculaId, decimal Valor, StatusPagamento Status);
 
-    private static SituacaoCursoInscricoes DefinirSituacao(Curso curso)
-    {
-        if (curso.EncerradoEm.HasValue)
-        {
-            return SituacaoCursoInscricoes.Encerrado;
-        }
-
-        if (curso.ModeloCurso == ModeloCurso.PagoPacote && curso.PublicadoParaVendaEm.HasValue)
-        {
-            return SituacaoCursoInscricoes.AVenda;
-        }
-
-        if (curso.ConcluidoPeloProfessorEm.HasValue)
-        {
-            return SituacaoCursoInscricoes.AguardandoEncerramento;
-        }
-
-        return SituacaoCursoInscricoes.EmAndamento;
-    }
 }

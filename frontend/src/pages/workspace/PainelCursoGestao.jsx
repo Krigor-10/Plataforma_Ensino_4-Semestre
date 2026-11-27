@@ -24,7 +24,7 @@ import BlocoProfessoresCurso from "../../components/BlocoProfessoresCurso.jsx";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import CartaoEstatistica from "../../components/CartaoEstatistica.jsx";
-import Insignia from "../../components/Insignia.jsx";
+import SeloSituacaoCurso from "../../components/SeloSituacaoCurso.jsx";
 import ModaisModulo from "../../components/ModaisModulo.jsx";
 import Modal from "../../components/Modal.jsx";
 import ModalPrepararVenda from "../../components/ModalPrepararVenda.jsx";
@@ -479,11 +479,7 @@ export default function PainelCursoGestao({
                 <TbLockOpen aria-hidden="true" size={16} /> Reabrir curso
               </Botao>
             ) : null}
-            {temCicloDeEncerramento ? (
-              <Insignia
-                texto={curso.encerradoEm ? "Encerrado" : curso.concluidoPeloProfessorEm ? "Aguardando encerramento" : "Em andamento"}
-              />
-            ) : null}
+            <SeloSituacaoCurso curso={curso} />
           </div>
         </div>
 

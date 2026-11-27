@@ -51,20 +51,44 @@ describe("SecaoCursos - filtros do Admin (rodada 2)", () => {
     expect(within(selectCoordenador).getByRole("option", { name: "Coordenador: Sem coordenador (0)" })).toBeInTheDocument();
   });
 
-  test("Modelo fica desativado mostrando 'Modelo: Pago' nas abas de venda, e volta a ativar", async () => {
+  // Pacote 6 da auditoria de 26/11: Pago e Gratuito aparecem em varias abas,
+  // entao o filtro de Modelo fica ativo em todas e ganha a opcao "Pago".
+  test("Modelo fica ativo em todas as abas, com a opcao 'Pago'", async () => {
     renderSecaoCursos();
 
     const selectModelo = screen.getByLabelText("Modelo");
     expect(selectModelo).toBeEnabled();
     expect(selectModelo).toHaveDisplayValue("Modelo: Todos");
+    expect(screen.getByRole("option", { name: "Modelo: Pago" })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: /À venda/ }));
-    expect(selectModelo).toBeDisabled();
-    expect(selectModelo).toHaveDisplayValue("Modelo: Pago");
-
-    await userEvent.click(screen.getByRole("tab", { name: /Em andamento/ }));
     expect(selectModelo).toBeEnabled();
     expect(selectModelo).toHaveDisplayValue("Modelo: Todos");
+  });
+
+  // Abas e selos pela situacao unica (decisoes D5, D6, D6b, D10).
+  test("abas seguem a situacao unica: Pago em montagem em 'Em andamento', retirado em 'Fora de venda'", async () => {
+    renderSecaoCursos({
+      cursos: [
+        { id: 10, titulo: "Pago em montagem", codigoRegistro: "CUR-010", modeloCurso: 2, coordenadorId: 7 },
+        { id: 11, titulo: "Acompanhado aguardando", codigoRegistro: "CUR-011", modeloCurso: 3, coordenadorId: 7, concluidoPeloProfessorEm: "2026-11-01" },
+        { id: 12, titulo: "Pago pronto", codigoRegistro: "CUR-012", modeloCurso: 2, coordenadorId: 7, concluidoPeloProfessorEm: "2026-11-01" },
+        { id: 13, titulo: "Pago retirado", codigoRegistro: "CUR-013", modeloCurso: 2, coordenadorId: 7, retiradoDaVendaEm: "2026-11-10" }
+      ]
+    });
+
+    expect(screen.getByText("Pago em montagem")).toBeInTheDocument();
+    expect(screen.getByText("Acompanhado aguardando")).toBeInTheDocument();
+    expect(screen.getByText("Concluído · aguardando coordenador")).toBeInTheDocument();
+    expect(screen.queryByText("Pago pronto")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: /Encerrados/ }));
+    expect(screen.getByText("Pago pronto")).toBeInTheDocument();
+    expect(screen.getByText("Pronto para publicar")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: /Fora da venda/ }));
+    expect(screen.getByText("Pago retirado")).toBeInTheDocument();
+    expect(screen.getByText("Fora de venda")).toBeInTheDocument();
   });
 
   test("Limpar (✕) comeca desativado e ativa com filtro, limpando tudo ao clicar", async () => {

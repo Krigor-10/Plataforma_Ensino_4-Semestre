@@ -29,6 +29,7 @@ import { useLarguraJanela } from "../../hooks/useLarguraJanela.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { clampPercent, formatDate, formatDayMonth, formatGrade, formatMoney } from "../../lib/format.js";
+import { rotuloSituacaoCurso } from "../../lib/situacaoCurso.js";
 import { isCursoVisivelNoCatalogoPublico } from "../../data/appConfig.js";
 import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
@@ -430,14 +431,9 @@ const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
 const CURSOS_POR_PAGINA_INSCRICOES = 10;
 
-// 1=EmAndamento, 2=AguardandoEncerramento, 3=Encerrado, 4=AVenda (backend
-// SituacaoCursoInscricoes) - rotulo sempre neutro (so o modelo tem cor).
-const ROTULO_SITUACAO_CURSO = {
-  1: "Em andamento",
-  2: "Aguardando encerramento",
-  3: "Encerrado",
-  4: "À venda"
-};
+// Situacao do curso: a mesma regra unica das abas e selos (lib/
+// situacaoCurso.js, pacote 6 da auditoria de 26/11) - aqui o rotulo fica
+// sempre neutro (so o modelo tem cor).
 
 const ROTULO_MODELO_CURSO_INSCRICOES = { [MODELO_GRATUITO]: "Gratuito", [MODELO_PAGO_PACOTE]: "Pago", [MODELO_ACOMPANHADO]: "Acompanhado" };
 const VARIANTE_MODELO_CURSO_INSCRICOES = { [MODELO_GRATUITO]: "sucesso", [MODELO_PAGO_PACOTE]: "marca", [MODELO_ACOMPANHADO]: "info" };
@@ -609,7 +605,7 @@ function BadgesCursoInscricoes({ inscricao }) {
   return (
     <span className="inscricoes-badges">
       <Insignia texto={ROTULO_MODELO_CURSO_INSCRICOES[inscricao.modeloCurso] || "—"} variante={VARIANTE_MODELO_CURSO_INSCRICOES[inscricao.modeloCurso]} />
-      <Insignia texto={ROTULO_SITUACAO_CURSO[inscricao.situacao] || "—"} variante="neutro" />
+      <Insignia texto={inscricao.situacao ? rotuloSituacaoCurso(inscricao.situacao) : "—"} variante="neutro" />
     </span>
   );
 }

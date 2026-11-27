@@ -245,6 +245,14 @@ public class CursoService : ICursoService
             throw new InvalidOperationException("O professor informado nao esta vinculado a este curso.");
         }
 
+        // Decisao D9 da auditoria de 26/11: sem coordenador ninguem encerra
+        // o curso depois (o Admin nao encerra), entao ele ficaria parado.
+        if (!curso.CoordenadorId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Este curso ainda nao tem coordenador. Peca ao Admin para atribuir um coordenador antes de concluir.");
+        }
+
         if (curso.ConcluidoPeloProfessorEm.HasValue)
         {
             throw new InvalidOperationException("Este curso ja foi marcado como concluido pelo professor.");
