@@ -306,3 +306,90 @@ describe("ConteudosScreen - trilha do curso compacta: linha de conteudo", () => 
     expect(screen.getByText("Responder")).toBeTruthy();
   });
 });
+
+// docs/TelaConteudosAlunos/PROMPT-agente-quiz-vinculado-ordem-estrita.md,
+// item 4: mesma ordem estrita da web e quiz vinculado com conector "↳".
+describe("ConteudosScreen - ordem estrita + quiz vinculado", () => {
+  const MODULO = { id: 100, cursoId: 10, titulo: "Fundamentos", dataCriacao: "2026-01-01" };
+
+  function quizVinculadoAoPdf1000(extra = {}) {
+    return {
+      id: 7000,
+      cursoId: 10,
+      moduloId: 100,
+      conteudoDidaticoId: 1000,
+      titulo: "Revisão rápida",
+      tipoAvaliacao: 1,
+      totalQuestoes: 3,
+      tentativasRestantes: 1,
+      progressoLiberado: true,
+      dataAbertura: null,
+      dataFechamento: null,
+      ...extra
+    };
+  }
+
+  async function renderizarModulo(snapshot) {
+    mockRouteParams = { cursoId: 10 };
+    await render(<ConteudosScreen onRecarregar={jest.fn()} onSessionExpired={jest.fn()} snapshot={snapshot} />);
+    await fireEvent.press(screen.getByLabelText("Fundamentos"));
+  }
+
+  test("conteudo 1 concluido: quiz vinculado liberado com conector, conteudo 2 espera o quiz", async () => {
+    await renderizarModulo(
+      montarSnapshotCurso({
+        avaliacoes: [quizVinculadoAoPdf1000()],
+        conteudos: [conteudoPdf(1000), conteudoPdf(1001)],
+        modulos: [MODULO],
+        progressoConteudos: [{ conteudoDidaticoId: 1000, percentualConclusao: 100 }]
+      })
+    );
+
+    expect(screen.getByText("↳ Quiz sobre PDF 1000 · 3 questões")).toBeTruthy();
+    expect(screen.getByTestId("conector-quiz-vinculado")).toBeTruthy();
+    expect(screen.getByText("Responder")).toBeTruthy();
+    expect(screen.getByText(/Responda o quiz acima para liberar/)).toBeTruthy();
+  });
+
+  test("quiz enviado: conteudo 2 libera", async () => {
+    await renderizarModulo(
+      montarSnapshotCurso({
+        avaliacoes: [quizVinculadoAoPdf1000({ tentativasRealizadas: 1, tentativasRestantes: 0 })],
+        conteudos: [conteudoPdf(1000), conteudoPdf(1001)],
+        modulos: [MODULO],
+        progressoConteudos: [{ conteudoDidaticoId: 1000, percentualConclusao: 100 }]
+      })
+    );
+
+    expect(screen.queryByText(/Responda o quiz acima/)).toBeNull();
+    expect(screen.getByText("Abrir ›")).toBeTruthy();
+  });
+
+  test("conteudo-pai pendente: quiz vinculado fica sem 'Responder'", async () => {
+    await renderizarModulo(
+      montarSnapshotCurso({
+        avaliacoes: [quizVinculadoAoPdf1000()],
+        conteudos: [conteudoPdf(1000), conteudoPdf(1001)],
+        modulos: [MODULO]
+      })
+    );
+
+    expect(screen.getByText("↳ Quiz sobre PDF 1000 · 3 questões")).toBeTruthy();
+    expect(screen.queryByText("Responder")).toBeNull();
+  });
+
+  test("quiz solto continua sem conector nem 'Quiz sobre'", async () => {
+    await renderizarModulo(
+      montarSnapshotCurso({
+        avaliacoes: [quizVinculadoAoPdf1000({ conteudoDidaticoId: null, titulo: "Quiz do módulo" })],
+        conteudos: [conteudoPdf(1000)],
+        modulos: [MODULO],
+        progressoConteudos: [{ conteudoDidaticoId: 1000, percentualConclusao: 100 }]
+      })
+    );
+
+    expect(screen.queryByTestId("conector-quiz-vinculado")).toBeNull();
+    expect(screen.queryByText(/Quiz sobre/)).toBeNull();
+    expect(screen.getByText("Quiz · 3 questões · sem nota")).toBeTruthy();
+  });
+});

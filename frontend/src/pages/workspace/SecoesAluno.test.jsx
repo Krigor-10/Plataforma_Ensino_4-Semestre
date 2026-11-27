@@ -643,6 +643,8 @@ describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no
           ordemExibicao: 1
         }
       ],
+      // Quiz vinculado so libera com o conteudo-pai concluido (ordem estrita).
+      progressos: { conteudos: [{ conteudoDidaticoId: 1, percentualConclusao: 100 }], modulos: [], cursos: [] },
       avaliacoes: [
         {
           id: 200,
@@ -709,6 +711,102 @@ describe("TelaCursoAluno / TelaModuloGestaoAluno (SecaoConteudosAluno, trilha no
     const itemQuizBloqueado = screen.getByText("Quiz da Aula 2").closest(".painel-itens-modulo__item");
     expect(within(itemQuizBloqueado).getByText(/Bloqueado/)).toBeInTheDocument();
     expect(within(itemQuizBloqueado).queryByRole("button", { name: "Iniciar quiz" })).not.toBeInTheDocument();
+  });
+
+  describe("ordem estrita + quiz vinculado recuado (PROMPT-agente-quiz-vinculado-ordem-estrita.md)", () => {
+    const conteudosDoModulo = [
+      { id: 1, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Conteúdo 1", tipoConteudo: 2, arquivoUrl: "a.pdf", ordemExibicao: 1 },
+      { id: 2, cursoId: CURSO_ID, moduloId: MODULO_ID, turmaId: TURMA_ID, titulo: "Conteúdo 2", tipoConteudo: 3, arquivoUrl: "b.mp4", ordemExibicao: 2 }
+    ];
+    const conteudo1Concluido = { conteudos: [{ conteudoDidaticoId: 1, percentualConclusao: 100 }], modulos: [], cursos: [] };
+
+    function quizVinculadoAoConteudo1(extras = {}) {
+      return {
+        id: 300,
+        cursoId: CURSO_ID,
+        moduloId: MODULO_ID,
+        conteudoDidaticoId: 1,
+        tipoAvaliacao: 1,
+        titulo: "Revisão rápida",
+        totalQuestoes: 3,
+        tentativasRestantes: 1,
+        tentativasPermitidas: 1,
+        ...extras
+      };
+    }
+
+    test("conteúdo 1 concluído e quiz não enviado: quiz liberado e destacado, conteúdo 2 espera o quiz", () => {
+      renderConteudosAluno({
+        moduloIdSelecionado: MODULO_ID,
+        conteudos: conteudosDoModulo,
+        avaliacoes: [quizVinculadoAoConteudo1()],
+        progressos: conteudo1Concluido
+      });
+
+      const itemQuiz = screen.getByText("Revisão rápida").closest(".painel-itens-modulo__item");
+      expect(itemQuiz).toHaveClass("painel-itens-modulo__item--vinculado");
+      expect(itemQuiz).toHaveClass("painel-itens-modulo__item--proximo-passo");
+      expect(itemQuiz.querySelector(".painel-itens-modulo__conector-vinculo")).toBeInTheDocument();
+      expect(within(itemQuiz).getByText(/Quiz sobre Conteúdo 1/)).toBeInTheDocument();
+      expect(within(itemQuiz).getByRole("button", { name: "Iniciar quiz" })).toBeInTheDocument();
+
+      const itemConteudo2 = screen.getByText("Conteúdo 2").closest(".painel-itens-modulo__item");
+      expect(within(itemConteudo2).getByText(/Responda o quiz acima para liberar/)).toBeInTheDocument();
+      expect(itemConteudo2).not.toHaveClass("painel-itens-modulo__item--proximo-passo");
+    });
+
+    test("depois de enviar o quiz, o conteúdo 2 libera e vira o próximo passo", () => {
+      renderConteudosAluno({
+        moduloIdSelecionado: MODULO_ID,
+        conteudos: conteudosDoModulo,
+        avaliacoes: [quizVinculadoAoConteudo1({ tentativasRealizadas: 1, tentativasRestantes: 0 })],
+        progressos: conteudo1Concluido
+      });
+
+      const itemConteudo2 = screen.getByText("Conteúdo 2").closest(".painel-itens-modulo__item");
+      expect(within(itemConteudo2).queryByText(/Bloqueado/)).not.toBeInTheDocument();
+      expect(itemConteudo2).toHaveClass("painel-itens-modulo__item--proximo-passo");
+    });
+
+    test("conteúdo-pai pendente: quiz vinculado bloqueado, mas o primeiro conteúdo é o próximo passo", () => {
+      renderConteudosAluno({
+        moduloIdSelecionado: MODULO_ID,
+        conteudos: conteudosDoModulo,
+        avaliacoes: [quizVinculadoAoConteudo1({ progressoLiberado: false })]
+      });
+
+      const itemQuiz = screen.getByText("Revisão rápida").closest(".painel-itens-modulo__item");
+      expect(within(itemQuiz).getByText(/Bloqueado/)).toBeInTheDocument();
+      expect(within(itemQuiz).queryByRole("button", { name: "Iniciar quiz" })).not.toBeInTheDocument();
+      expect(screen.getByText("Conteúdo 1").closest(".painel-itens-modulo__item")).toHaveClass(
+        "painel-itens-modulo__item--proximo-passo"
+      );
+    });
+
+    test("quiz solto continua no fim, sem recuo nem conector", () => {
+      renderConteudosAluno({
+        moduloIdSelecionado: MODULO_ID,
+        conteudos: conteudosDoModulo,
+        avaliacoes: [quizVinculadoAoConteudo1({ id: 301, conteudoDidaticoId: null, titulo: "Quiz do módulo", progressoLiberado: false })]
+      });
+
+      const itens = Array.from(document.querySelectorAll(".painel-itens-modulo__item"));
+      const itemQuizSolto = screen.getByText("Quiz do módulo").closest(".painel-itens-modulo__item");
+      expect(itens[itens.length - 1]).toBe(itemQuizSolto);
+      expect(itemQuizSolto).not.toHaveClass("painel-itens-modulo__item--vinculado");
+      expect(itemQuizSolto.querySelector(".painel-itens-modulo__conector-vinculo")).not.toBeInTheDocument();
+      expect(within(itemQuizSolto).queryByText(/Quiz sobre/)).not.toBeInTheDocument();
+    });
+
+    test('"Continuar" do cartão do curso aponta para o quiz vinculado antes do conteúdo 2', () => {
+      renderConteudosAluno({
+        conteudos: conteudosDoModulo,
+        avaliacoes: [quizVinculadoAoConteudo1()],
+        progressos: conteudo1Concluido
+      });
+
+      expect(screen.getByRole("button", { name: /Continuar: Revisão rápida/ })).toBeInTheDocument();
+    });
   });
 
   test('quiz com titulo generico exibe "Quiz do conteúdo" na tela do módulo, e o titulo proprio e mantido', () => {

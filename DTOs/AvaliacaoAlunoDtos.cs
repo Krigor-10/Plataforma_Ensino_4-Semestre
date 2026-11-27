@@ -33,9 +33,10 @@ public class AvaliacaoAlunoResponseDto
     public DateTime? PublicadoEm { get; set; }
 
     /// <summary>
-    /// Quiz de modulo exige 100% dos conteudos daquele modulo; avaliacao sem
-    /// modulo (prova/exercicio final) exige 100% dos conteudos do curso inteiro
-    /// mais todos os quizzes ja enviados. Ver AvaliacaoService.AvaliacaoLiberadaPorProgressoAsync.
+    /// Quiz vinculado a um conteudo libera quando esse conteudo e concluido;
+    /// quiz solto do modulo exige 100% dos conteudos daquele modulo; avaliacao
+    /// sem modulo (prova/exercicio final) exige 100% dos conteudos do curso
+    /// inteiro mais todos os quizzes ja enviados. Ver LiberacaoAvaliacoesInfo.
     /// </summary>
     public bool ProgressoLiberado { get; set; } = true;
 }

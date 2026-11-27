@@ -21,7 +21,7 @@ import EstadoVazio from "../../components/EstadoVazio.jsx";
 import ProgressoCircular from "../../components/ProgressoCircular.jsx";
 import Toast from "../../components/Toast.jsx";
 import { apiRequest, obterTokenValido, ApiError } from "../../lib/api.js";
-import { agruparConteudosPorCurso } from "../../lib/conteudos.js";
+import { agruparConteudosPorCurso, MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR, MOTIVO_BLOQUEIO_QUIZ_ANTERIOR } from "../../lib/conteudos.js";
 import { obterRotuloAcaoPrincipal, obterSituacaoCurso, obterVarianteAcaoPrincipalBotao, temAcessoLiberado } from "../../lib/cursosVitrine.js";
 import { abrirArquivoSeguro } from "../../lib/abrirArquivoSeguro";
 import { ehArquivoProprio, extrairNomeArquivo, resolverUrlArquivo, resolverUrlArquivoAbsoluta } from "../../lib/arquivos.js";
@@ -57,13 +57,15 @@ const TIPOS_COM_VISUALIZADOR_INTEGRADO = new Set([TIPO_PDF, TIPO_VIDEO, TIPO_IMA
 // Monta uma lista plana de linhas (conteudo + quiz vinculado + quiz solto do
 // modulo) na ordem de exibicao, pra renderizar o modulo como uma lista unica
 // (Material 3), nao cards aninhados. `recuado` marca quiz vinculado a um
-// conteudo especifico, pra indentar alinhado ao titulo do pai.
+// conteudo especifico, pra indentar alinhado ao titulo do pai; `conteudoPai`
+// e esse conteudo (conector "↳ Quiz sobre {pai}" e bloqueio em ordem
+// estrita: o quiz vinculado so libera com o pai concluido).
 function montarLinhasModulo(modulo) {
   const linhas = [];
   modulo.conteudos.forEach((conteudo) => {
     linhas.push({ chave: `conteudo-${conteudo.id}`, dado: conteudo, recuado: false, tipo: "conteudo" });
     (conteudo.quizzes || []).forEach((quiz) => {
-      linhas.push({ chave: `quiz-${quiz.id}`, dado: quiz, recuado: true, tipo: "quiz" });
+      linhas.push({ chave: `quiz-${quiz.id}`, conteudoPai: conteudo, dado: quiz, recuado: true, tipo: "quiz" });
     });
   });
   modulo.quizzes.forEach((quiz) => {
@@ -97,6 +99,12 @@ const VISUAL_MATERIAL_CONTEUDO = {
   corIcone: "#86efac"
 };
 const VISUAL_QUIZ_CONTEUDO = VISUAL_TIPO_AVALIACAO[TIPO_AVALIACAO_PROVA];
+
+// Motivo do cadeado na linha do conteudo (ordem estrita, mesmo texto da web).
+const TEXTO_MOTIVO_BLOQUEIO_CONTEUDO = {
+  [MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR]: "Conclua o conteúdo anterior",
+  [MOTIVO_BLOQUEIO_QUIZ_ANTERIOR]: "Responda o quiz acima para liberar"
+};
 
 function obterRotuloAcaoConteudo(tipoConteudo) {
   if (Number(tipoConteudo) === TIPO_IMAGEM) {
@@ -900,6 +908,9 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
           <Text style={estilos.linhaMeta}>
             {normalizeContentType(conteudo.tipoConteudo)}
             {conteudo.concluido ? " · lido" : ""}
+            {conteudo.bloqueado && TEXTO_MOTIVO_BLOQUEIO_CONTEUDO[conteudo.motivoBloqueio]
+              ? ` · ${TEXTO_MOTIVO_BLOQUEIO_CONTEUDO[conteudo.motivoBloqueio]}`
+              : ""}
           </Text>
         </View>
         {conteudo.bloqueado ? null : conteudo.concluido ? (
@@ -941,14 +952,22 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
   }
 
   const quiz = linha.dado;
-  const disponibilidade = obterDisponibilidadeAvaliacao(quiz);
-  const concluidoQuiz = !disponibilidade.podeRealizar && disponibilidade.tone === "neutro";
+  const disponibilidadeServidor = obterDisponibilidadeAvaliacao(quiz);
+  const concluidoQuiz = !disponibilidadeServidor.podeRealizar && disponibilidadeServidor.tone === "neutro";
+  // Quiz vinculado espera o conteudo-pai (o servidor segue a mesma regra;
+  // aqui evita o quiz parecer liberado antes do pai ser concluido).
+  const esperaConteudoPai = Boolean(linha.conteudoPai) && !linha.conteudoPai.concluido && !concluidoQuiz;
+  const disponibilidade = esperaConteudoPai ? { ...disponibilidadeServidor, podeRealizar: false } : disponibilidadeServidor;
   const tocavel = disponibilidade.podeRealizar || concluidoQuiz;
+  const metaQuiz = linha.conteudoPai
+    ? `↳ Quiz sobre ${linha.conteudoPai.titulo} · ${formatQuestoes(quiz.totalQuestoes)}`
+    : `Quiz · ${formatQuestoes(quiz.totalQuestoes)} · sem nota`;
   const temRevisaoDisponivel =
     concluidoQuiz && Boolean(quiz.ultimaTentativaId) && Number(quiz.ultimoStatusTentativa) === STATUS_TENTATIVA_CORRIGIDA;
 
   const corpoQuiz = (
     <>
+      {linha.conteudoPai ? <View pointerEvents="none" style={estilos.conectorVinculo} testID="conector-quiz-vinculado" /> : null}
       <QuadradoIconeConteudo
         bloqueado={!disponibilidade.podeRealizar && !concluidoQuiz}
         concluido={concluidoQuiz}
@@ -958,7 +977,7 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
       />
       <View style={estilos.linhaTextos}>
         <Text numberOfLines={2} style={estilos.linhaTitulo}>{quiz.titulo}</Text>
-        <Text style={estilos.linhaMeta}>Quiz · {formatQuestoes(quiz.totalQuestoes)} · sem nota</Text>
+        <Text numberOfLines={1} style={estilos.linhaMeta}>{metaQuiz}</Text>
       </View>
       {disponibilidade.podeRealizar ? (
         <TouchableOpacity
@@ -976,11 +995,15 @@ function LinhaConteudo({ abrirConteudo, conteudoProcessando, linha, marcarConclu
     </>
   );
 
+  const rotuloVinculo = linha.conteudoPai ? `Quiz sobre ${linha.conteudoPai.titulo}: ` : "";
+
   if (tocavel) {
     return (
       <Pressable
         accessibilityHint={temRevisaoDisponivel ? "Mostra a revisão com o gabarito do quiz" : undefined}
-        accessibilityLabel={temRevisaoDisponivel ? `Ver revisão do quiz ${quiz.titulo}` : `Abrir quiz ${quiz.titulo}`}
+        accessibilityLabel={
+          temRevisaoDisponivel ? `${rotuloVinculo}ver revisão do quiz ${quiz.titulo}` : `${rotuloVinculo}abrir quiz ${quiz.titulo}`
+        }
         accessibilityRole="button"
         onPress={() => onAbrirQuiz(quiz)}
         style={({ pressed }) => [...estiloLinha, pressed ? estilos.linhaPressionada : null]}
@@ -1138,6 +1161,20 @@ const estilos = StyleSheet.create({
   // Recuo alinhado ao inicio do texto do item pai (quadrado 34 + gap md), nao
   // a borda do card — mesmo recuo pra todo quiz vinculado a um conteudo.
   linhaRecuada: { paddingLeft: 14 + 34 + espacamentos.md },
+  // Conector em "L" do quiz vinculado (docs/TelaConteudosAlunos/PROMPT-
+  // agente-quiz-vinculado-ordem-estrita.md, item 4): desce do centro do
+  // icone do conteudo de cima e entra no icone do quiz. Decorativo.
+  conectorVinculo: {
+    position: "absolute",
+    top: 0,
+    bottom: "50%",
+    left: 14 + 17,
+    width: 34 + espacamentos.md - 17 - espacamentos.xs,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderBottomLeftRadius: 10,
+    borderColor: "rgba(157, 103, 255, 0.55)"
+  },
   linhaPressionada: { backgroundColor: "rgba(123, 47, 247, 0.08)" },
   linhaTextos: { flex: 1 },
   linhaTitulo: { color: cores.texto, fontWeight: "600", fontSize: tipografia.corpo },

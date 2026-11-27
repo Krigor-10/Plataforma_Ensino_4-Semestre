@@ -10333,6 +10333,85 @@
   animation: painel-itens-modulo-destaque 1.4s ease-in-out 2;
 }
 
+/* Proximo passo (so Aluno, docs/TelaConteudosAlunos/PROMPT-agente-quiz-
+   vinculado-ordem-estrita.md): aro fixo no primeiro item liberado e ainda
+   nao feito - com a ordem estrita, e o quiz vinculado logo depois do
+   conteudo concluido, ou o proximo conteudo. */
+.painel-itens-modulo__item--proximo-passo .painel-itens-modulo__linha {
+  border-color: var(--cor-marca-clara);
+  box-shadow: var(--relevo-card-topo), var(--relevo-card-base), 0 0 0 1px var(--cor-marca-clara);
+}
+
+/* Quiz vinculado a um conteudo (os 3 perfis, mesmo prompt, item 3): linha
+   recuada, com um conector em "L" saindo do conteudo de cima ate a borda
+   esquerda do quiz (decorativo, aria-hidden). Quiz solto nao recebe nada
+   disso. */
+.painel-itens-modulo__item--vinculado {
+  --recuo-quiz-vinculado: 2.125rem;
+  --inicio-conector-vinculo: 1.1rem;
+  position: relative;
+  padding-left: var(--recuo-quiz-vinculado);
+}
+
+.painel-itens-modulo__conector-vinculo {
+  position: absolute;
+  top: calc(-1 * var(--espaco-sm));
+  bottom: 50%;
+  left: var(--inicio-conector-vinculo);
+  width: calc(var(--recuo-quiz-vinculado) - var(--inicio-conector-vinculo));
+  border-bottom: 2px solid rgba(157, 103, 255, 0.55);
+  border-left: 2px solid rgba(157, 103, 255, 0.55);
+  border-bottom-left-radius: var(--raio-md);
+  pointer-events: none;
+}
+
+.painel-itens-modulo__item--vinculado .painel-itens-modulo__linha {
+  min-height: 4.25rem;
+}
+
+.painel-itens-modulo__item--vinculado .painel-itens-modulo__icone {
+  width: 2.125rem;
+  height: 2.125rem;
+}
+
+.painel-itens-modulo__item--vinculado .painel-itens-modulo__icone svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* "↳ Quiz sobre {conteudo}" pode ser longo: corta com reticencias em vez
+   de empurrar o resto da linha de dados pra fora do cartao. */
+.painel-itens-modulo__item--vinculado .painel-itens-modulo__item-dados {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.painel-itens-modulo__vinculo-texto {
+  display: inline-block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Celular: a linha do quiz divide espaco com o botao ("Iniciar quiz"/"Ver
+   revisao") e o "↳ Quiz sobre..." sumiria espremido - vai pra uma linha
+   propria, com o resto dos dados embaixo. */
+@media (max-width: 767.98px) {
+  .painel-itens-modulo__item--vinculado .painel-itens-modulo__item-dados {
+    flex-wrap: wrap;
+    row-gap: 0.1rem;
+  }
+
+  .painel-itens-modulo__vinculo-texto {
+    flex-basis: 100%;
+  }
+
+  .painel-itens-modulo__vinculo-separador {
+    display: none;
+  }
+}
+
 .painel-itens-modulo__texto {
   display: flex;
   flex: 1;
@@ -10409,6 +10488,23 @@
 
   .painel-itens-modulo__selo-tipo {
     display: none;
+  }
+
+  /* Botao da linha ("Iniciar quiz"/"Ver revisao" do Aluno) desce pra baixo
+     do texto quando nao sobra ~9rem pro titulo, em vez de espremer o texto
+     em uma coluna de poucas letras. Linhas com acao curta ("Abrir ›", menu
+     ⋮) continuam numa linha so. */
+  .painel-itens-modulo__linha {
+    flex-wrap: wrap;
+    row-gap: var(--espaco-sm);
+  }
+
+  .painel-itens-modulo__texto {
+    flex: 1 1 9rem;
+  }
+
+  .painel-itens-modulo__direita {
+    margin-left: auto;
   }
 }
 

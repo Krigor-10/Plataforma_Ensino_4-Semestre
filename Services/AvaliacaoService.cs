@@ -1082,11 +1082,11 @@ public class AvaliacaoService : IAvaliacaoService
     }
 
     /// <summary>
-    /// Quiz de modulo exige 100% dos conteudos DAQUELE modulo; avaliacao sem
-    /// modulo (prova/exercicio final) exige 100% dos conteudos do curso inteiro
-    /// mais todos os quizzes de modulo ja enviados. Qualquer outra combinacao
-    /// (ex.: avaliacao vinculada a ConteudoDidaticoId especifico) nao tem
-    /// restricao de progresso por enquanto.
+    /// Quiz vinculado a um conteudo (ConteudoDidaticoId) libera quando esse
+    /// conteudo e concluido; quiz solto do modulo exige 100% dos conteudos
+    /// DAQUELE modulo; avaliacao sem modulo (prova/exercicio final) exige 100%
+    /// dos conteudos do curso inteiro mais todos os quizzes de modulo ja
+    /// enviados. Ver LiberacaoAvaliacoesInfo.
     /// </summary>
     private async Task<bool> AvaliacaoLiberadaPorProgressoAsync(Avaliacao avaliacao, int matriculaId)
     {
@@ -1096,6 +1096,16 @@ public class AvaliacaoService : IAvaliacaoService
 
     private static bool AvaliacaoLiberadaPorProgresso(Avaliacao avaliacao, LiberacaoAvaliacoesInfo liberacao)
     {
+        var quizVinculadoAConteudoDaTrilha =
+            avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz &&
+            avaliacao.ConteudoDidaticoId.HasValue &&
+            liberacao.ConteudosPublicados.Contains(avaliacao.ConteudoDidaticoId.Value);
+
+        if (quizVinculadoAConteudoDaTrilha)
+        {
+            return liberacao.ConteudosConcluidos.Contains(avaliacao.ConteudoDidaticoId!.Value);
+        }
+
         if (avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz && avaliacao.ModuloId.HasValue)
         {
             return liberacao.ModulosComConteudoCompleto.Contains(avaliacao.ModuloId.Value);

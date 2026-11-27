@@ -64,7 +64,7 @@ export function formatScore(value) {
 
 export function formatQuestoes(total) {
   const quantidade = Number(total) || 0;
-  return `${quantidade} questão${quantidade === 1 ? "" : "ões"}`;
+  return `${quantidade} ${quantidade === 1 ? "questão" : "questões"}`;
 }
 
 export function formatarTempoRestante(segundosRestantes) {

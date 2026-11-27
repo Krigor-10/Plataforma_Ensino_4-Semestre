@@ -258,6 +258,42 @@ public class ChatbotFerramentasServiceTests
     }
 
     [Fact]
+    public async Task ObterSituacaoAvaliacoesAsync_QuizVinculadoBloqueado_CitaSoOConteudoPai()
+    {
+        var context = TestContextFactory.Criar();
+        var aluno = CriarAluno(context, "A");
+        var curso = CriarCurso(context, "Curso com quiz vinculado");
+        var matricula = CriarMatriculaAprovada(context, aluno.Id, curso.Id);
+        var modulo = CriarModulo(context, curso.Id, "Modulo 2", new DateTime(2026, 1, 1));
+
+        var conteudoPai = CriarConteudoPublicado(context, curso.Id, modulo.Id, "Conteudo 1");
+        CriarConteudoPublicado(context, curso.Id, modulo.Id, "Conteudo 2");
+
+        var avaliacoesFake = new AvaliacaoServiceFake();
+        avaliacoesFake.Avaliacoes.Add(new AvaliacaoAlunoResponseDto
+        {
+            Id = 11,
+            MatriculaId = matricula.Id,
+            Titulo = "Quiz sobre Conteudo 1",
+            CursoId = curso.Id,
+            ModuloId = modulo.Id,
+            ModuloTitulo = modulo.Titulo,
+            ConteudoDidaticoId = conteudoPai.Id,
+            TipoAvaliacao = TipoAvaliacao.Quiz,
+            TentativasPermitidas = 1,
+            ProgressoLiberado = false
+        });
+
+        var service = CriarService(context, new MatriculaServiceFake(context), avaliacoesFake);
+
+        var situacao = Assert.Single(await service.ObterSituacaoAvaliacoesAsync(aluno.Id, curso.Id));
+
+        Assert.Equal(new List<string> { "Conteudo 1" }, situacao.ConteudosPendentes);
+        Assert.Contains("Conteudo 1", situacao.Motivo);
+        Assert.DoesNotContain("100%", situacao.Motivo);
+    }
+
+    [Fact]
     public void SituacaoAvaliacaoFerramentaDto_NaoExpoeEnunciadoNemGabarito()
     {
         // Ferramenta "situacao_avaliacoes" NUNCA pode mandar enunciado/gabarito pro

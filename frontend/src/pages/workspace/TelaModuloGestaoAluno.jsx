@@ -10,25 +10,96 @@ import { normalizeContentType } from "../../lib/format.js";
 import { montarNomesExibicaoQuizzesVinculados } from "../../lib/trilhaConteudos.js";
 import { obterDisponibilidadeAvaliacao, obterSeloCursoAluno } from "./SecoesAluno.jsx";
 
-// Flat na mesma ordem do professor (material, quiz vinculado logo depois,
-// quizzes soltos no fim) - so que aqui `modulo.conteudos[].quizzes` ja vem
-// pronto de SecaoConteudosAluno.jsx (gruposConteudosPorCurso), sem precisar
-// cruzar conteudos/avaliacoes crus. `bloqueado` e por ordem - o mesmo quiz
-// vinculado herda o bloqueio do conteudo-pai (mesma regra do acordeao de
-// antes: nenhum item deste modulo aparece liberado antes do anterior).
-function montarItensOrdenadosAluno(modulo) {
+export const MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR = "conteudo-anterior";
+export const MOTIVO_BLOQUEIO_QUIZ_ANTERIOR = "quiz-anterior";
+
+export function quizFoiEnviado(quiz) {
+  return Number(quiz.tentativasRealizadas || 0) > 0;
+}
+
+// Quiz vinculado que ainda segura o conteudo seguinte: nao enviado e que o
+// aluno consegue (ou vai conseguir, ao concluir o conteudo-pai) responder.
+// Quiz sem questoes, agendado, encerrado ou sem tentativas restantes nao
+// trava a trilha - senao o aluno ficaria parado sem ter o que fazer.
+function quizVinculadoSeguraProximoConteudo(quiz) {
+  if (quizFoiEnviado(quiz)) {
+    return false;
+  }
+  return quiz.progressoLiberado === false || obterDisponibilidadeAvaliacao(quiz).podeRealizar;
+}
+
+// Lista plana na ordem da trilha (material, quiz(zes) vinculado(s) logo
+// depois, quizzes soltos no fim), ja com o bloqueio em ORDEM ESTRITA (docs/
+// TelaConteudosAlunos/PROMPT-agente-quiz-vinculado-ordem-estrita.md): a
+// ordem da tela e a ordem em que os itens liberam.
+// - conteudo: espera o conteudo anterior E o(s) quiz(zes) vinculado(s) a
+//   ele. Conteudo ja concluido nunca volta a ficar bloqueado (o aluno pode
+//   rever o que ja viu);
+// - quiz vinculado: libera quando o conteudo-pai e concluido (o servidor
+//   segue a mesma regra, ver AvaliacaoService.AvaliacaoLiberadaPorProgresso);
+// - quiz solto: a liberacao vem so do servidor (100% dos conteudos).
+// `modulo.conteudos[].quizzes` ja vem pronto de SecoesAluno.jsx
+// (gruposConteudosPorCurso). Reaproveitado pelo botao "Continuar" do cartao
+// do curso (obterProximoItemLiberado), pra os dois nunca discordarem.
+export function montarItensOrdenadosAluno(modulo) {
   const itens = [];
   modulo.conteudos.forEach((conteudo, indice) => {
-    const bloqueado = indice > 0 && !modulo.conteudos[indice - 1].concluido;
-    itens.push({ id: `material-${conteudo.id}`, tipo: "material", conteudo, bloqueado });
+    const conteudoAnterior = indice > 0 ? modulo.conteudos[indice - 1] : null;
+    let motivoBloqueio = null;
+    if (conteudoAnterior && !conteudo.concluido) {
+      if (!conteudoAnterior.concluido) {
+        motivoBloqueio = MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR;
+      } else if ((conteudoAnterior.quizzes || []).some(quizVinculadoSeguraProximoConteudo)) {
+        motivoBloqueio = MOTIVO_BLOQUEIO_QUIZ_ANTERIOR;
+      }
+    }
+
+    itens.push({ id: `material-${conteudo.id}`, tipo: "material", conteudo, bloqueado: Boolean(motivoBloqueio), motivoBloqueio });
     (conteudo.quizzes || []).forEach((quiz) => {
-      itens.push({ id: `quiz-${quiz.id}`, tipo: "quiz", quiz, conteudoVinculado: conteudo, bloqueado });
+      const bloqueado = !conteudo.concluido;
+      itens.push({
+        id: `quiz-${quiz.id}`,
+        tipo: "quiz",
+        quiz,
+        conteudoVinculado: conteudo,
+        bloqueado,
+        motivoBloqueio: bloqueado ? MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR : null
+      });
     });
   });
   modulo.quizzes.forEach((quiz) => {
-    itens.push({ id: `quiz-${quiz.id}`, tipo: "quiz", quiz, bloqueado: false });
+    itens.push({ id: `quiz-${quiz.id}`, tipo: "quiz", quiz, bloqueado: false, motivoBloqueio: null });
   });
   return itens;
+}
+
+// Proximo passo do aluno neste modulo: o primeiro item liberado e ainda nao
+// feito (quiz so conta quando pode ser respondido agora).
+export function encontrarProximoPassoAluno(itensOrdenados) {
+  return (
+    itensOrdenados.find((item) => {
+      if (item.bloqueado) {
+        return false;
+      }
+      if (item.tipo === "material") {
+        return !item.conteudo.concluido;
+      }
+      return !quizFoiEnviado(item.quiz) && obterDisponibilidadeAvaliacao(item.quiz).podeRealizar;
+    }) || null
+  );
+}
+
+const TEXTO_MOTIVO_BLOQUEIO = {
+  [MOTIVO_BLOQUEIO_CONTEUDO_ANTERIOR]: "Conclua o conteúdo anterior",
+  [MOTIVO_BLOQUEIO_QUIZ_ANTERIOR]: "Responda o quiz acima para liberar"
+};
+
+function DadosLinhaBloqueada({ motivoBloqueio }) {
+  return (
+    <span className="painel-itens-modulo__item-dados-parte">
+      <TbLock aria-hidden="true" size="0.85rem" /> Bloqueado · {TEXTO_MOTIVO_BLOQUEIO[motivoBloqueio]}
+    </span>
+  );
 }
 
 function statusConteudo(conteudo) {
@@ -47,8 +118,8 @@ function statusConteudo(conteudo) {
    compartilhados), com o ponto de vista do aluno - linha de dados mostra o
    STATUS do aluno (Concluido/Em andamento/Nao iniciado/Bloqueado) em vez de
    Publicado/Rascunho, e o quiz tem o botao da acao de hoje (Iniciar quiz/
-   Ver revisao) na propria linha, em vez de abrir na janela. Bloqueio por
-   ordem (modulo.conteudos[].concluido) preservado - a linha continua
+   Ver revisao) na propria linha, em vez de abrir na janela. Bloqueio em
+   ordem estrita (montarItensOrdenadosAluno) - a linha continua
    visivel, so fica inerte (cadeado, opacidade reduzida), em vez de sumir
    como o acordeao fazia. Sem coluna de modulos, sem seletor e sem "Modulo
    anterior/Proximo" - a unica forma de trocar de modulo e o "← Voltar",
@@ -165,11 +236,13 @@ export default function TelaModuloGestaoAluno({
   }
 
   const destaqueAtivoId = destaqueLocalId;
+  const proximoPassoId = encontrarProximoPassoAluno(itensOrdenados)?.id ?? null;
 
   const linhas = itensOrdenados.map((entrada) => {
     const tituloExibicao = tituloExibicaoItem(entrada);
     const ancoraId = `painel-item-${entrada.id}`;
     const destaque = entrada.id === destaqueAtivoId;
+    const proximoPasso = entrada.id === proximoPassoId;
 
     if (entrada.tipo === "material") {
       const { conteudo } = entrada;
@@ -182,15 +255,14 @@ export default function TelaModuloGestaoAluno({
         ancoraId,
         bloqueado: entrada.bloqueado,
         destaque,
+        proximoPasso,
         tituloReal: conteudo.titulo,
         tituloExibicao,
         descricao: conteudo.descricao || "",
         corIcone: conteudo.concluido ? "verde" : "roxo",
         iconeTipo: obterIconeTipoConteudo(conteudo.tipoConteudo, "1.6rem"),
         dadosLinha: entrada.bloqueado ? (
-          <span className="painel-itens-modulo__item-dados-parte">
-            <TbLock aria-hidden="true" size="0.85rem" /> Bloqueado · Conclua o conteúdo anterior
-          </span>
+          <DadosLinhaBloqueada motivoBloqueio={entrada.motivoBloqueio} />
         ) : (
           <>
             <span className="painel-itens-modulo__item-dados-parte">
@@ -211,7 +283,7 @@ export default function TelaModuloGestaoAluno({
 
     const { quiz } = entrada;
     const totalQuestoesQuiz = quiz.totalQuestoes || 0;
-    const quizConcluido = Number(quiz.tentativasRealizadas || 0) > 0;
+    const quizConcluido = quizFoiEnviado(quiz);
     const disponibilidadeQuiz = obterDisponibilidadeAvaliacao(quiz);
     const quizBloqueado = entrada.bloqueado || (!quizConcluido && !disponibilidadeQuiz.podeRealizar);
 
@@ -226,15 +298,15 @@ export default function TelaModuloGestaoAluno({
       ancoraId,
       bloqueado: quizBloqueado,
       destaque,
+      proximoPasso,
+      vinculadoA: entrada.conteudoVinculado ? { id: entrada.conteudoVinculado.id, titulo: entrada.conteudoVinculado.titulo } : null,
       tituloReal: quiz.titulo,
       tituloExibicao,
       descricao: "",
       corIcone: quizConcluido ? "verde" : "roxo",
       iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,
       dadosLinha: entrada.bloqueado ? (
-        <span className="painel-itens-modulo__item-dados-parte">
-          <TbLock aria-hidden="true" size="0.85rem" /> Bloqueado · Conclua o conteúdo anterior
-        </span>
+        <DadosLinhaBloqueada motivoBloqueio={entrada.motivoBloqueio} />
       ) : (
         <>
           <span className="painel-itens-modulo__item-dados-parte">
@@ -273,8 +345,8 @@ export default function TelaModuloGestaoAluno({
   const resumoModulo = `${totalConteudos} conteúdo${totalConteudos === 1 ? "" : "s"} · ${totalQuizzes} quiz${totalQuizzes === 1 ? "" : "zes"}`;
   const totalConcluidos =
     modulo.conteudos.filter((conteudo) => conteudo.concluido).length +
-    quizzesVinculados.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length +
-    modulo.quizzes.filter((quiz) => Number(quiz.tentativasRealizadas || 0) > 0).length;
+    quizzesVinculados.filter(quizFoiEnviado).length +
+    modulo.quizzes.filter(quizFoiEnviado).length;
   const totalItensModulo = totalConteudos + totalQuizzes;
 
   const numeroModuloTexto = `Módulo ${String(moduloIndice + 1).padStart(2, "0")}`;

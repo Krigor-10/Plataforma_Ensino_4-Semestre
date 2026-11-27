@@ -523,6 +523,7 @@ export default function TelaModuloGestaoProfessor({
       id: item.id,
       tituloReal,
       tituloExibicao,
+      vinculadoA: item.conteudoVinculado ? { id: item.conteudoVinculado.id, titulo: item.conteudoVinculado.titulo } : null,
       descricao: "",
       corIcone: publicado ? "verde" : "roxo",
       iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,

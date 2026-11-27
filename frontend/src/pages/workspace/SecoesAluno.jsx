@@ -41,7 +41,7 @@ import { useBloqueioScroll } from "../../hooks/useBloqueioScroll.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { CartaoCursoMatricula } from "./SecaoMatriculas.jsx";
 import { RevisaoTentativaAvaliacao } from "./RevisaoTentativaAvaliacao.jsx";
-import TelaModuloGestaoAluno from "./TelaModuloGestaoAluno.jsx";
+import TelaModuloGestaoAluno, { encontrarProximoPassoAluno, montarItensOrdenadosAluno } from "./TelaModuloGestaoAluno.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { mapById } from "../../lib/dashboard.js";
 import {
@@ -2006,13 +2006,11 @@ export function SecaoConteudosAluno({
   );
 }
 
-// Primeiro item NAO concluido e liberado do curso inteiro, na ordem da
-// trilha (material antes do(s) quiz(zes) vinculado(s), depois os quizzes
-// soltos do modulo) - alimenta o botao "▶ Continuar: {proximo item}" do
-// cartao do curso (item 2 do prompt). Um modulo bloqueado encerra a busca
-// (nada depois dele esta liberado); dentro do modulo, um item bloqueado por
-// ordem faz o mesmo. Quiz so conta como "proximo" quando pode ser
-// respondido agora (obterDisponibilidadeAvaliacao) - uma avaliacao
+// Primeiro item NAO feito e liberado do curso inteiro, na ordem estrita da
+// trilha (montarItensOrdenadosAluno, a mesma regra da tela do modulo) -
+// alimenta o botao "▶ Continuar: {proximo item}" do cartao do curso. Um
+// modulo bloqueado encerra a busca (nada depois dele esta liberado). Quiz so
+// conta como "proximo" quando pode ser respondido agora - uma avaliacao
 // agendada/encerrada nao vira destino do botao.
 function obterProximoItemLiberado(modulosComEstado) {
   for (const { bloqueado, modulo } of modulosComEstado) {
@@ -2020,29 +2018,11 @@ function obterProximoItemLiberado(modulosComEstado) {
       break;
     }
 
-    for (let indice = 0; indice < modulo.conteudos.length; indice += 1) {
-      const conteudo = modulo.conteudos[indice];
-      if (indice > 0 && !modulo.conteudos[indice - 1].concluido) {
-        break;
-      }
-
-      if (!conteudo.concluido) {
-        return { tipo: "material", item: conteudo, modulo };
-      }
-
-      const quizLiberado = (conteudo.quizzes || []).find(
-        (quiz) => Number(quiz.tentativasRealizadas || 0) === 0 && obterDisponibilidadeAvaliacao(quiz).podeRealizar
-      );
-      if (quizLiberado) {
-        return { tipo: "quiz", item: quizLiberado, modulo };
-      }
-    }
-
-    const quizSoltoLiberado = modulo.quizzes.find(
-      (quiz) => Number(quiz.tentativasRealizadas || 0) === 0 && obterDisponibilidadeAvaliacao(quiz).podeRealizar
-    );
-    if (quizSoltoLiberado) {
-      return { tipo: "quiz", item: quizSoltoLiberado, modulo };
+    const proximoPasso = encontrarProximoPassoAluno(montarItensOrdenadosAluno(modulo));
+    if (proximoPasso) {
+      return proximoPasso.tipo === "material"
+        ? { tipo: "material", item: proximoPasso.conteudo, modulo }
+        : { tipo: "quiz", item: proximoPasso.quiz, modulo };
     }
   }
 
@@ -2407,9 +2387,11 @@ export function obterDisponibilidadeAvaliacao(avaliacao) {
     return {
       podeRealizar: false,
       label: "Bloqueada",
-      mensagem: avaliacao.moduloId
-        ? "Conclua todos os conteudos deste modulo para liberar esta avaliacao."
-        : "Conclua todos os conteudos e quizzes do curso para liberar a avaliacao final.",
+      mensagem: avaliacao.conteudoDidaticoId
+        ? "Conclua o conteúdo deste quiz para liberá-lo."
+        : avaliacao.moduloId
+          ? "Conclua todos os conteudos deste modulo para liberar esta avaliacao."
+          : "Conclua todos os conteudos e quizzes do curso para liberar a avaliacao final.",
       tone: "warning"
     };
   }

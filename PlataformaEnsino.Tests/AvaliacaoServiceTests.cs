@@ -2006,6 +2006,88 @@ public class AvaliacaoServiceTests
         Assert.False(item.ProgressoLiberado);
     }
 
+    // ---------- Quiz vinculado a um conteudo: ordem estrita da trilha ----------
+    // docs/TelaConteudosAlunos/PROMPT-agente-quiz-vinculado-ordem-estrita.md:
+    // o quiz vinculado libera assim que o conteudo-pai e concluido, mesmo com
+    // outros conteudos do modulo pendentes.
+
+    private static async Task<(AvaliacaoService Service, PlataformaContext Context, Aluno Aluno, Avaliacao QuizVinculado, ConteudoDidatico ConteudoPai, ConteudoDidatico ConteudoSeguinte)> CriarCenarioQuizVinculadoAoPrimeiroConteudo()
+    {
+        var (service, context, professor, aluno, turma, modulo, quiz) = await CriarCenarioComAvaliacaoPublicada();
+        var conteudoPai = CriarConteudoPublicado(context, turma.Id, modulo.Id, quiz.CursoId, "Conteudo 1");
+        var conteudoSeguinte = CriarConteudoPublicado(context, turma.Id, modulo.Id, quiz.CursoId, "Conteudo 2");
+        await service.AdicionarQuestaoAsync(quiz.Id, professor.Id, NovaQuestaoObjetivaDto());
+
+        quiz.ConteudoDidaticoId = conteudoPai.Id;
+        context.Avaliacoes.Update(quiz);
+        await context.SaveChangesAsync();
+
+        return (service, context, aluno, quiz, conteudoPai, conteudoSeguinte);
+    }
+
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_QuizVinculadoComConteudoPaiConcluido_LiberaMesmoComOutroConteudoPendente()
+    {
+        var (service, context, aluno, _, conteudoPai, _) = await CriarCenarioQuizVinculadoAoPrimeiroConteudo();
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudoPai.Id);
+
+        var resultado = (await service.ListarAvaliacoesPorAlunoAsync(aluno.Id)).ToList();
+
+        Assert.True(Assert.Single(resultado).ProgressoLiberado);
+    }
+
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_QuizVinculadoComConteudoPaiPendente_MarcaProgressoLiberadoFalso()
+    {
+        var (service, context, aluno, _, _, conteudoSeguinte) = await CriarCenarioQuizVinculadoAoPrimeiroConteudo();
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudoSeguinte.Id);
+
+        var resultado = (await service.ListarAvaliacoesPorAlunoAsync(aluno.Id)).ToList();
+
+        Assert.False(Assert.Single(resultado).ProgressoLiberado);
+    }
+
+    [Fact]
+    public async Task ListarQuestoesPorAlunoAsync_QuizVinculadoComConteudoPaiConcluido_PermiteIniciar()
+    {
+        var (service, context, aluno, quiz, conteudoPai, _) = await CriarCenarioQuizVinculadoAoPrimeiroConteudo();
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudoPai.Id);
+
+        var questoes = await service.ListarQuestoesPorAlunoAsync(quiz.Id, aluno.Id);
+
+        Assert.Single(questoes);
+    }
+
+    [Fact]
+    public async Task ListarQuestoesPorAlunoAsync_QuizVinculadoComConteudoPaiPendente_LancaInvalidOperation()
+    {
+        var (service, _, aluno, quiz, _, _) = await CriarCenarioQuizVinculadoAoPrimeiroConteudo();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.ListarQuestoesPorAlunoAsync(quiz.Id, aluno.Id));
+    }
+
+    [Fact]
+    public async Task ListarAvaliacoesPorAlunoAsync_QuizVinculadoAConteudoForaDaTrilha_VoltaParaRegraDoModulo()
+    {
+        var (service, context, aluno, _, conteudoPai, conteudoSeguinte) = await CriarCenarioQuizVinculadoAoPrimeiroConteudo();
+        conteudoPai.DefinirStatusPublicacao(StatusPublicacao.Rascunho);
+        context.ConteudosDidaticos.Update(conteudoPai);
+        await context.SaveChangesAsync();
+
+        var antes = Assert.Single(await service.ListarAvaliacoesPorAlunoAsync(aluno.Id));
+        Assert.False(antes.ProgressoLiberado);
+
+        var progressoService = new ProgressoAlunoService(context, new AcessoAcademicoService(context));
+        await progressoService.MarcarConteudoConcluidoAsync(aluno.Id, conteudoSeguinte.Id);
+
+        var depois = Assert.Single(await service.ListarAvaliacoesPorAlunoAsync(aluno.Id));
+        Assert.True(depois.ProgressoLiberado);
+    }
+
     // docs/certificados-mobile/PROMPT-agente-certificados-mobile.md, item 0:
     // a nota lancada (via correcao automatica da prova objetiva) que atinge
     // o minimo de 7 emite o certificado automaticamente, quando o resto do

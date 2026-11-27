@@ -164,16 +164,37 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
         var resultado = new List<SituacaoAvaliacaoFerramentaDto>();
         foreach (var avaliacao in avaliacoesDoCurso)
         {
-            var pendentes = avaliacao.ProgressoLiberado
-                ? new List<string>()
-                : await ObterTitulosConteudosPendentesAsync(matricula.Id, cursoId, avaliacao.ModuloId);
+            var pendentes = new List<string>();
+            string? motivo = null;
+
+            if (!avaliacao.ProgressoLiberado)
+            {
+                // Quiz vinculado a um conteudo libera so com ESSE conteudo
+                // (ordem estrita da trilha, ver LiberacaoAvaliacoesInfo). Lista
+                // vazia aqui = o conteudo-pai saiu da trilha (excluido/
+                // despublicado) e o quiz voltou pra regra do quiz solto.
+                var pendentesDoConteudoPai = avaliacao.TipoAvaliacao == TipoAvaliacao.Quiz && avaliacao.ConteudoDidaticoId.HasValue
+                    ? await ObterTitulosConteudosPendentesAsync(matricula.Id, cursoId, avaliacao.ModuloId, avaliacao.ConteudoDidaticoId)
+                    : new List<string>();
+
+                if (pendentesDoConteudoPai.Count > 0)
+                {
+                    pendentes = pendentesDoConteudoPai;
+                    motivo = $"Conclua o conteudo \"{pendentesDoConteudoPai[0]}\" para liberar este quiz.";
+                }
+                else
+                {
+                    pendentes = await ObterTitulosConteudosPendentesAsync(matricula.Id, cursoId, avaliacao.ModuloId);
+                    motivo = MontarMotivoBloqueio(avaliacao.ModuloId, avaliacao.ModuloTitulo, pendentes);
+                }
+            }
 
             resultado.Add(new SituacaoAvaliacaoFerramentaDto
             {
                 AvaliacaoId = avaliacao.Id,
                 Titulo = avaliacao.Titulo,
                 Liberada = avaliacao.ProgressoLiberado,
-                Motivo = avaliacao.ProgressoLiberado ? null : MontarMotivoBloqueio(avaliacao.ModuloId, avaliacao.ModuloTitulo, pendentes),
+                Motivo = motivo,
                 ConteudosPendentes = pendentes,
                 TentativasPermitidas = avaliacao.TentativasPermitidas,
                 TentativasRealizadas = avaliacao.TentativasRealizadas,
@@ -198,11 +219,16 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
     /// <summary>
     /// Titulos dos conteudos publicados ainda nao concluidos pelo aluno - do
     /// modulo especifico (avaliacao de modulo) ou do curso inteiro (prova/
-    /// exercicio final, moduloId nulo). Usado so quando a avaliacao esta
+    /// exercicio final, moduloId nulo), ou so do conteudo-pai de um quiz
+    /// vinculado (conteudoDidaticoId). Usado so quando a avaliacao esta
     /// bloqueada, pra o assistente poder citar os conteudos pendentes pelo
     /// nome em vez de so uma contagem agregada.
     /// </summary>
-    private async Task<List<string>> ObterTitulosConteudosPendentesAsync(int matriculaId, int cursoId, int? moduloId)
+    private async Task<List<string>> ObterTitulosConteudosPendentesAsync(
+        int matriculaId,
+        int cursoId,
+        int? moduloId,
+        int? conteudoDidaticoId = null)
     {
         var consulta = _context.ConteudosDidaticos
             .AsNoTracking()
@@ -211,7 +237,11 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
                 conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
                 conteudo.ExcluidoEm == null);
 
-        if (moduloId.HasValue)
+        if (conteudoDidaticoId.HasValue)
+        {
+            consulta = consulta.Where(conteudo => conteudo.Id == conteudoDidaticoId.Value);
+        }
+        else if (moduloId.HasValue)
         {
             consulta = consulta.Where(conteudo => conteudo.ModuloId == moduloId.Value);
         }

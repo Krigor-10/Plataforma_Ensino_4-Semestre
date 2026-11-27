@@ -380,7 +380,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
         var (quizzesCurso, quizzesConcluidosIds) = await ObterQuizzesDoCursoAsync(matricula);
         var cursoQuizzesCompleto = quizzesCurso.All(quiz => quizzesConcluidosIds.Contains(quiz.Id));
 
-        return new LiberacaoAvaliacoesInfo(modulosComConteudoCompleto, cursoConteudosCompleto && cursoQuizzesCompleto);
+        return new LiberacaoAvaliacoesInfo(
+            modulosComConteudoCompleto,
+            cursoConteudosCompleto && cursoQuizzesCompleto,
+            concluidos,
+            conteudoIds.ToHashSet());
     }
 
     private async Task RecalcularMediaModuloAsync(Matricula matricula, int moduloId, DateTime now)

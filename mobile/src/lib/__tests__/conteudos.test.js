@@ -68,6 +68,30 @@ describe("agruparConteudosPorCurso", () => {
     expect(curso.proximoConteudo?.id).toBe(2);
   });
 
+  it("ordem estrita: conteudo seguinte espera o quiz vinculado ao anterior ser enviado", () => {
+    const { conteudos, cursos, matriculas, modulos, progressos } = montarCenario();
+    const quizPendente = { id: 500, tipoAvaliacao: 1, cursoId: 1, moduloId: 100, conteudoDidaticoId: 1, totalQuestoes: 2, tentativasRestantes: 1 };
+
+    const [cursoComQuizPendente] = agruparConteudosPorCurso({ avaliacoes: [quizPendente], conteudos, cursos, matriculas, modulos, progressos });
+    const conteudo2 = cursoComQuizPendente.modulos[0].conteudos[1];
+    expect(conteudo2.bloqueado).toBe(true);
+    expect(conteudo2.motivoBloqueio).toBe("quiz-anterior");
+    expect(cursoComQuizPendente.proximoConteudo).toBeNull();
+
+    const quizEnviado = { ...quizPendente, tentativasRealizadas: 1, tentativasRestantes: 0 };
+    const [cursoComQuizEnviado] = agruparConteudosPorCurso({ avaliacoes: [quizEnviado], conteudos, cursos, matriculas, modulos, progressos });
+    expect(cursoComQuizEnviado.modulos[0].conteudos[1].bloqueado).toBe(false);
+  });
+
+  it("ordem estrita: quiz vinculado sem questoes nao trava a trilha", () => {
+    const { conteudos, cursos, matriculas, modulos, progressos } = montarCenario();
+    const quizSemQuestoes = { id: 500, tipoAvaliacao: 1, cursoId: 1, moduloId: 100, conteudoDidaticoId: 1, totalQuestoes: 0 };
+
+    const [curso] = agruparConteudosPorCurso({ avaliacoes: [quizSemQuestoes], conteudos, cursos, matriculas, modulos, progressos });
+
+    expect(curso.modulos[0].conteudos[1].bloqueado).toBe(false);
+  });
+
   it("aninha o quiz vinculado a um material especifico dentro do conteudo, nao solto no modulo", () => {
     const { avaliacoes, conteudos, cursos, matriculas, modulos, progressos } = montarCenario();
     const [curso] = agruparConteudosPorCurso({ avaliacoes, conteudos, cursos, matriculas, modulos, progressos });

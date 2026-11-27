@@ -24,7 +24,31 @@ import NumeroModulo from "./NumeroModulo.jsx";
    de antes fazia), `acao` (um no React no lugar do menu ⋮ - o botao "Iniciar
    quiz"/"Continuar"/"Ver revisao" do quiz) e `destaque` (realce temporario
    na linha, usado pelo botao "Continuar: {proximo item}" do cartao do
-   curso ao levar o aluno direto pro quiz em questao). */
+   curso ao levar o aluno direto pro quiz em questao), alem de `proximoPasso`
+   (aro fixo no primeiro item liberado e ainda nao feito).
+
+   `vinculadoA: { id, titulo }` (os 3 perfis, docs/TelaConteudosAlunos/
+   PROMPT-agente-quiz-vinculado-ordem-estrita.md, item 3) marca o quiz
+   vinculado a um conteudo: a linha fica recuada, com um conector em "L"
+   saindo do conteudo de cima, icone menor e "↳ Quiz sobre {conteudo}" no
+   comeco da linha de dados. Quiz solto vem sem `vinculadoA` e nao muda. */
+function rotuloAcessivelLinha(linha) {
+  if (linha.vinculadoA) {
+    return `Quiz sobre ${linha.vinculadoA.titulo}: ${linha.tituloReal}`;
+  }
+  return linha.bloqueado ? undefined : `Ver ${linha.tituloReal}`;
+}
+
+function classesItem(linha) {
+  return [
+    "painel-itens-modulo__item",
+    linha.destaque ? "painel-itens-modulo__item--destaque" : "",
+    linha.proximoPasso ? "painel-itens-modulo__item--proximo-passo" : "",
+    linha.vinculadoA ? "painel-itens-modulo__item--vinculado" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 export default function PainelItensModulo({
   barraSelecao,
   itensSelecionados,
@@ -77,13 +101,10 @@ export default function PainelItensModulo({
             const selecionado = itensSelecionados?.has(linha.id);
             const indisponivel = modoSelecao ? false : Boolean(linha.bloqueado);
             return (
-              <li
-                className={`painel-itens-modulo__item${linha.destaque ? " painel-itens-modulo__item--destaque" : ""}`}
-                id={linha.ancoraId}
-                key={linha.id}
-              >
+              <li className={classesItem(linha)} id={linha.ancoraId} key={linha.id}>
+                {linha.vinculadoA ? <span aria-hidden="true" className="painel-itens-modulo__conector-vinculo" /> : null}
                 <div
-                  aria-label={linha.bloqueado ? undefined : `Ver ${linha.tituloReal}`}
+                  aria-label={rotuloAcessivelLinha(linha)}
                   className={`painel-itens-modulo__linha${linha.bloqueado ? " painel-itens-modulo__linha--bloqueada" : ""}`}
                   onClick={indisponivel ? undefined : () => (modoSelecao ? onSelecionarItem(linha.id) : linha.onAbrir())}
                   onKeyDown={
@@ -124,7 +145,19 @@ export default function PainelItensModulo({
                       {linha.tituloExibicao}
                     </strong>
                     {linha.descricao ? <span className="painel-itens-modulo__item-descricao">{linha.descricao}</span> : null}
-                    <span className="painel-itens-modulo__item-dados">{linha.dadosLinha}</span>
+                    <span className="painel-itens-modulo__item-dados">
+                      {linha.vinculadoA ? (
+                        <>
+                          <span className="painel-itens-modulo__item-dados-parte painel-itens-modulo__vinculo-texto">
+                            <span aria-hidden="true">↳</span> Quiz sobre {linha.vinculadoA.titulo}
+                          </span>
+                          <span aria-hidden="true" className="painel-itens-modulo__vinculo-separador">
+                            ·
+                          </span>
+                        </>
+                      ) : null}
+                      {linha.dadosLinha}
+                    </span>
                   </div>
 
                   <div className="painel-itens-modulo__direita" onClick={(evento) => evento.stopPropagation()}>

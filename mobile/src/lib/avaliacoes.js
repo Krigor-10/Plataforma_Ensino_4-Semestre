@@ -49,7 +49,9 @@ export function obterDisponibilidadeAvaliacao(avaliacao) {
     return {
       podeRealizar: false,
       label: "Bloqueada",
-      mensagem: avaliacao.moduloId
+      mensagem: avaliacao.conteudoDidaticoId
+        ? "Conclua o conteúdo deste quiz para liberá-lo."
+        : avaliacao.moduloId
         ? "Conclua todos os conteúdos deste módulo para liberar esta avaliação."
         : "Conclua todos os conteúdos e quizzes do curso para liberar a avaliação final.",
       tone: "aviso"

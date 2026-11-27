@@ -100,9 +100,16 @@ describe("TrilhaConteudosProfessor (SecaoConteudosProfessor)", () => {
 
     const listaDeConteudos = document.querySelector(".painel-itens-modulo__lista");
     const titulos = within(listaDeConteudos)
-      .getAllByRole("button", { name: /^Ver / })
+      .getAllByRole("button", { name: /^(Ver |Quiz sobre )/ })
       .map((botao) => botao.getAttribute("aria-label"));
-    expect(titulos).toEqual(["Ver Aula 1", "Ver Quiz da Aula 1"]);
+    expect(titulos).toEqual(["Ver Aula 1", "Quiz sobre Aula 1: Quiz da Aula 1"]);
+
+    // Quiz vinculado recuado, com conector e "↳ Quiz sobre {conteudo}"
+    // (PROMPT-agente-quiz-vinculado-ordem-estrita.md, item 3).
+    const itemQuiz = within(listaDeConteudos).getByText("Quiz da Aula 1").closest(".painel-itens-modulo__item");
+    expect(itemQuiz).toHaveClass("painel-itens-modulo__item--vinculado");
+    expect(itemQuiz.querySelector(".painel-itens-modulo__conector-vinculo")).toBeInTheDocument();
+    expect(within(itemQuiz).getByText(/Quiz sobre Aula 1/)).toBeInTheDocument();
   });
 
   test("dois quizzes vinculados ao mesmo material aparecem os dois", () => {

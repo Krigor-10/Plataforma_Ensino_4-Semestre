@@ -62,7 +62,8 @@ function montarItensDoModulo(moduloRevisao) {
       titulo,
       tituloReal: quizVinculado.titulo,
       quiz: quizVinculado,
-      questoes: quizVinculado.questoes
+      questoes: quizVinculado.questoes,
+      conteudoVinculado: conteudo
     });
   });
   quizzesSoltos.forEach((quiz) => {
@@ -186,6 +187,7 @@ export default function TelaModuloGestao({
       id: item.id,
       tituloReal,
       tituloExibicao: item.titulo,
+      vinculadoA: item.conteudoVinculado ? { id: item.conteudoVinculado.id, titulo: item.conteudoVinculado.titulo } : null,
       descricao: "",
       corIcone: "verde",
       iconeTipo: <TbTrophy aria-hidden="true" size="1.6rem" />,
