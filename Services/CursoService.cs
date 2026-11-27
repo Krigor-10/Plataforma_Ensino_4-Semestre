@@ -202,14 +202,21 @@ public class CursoService : ICursoService
             return;
         }
 
+        if (curso.PublicadoParaVendaEm.HasValue)
+        {
+            throw new InvalidOperationException(
+                "Este curso esta publicado para os alunos e o conteudo esta travado. Para alterar, peca ao Admin para tirar do catalogo/da venda.");
+        }
+
         if (curso.EncerradoEm.HasValue)
         {
             throw new InvalidOperationException(
                 "Este curso foi encerrado e nao aceita mais alteracoes de conteudo, avaliacoes ou modulos.");
         }
 
-        throw new InvalidOperationException(
-            "Este curso foi concluido pelo professor e esta aguardando o encerramento. Para alterar, peca ao coordenador para devolver o curso.");
+        throw new InvalidOperationException(curso.ModeloCurso == ModeloCurso.PagoPacote
+            ? "Este curso foi concluido pelo professor e esta aguardando a publicacao. Para alterar, peca ao coordenador para devolver o curso."
+            : "Este curso foi concluido pelo professor e esta aguardando o encerramento. Para alterar, peca ao coordenador para devolver o curso.");
     }
 
     /// <summary>
@@ -222,11 +229,18 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        var modeloComCicloDeVida = curso.ModeloCurso == ModeloCurso.Acompanhado || curso.ModeloCurso == ModeloCurso.Gratuito;
-        if (modeloComCicloDeVida && curso.EncerradoEm.HasValue)
+        // Pacote 7 (decisao D3): Acompanhado recusa depois de encerrado;
+        // Gratuito so aceita publicado (no catalogo). O Pago tem a checagem
+        // propria na compra (MatriculaService.ComprarCursoAsync).
+        if (curso.ModeloCurso == ModeloCurso.Acompanhado && curso.EncerradoEm.HasValue)
         {
             throw new InvalidOperationException(
                 "Este curso foi encerrado e nao aceita mais matriculas novas.");
+        }
+
+        if (curso.ModeloCurso == ModeloCurso.Gratuito && !curso.PublicadoParaVendaEm.HasValue)
+        {
+            throw new InvalidOperationException("Este curso nao esta disponivel no momento.");
         }
     }
 
@@ -235,9 +249,13 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso != ModeloCurso.Acompanhado && curso.ModeloCurso != ModeloCurso.Gratuito)
+        // Pacote 7: o Pago criado direto tambem e concluido pelo professor
+        // (vai direto ao Admin, "Pronto para publicar", decisao D11) - so
+        // enquanto nao estiver publicado nem encerrado.
+        var ehPago = curso.ModeloCurso == ModeloCurso.PagoPacote;
+        if (ehPago && (curso.PublicadoParaVendaEm.HasValue || curso.EncerradoEm.HasValue))
         {
-            throw new InvalidOperationException("Apenas cursos do modelo Acompanhado ou Gratuito podem ser concluidos pelo professor.");
+            throw new InvalidOperationException("Este curso ja esta publicado ou encerrado e nao pode ser concluido de novo.");
         }
 
         if (!await ProfessorPertenceAoCursoAsync(professorId, cursoId))
@@ -247,7 +265,8 @@ public class CursoService : ICursoService
 
         // Decisao D9 da auditoria de 26/11: sem coordenador ninguem encerra
         // o curso depois (o Admin nao encerra), entao ele ficaria parado.
-        if (!curso.CoordenadorId.HasValue)
+        // O Pago nao passa pelo coordenador (D11).
+        if (!ehPago && !curso.CoordenadorId.HasValue)
         {
             throw new InvalidOperationException(
                 "Este curso ainda nao tem coordenador. Peca ao Admin para atribuir um coordenador antes de concluir.");
@@ -261,6 +280,22 @@ public class CursoService : ICursoService
         curso.ConcluirPeloProfessor(professorId);
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
+
+        if (ehPago)
+        {
+            var adminIds = await _context.Admins.AsNoTracking().Select(admin => admin.Id).ToListAsync();
+            foreach (var adminId in adminIds)
+            {
+                await _notificacaoService.NotificarAsync(
+                    adminId,
+                    "Curso pronto para publicar",
+                    $"O professor concluiu o curso \"{curso.Titulo}\". Confira o preco e coloque a venda quando estiver pronto.",
+                    TipoNotificacao.CursoConcluidoPeloProfessor,
+                    $"/app/cursos/{cursoId}");
+            }
+
+            return;
+        }
 
         if (curso.CoordenadorId.HasValue)
         {
@@ -278,12 +313,11 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        // Acompanhado/Gratuito: ciclo de vida normal. PagoPacote so pode
-        // reencerrar se veio do fluxo Gratuito->pacote (ConcluidoPeloProfessorEm
-        // preenchido) — um pacote criado direto nunca passa por aqui.
+        // Pacote 7 (decisao D11): so Acompanhado e Gratuito passam pelo
+        // encerramento do coordenador. O Pago concluido vai direto ao Admin
+        // (publicar), e reabrir um Pago desfaz a conclusao.
         var modeloAceito = curso.ModeloCurso == ModeloCurso.Acompanhado
-            || curso.ModeloCurso == ModeloCurso.Gratuito
-            || (curso.ModeloCurso == ModeloCurso.PagoPacote && curso.ConcluidoPeloProfessorEm.HasValue);
+            || curso.ModeloCurso == ModeloCurso.Gratuito;
 
         if (!modeloAceito)
         {
@@ -358,9 +392,9 @@ public class CursoService : ICursoService
         // Correcao Adendo 2 item 1: um pacote que os alunos ja estao comprando
         // nao pode ser reaberto por baixo dos pes deles - o Admin precisa
         // tirar da venda primeiro (PublicarParaVendaAsync/DespublicarDaVendaAsync).
-        if (curso.ModeloCurso == ModeloCurso.PagoPacote && curso.PublicadoParaVendaEm.HasValue)
+        if (curso.PublicadoParaVendaEm.HasValue)
         {
-            throw new InvalidOperationException("Tire o curso da venda antes de reabrir.");
+            throw new InvalidOperationException("Tire o curso da venda/do catalogo antes de reabrir.");
         }
 
         // Gratuito/Acompanhado: reabrir tambem devolve ao professor - sem isso
@@ -368,7 +402,9 @@ public class CursoService : ICursoService
         // continuaria preenchido) e o professor nunca conseguiria concluir de
         // novo. Pacote (inclusive vindo do fluxo Gratuito->pacote) nao tem essa
         // devolucao - so o EncerradoEm volta, como sempre.
-        var desfazConclusaoAoReabrir = curso.ModeloCurso == ModeloCurso.Gratuito || curso.ModeloCurso == ModeloCurso.Acompanhado;
+        // Pacote 7: vale tambem pro Pago (pacote convertido), senao a marca
+        // de conclusao deixaria o curso travado depois de reaberto.
+        var desfazConclusaoAoReabrir = true;
 
         curso.Reabrir();
         if (desfazConclusaoAoReabrir)
@@ -400,9 +436,9 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso != ModeloCurso.Gratuito && curso.ModeloCurso != ModeloCurso.Acompanhado)
+        if (curso.PublicadoParaVendaEm.HasValue)
         {
-            throw new InvalidOperationException("Apenas cursos do modelo Gratuito ou Acompanhado podem ser devolvidos ao professor.");
+            throw new InvalidOperationException("Tire o curso da venda/do catalogo antes de devolver ao professor.");
         }
 
         if (curso.CoordenadorId != coordenadorId)
@@ -477,6 +513,12 @@ public class CursoService : ICursoService
                 "Somente um curso Gratuito encerrado ou ja do modelo Pago pode ter preco/descricao de pacote definidos.");
         }
 
+        // Pacote 7: um Gratuito no catalogo viraria Pago "a venda" na hora.
+        if (curso.ModeloCurso == ModeloCurso.Gratuito && curso.PublicadoParaVendaEm.HasValue)
+        {
+            throw new InvalidOperationException("Tire o curso do catalogo antes de converte-lo em pacote pago.");
+        }
+
         if (dto.Preco <= 0)
         {
             throw new ArgumentException("O preco do pacote deve ser maior que zero.");
@@ -500,23 +542,43 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        if (curso.ModeloCurso != ModeloCurso.PagoPacote)
+        // Pacote 7 da auditoria de 26/11 (regra de 25/11 + D2/D3/D11):
+        // Gratuito e Pago so chegam ao aluno completos.
+        if (curso.ModeloCurso == ModeloCurso.Acompanhado)
         {
-            throw new InvalidOperationException("Somente um pacote pago pode ser publicado para venda.");
+            throw new InvalidOperationException("Curso acompanhado nao usa publicacao. Depois de encerrado, ele pode ser convertido em Pago ou Gratuito.");
         }
 
-        if (curso.Preco <= 0)
+        if (curso.PublicadoParaVendaEm.HasValue)
         {
-            throw new InvalidOperationException("Defina um preco maior que zero antes de publicar o pacote para venda.");
+            return;
         }
 
-        // So exige "travado" (EncerradoEm) pra um pacote que veio do fluxo
-        // Gratuito->pacote (ConcluidoPeloProfessorEm preenchido). Um pacote
-        // criado direto pelo Admin nunca passou por conclusao/encerramento e
-        // publica sem essa exigencia.
-        if (curso.ConcluidoPeloProfessorEm.HasValue && !curso.EncerradoEm.HasValue)
+        if (curso.ModeloCurso == ModeloCurso.Gratuito && !curso.EncerradoEm.HasValue)
         {
-            throw new InvalidOperationException("Encerre o curso antes de publica-lo para venda.");
+            throw new InvalidOperationException("O professor precisa concluir e o coordenador precisa encerrar o curso antes de publicar.");
+        }
+
+        if (curso.ModeloCurso == ModeloCurso.PagoPacote)
+        {
+            if (curso.Preco <= 0)
+            {
+                throw new InvalidOperationException("Defina um preco maior que zero antes de publicar o pacote para venda.");
+            }
+
+            if (!curso.ConcluidoPeloProfessorEm.HasValue)
+            {
+                throw new InvalidOperationException("O professor precisa concluir o curso antes de publicar.");
+            }
+        }
+
+        var temConteudoPublicado = await _context.ConteudosDidaticos.AnyAsync(conteudo =>
+            conteudo.CursoId == cursoId &&
+            conteudo.StatusPublicacao == StatusPublicacao.Publicado &&
+            conteudo.ExcluidoEm == null);
+        if (!temConteudoPublicado)
+        {
+            throw new InvalidOperationException("Publique pelo menos um conteudo antes de colocar o curso no catalogo.");
         }
 
         curso.PublicarParaVenda();

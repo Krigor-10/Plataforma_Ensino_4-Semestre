@@ -79,6 +79,18 @@ public class CursoServiceTests
         return curso;
     }
 
+    // Pacote 7 da auditoria de 26/11: publicar exige pelo menos 1 conteudo
+    // publicado no curso.
+    private static void CriarConteudoPublicado(PlataformaContext context, int cursoId)
+    {
+        var conteudo = new ConteudoDidatico { Titulo = "Aula publicada", PesoProgresso = 1 };
+        conteudo.DefinirProfessorAutor(1);
+        conteudo.DefinirCurso(cursoId);
+        conteudo.DefinirStatusPublicacao(StatusPublicacao.Publicado);
+        context.ConteudosDidaticos.Add(conteudo);
+        context.SaveChanges();
+    }
+
     private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
     {
         context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
@@ -277,16 +289,37 @@ public class CursoServiceTests
     }
 
     [Fact]
-    public async Task ConcluirCursoComoProfessorAsync_CursoNaoAcompanhado_LancaInvalidOperation()
+    public async Task ConcluirCursoComoProfessorAsync_PagoJaPublicado_LancaInvalidOperation()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+        curso.PublicarParaVenda();
+        context.SaveChanges();
         VincularProfessorCurso(context, professor.Id, curso.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id));
+    }
+
+    // Pacote 7 (decisao D11): o Pago criado direto e concluido pelo professor
+    // sem coordenador e vai direto ao Admin ("Pronto para publicar").
+    [Fact]
+    public async Task ConcluirCursoComoProfessorAsync_PagoCriadoDireto_ConcluiSemCoordenadorENotificaAdmins()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var admin = CriarAdmin(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+
+        var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
+        Assert.Equal(SituacaoCurso.ProntoParaPublicar, cursoAtualizado.Situacao);
+        Assert.Single(context.Notificacoes.Where(n => n.UsuarioId == admin.Id));
     }
 
     [Fact]
@@ -478,12 +511,13 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
         await service.PublicarParaVendaAsync(curso.Id);
 
         var excecao = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.ReabrirCursoAsync(curso.Id, coordenador.Id));
 
-        Assert.Equal("Tire o curso da venda antes de reabrir.", excecao.Message);
+        Assert.Equal("Tire o curso da venda/do catalogo antes de reabrir.", excecao.Message);
     }
 
     [Fact]
@@ -498,6 +532,7 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
         await service.PublicarParaVendaAsync(curso.Id);
         await service.DespublicarDaVendaAsync(curso.Id);
 
@@ -505,10 +540,9 @@ public class CursoServiceTests
 
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Null(cursoAtualizado.EncerradoEm);
-        // PagoPacote (mesmo vindo do fluxo Gratuito->pacote) nao tem "Devolver
-        // ao professor" nem desfaz conclusao ao reabrir - ConcluidoPeloProfessorEm
-        // e so o marcador historico de origem (ver Curso.AceitaEdicao).
-        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+        // Pacote 7: reabrir desfaz a conclusao tambem no Pago (senao ficaria
+        // travado, ver Curso.AceitaEdicao).
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorEm);
     }
 
     [Fact]
@@ -671,11 +705,10 @@ public class CursoServiceTests
     }
 
     [Fact]
-    public async Task GarantirCursoAbertoParaEdicaoAsync_PagoPacoteVindoDoGratuitoNaoEncerrado_NuncaBloqueia()
+    public async Task GarantirCursoAbertoParaEdicaoAsync_PacoteConvertidoTiradoDaVendaEReaberto_DesfazConclusaoEAceitaEdicao()
     {
-        // ConcluidoPeloProfessorEm em um PagoPacote e so o marcador historico
-        // de que ele veio do fluxo Gratuito->pacote - nao e uma conclusao "em
-        // andamento" (so o EncerradoEm trava um pacote).
+        // Pacote 7 da auditoria de 26/11: reabrir tambem desfaz a conclusao
+        // no Pago - senao o curso ficaria travado para sempre (concluido trava).
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var coordenador = CriarCoordenador(context);
@@ -685,13 +718,14 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
         await service.PublicarParaVendaAsync(curso.Id);
         await service.DespublicarDaVendaAsync(curso.Id);
         await service.ReabrirCursoAsync(curso.Id, coordenador.Id);
 
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
-        Assert.NotNull(cursoAtualizado.ConcluidoPeloProfessorEm);
+        Assert.Null(cursoAtualizado.ConcluidoPeloProfessorEm);
 
         await service.GarantirCursoAbertoParaEdicaoAsync(curso.Id);
     }
@@ -928,18 +962,131 @@ public class CursoServiceTests
 
     // ---------- PublicarParaVendaAsync / DespublicarDaVendaAsync ----------
 
+    // Pacote 7 da auditoria de 26/11: o Pago criado direto so publica depois
+    // que o professor conclui (o conteudo chega completo ao aluno).
     [Fact]
-    public async Task PublicarParaVendaAsync_PacoteCriadoDireto_PublicaSemExigirEncerramento()
+    public async Task PublicarParaVendaAsync_PacoteCriadoDiretoSemConclusao_LancaInvalidOperation()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var curso = CriarCurso(context, ModeloCurso.PagoPacote);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PublicarParaVendaAsync(curso.Id));
+    }
+
+    [Fact]
+    public async Task PublicarParaVendaAsync_PacoteCriadoDiretoConcluido_PublicaSemExigirEncerramento()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+        await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
+        curso.ConcluirPeloProfessor(1);
+        context.SaveChanges();
 
         await service.PublicarParaVendaAsync(curso.Id);
 
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.NotNull(cursoAtualizado.PublicadoParaVendaEm);
+    }
+
+    [Fact]
+    public async Task PublicarParaVendaAsync_SemConteudoPublicado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+        await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        curso.ConcluirPeloProfessor(1);
+        context.SaveChanges();
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(() => service.PublicarParaVendaAsync(curso.Id));
+        Assert.Contains("conteudo", erro.Message);
+    }
+
+    // Decisoes D3/D11: o Gratuito publica depois do coordenador encerrar,
+    // vira "No catalogo" e passa a aceitar matricula.
+    [Fact]
+    public async Task PublicarParaVendaAsync_GratuitoEncerrado_PublicaNoCatalogo()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        CriarConteudoPublicado(context, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+
+        await service.PublicarParaVendaAsync(curso.Id);
+
+        var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
+        Assert.Equal(SituacaoCurso.NoCatalogo, cursoAtualizado.Situacao);
+        Assert.True(cursoAtualizado.DisponivelParaNovosAlunos);
+        await service.GarantirCursoAbertoParaMatriculaAsync(curso.Id);
+    }
+
+    [Fact]
+    public async Task PublicarParaVendaAsync_GratuitoNaoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito);
+        CriarConteudoPublicado(context, curso.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PublicarParaVendaAsync(curso.Id));
+    }
+
+    [Fact]
+    public async Task PublicarParaVendaAsync_Acompanhado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado);
+        CriarConteudoPublicado(context, curso.Id);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PublicarParaVendaAsync(curso.Id));
+    }
+
+    [Fact]
+    public async Task GarantirCursoAbertoParaMatriculaAsync_GratuitoNaoPublicado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito);
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GarantirCursoAbertoParaMatriculaAsync(curso.Id));
+        Assert.Contains("nao esta disponivel", erro.Message);
+    }
+
+    [Fact]
+    public async Task GarantirCursoAbertoParaEdicaoAsync_CursoPublicado_TravaComMensagemDePublicado()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito);
+        curso.PublicarParaVenda();
+        context.SaveChanges();
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(() => service.GarantirCursoAbertoParaEdicaoAsync(curso.Id));
+        Assert.Contains("publicado", erro.Message);
+    }
+
+    [Fact]
+    public async Task EncerrarCursoAsync_Pago_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var coordenador = CriarCoordenador(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote, coordenador.Id);
+        curso.ConcluirPeloProfessor(1);
+        context.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.EncerrarCursoAsync(curso.Id, coordenador.Id));
     }
 
     [Fact]
@@ -954,6 +1101,7 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
         await service.ReabrirCursoAsync(curso.Id, coordenador.Id);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -972,6 +1120,7 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
 
         await service.PublicarParaVendaAsync(curso.Id);
 
@@ -991,24 +1140,29 @@ public class CursoServiceTests
     }
 
     [Fact]
-    public async Task DespublicarDaVendaAsync_LimpaOCampo()
+    public async Task DespublicarDaVendaAsync_LimpaOCampoEMarcaRetiradoDaVenda()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var curso = CriarCurso(context, ModeloCurso.PagoPacote);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
+        curso.ConcluirPeloProfessor(1);
+        context.SaveChanges();
         await service.PublicarParaVendaAsync(curso.Id);
 
         await service.DespublicarDaVendaAsync(curso.Id);
 
         var cursoAtualizado = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.Null(cursoAtualizado.PublicadoParaVendaEm);
+        Assert.NotNull(cursoAtualizado.RetiradoDaVendaEm);
+        Assert.Equal(SituacaoCurso.ForaDeVenda, cursoAtualizado.Situacao);
     }
 
     // ---------- Ciclo completo: Gratuito -> pacote travado -> reabrir so fora da venda ----------
 
     [Fact]
-    public async Task CicloCompleto_PacoteTravado_TiraDaVendaReabreEditaReencerraEPublicaDeNovo()
+    public async Task CicloCompleto_PacoteTravado_TiraDaVendaReabreEditaConcluiEPublicaDeNovo()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -1020,28 +1174,29 @@ public class CursoServiceTests
         await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
         await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+        CriarConteudoPublicado(context, curso.Id);
         await service.PublicarParaVendaAsync(curso.Id);
 
         // Travado: nem o Coordenador reabre nem o Professor edita enquanto a
-        // venda estiver ativa (achado 10/12 do plano).
+        // venda estiver ativa.
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.ReabrirCursoAsync(curso.Id, coordenador.Id));
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => moduloService.CriarModuloAsync(new Modulo { Titulo = "Modulo Novo", CursoId = curso.Id }));
 
-        // Admin tira da venda -> Coordenador reabre -> Professor edita.
+        // Admin tira da venda -> Coordenador reabre (desfaz a conclusao) -> Professor edita.
         await service.DespublicarDaVendaAsync(curso.Id);
         await service.ReabrirCursoAsync(curso.Id, coordenador.Id);
         var moduloNovo = await moduloService.CriarModuloAsync(new Modulo { Titulo = "Modulo Novo", CursoId = curso.Id });
         Assert.NotEqual(0, moduloNovo.Id);
 
-        // Coordenador reencerra (nao exige nova conclusao do professor,
-        // Reabrir nao desfaz ConcluidoPeloProfessorEm) -> Admin publica de novo.
-        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+        // Pacote 7 (D11): o Pago nao volta ao coordenador - o professor
+        // conclui de novo e o Admin publica.
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
         await service.PublicarParaVendaAsync(curso.Id);
 
         var cursoFinal = await service.ObterCursoPorIdAsync(curso.Id);
         Assert.NotNull(cursoFinal.PublicadoParaVendaEm);
-        Assert.NotNull(cursoFinal.EncerradoEm);
+        Assert.Equal(SituacaoCurso.AVenda, cursoFinal.Situacao);
     }
 
     [Fact]

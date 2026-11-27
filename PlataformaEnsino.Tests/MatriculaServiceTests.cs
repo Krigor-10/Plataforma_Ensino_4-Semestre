@@ -41,10 +41,9 @@ public class MatriculaServiceTests
             ModeloCurso = preco <= 0 ? ModeloCurso.Gratuito : ModeloCurso.PagoPacote
         };
 
-        if (curso.ModeloCurso == ModeloCurso.PagoPacote)
-        {
-            curso.PublicarParaVenda();
-        }
+        // Pacote 7 da auditoria de 26/11 (D3): Gratuito e Pago so aceitam
+        // matricula nova publicados - o curso de teste ja nasce publicado.
+        curso.PublicarParaVenda();
 
         context.Cursos.Add(curso);
         context.SaveChanges();
@@ -135,13 +134,16 @@ public class MatriculaServiceTests
         Assert.Equal(1, aprovadas);
     }
 
+
     [Fact]
-    public async Task MatricularComAprovacaoAutomaticaAsync_CursoAcompanhadoEncerrado_LancaInvalidOperation()
+    // Pacote 7 da auditoria de 26/11 (D3): para o Gratuito vale a
+    // PUBLICACAO, nao o encerramento - nao publicado recusa; encerrado e
+    // publicado (curso convertido) aceita.
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoGratuitoNaoPublicado_LancaInvalidOperation()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        curso.ModeloCurso = ModeloCurso.Acompanhado;
-        curso.Encerrar(coordenadorId: 1);
+        curso.DespublicarDaVenda();
         context.SaveChanges();
         var aluno = CriarAluno(context);
 
@@ -150,11 +152,25 @@ public class MatriculaServiceTests
     }
 
     [Fact]
-    public async Task MatricularComAprovacaoAutomaticaAsync_CursoGratuitoEncerrado_LancaInvalidOperation()
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoGratuitoEncerradoEPublicado_Aceita()
     {
         var (service, context) = CriarService();
         var curso = CriarCurso(context);
-        curso.ModeloCurso = ModeloCurso.Gratuito;
+        curso.Encerrar(coordenadorId: 1);
+        context.SaveChanges();
+        var aluno = CriarAluno(context);
+
+        var matricula = await service.MatricularComAprovacaoAutomaticaAsync(aluno.Id, curso.Id);
+
+        Assert.Equal(StatusMatricula.Aprovada, matricula.Status);
+    }
+
+    [Fact]
+    public async Task MatricularComAprovacaoAutomaticaAsync_CursoAcompanhadoEncerrado_LancaInvalidOperation()
+    {
+        var (service, context) = CriarService();
+        var curso = CriarCurso(context);
+        curso.ModeloCurso = ModeloCurso.Acompanhado;
         curso.Encerrar(coordenadorId: 1);
         context.SaveChanges();
         var aluno = CriarAluno(context);

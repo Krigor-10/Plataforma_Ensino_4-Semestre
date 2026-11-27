@@ -91,3 +91,33 @@ const ABA_POR_SITUACAO = {
 export function abaAdminDoCurso(curso) {
   return ABA_POR_SITUACAO[situacaoDoCurso(curso)] || "andamento";
 }
+
+// Trava de edicao do conteudo (pacote 7 da auditoria de 26/11). A fonte e o
+// servidor (Curso.AceitaEdicao, enviado como `permiteEdicaoConteudo`); a
+// reserva segue a mesma regra: publicado, concluido ou encerrado trava.
+export function cursoTravadoParaEdicao(curso) {
+  if (!curso) {
+    return false;
+  }
+  if (typeof curso.permiteEdicaoConteudo === "boolean") {
+    return !curso.permiteEdicaoConteudo;
+  }
+  return Boolean(curso.publicadoParaVendaEm || curso.concluidoPeloProfessorEm || curso.encerradoEm);
+}
+
+// Aviso mostrado ao professor explicando POR QUE a edicao esta travada.
+export function motivoTravaEdicao(curso) {
+  if (!cursoTravadoParaEdicao(curso)) {
+    return "";
+  }
+  if (curso.publicadoParaVendaEm) {
+    return "Curso publicado para os alunos. A edição está travada — para alterar, peça ao Admin para tirar o curso do catálogo/da venda.";
+  }
+  if (curso.encerradoEm) {
+    return "Curso encerrado. A edição está travada.";
+  }
+  if (Number(curso.modeloCurso) === MODELO_PAGO_PACOTE) {
+    return "Curso concluído — aguardando a publicação pelo Admin. A edição está travada.";
+  }
+  return "Curso concluído — aguardando o encerramento pelo coordenador. A edição está travada.";
+}

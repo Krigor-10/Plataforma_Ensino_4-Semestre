@@ -19,7 +19,6 @@ import BarraProgresso from "../../components/BarraProgresso.jsx";
 import Botao from "../../components/Botao.jsx";
 import BotaoVoltar from "../../components/BotaoVoltar.jsx";
 import GradeCursosProfessor from "../../components/GradeCursosProfessor.jsx";
-import Insignia from "../../components/Insignia.jsx";
 import SeloSituacaoCurso from "../../components/SeloSituacaoCurso.jsx";
 import MenuAcoes from "../../components/MenuAcoes.jsx";
 import Modal from "../../components/Modal.jsx";
@@ -31,6 +30,7 @@ import { useModaisModulo } from "../../hooks/useModaisModulo.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest, resolverUrlArquivo } from "../../lib/api.js";
 import { normalizeContentType } from "../../lib/format.js";
+import { cursoTravadoParaEdicao, motivoTravaEdicao } from "../../lib/situacaoCurso.js";
 import {
   montarPayloadAvaliacao,
   montarPayloadConteudo,
@@ -87,6 +87,7 @@ const ACEITA_ARQUIVO_POR_TIPO = {
 };
 
 const MODELO_GRATUITO = 1;
+const MODELO_PAGO_PACOTE = 2;
 const MODELO_ACOMPANHADO = 3;
 
 /* Trilha de Conteudos do professor: mesmo padrao Card do curso -> Modulos -> Conteudos
@@ -252,10 +253,19 @@ export function SecaoConteudosProfessor({
   // compartilhada pela lista de modulos e pela tela do modulo - ver
   // ListaModulosProfessor (comentario original) pra detalhes da regra.
   const modeloCursoAtivo = cursoAtivo ? Number(cursoAtivo.curso.modeloCurso) : null;
-  const cursoAceitaConclusao = modeloCursoAtivo === MODELO_GRATUITO || modeloCursoAtivo === MODELO_ACOMPANHADO;
+  // Pacote 7 da auditoria de 26/11: todo curso fora do catalogo/da venda
+  // pode ser concluido pelo professor (o Pago criado direto vai ao Admin);
+  // a trava vem do servidor (publicado, concluido ou encerrado).
+  const cursoPublicado = Boolean(cursoAtivo?.curso.publicadoParaVendaEm);
+  const cursoAceitaConclusao =
+    modeloCursoAtivo === MODELO_GRATUITO ||
+    modeloCursoAtivo === MODELO_ACOMPANHADO ||
+    (modeloCursoAtivo === MODELO_PAGO_PACOTE && !cursoPublicado);
+  const conclusaoExigeCoordenador = modeloCursoAtivo !== MODELO_PAGO_PACOTE;
   const cursoJaConcluido = Boolean(cursoAtivo?.curso.concluidoPeloProfessorEm);
   const cursoEncerrado = Boolean(cursoAtivo?.curso.encerradoEm);
-  const edicaoTravada = cursoEncerrado || (cursoAceitaConclusao && cursoJaConcluido);
+  const edicaoTravada = cursoTravadoParaEdicao(cursoAtivo?.curso);
+  const motivoTrava = motivoTravaEdicao(cursoAtivo?.curso);
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/conteudos/${cursoId}`);
@@ -761,6 +771,8 @@ export function SecaoConteudosProfessor({
           avaliacoes={avaliacoes}
           conteudos={conteudos}
           cursoAceitaConclusao={cursoAceitaConclusao}
+          conclusaoExigeCoordenador={conclusaoExigeCoordenador}
+          motivoTrava={motivoTrava}
           cursoAtivo={cursoAtivo}
           cursoEncerrado={cursoEncerrado}
           cursoJaConcluido={cursoJaConcluido}
@@ -1087,6 +1099,8 @@ function ListaModulosProfessor({
   avaliacoes,
   conteudos,
   cursoAceitaConclusao,
+  conclusaoExigeCoordenador,
+  motivoTrava,
   cursoAtivo,
   cursoEncerrado,
   cursoJaConcluido,
@@ -1258,23 +1272,29 @@ function ListaModulosProfessor({
             // Decisao D9 da auditoria de 26/11: sem coordenador o servidor
             // recusa a conclusao (ninguem encerraria o curso depois).
             <Botao
-              disabled={!cursoAtivo.curso.coordenadorId}
+              disabled={conclusaoExigeCoordenador && !cursoAtivo.curso.coordenadorId}
               onClick={() => setConfirmandoConclusao(true)}
               tamanho="pequeno"
-              title={cursoAtivo.curso.coordenadorId ? undefined : "Peça ao Admin para atribuir um coordenador antes de concluir."}
+              title={
+                conclusaoExigeCoordenador && !cursoAtivo.curso.coordenadorId
+                  ? "Peça ao Admin para atribuir um coordenador antes de concluir."
+                  : undefined
+              }
               variante="primario"
             >
               <TbCheck aria-hidden="true" size={15} /> Concluir curso
             </Botao>
           ) : null}
-          {cursoAceitaConclusao && cursoJaConcluido && !cursoEncerrado ? <Insignia texto="Concluído, aguardando o coordenador" /> : null}
+          {cursoJaConcluido || cursoEncerrado || cursoAtivo.curso.publicadoParaVendaEm ? (
+            <SeloSituacaoCurso curso={cursoAtivo.curso} />
+          ) : null}
           <Botao onClick={onVisualizarComoAluno} tamanho="pequeno" variante="fantasma">
             <TbEye aria-hidden="true" size={15} /> Visualizar como aluno
           </Botao>
         </div>
       </header>
 
-      {cursoAceitaConclusao && !cursoJaConcluido && !cursoEncerrado && !cursoAtivo.curso.coordenadorId ? (
+      {cursoAceitaConclusao && conclusaoExigeCoordenador && !cursoJaConcluido && !cursoEncerrado && !cursoAtivo.curso.coordenadorId ? (
         <InlineMessage tone="warning">
           Este curso ainda não tem coordenador. Peça ao Admin para atribuir um coordenador antes de concluir.
         </InlineMessage>
@@ -1282,9 +1302,7 @@ function ListaModulosProfessor({
 
       {edicaoTravada ? (
         <InlineMessage tone="warning">
-          {cursoEncerrado
-            ? "Curso encerrado. A edição está travada."
-            : "Curso concluído — aguardando o encerramento pelo coordenador. A edição está travada."}
+          {motivoTrava}
         </InlineMessage>
       ) : null}
 

@@ -420,7 +420,18 @@ describe("PainelCursoGestao - devolver ao professor", () => {
   });
 
   const CURSO_GRATUITO_CONCLUIDO = { ...CURSO, modeloCurso: 1, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
-  const CURSO_PACOTE_VINDO_DO_GRATUITO = { ...CURSO, modeloCurso: 2, concluidoPeloProfessorEm: "2026-01-10T12:00:00" };
+  const CURSO_PACOTE_VINDO_DO_GRATUITO = {
+    ...CURSO,
+    modeloCurso: 2,
+    concluidoPeloProfessorEm: "2026-01-10T12:00:00",
+    encerradoEm: "2026-01-11T12:00:00"
+  };
+  const CURSO_PAGO_PUBLICADO = {
+    ...CURSO,
+    modeloCurso: 2,
+    concluidoPeloProfessorEm: "2026-01-10T12:00:00",
+    publicadoParaVendaEm: "2026-01-12T12:00:00"
+  };
 
   test("Gratuito concluido: mostra 'Devolver ao professor' ao lado de 'Encerrar curso'", async () => {
     mockApi(DESEMPENHO);
@@ -433,7 +444,17 @@ describe("PainelCursoGestao - devolver ao professor", () => {
     expect(screen.getByRole("button", { name: /Devolver ao professor/ })).toBeInTheDocument();
   });
 
-  test("pacote vindo do Gratuito (concluidoPeloProfessorEm preenchido) nao mostra 'Devolver ao professor'", async () => {
+  test("Pago publicado (pacote 7) nao mostra 'Devolver ao professor'", async () => {
+    mockApi(DESEMPENHO);
+
+    renderPainel({ curso: CURSO_PAGO_PUBLICADO });
+
+    await waitFor(() => expect(screen.getByText("Modulo A")).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: /Devolver ao professor/ })).not.toBeInTheDocument();
+  });
+
+  test("pacote vindo do Gratuito (encerrado) nao mostra 'Devolver ao professor'", async () => {
     mockApi(DESEMPENHO);
 
     renderPainel({ curso: CURSO_PACOTE_VINDO_DO_GRATUITO });

@@ -367,9 +367,12 @@ public class ChatbotFerramentasServiceTests
         var context = TestContextFactory.Criar();
         for (var indice = 1; indice <= 6; indice++)
         {
-            CriarCurso(context, $"Curso Buscavel {indice}", ModeloCurso.Gratuito);
+            CriarCurso(context, $"Curso Buscavel {indice}", ModeloCurso.Gratuito).PublicarParaVenda();
         }
-        var cursoEncerrado = CriarCurso(context, "Curso Buscavel Encerrado", ModeloCurso.Gratuito);
+        // Pacote 7 da auditoria de 26/11 (D3): Gratuito so aparece publicado;
+        // Acompanhado some depois de encerrado.
+        var gratuitoNaoPublicado = CriarCurso(context, "Curso Buscavel Gratuito Nao Publicado", ModeloCurso.Gratuito);
+        var cursoEncerrado = CriarCurso(context, "Curso Buscavel Encerrado", ModeloCurso.Acompanhado);
         // EncerradoEm so tem setter privado no modelo - usa Encerrar() direto.
         cursoEncerrado.Encerrar(coordenadorId: 1);
         context.SaveChanges();
@@ -383,6 +386,7 @@ public class ChatbotFerramentasServiceTests
 
         Assert.Equal(5, resultado.Count);
         Assert.DoesNotContain(resultado, curso => curso.CursoId == cursoEncerrado.Id);
+        Assert.DoesNotContain(resultado, curso => curso.CursoId == gratuitoNaoPublicado.Id);
         Assert.DoesNotContain(resultado, curso => curso.CursoId == pacoteNaoPublicado.Id);
     }
 }

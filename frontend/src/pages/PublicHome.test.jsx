@@ -9,7 +9,16 @@ vi.mock("../lib/api.js", async () => {
 });
 
 function cursoGratuito(id) {
-  return { id, titulo: `Curso ${id}`, descricao: "Descricao", ehGratuito: true, preco: 0, modeloCurso: 1 };
+  // Pacote 7 (decisao D3): Gratuito so aparece no catalogo se publicado.
+  return {
+    id,
+    titulo: `Curso ${id}`,
+    descricao: "Descricao",
+    ehGratuito: true,
+    preco: 0,
+    modeloCurso: 1,
+    publicadoParaVendaEm: "2026-01-10T12:00:00"
+  };
 }
 
 describe("PublicHome - contagem de cursos disponiveis", () => {

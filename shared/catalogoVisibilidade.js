@@ -8,13 +8,12 @@ const MODELO_CURSO_ACOMPANHADO = 3;
  * do Aluno (web e mobile) e pelo Cadastro (web): um curso so conta como
  * "disponivel pra quem ainda nao o tem" se nao estiver na lista de titulos
  * ocultos e:
- * - Acompanhado ou Gratuito: se ainda nao tiver sido encerrado pelo
- *   coordenador (pendencia_compra_cursos - quem nao tem o curso nao pode
- *   mais comprar/comecar um curso encerrado; quem ja tem matricula continua
- *   vendo o curso normalmente nas proprias telas, essa regra so afeta
- *   descoberta);
- * - PagoPacote: so se estiver publicado pra venda (publicadoParaVendaEm) -
- *   plano fluxo-venda-cursos, Round 3/4.
+ * - Acompanhado: se ainda nao tiver sido encerrado pelo coordenador (quem ja
+ *   tem matricula continua vendo o curso normalmente nas proprias telas,
+ *   essa regra so afeta descoberta);
+ * - Gratuito e PagoPacote: so se estiver PUBLICADO pelo Admin
+ *   (publicadoParaVendaEm), mesmo encerrado - pacote 7 da auditoria de 26/11,
+ *   decisao D3 (regra do servidor: Curso.DisponivelParaNovosAlunos).
  *
  * Extraida pra shared/ (Round 7) pra parar de duplicar entre
  * frontend/src/data/appConfig.js (que passa a reexportar esta funcao) e o
@@ -30,12 +29,12 @@ export function isCursoVisivelNoCatalogoPublico(curso) {
 
   const modeloCurso = Number(curso?.modeloCurso);
 
-  if ((modeloCurso === MODELO_CURSO_ACOMPANHADO || modeloCurso === MODELO_CURSO_GRATUITO) && curso?.encerradoEm) {
-    return false;
+  if (modeloCurso === MODELO_CURSO_ACOMPANHADO) {
+    return !curso?.encerradoEm;
   }
 
-  if (modeloCurso === MODELO_CURSO_PAGO_PACOTE && !curso?.publicadoParaVendaEm) {
-    return false;
+  if (modeloCurso === MODELO_CURSO_GRATUITO || modeloCurso === MODELO_CURSO_PAGO_PACOTE) {
+    return Boolean(curso?.publicadoParaVendaEm);
   }
 
   return true;

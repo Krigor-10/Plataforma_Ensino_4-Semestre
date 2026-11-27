@@ -155,23 +155,34 @@ public class Curso
     /// usada tanto pela trava (CursoService.GarantirCursoAbertoParaEdicaoAsync)
     /// quanto pelo recalculo de progresso (ProgressoAlunoService.
     /// RecalcularProgressoDoCursoAsync) - as duas nunca podem divergir.
-    /// Encerrado trava sempre; "concluido pelo professor" so trava em
-    /// Gratuito/Acompanhado (no PagoPacote, ConcluidoPeloProfessorEm e so o
-    /// marcador de que ele veio do fluxo Gratuito->pacote, nao uma conclusao
-    /// de ciclo em andamento).
+    /// Pacote 7 da auditoria de 26/11 (regra de 25/11, "Gratuito e Pago so
+    /// chegam completos"): trava se estiver PUBLICADO (catalogo/venda),
+    /// CONCLUIDO pelo professor ou ENCERRADO, em qualquer modelo. Para
+    /// corrigir: o Admin tira da venda/do catalogo e, se estava concluido, o
+    /// coordenador devolve ou reabre.
     /// </summary>
     public bool AceitaEdicao()
     {
-        if (EncerradoEm.HasValue)
-        {
-            return false;
-        }
-
-        var concluidoTravaEdicao = ConcluidoPeloProfessorEm.HasValue
-            && (ModeloCurso == ModeloCurso.Gratuito || ModeloCurso == ModeloCurso.Acompanhado);
-
-        return !concluidoTravaEdicao;
+        return !PublicadoParaVendaEm.HasValue
+            && !ConcluidoPeloProfessorEm.HasValue
+            && !EncerradoEm.HasValue;
     }
+
+    /// <summary>Mesma regra de <see cref="AceitaEdicao"/>, exposta no JSON pras telas.</summary>
+    [NotMapped]
+    public bool PermiteEdicaoConteudo => AceitaEdicao();
+
+    /// <summary>
+    /// Aparece no catalogo e aceita matricula NOVA (decisao D3 da auditoria
+    /// de 26/11): Gratuito e Pago so se publicados pelo Admin, mesmo
+    /// encerrados (curso convertido); Acompanhado como antes, ate o
+    /// coordenador encerrar. Quem ja tem matricula continua com acesso
+    /// sempre (D7). Espelhado em shared/catalogoVisibilidade.js.
+    /// </summary>
+    [NotMapped]
+    public bool DisponivelParaNovosAlunos => ModeloCurso == ModeloCurso.Acompanhado
+        ? !EncerradoEm.HasValue
+        : PublicadoParaVendaEm.HasValue;
 
     public void PublicarParaVenda(DateTime? momento = null)
     {

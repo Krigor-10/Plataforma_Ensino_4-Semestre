@@ -27,12 +27,10 @@ import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
+import { cursoTravadoParaEdicao, motivoTravaEdicao } from "../../lib/situacaoCurso.js";
 import { montarPayloadAvaliacao } from "../../lib/trilhaConteudos.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
-
-const MODELO_GRATUITO = 1;
-const MODELO_ACOMPANHADO = 3;
 
 const STATUS_PUBLICADO = 2;
 const STATUS_ARQUIVADO = 3;
@@ -239,21 +237,9 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
     [cursoAtivo, modulosPorCursoId]
   );
 
-  // Mesma regra de Curso.AceitaEdicao (backend): encerrado trava sempre;
-  // concluido pelo professor so trava em Gratuito/Acompanhado.
-  const edicaoTravadaCursoAtivo = useMemo(() => {
-    if (!cursoAtivo) {
-      return false;
-    }
-
-    if (cursoAtivo.curso.encerradoEm) {
-      return true;
-    }
-
-    const modeloCurso = Number(cursoAtivo.curso.modeloCurso);
-    const modeloTravaPorConclusao = modeloCurso === MODELO_GRATUITO || modeloCurso === MODELO_ACOMPANHADO;
-    return modeloTravaPorConclusao && Boolean(cursoAtivo.curso.concluidoPeloProfessorEm);
-  }, [cursoAtivo]);
+  // Mesma regra de Curso.AceitaEdicao (backend, pacote 7 da auditoria de
+  // 26/11): publicado, concluido ou encerrado trava.
+  const edicaoTravadaCursoAtivo = cursoTravadoParaEdicao(cursoAtivo?.curso);
 
   function abrirCurso(cursoId) {
     onNavigate?.(`/app/avaliacoes/${cursoId}`);
@@ -489,9 +475,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
           {edicaoTravadaCursoAtivo ? (
             <InlineMessage tone="warning">
-              {cursoAtivo.curso.encerradoEm
-                ? "Curso encerrado. A edição está travada."
-                : "Curso concluído — aguardando o encerramento pelo coordenador. A edição está travada."}
+              {motivoTravaEdicao(cursoAtivo.curso)}
             </InlineMessage>
           ) : null}
 

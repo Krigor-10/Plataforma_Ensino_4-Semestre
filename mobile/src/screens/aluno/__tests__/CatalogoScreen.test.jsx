@@ -40,6 +40,8 @@ const CURSO_GRATIS = {
   titulo: "Curso Gratis Teste",
   preco: 0,
   modeloCurso: 1,
+  // Pacote 7 (decisao D3): Gratuito so aparece no catalogo se publicado.
+  publicadoParaVendaEm: "2026-01-01T00:00:00Z",
   descricao: "Descrição completa do curso gratuito, com todos os detalhes do conteúdo oferecido."
 };
 const CURSO_ACOMPANHADO = { id: 3, titulo: "Curso Acompanhado Teste", preco: 0, modeloCurso: 3 };

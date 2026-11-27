@@ -10,6 +10,8 @@ import {
   TbChevronRight,
   TbCircleCheck,
   TbDotsVertical,
+  TbEye,
+  TbEyeOff,
   TbInfoCircle,
   TbLock,
   TbLockOpen,
@@ -104,6 +106,10 @@ export default function PainelCursoGestao({
   const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
   const [confirmandoReabrir, setConfirmandoReabrir] = useState(false);
   const [confirmandoDevolver, setConfirmandoDevolver] = useState(false);
+  // Publicacao do Gratuito no catalogo pelo Admin (pacote 7 da auditoria de
+  // 26/11): "publicar" ou "despublicar" aguardando confirmacao.
+  const [confirmacaoCatalogo, setConfirmacaoCatalogo] = useState(null);
+  const [processandoCatalogo, setProcessandoCatalogo] = useState(false);
   const [motivoDevolucao, setMotivoDevolucao] = useState("");
   const [processandoConfirmacaoCiclo, setProcessandoConfirmacaoCiclo] = useState(false);
   const refAbas = useRef(null);
@@ -333,6 +339,29 @@ export default function PainelCursoGestao({
     setConfirmandoReabrir(false);
   }
 
+  async function confirmarAcaoCatalogo() {
+    const acao = confirmacaoCatalogo;
+    if (!acao) {
+      return;
+    }
+
+    setProcessandoCatalogo(true);
+    try {
+      await apiRequest(`/Cursos/${curso.id}/venda/${acao}`, { method: "POST" });
+      mostrarToast(acao === "publicar" ? "Curso publicado no catálogo." : "Curso tirado do catálogo.", "sucesso");
+      setConfirmacaoCatalogo(null);
+      onRefresh?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+      mostrarToast(err.message || "Não foi possível alterar a publicação agora.", "erro");
+    } finally {
+      setProcessandoCatalogo(false);
+    }
+  }
+
   function fecharConfirmacaoDevolver() {
     if (processandoConfirmacaoCiclo) {
       return;
@@ -345,23 +374,23 @@ export default function PainelCursoGestao({
   const ehAcompanhado = Number(curso.modeloCurso) === MODELO_ACOMPANHADO;
   const ehGratuito = Number(curso.modeloCurso) === MODELO_GRATUITO;
   const ehPagoPacote = Number(curso.modeloCurso) === MODELO_PAGO_PACOTE;
-  // Acompanhado/Gratuito sempre tem o ciclo concluir->encerrar->reabrir; um
-  // PagoPacote so entra nele se veio do fluxo Gratuito->pacote
-  // (concluidoPeloProfessorEm preenchido) - um pacote criado direto pelo
-  // Admin nunca passa por aqui.
-  const temCicloDeEncerramento = ehAcompanhado || ehGratuito || (ehPagoPacote && Boolean(curso.concluidoPeloProfessorEm));
-  // "Devolver ao professor" so existe em Gratuito/Acompanhado concluido e nao
-  // encerrado - um pacote vindo do fluxo Gratuito->pacote nao tem essa
-  // conclusao "em andamento" pra devolver (PROMPT-agente-progresso-e-trava-
-  // ao-concluir.md, Parte A).
+  // Pacote 7 da auditoria de 26/11 (decisao D11): so Acompanhado e Gratuito
+  // passam pelo encerramento do coordenador; o Pago concluido vai direto ao
+  // Admin. Reabrir vale pra qualquer curso encerrado (inclusive pacote
+  // convertido) e devolver pra qualquer curso concluido - os dois so fora
+  // do catalogo/da venda.
+  const temCicloDeEncerramento = ehAcompanhado || ehGratuito;
+  const cursoPublicado = Boolean(curso.publicadoParaVendaEm);
   const podeDevolverAoProfessor =
-    !ehAdmin && (ehGratuito || ehAcompanhado) && Boolean(curso.concluidoPeloProfessorEm) && !curso.encerradoEm;
-  const pacoteTravadoNaVenda = ehPagoPacote && Boolean(curso.publicadoParaVendaEm);
-  // Round 6 (plano fluxo-venda-cursos): Gratuito encerrado abre a janela pra
-  // virar pacote; PagoPacote (criado direto ou ja convertido) reabre a mesma
-  // janela pra editar preco/descricao e alternar Colocar/Tirar da venda -
-  // ModalPrepararVenda.jsx ja adapta o rotulo do botao de venda sozinho.
-  const podeGerenciarVenda = ehAdmin && (ehPagoPacote || (ehGratuito && Boolean(curso.encerradoEm)));
+    !ehAdmin && Boolean(curso.concluidoPeloProfessorEm) && !curso.encerradoEm && !cursoPublicado;
+  const pacoteTravadoNaVenda = cursoPublicado;
+  // Round 6 (plano fluxo-venda-cursos): Gratuito encerrado (fora do
+  // catalogo) abre a janela pra virar pacote; PagoPacote reabre a mesma
+  // janela pra editar preco/descricao e alternar Colocar/Tirar da venda.
+  const podeGerenciarVenda = ehAdmin && (ehPagoPacote || (ehGratuito && Boolean(curso.encerradoEm) && !cursoPublicado));
+  // Gratuito no catalogo (decisoes D3/D11): publica depois do encerramento.
+  const podePublicarNoCatalogo = ehAdmin && ehGratuito && Boolean(curso.encerradoEm) && !cursoPublicado;
+  const podeTirarDoCatalogo = ehAdmin && ehGratuito && cursoPublicado;
   const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
   const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
 
@@ -453,8 +482,18 @@ export default function PainelCursoGestao({
                 <TbUserCheck aria-hidden="true" size={16} /> {coordenadorDoCurso ? "Coordenador" : "Atribuir coordenador"}
               </Botao>
             ) : null}
+            {podePublicarNoCatalogo ? (
+              <Botao onClick={() => setConfirmacaoCatalogo("publicar")} tamanho="pequeno" variante="primario">
+                <TbEye aria-hidden="true" size={16} /> Publicar no catálogo
+              </Botao>
+            ) : null}
+            {podeTirarDoCatalogo ? (
+              <Botao onClick={() => setConfirmacaoCatalogo("despublicar")} tamanho="pequeno" variante="secundario">
+                <TbEyeOff aria-hidden="true" size={16} /> Tirar do catálogo
+              </Botao>
+            ) : null}
             {podeGerenciarVenda ? (
-              <Botao onClick={() => setModalPrepararVendaAberto(true)} tamanho="pequeno" variante="primario">
+              <Botao onClick={() => setModalPrepararVendaAberto(true)} tamanho="pequeno" variante={ehPagoPacote ? "primario" : "secundario"}>
                 <TbTag aria-hidden="true" size={16} /> {ehPagoPacote ? "Gerenciar venda" : "Preparar para venda"}
               </Botao>
             ) : null}
@@ -468,13 +507,13 @@ export default function PainelCursoGestao({
                 <TbArrowBackUp aria-hidden="true" size={16} /> Devolver ao professor
               </Botao>
             ) : null}
-            {!ehAdmin && temCicloDeEncerramento && curso.encerradoEm ? (
+            {!ehAdmin && curso.encerradoEm ? (
               <Botao
                 disabled={salvandoCurso || pacoteTravadoNaVenda}
                 onClick={() => setConfirmandoReabrir(true)}
                 tamanho="pequeno"
                 variante="secundario"
-                title={pacoteTravadoNaVenda ? "Tire o curso da venda antes de reabrir." : undefined}
+                title={pacoteTravadoNaVenda ? "Peça ao Admin para tirar o curso da venda/do catálogo antes de reabrir." : undefined}
               >
                 <TbLockOpen aria-hidden="true" size={16} /> Reabrir curso
               </Botao>
@@ -633,6 +672,29 @@ export default function PainelCursoGestao({
           }}
           onSessionExpired={onSessionExpired}
         />
+      ) : null}
+
+      {confirmacaoCatalogo ? (
+        <Modal
+          onFechar={() => !processandoCatalogo && setConfirmacaoCatalogo(null)}
+          titulo={confirmacaoCatalogo === "publicar" ? `Publicar "${curso.titulo}" no catálogo?` : `Tirar "${curso.titulo}" do catálogo?`}
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={processandoCatalogo} onClick={() => setConfirmacaoCatalogo(null)} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao disabled={processandoCatalogo} onClick={confirmarAcaoCatalogo} variante="primario">
+                {processandoCatalogo ? "Salvando..." : confirmacaoCatalogo === "publicar" ? "Publicar" : "Tirar do catálogo"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p className="texto-confirmacao-exclusao">
+            {confirmacaoCatalogo === "publicar"
+              ? "O curso fica visível no catálogo para novos alunos e o conteúdo fica travado para edição."
+              : "O curso some do catálogo para quem ainda não tem matrícula. Quem já tem continua estudando normalmente."}
+          </p>
+        </Modal>
       ) : null}
 
       {confirmandoEncerrar ? (

@@ -332,17 +332,8 @@ public class ChatbotFerramentasService : IChatbotFerramentasService
             return false;
         }
 
-        if ((curso.ModeloCurso == ModeloCurso.Acompanhado || curso.ModeloCurso == ModeloCurso.Gratuito) && curso.EncerradoEm.HasValue)
-        {
-            return false;
-        }
-
-        if (curso.ModeloCurso == ModeloCurso.PagoPacote && !curso.PublicadoParaVendaEm.HasValue)
-        {
-            return false;
-        }
-
-        return true;
+        // Mesma regra do catalogo (Curso.DisponivelParaNovosAlunos, decisao D3).
+        return curso.DisponivelParaNovosAlunos;
     }
 
     private async Task<Matricula> ObterMatriculaDoAlunoNoCursoAsync(int alunoId, int cursoId)
