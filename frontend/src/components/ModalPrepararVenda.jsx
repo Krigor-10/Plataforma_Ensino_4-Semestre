@@ -18,8 +18,21 @@ import { ApiError, apiRequest } from "../lib/api.js";
    "Colocar a venda" (POST venda/publicar) quando publicadoParaVendaEm esta
    vazio, "Tirar da venda" (POST venda/despublicar) quando ja esta a venda -
    cobre os dois pontos de entrada do plano (Gratuito-encerrado abrindo pela
-   1a vez, e PagoPacote ja convertido sendo editado depois). */
-export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSessionExpired }) {
+   1a vez, e PagoPacote ja convertido sendo editado depois).
+
+   Pacote 8 da auditoria de 26/11 (D1, D4, D8b): Acompanhado ou Gratuito
+   ENCERRADO escolhe se vira Pago ou Gratuito. O servidor guarda a
+   modalidade original e recusa curso com questao dissertativa publicada. */
+const MODELO_GRATUITO = 1;
+const MODELO_PAGO_PACOTE = 2;
+const ROTULO_MODELO = { 1: "Gratuito", 2: "Pago", 3: "Acompanhado" };
+
+export default function ModalPrepararVenda({ curso, onAtualizar, onFechar, onSalvo, onSessionExpired }) {
+  // Modalidade que o servidor ja tem: muda se a conversao salvar e a
+  // publicacao falhar logo depois (a janela fica aberta com o motivo).
+  const [modeloAtual, setModeloAtual] = useState(Number(curso.modeloCurso));
+  const podeEscolherModalidade = modeloAtual !== MODELO_PAGO_PACOTE;
+  const [modeloDestino, setModeloDestino] = useState(MODELO_PAGO_PACOTE);
   const [preco, setPreco] = useState(String(curso.preco > 0 ? curso.preco : ""));
   const [descricao, setDescricao] = useState(curso.descricao || "");
   const [arquivoImagemSelecionado, setArquivoImagemSelecionado] = useState(null);
@@ -28,7 +41,9 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
   const [mensagem, setMensagem] = useState({ tone: "", message: "" });
 
   const jaEstaAVenda = Boolean(curso.publicadoParaVendaEm);
-  const precoNumero = Number(preco);
+  const destinoGratuito = podeEscolherModalidade && modeloDestino === MODELO_GRATUITO;
+  const vaiConverter = podeEscolherModalidade && modeloDestino !== modeloAtual;
+  const precoNumero = destinoGratuito ? 0 : Number(preco);
   const previaCurso = {
     ...curso,
     descricao,
@@ -64,19 +79,28 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
   }
 
   async function executar(acao) {
-    if (!Number.isFinite(precoNumero) || precoNumero <= 0) {
+    if (!destinoGratuito && (!Number.isFinite(precoNumero) || precoNumero <= 0)) {
       setMensagem({ tone: "error", message: "Informe um preco maior que zero." });
       return;
     }
 
     setSalvando(true);
     setMensagem({ tone: "", message: "" });
+    let pacoteSalvo = false;
 
     try {
       await apiRequest(`/Cursos/${curso.id}/pacote`, {
         method: "PUT",
-        body: JSON.stringify({ preco: precoNumero, descricao: descricao.trim() })
+        body: JSON.stringify({
+          preco: precoNumero,
+          descricao: descricao.trim(),
+          ...(podeEscolherModalidade ? { modeloDestino } : {})
+        })
       });
+      pacoteSalvo = true;
+      if (podeEscolherModalidade) {
+        setModeloAtual(modeloDestino);
+      }
 
       if (arquivoImagemSelecionado) {
         const formData = new FormData();
@@ -95,6 +119,17 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         onSessionExpired?.();
+        return;
+      }
+
+      if (pacoteSalvo) {
+        // Conversao/preco ja gravados; so a capa ou a publicacao falhou.
+        onAtualizar?.();
+        const salvoComo = ROTULO_MODELO[podeEscolherModalidade ? modeloDestino : modeloAtual];
+        setMensagem({
+          tone: "error",
+          message: `O curso já foi salvo como ${salvoComo}, mas ainda não foi publicado: ${err.message || "tente de novo."}`
+        });
         return;
       }
 
@@ -128,7 +163,8 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
               </>
             ) : (
               <>
-                <TbTag aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Colocar à venda"}
+                <TbTag aria-hidden="true" size={17} />{" "}
+                {salvando ? "Salvando..." : destinoGratuito ? "Publicar no catálogo" : "Colocar à venda"}
               </>
             )}
           </Botao>
@@ -145,20 +181,50 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
             executar("salvar");
           }}
         >
-          <div className="campo">
-            <label className="campo__rotulo" htmlFor="preparar-venda-preco">Preco (R$) *</label>
-            <input
-              className="campo__entrada"
-              disabled={salvando}
-              id="preparar-venda-preco"
-              inputMode="decimal"
-              min={0}
-              onChange={(event) => setPreco(event.target.value)}
-              step="0.01"
-              type="number"
-              value={preco}
-            />
-          </div>
+          {podeEscolherModalidade ? (
+            <fieldset className="campo janela-preparar-venda__modalidade">
+              <legend className="campo__rotulo">Vender como</legend>
+              <div className="gerar-ia__tipos-grid">
+                <label className="gerar-ia__tipo-opcao">
+                  <input
+                    checked={modeloDestino === MODELO_PAGO_PACOTE}
+                    disabled={salvando}
+                    name="preparar-venda-modelo"
+                    onChange={() => setModeloDestino(MODELO_PAGO_PACOTE)}
+                    type="radio"
+                  />
+                  Pago
+                </label>
+                <label className="gerar-ia__tipo-opcao">
+                  <input
+                    checked={modeloDestino === MODELO_GRATUITO}
+                    disabled={salvando}
+                    name="preparar-venda-modelo"
+                    onChange={() => setModeloDestino(MODELO_GRATUITO)}
+                    type="radio"
+                  />
+                  Gratuito
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
+
+          {!destinoGratuito ? (
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="preparar-venda-preco">Preco (R$) *</label>
+              <input
+                className="campo__entrada"
+                disabled={salvando}
+                id="preparar-venda-preco"
+                inputMode="decimal"
+                min={0}
+                onChange={(event) => setPreco(event.target.value)}
+                step="0.01"
+                type="number"
+                value={preco}
+              />
+            </div>
+          ) : null}
 
           <div className="campo">
             <label className="campo__rotulo" htmlFor="preparar-venda-descricao">Descricao</label>
@@ -184,6 +250,14 @@ export default function ModalPrepararVenda({ curso, onFechar, onSalvo, onSession
               type="file"
             />
           </div>
+
+          {vaiConverter ? (
+            <InlineMessage tone="info">
+              {`Ao salvar, o curso passa de ${ROTULO_MODELO[modeloAtual]} para ${ROTULO_MODELO[modeloDestino]}. `}
+              A modalidade original fica registrada, quem já está matriculado continua com acesso e professor e
+              coordenador passam a ser opcionais.
+            </InlineMessage>
+          ) : null}
 
           <InlineMessage tone="warning">
             {jaEstaAVenda

@@ -40,6 +40,13 @@ public class Curso
 
     public ModeloCurso ModeloCurso { get; set; } = ModeloCurso.PagoPacote;
 
+    /// <summary>
+    /// Modalidade com que o curso nasceu, guardada na PRIMEIRA conversao
+    /// (pacote 8 da auditoria de 26/11, decisao D4): Acompanhado ou Gratuito
+    /// encerrado que virou Pago ou Gratuito. Null = nunca foi convertido.
+    /// </summary>
+    public ModeloCurso? ModeloCursoOriginal { get; private set; }
+
     public int? ConcluidoPeloProfessorId { get; private set; }
     public DateTime? ConcluidoPeloProfessorEm { get; private set; }
 
@@ -114,6 +121,18 @@ public class Curso
     {
         ArgumentNullException.ThrowIfNull(modulo);
         Modulos.Add(modulo);
+    }
+
+    /// <summary>
+    /// Converte o curso pronto em outra modalidade de venda (pacote 8, D1/D4).
+    /// Guarda a modalidade de origem so na primeira conversao; encerramento,
+    /// conclusao e matriculas continuam como estao (D7).
+    /// </summary>
+    public void ConverterPara(ModeloCurso destino, decimal preco)
+    {
+        ModeloCursoOriginal ??= ModeloCurso;
+        ModeloCurso = destino;
+        Preco = preco;
     }
 
     public void ConcluirPeloProfessor(int professorId, DateTime? momento = null)

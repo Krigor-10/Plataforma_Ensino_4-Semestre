@@ -40,6 +40,7 @@ import { useProfessoresCurso } from "../../hooks/useProfessoresCurso.js";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatDayMonth, formatGrade, formatMoney, formatPercent, normalizeTipoAvaliacao } from "../../lib/format.js";
+import { textoOrigemConversao } from "../../lib/situacaoCurso.js";
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
@@ -387,12 +388,16 @@ export default function PainelCursoGestao({
   // Round 6 (plano fluxo-venda-cursos): Gratuito encerrado (fora do
   // catalogo) abre a janela pra virar pacote; PagoPacote reabre a mesma
   // janela pra editar preco/descricao e alternar Colocar/Tirar da venda.
-  const podeGerenciarVenda = ehAdmin && (ehPagoPacote || (ehGratuito && Boolean(curso.encerradoEm) && !cursoPublicado));
+  // Pacote 8 (D1): Acompanhado encerrado tambem pode virar Pago ou Gratuito.
+  const podeGerenciarVenda =
+    ehAdmin &&
+    (ehPagoPacote || ((ehGratuito || ehAcompanhado) && Boolean(curso.encerradoEm) && !cursoPublicado));
   // Gratuito no catalogo (decisoes D3/D11): publica depois do encerramento.
   const podePublicarNoCatalogo = ehAdmin && ehGratuito && Boolean(curso.encerradoEm) && !cursoPublicado;
   const podeTirarDoCatalogo = ehAdmin && ehGratuito && cursoPublicado;
   const coordenadorDoCurso = ehAdmin && curso.coordenadorId ? coordenadores.find((coordenador) => coordenador.id === curso.coordenadorId) : null;
-  const rotuloModeloCurso = ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—";
+  const origemConversao = textoOrigemConversao(curso);
+  const rotuloModeloCurso = `${ROTULOS_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}${origemConversao ? ` (${origemConversao})` : ""}`;
 
   // Tela do modulo (Admin/Coordenador) substitui o conteudo normal do curso
   // enquanto houver moduloIdSelecionado - se o id nao pertencer a este curso,
@@ -665,6 +670,7 @@ export default function PainelCursoGestao({
       {modalPrepararVendaAberto ? (
         <ModalPrepararVenda
           curso={curso}
+          onAtualizar={onRefresh}
           onFechar={() => setModalPrepararVendaAberto(false)}
           onSalvo={() => {
             mostrarToast("Curso preparado para venda com sucesso.", "sucesso");

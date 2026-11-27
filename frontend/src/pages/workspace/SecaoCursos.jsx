@@ -16,7 +16,7 @@ import { getCourseCover } from "../../data/courseCovers.js";
 import { resolverImagemCurso } from "../../lib/courseImage.js";
 import PainelCursoGestao from "./PainelCursoGestao.jsx";
 import SeloSituacaoCurso from "../../components/SeloSituacaoCurso.jsx";
-import { abaAdminDoCurso } from "../../lib/situacaoCurso.js";
+import { abaAdminDoCurso, textoOrigemConversao, vinculosOpcionais } from "../../lib/situacaoCurso.js";
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
@@ -586,6 +586,7 @@ export function SecaoCursos({
       {cursoParaPrepararVenda ? (
         <ModalPrepararVenda
           curso={cursoParaPrepararVenda}
+          onAtualizar={onRefresh}
           onFechar={() => setCursoParaPrepararVenda(null)}
           onSalvo={() => {
             mostrarToast("Curso preparado para venda com sucesso.", "sucesso");
@@ -955,7 +956,15 @@ export function SecaoCursos({
             const media = mediaDoCurso(resumo);
             const coordenador = curso.coordenadorId ? coordenadorPorId.get(curso.coordenadorId) : null;
 
-            const mostrarBotaoPrepararVenda = ehAdmin && abaCurso === "encerrados" && Number(curso.modeloCurso) === MODELO_GRATUITO;
+            // Pacote 8 (D1): Gratuito e Acompanhado encerrados podem ser convertidos.
+            const mostrarBotaoPrepararVenda =
+              ehAdmin &&
+              abaCurso === "encerrados" &&
+              Boolean(curso.encerradoEm) &&
+              (Number(curso.modeloCurso) === MODELO_GRATUITO || Number(curso.modeloCurso) === MODELO_ACOMPANHADO);
+            // Decisao D12: em Gratuito/Pago pronto, coordenador e opcional.
+            const semCoordenadorEhAviso = !vinculosOpcionais(curso);
+            const origemConversao = textoOrigemConversao(curso);
             const situacaoCoordenador = !ehCoordenador
               ? null
               : estaAguardandoEncerramento(curso)
@@ -987,12 +996,15 @@ export function SecaoCursos({
                       {ehAdmin ? (
                         <Insignia
                           texto={coordenador || curso.coordenadorId ? "Coordenado" : "Sem coordenador"}
-                          variante={coordenador || curso.coordenadorId ? undefined : "aviso"}
+                          variante={coordenador || curso.coordenadorId || !semCoordenadorEhAviso ? undefined : "aviso"}
                         />
                       ) : null}
                     </div>
                     {ehAdmin ? (
-                      <p className="catalogo-card__data">{ROTULO_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}</p>
+                      <p className="catalogo-card__data">
+                        {ROTULO_MODELO_CURSO[Number(curso.modeloCurso)] || "—"}
+                        {origemConversao ? ` · ${origemConversao}` : ""}
+                      </p>
                     ) : null}
                     <p className="catalogo-card__data">
                       {resumo.alunosMatriculados} aluno{resumo.alunosMatriculados === 1 ? "" : "s"} · {resumo.modulos} modulo{resumo.modulos === 1 ? "" : "s"}

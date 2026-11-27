@@ -17,6 +17,13 @@ export const SITUACAO_CURSO = {
 
 const MODELO_GRATUITO = 1;
 const MODELO_PAGO_PACOTE = 2;
+const MODELO_ACOMPANHADO = 3;
+
+const ROTULO_MODELO = {
+  [MODELO_GRATUITO]: "Gratuito",
+  [MODELO_PAGO_PACOTE]: "Pago",
+  [MODELO_ACOMPANHADO]: "Acompanhado"
+};
 
 export function calcularSituacaoCurso(curso) {
   if (!curso) {
@@ -103,6 +110,28 @@ export function cursoTravadoParaEdicao(curso) {
     return !curso.permiteEdicaoConteudo;
   }
   return Boolean(curso.publicadoParaVendaEm || curso.concluidoPeloProfessorEm || curso.encerradoEm);
+}
+
+// Pacote 8 da auditoria de 26/11 (decisao D4): "convertido de Acompanhado".
+// Vazio quando o curso nunca foi convertido.
+export function textoOrigemConversao(curso) {
+  const original = Number(curso?.modeloCursoOriginal);
+  if (!original || original === Number(curso?.modeloCurso)) {
+    return "";
+  }
+  return `convertido de ${ROTULO_MODELO[original] || "outra modalidade"}`;
+}
+
+// Decisao D12 (27/11): Gratuito/Pago PRONTO (encerrado, pronto para publicar,
+// publicado ou ja retirado) e produto - professor e coordenador sao
+// opcionais. Antes disso (montagem, aguardando coordenador) continuam
+// obrigatorios (D9/D11), e o Acompanhado sempre precisa deles.
+export function vinculosOpcionais(curso) {
+  if (!curso || Number(curso.modeloCurso) === MODELO_ACOMPANHADO) {
+    return false;
+  }
+  const situacao = situacaoDoCurso(curso);
+  return situacao !== SITUACAO_CURSO.EM_ANDAMENTO && situacao !== SITUACAO_CURSO.AGUARDANDO_COORDENADOR;
 }
 
 // Aviso mostrado ao professor explicando POR QUE a edicao esta travada.

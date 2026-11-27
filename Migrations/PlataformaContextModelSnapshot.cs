@@ -521,6 +521,9 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<int>("ModeloCurso")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ModeloCursoOriginal")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Preco")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");

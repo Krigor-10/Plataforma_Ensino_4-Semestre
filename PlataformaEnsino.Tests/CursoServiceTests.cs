@@ -91,6 +91,35 @@ public class CursoServiceTests
         context.SaveChanges();
     }
 
+    private static void CriarAvaliacaoComQuestao(
+        PlataformaContext context, int cursoId, TipoQuestao tipoQuestao, bool publicada = true)
+    {
+        var avaliacao = new Avaliacao { Titulo = "Prova", TipoAvaliacao = TipoAvaliacao.Prova };
+        avaliacao.DefinirAutor(1);
+        avaliacao.DefinirCurso(cursoId);
+        if (publicada)
+        {
+            avaliacao.Publicar();
+        }
+        context.Avaliacoes.Add(avaliacao);
+        context.SaveChanges();
+        context.QuestoesPublicadas.Add(new QuestaoPublicada { AvaliacaoId = avaliacao.Id, Ordem = 1, TipoQuestao = tipoQuestao });
+        context.SaveChanges();
+    }
+
+    // Curso pronto: professor concluiu e coordenador encerrou.
+    private static async Task<Curso> CriarCursoEncerradoAsync(
+        PlataformaContext context, CursoService service, ModeloCurso modeloCurso)
+    {
+        var coordenador = CriarCoordenador(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context, modeloCurso, coordenador.Id);
+        VincularProfessorCurso(context, professor.Id, curso.Id);
+        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
+        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+        return curso;
+    }
+
     private static void VincularProfessorCurso(PlataformaContext context, int professorId, int cursoId)
     {
         context.ProfessoresCursos.Add(new ProfessorCurso { ProfessorId = professorId, CursoId = cursoId });
@@ -919,20 +948,134 @@ public class CursoServiceTests
             () => service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m }));
     }
 
+    // Pacote 8 da auditoria de 26/11 (D1, D4, D8b): conversao.
+
     [Fact]
-    public async Task DefinirPacoteAsync_CursoAcompanhado_LancaInvalidOperation()
+    public async Task DefinirPacoteAsync_GratuitoEncerradoViraPago_GuardaModalidadeOriginal()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
-        var coordenador = CriarCoordenador(context);
-        var professor = CriarProfessor(context);
-        var curso = CriarCurso(context, ModeloCurso.Acompanhado, coordenador.Id);
-        VincularProfessorCurso(context, professor.Id, curso.Id);
-        await service.ConcluirCursoComoProfessorAsync(curso.Id, professor.Id);
-        await service.EncerrarCursoAsync(curso.Id, coordenador.Id);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Gratuito);
+
+        var cursoAtualizado = await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+
+        Assert.Equal(ModeloCurso.Gratuito, cursoAtualizado.ModeloCursoOriginal);
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_AcompanhadoEncerradoViraPago()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Acompanhado);
+
+        var cursoAtualizado = await service.DefinirPacoteAsync(
+            curso.Id, new AtualizarPacoteCursoDto { Preco = 59.90m, ModeloDestino = ModeloCurso.PagoPacote });
+
+        Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
+        Assert.Equal(ModeloCurso.Acompanhado, cursoAtualizado.ModeloCursoOriginal);
+        Assert.Equal(59.90m, cursoAtualizado.Preco);
+        Assert.NotNull(cursoAtualizado.EncerradoEm);
+        Assert.Null(cursoAtualizado.PublicadoParaVendaEm);
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_AcompanhadoEncerradoViraGratuito_ZeraPrecoEPodePublicar()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Acompanhado);
+        curso.Preco = 59.90m;
+        context.SaveChanges();
+        CriarConteudoPublicado(context, curso.Id);
+
+        var cursoAtualizado = await service.DefinirPacoteAsync(
+            curso.Id, new AtualizarPacoteCursoDto { Preco = 0, ModeloDestino = ModeloCurso.Gratuito });
+        await service.PublicarParaVendaAsync(curso.Id);
+
+        Assert.Equal(ModeloCurso.Gratuito, cursoAtualizado.ModeloCurso);
+        Assert.Equal(ModeloCurso.Acompanhado, cursoAtualizado.ModeloCursoOriginal);
+        Assert.Equal(0m, cursoAtualizado.Preco);
+        Assert.NotNull(cursoAtualizado.PublicadoParaVendaEm);
+        Assert.True(cursoAtualizado.DisponivelParaNovosAlunos);
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_ConvertidoDuasVezes_MantemPrimeiraOrigem()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Acompanhado);
+
+        await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { ModeloDestino = ModeloCurso.Gratuito });
+        var cursoAtualizado = await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 19.90m });
+
+        Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
+        Assert.Equal(ModeloCurso.Acompanhado, cursoAtualizado.ModeloCursoOriginal);
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_AcompanhadoNaoEncerrado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Acompanhado);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m }));
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_PagoParaGratuito_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { ModeloDestino = ModeloCurso.Gratuito }));
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_DestinoAcompanhado_LancaInvalidOperation()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Gratuito);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { ModeloDestino = ModeloCurso.Acompanhado }));
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_ComDissertativaPublicada_BloqueiaConversao()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Acompanhado);
+        CriarAvaliacaoComQuestao(context, curso.Id, TipoQuestao.Dissertativa);
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m }));
+
+        Assert.Contains("dissertativa", erro.Message);
+        var cursoNoBanco = await context.Cursos.FindAsync(curso.Id);
+        Assert.Equal(ModeloCurso.Acompanhado, cursoNoBanco!.ModeloCurso);
+        Assert.Null(cursoNoBanco.ModeloCursoOriginal);
+    }
+
+    [Fact]
+    public async Task DefinirPacoteAsync_SoObjetivasOuDissertativaEmRascunho_Converte()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = await CriarCursoEncerradoAsync(context, service, ModeloCurso.Acompanhado);
+        CriarAvaliacaoComQuestao(context, curso.Id, TipoQuestao.MultiplaEscolha);
+        CriarAvaliacaoComQuestao(context, curso.Id, TipoQuestao.Dissertativa, publicada: false);
+
+        var cursoAtualizado = await service.DefinirPacoteAsync(curso.Id, new AtualizarPacoteCursoDto { Preco = 29.90m });
+
+        Assert.Equal(ModeloCurso.PagoPacote, cursoAtualizado.ModeloCurso);
     }
 
     [Fact]

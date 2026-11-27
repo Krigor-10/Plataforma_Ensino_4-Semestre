@@ -504,28 +504,50 @@ public class CursoService : ICursoService
         var curso = await _cursoRepository.ObterPorIdAsync(cursoId)
             ?? throw new KeyNotFoundException("Curso não encontrado.");
 
-        var podeDefinirPacote = curso.ModeloCurso == ModeloCurso.PagoPacote
-            || (curso.ModeloCurso == ModeloCurso.Gratuito && curso.EncerradoEm.HasValue);
-
-        if (!podeDefinirPacote)
+        // Pacote 8 da auditoria de 26/11 (D1, D4, D8b): Acompanhado e Gratuito
+        // ENCERRADOS viram Pago ou Gratuito; um Pago so edita preco/descricao.
+        var destino = dto.ModeloDestino ?? ModeloCurso.PagoPacote;
+        if (destino == ModeloCurso.Acompanhado)
         {
-            throw new InvalidOperationException(
-                "Somente um curso Gratuito encerrado ou ja do modelo Pago pode ter preco/descricao de pacote definidos.");
+            throw new InvalidOperationException("Um curso so pode ser convertido em Pago ou Gratuito.");
         }
 
-        // Pacote 7: um Gratuito no catalogo viraria Pago "a venda" na hora.
-        if (curso.ModeloCurso == ModeloCurso.Gratuito && curso.PublicadoParaVendaEm.HasValue)
+        if (curso.ModeloCurso == ModeloCurso.PagoPacote)
         {
-            throw new InvalidOperationException("Tire o curso do catalogo antes de converte-lo em pacote pago.");
+            if (destino != ModeloCurso.PagoPacote)
+            {
+                throw new InvalidOperationException("Um pacote pago nao pode ser convertido em Gratuito.");
+            }
+
+            GarantirPrecoDoPacote(dto.Preco);
+            curso.Preco = dto.Preco;
+        }
+        else
+        {
+            if (!curso.EncerradoEm.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "Somente um curso Acompanhado ou Gratuito encerrado pode ser convertido em Pago ou Gratuito.");
+            }
+
+            // Pacote 7: um Gratuito no catalogo viraria Pago "a venda" na hora.
+            if (curso.PublicadoParaVendaEm.HasValue)
+            {
+                throw new InvalidOperationException("Tire o curso do catalogo antes de converte-lo em pacote pago.");
+            }
+
+            if (destino != curso.ModeloCurso)
+            {
+                if (destino == ModeloCurso.PagoPacote)
+                {
+                    GarantirPrecoDoPacote(dto.Preco);
+                }
+
+                await GarantirSemQuestaoDissertativaAsync(cursoId);
+                curso.ConverterPara(destino, destino == ModeloCurso.PagoPacote ? dto.Preco : 0m);
+            }
         }
 
-        if (dto.Preco <= 0)
-        {
-            throw new ArgumentException("O preco do pacote deve ser maior que zero.");
-        }
-
-        curso.ModeloCurso = ModeloCurso.PagoPacote;
-        curso.Preco = dto.Preco;
         if (dto.Descricao is not null)
         {
             curso.Descricao = dto.Descricao.Trim();
@@ -535,6 +557,35 @@ public class CursoService : ICursoService
         await _cursoRepository.SalvarAlteracoesAsync();
 
         return curso;
+    }
+
+    private static void GarantirPrecoDoPacote(decimal preco)
+    {
+        if (preco <= 0)
+        {
+            throw new ArgumentException("O preco do pacote deve ser maior que zero.");
+        }
+    }
+
+    /// <summary>
+    /// Decisao D8b: dissertativa precisa de correcao, e curso convertido nao
+    /// tem professor acompanhando. Ate a correcao pela IA existir (D8), so
+    /// converte curso com avaliacoes publicadas 100% objetivas.
+    /// </summary>
+    private async Task GarantirSemQuestaoDissertativaAsync(int cursoId)
+    {
+        var temDissertativa = await _context.QuestoesPublicadas.AnyAsync(questao =>
+            questao.TipoQuestao == TipoQuestao.Dissertativa &&
+            _context.Avaliacoes.Any(avaliacao =>
+                avaliacao.Id == questao.AvaliacaoId &&
+                avaliacao.CursoId == cursoId &&
+                avaliacao.StatusPublicacao == StatusPublicacao.Publicado));
+
+        if (temDissertativa)
+        {
+            throw new InvalidOperationException(
+                "Este curso tem questao dissertativa em avaliacao publicada. Enquanto a correcao automatica nao existir, so cursos com questoes objetivas podem ser convertidos.");
+        }
     }
 
     public async Task PublicarParaVendaAsync(int cursoId)

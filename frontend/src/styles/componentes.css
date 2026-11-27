@@ -943,6 +943,14 @@ select.campo__entrada option {
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
 }
 
+/* Pacote 8: grupo "Vender como" (Pago/Gratuito) sem a borda padrao do fieldset. */
+.janela-preparar-venda__modalidade {
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
 .janela-preparar-venda__previa {
   display: flex;
   flex-direction: column;
