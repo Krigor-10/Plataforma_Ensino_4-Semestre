@@ -6,10 +6,11 @@ import Modal from "../../components/Modal.jsx";
 import { InlineMessage, StatusPill } from "../../components/Primitives.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 
+// Decisao de 27/11: por enquanto so questoes objetivas (ainda nao existe
+// correcao manual de dissertativa). O servidor tambem recusa o tipo 3.
 const OPCOES_TIPO_QUESTAO = [
   { value: "1", label: "Multipla escolha" },
   { value: "2", label: "Verdadeiro/Falso" },
-  { value: "3", label: "Dissertativa" },
   { value: "4", label: "Afirmativas combinadas" }
 ];
 

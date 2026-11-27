@@ -32,10 +32,11 @@ const OPCOES_STATUS_PUBLICACAO = [
   { value: "3", label: "Arquivado" }
 ];
 
+// Decisao de 27/11: por enquanto so questoes objetivas (ainda nao existe
+// correcao manual de dissertativa). O servidor tambem recusa o tipo 3.
 const OPCOES_TIPO_QUESTAO = [
   { value: "1", label: "Multipla escolha" },
   { value: "2", label: "Verdadeiro/Falso" },
-  { value: "3", label: "Dissertativa" },
   { value: "4", label: "Afirmativas combinadas" }
 ];
 
@@ -1155,6 +1156,11 @@ export function AssistenteQuizAvaliacao({
                               {opcao.label}
                             </option>
                           ))}
+                          {String(dadosFormularioQuestao.tipoQuestao) === "3" ? (
+                            <option disabled value="3">
+                              Dissertativa (escolha um tipo objetivo)
+                            </option>
+                          ) : null}
                         </select>
                       </div>
                       <div className="campo">

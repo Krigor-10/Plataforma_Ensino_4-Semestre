@@ -5,6 +5,7 @@ using PlataformaEnsino.API.Common;
 using PlataformaEnsino.API.DTOs;
 using PlataformaEnsino.API.Interfaces;
 using PlataformaEnsino.API.Models;
+using PlataformaEnsino.API.Services;
 
 namespace PlataformaEnsino.API.Controllers;
 
@@ -320,6 +321,11 @@ public class AvaliacoesController : ControllerBase
             return BadRequest(new { mensagem = "Informe ao menos um tipo de questao permitido." });
         }
 
+        if (tipos.Contains(TipoQuestao.Dissertativa))
+        {
+            return BadRequest(new { mensagem = AvaliacaoService.MensagemSomenteQuestoesObjetivas });
+        }
+
         var configuracao = new GerarQuestoesIaRequestDto
         {
             QuantidadeQuestoes = quantidadeQuestoes,
@@ -375,6 +381,11 @@ public class AvaliacoesController : ControllerBase
         if (tipos.Count == 0)
         {
             return BadRequest(new { mensagem = "Informe ao menos um tipo de questao permitido." });
+        }
+
+        if (tipos.Contains(TipoQuestao.Dissertativa))
+        {
+            return BadRequest(new { mensagem = AvaliacaoService.MensagemSomenteQuestoesObjetivas });
         }
 
         var configuracao = new GerarQuestoesIaRequestDto

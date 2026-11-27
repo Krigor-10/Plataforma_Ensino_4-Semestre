@@ -126,15 +126,16 @@ public class ValidadorQuestaoIaServiceTests
     }
 
     [Fact]
-    public void ValidarOuLancar_Dissertativa_NaoAplicaGabaritoIncerto()
+    public void ValidarOuLancar_Dissertativa_EhDescartada()
     {
+        // Decisao de 27/11: so questoes objetivas; dissertativa vinda da IA cai.
         var questao = CriarQuestaoValida();
         questao.TipoQuestao = TipoQuestao.Dissertativa;
         questao.Alternativas = new List<CriarAlternativaAvaliacaoDto>();
 
-        _service.ValidarOuLancar(questao);
+        var erro = Assert.Throws<ArgumentException>(() => _service.ValidarOuLancar(questao));
 
-        Assert.False(questao.GabaritoIncerto);
+        Assert.Equal(AvaliacaoService.MensagemSomenteQuestoesObjetivas, erro.Message);
     }
 
     [Fact]

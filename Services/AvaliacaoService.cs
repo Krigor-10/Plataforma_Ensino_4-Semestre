@@ -11,6 +11,13 @@ namespace PlataformaEnsino.API.Services;
 
 public class AvaliacaoService : IAvaliacaoService
 {
+    // Decisao de 27/11: por enquanto so questoes objetivas. Ainda nao existe
+    // correcao manual de dissertativa (a tentativa ficaria "aguardando correcao"
+    // para sempre), entao nenhuma dissertativa nova e criada nem publicada. As
+    // avaliacoes ja publicadas com dissertativa continuam como estao.
+    public const string MensagemSomenteQuestoesObjetivas =
+        "Por enquanto a plataforma aceita apenas questoes objetivas (multipla escolha, verdadeiro/falso ou afirmativas combinadas).";
+
     private readonly PlataformaContext _context;
     private readonly IProgressoAlunoService _progressoAlunoService;
     private readonly INotificacaoService _notificacaoService;
@@ -236,6 +243,16 @@ public class AvaliacaoService : IAvaliacaoService
         if (dto.StatusPublicacao == StatusPublicacao.Publicado && avaliacao.Questoes.Count == 0)
         {
             throw new InvalidOperationException("Adicione ao menos uma questao antes de publicar o quiz.");
+        }
+
+        // So na passagem para Publicado: uma avaliacao que ja estava publicada com
+        // dissertativa (antes de 27/11) continua editavel e publicada.
+        if (dto.StatusPublicacao == StatusPublicacao.Publicado &&
+            avaliacao.StatusPublicacao != StatusPublicacao.Publicado &&
+            avaliacao.Questoes.Any(questao => questao.TipoQuestao == TipoQuestao.Dissertativa))
+        {
+            throw new InvalidOperationException(
+                "Esta avaliacao tem questao dissertativa. Troque por uma questao objetiva ou remova-a antes de publicar. " + MensagemSomenteQuestoesObjetivas);
         }
 
         avaliacao.ModuloId = modulo?.Id;
@@ -1598,7 +1615,7 @@ public class AvaliacaoService : IAvaliacaoService
 
         if (dto.TipoQuestao == TipoQuestao.Dissertativa)
         {
-            return;
+            throw new ArgumentException(MensagemSomenteQuestoesObjetivas);
         }
 
         if (dto.Alternativas.Count < 2)

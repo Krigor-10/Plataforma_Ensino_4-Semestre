@@ -645,7 +645,7 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task AdicionarQuestaoAsync_Dissertativa_NaoExigeAlternativas()
+    public async Task AdicionarQuestaoAsync_Dissertativa_EhRecusada()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
@@ -663,9 +663,115 @@ public class AvaliacaoServiceTests
             Pontos = 10
         };
 
-        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, dto);
+        // Decisao de 27/11: por enquanto so questoes objetivas.
+        var erro = await Assert.ThrowsAsync<ArgumentException>(
+            () => service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, dto));
+        Assert.Equal(AvaliacaoService.MensagemSomenteQuestoesObjetivas, erro.Message);
+        Assert.Empty(context.QuestoesPublicadas);
+    }
 
-        Assert.Empty(questao.Alternativas);
+    [Fact]
+    public async Task AdicionarQuestoesEmLoteAsync_ComUmaDissertativa_NaoGravaNenhuma()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+
+        var lote = new CriarQuestoesEmLoteDto
+        {
+            Questoes = new List<CriarQuestaoAvaliacaoDto>
+            {
+                NovaQuestaoObjetivaDto(),
+                new() { TituloInterno = "Dissertativa", Enunciado = "Explique...", TipoQuestao = TipoQuestao.Dissertativa, Pontos = 5 }
+            }
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => service.AdicionarQuestoesEmLoteAsync(avaliacao.Id, professor.Id, lote));
+        Assert.Empty(context.QuestoesPublicadas);
+    }
+
+    [Fact]
+    public async Task AtualizarAvaliacaoAsync_PublicarComDissertativa_LancaInvalidOperationException()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarTurma(context, curso.Id, professor.Id);
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(curso.Id, modulo.Id));
+        await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto());
+        AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id);
+
+        var erro = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.AtualizarAvaliacaoAsync(avaliacao.Id, professor.Id, DtoAtualizacaoPublicada(avaliacao, curso.Id, modulo.Id)));
+
+        Assert.Contains("dissertativa", erro.Message);
+        Assert.Equal(StatusPublicacao.Rascunho, context.Avaliacoes.AsNoTracking().Single(a => a.Id == avaliacao.Id).StatusPublicacao);
+    }
+
+    [Fact]
+    public async Task AtualizarAvaliacaoAsync_JaPublicadaComDissertativa_ContinuaEditavelEPublicada()
+    {
+        var (service, context, professor, _, _, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
+        AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id);
+
+        var dto = DtoAtualizacaoPublicada(avaliacao, avaliacao.CursoId, modulo.Id);
+        dto.Titulo = "Titulo novo";
+        await service.AtualizarAvaliacaoAsync(avaliacao.Id, professor.Id, dto);
+
+        var noBanco = context.Avaliacoes.AsNoTracking().Single(a => a.Id == avaliacao.Id);
+        Assert.Equal(StatusPublicacao.Publicado, noBanco.StatusPublicacao);
+        Assert.Equal("Titulo novo", noBanco.Titulo);
+    }
+
+    private static AtualizarAvaliacaoDto DtoAtualizacaoPublicada(Avaliacao avaliacao, int cursoId, int moduloId) => new()
+    {
+        Titulo = avaliacao.Titulo,
+        CursoId = cursoId,
+        ModuloId = moduloId,
+        TipoAvaliacao = avaliacao.TipoAvaliacao,
+        StatusPublicacao = StatusPublicacao.Publicado,
+        TentativasPermitidas = 1,
+        NotaMaxima = 10,
+        PesoNota = 1,
+        PesoProgresso = 1
+    };
+
+    // Dissertativa publicada ANTES de 27/11 (hoje o servico recusa criar uma):
+    // grava direto no banco para testar o que continua valendo para elas.
+    private static QuestaoPublicada AdicionarDissertativaAntiga(PlataformaContext context, int avaliacaoId, int professorId, decimal pontos = 10)
+    {
+        var questaoBanco = new QuestaoBanco
+        {
+            ProfessorAutorId = professorId,
+            TituloInterno = "Dissertativa",
+            Enunciado = "Explique...",
+            TipoQuestao = TipoQuestao.Dissertativa,
+            Ativa = true,
+            CriadoEm = DateTime.UtcNow
+        };
+        context.QuestoesBanco.Add(questaoBanco);
+        context.SaveChanges();
+
+        var ordem = (context.QuestoesPublicadas.Where(q => q.AvaliacaoId == avaliacaoId).Select(q => (int?)q.Ordem).Max() ?? 0) + 1;
+        var questao = new QuestaoPublicada
+        {
+            AvaliacaoId = avaliacaoId,
+            QuestaoBancoId = questaoBanco.Id,
+            Ordem = ordem,
+            EnunciadoSnapshot = questaoBanco.Enunciado,
+            TipoQuestao = TipoQuestao.Dissertativa,
+            Pontos = pontos
+        };
+        context.QuestoesPublicadas.Add(questao);
+        context.SaveChanges();
+        return questao;
     }
 
     // ---------- AdicionarQuestoesEmLoteAsync ----------
@@ -1048,13 +1154,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_FicaEnviadaSemCorrecaoAutomatica()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
-        {
-            TituloInterno = "Dissertativa",
-            Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Dissertativa,
-            Pontos = 10
-        });
+        var questaoDissertativa = AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id, pontos: 10);
 
         var dto = new EnviarAvaliacaoAlunoDto
         {
@@ -1074,13 +1174,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_DissertativaVazia_LancaArgumentException()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
-        {
-            TituloInterno = "Dissertativa",
-            Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Dissertativa,
-            Pontos = 10
-        });
+        var questaoDissertativa = AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id, pontos: 10);
 
         var dto = new EnviarAvaliacaoAlunoDto
         {
@@ -1366,13 +1460,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_ComQuestaoDissertativa_NaoLancaNotaAutomatica()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
-        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
-        {
-            TituloInterno = "Dissertativa",
-            Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Dissertativa,
-            Pontos = 10
-        });
+        var questaoDissertativa = AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id, pontos: 10);
 
         var dto = new EnviarAvaliacaoAlunoDto
         {
@@ -1475,13 +1563,7 @@ public class AvaliacaoServiceTests
     public async Task EnviarRespostasAlunoAsync_Quiz_ComDissertativa_AindaContaProgresso()
     {
         var (service, context, professor, aluno, _, modulo, avaliacao) = await CriarCenarioComAvaliacaoPublicada();
-        var questaoDissertativa = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, new CriarQuestaoAvaliacaoDto
-        {
-            TituloInterno = "Dissertativa",
-            Enunciado = "Explique...",
-            TipoQuestao = TipoQuestao.Dissertativa,
-            Pontos = 10
-        });
+        var questaoDissertativa = AdicionarDissertativaAntiga(context, avaliacao.Id, professor.Id, pontos: 10);
 
         var dto = new EnviarAvaliacaoAlunoDto
         {
