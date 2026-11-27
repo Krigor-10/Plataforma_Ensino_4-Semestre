@@ -275,6 +275,34 @@ public class AvaliacaoServiceTests
         Assert.Equal(1m, avaliacao.PesoNota);
     }
 
+    // Decisao E3 da auditoria de 26/11: o professor escolhe de 1 a 10
+    // tentativas no quiz; Prova/Exercicio seguem sem limite maximo.
+    [Theory]
+    [InlineData(TipoAvaliacao.Quiz, 1, true)]
+    [InlineData(TipoAvaliacao.Quiz, 10, true)]
+    [InlineData(TipoAvaliacao.Quiz, 11, false)]
+    [InlineData(TipoAvaliacao.Prova, 15, true)]
+    public async Task CriarAvaliacaoAsync_LimiteDeTentativas_QuizAteDez(TipoAvaliacao tipo, int tentativas, bool deveAceitar)
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var professor = CriarProfessor(context);
+        var curso = CriarCurso(context);
+        var modulo = CriarModulo(context, curso.Id);
+        CriarTurma(context, curso.Id, professor.Id);
+        var dto = NovaAvaliacaoDto(curso.Id, modulo.Id, tentativasPermitidas: tentativas, tipoAvaliacao: tipo);
+
+        if (deveAceitar)
+        {
+            var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, dto);
+            Assert.Equal(tentativas, avaliacao.TentativasPermitidas);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<ArgumentException>(() => service.CriarAvaliacaoAsync(professor.Id, dto));
+        }
+    }
+
     [Fact]
     public async Task CriarAvaliacaoAsync_FechamentoAntesDaAbertura_LancaArgumentException()
     {

@@ -1532,6 +1532,13 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("O peso de progresso deve ser maior que zero.");
         }
 
+        // Quiz: de 1 a 10 tentativas, escolhidas pelo professor (decisao E3 da
+        // auditoria de 26/11). Prova/Exercicio seguem sem limite maximo.
+        if (tipoAvaliacao == TipoAvaliacao.Quiz && tentativasPermitidas > Avaliacao.MaximoTentativasQuiz)
+        {
+            throw new ArgumentException($"O quiz pode ter de 1 a {Avaliacao.MaximoTentativasQuiz} tentativas.");
+        }
+
         avaliacao.Titulo = tituloNormalizado;
         avaliacao.Descricao = (descricao ?? string.Empty).Trim();
         avaliacao.TipoAvaliacao = tipoAvaliacao;

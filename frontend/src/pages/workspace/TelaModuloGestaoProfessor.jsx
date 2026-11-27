@@ -519,6 +519,7 @@ export default function TelaModuloGestaoProfessor({
     }
 
     const totalQuestoesQuiz = item.quiz.totalQuestoes || 0;
+    const tentativasQuiz = Number(item.quiz.tentativasPermitidas) || 1;
     return {
       id: item.id,
       tituloReal,
@@ -530,7 +531,8 @@ export default function TelaModuloGestaoProfessor({
       dadosLinha: (
         <>
           <span className="painel-itens-modulo__item-dados-parte">
-            <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} {totalQuestoesQuiz === 1 ? "questão" : "questões"}
+            <TbListDetails aria-hidden="true" size="0.85rem" /> {totalQuestoesQuiz} {totalQuestoesQuiz === 1 ? "questão" : "questões"} ·{" "}
+            {tentativasQuiz} {tentativasQuiz === 1 ? "tentativa" : "tentativas"}
           </span>
           <span aria-hidden="true">|</span>
           <span className="painel-itens-modulo__item-dados-parte">

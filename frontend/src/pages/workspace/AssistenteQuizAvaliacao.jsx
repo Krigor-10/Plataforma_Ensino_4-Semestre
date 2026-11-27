@@ -22,6 +22,10 @@ const OPCOES_TIPO_AVALIACAO = [
 // so reaparece no select se for exatamente o tipo ja selecionado no momento.
 const OPCOES_TIPO_AVALIACAO_SEM_QUIZ = OPCOES_TIPO_AVALIACAO.filter((opcao) => opcao.value !== TIPO_QUIZ);
 
+// Limite de tentativas do quiz (decisao E3 da auditoria de 26/11); o
+// servidor aplica o mesmo limite (AvaliacaoService).
+const MAXIMO_TENTATIVAS_QUIZ = 10;
+
 const OPCOES_STATUS_PUBLICACAO = [
   { value: "1", label: "Rascunho" },
   { value: "2", label: "Publicado" },
@@ -385,7 +389,9 @@ export function AssistenteQuizAvaliacao({
       statusPublicacao: Number(dadosFormulario.statusPublicacao),
       dataAbertura: modoExclusivoQuiz ? null : toIsoOrNull(dadosFormulario.dataAbertura),
       dataFechamento: modoExclusivoQuiz ? null : toIsoOrNull(dadosFormulario.dataFechamento),
-      tentativasPermitidas: modoExclusivoQuiz ? 1 : Number(dadosFormulario.tentativasPermitidas),
+      // Quiz: o professor escolhe de 1 a 10 (decisao E3 da auditoria de 26/11).
+      // Antes era sempre 1, e editar um quiz antigo zerava para 1 sem aviso.
+      tentativasPermitidas: Number(dadosFormulario.tentativasPermitidas),
       tempoLimiteMinutos: modoExclusivoQuiz ? null : dadosFormulario.tempoLimiteMinutos ? Number(dadosFormulario.tempoLimiteMinutos) : null,
       // Toda avaliacao vale de 0 a 10 e a media do curso e simples (decisao
       // F0 da auditoria de 26/11): o servidor ignora estes dois valores.
@@ -414,6 +420,10 @@ export function AssistenteQuizAvaliacao({
 
     if (!Number.isInteger(dadosEnvio.tentativasPermitidas) || dadosEnvio.tentativasPermitidas <= 0) {
       return "Informe pelo menos uma tentativa permitida.";
+    }
+
+    if (ehQuiz && dadosEnvio.tentativasPermitidas > MAXIMO_TENTATIVAS_QUIZ) {
+      return `O quiz pode ter de 1 a ${MAXIMO_TENTATIVAS_QUIZ} tentativas.`;
     }
 
     if (dadosEnvio.tempoLimiteMinutos !== null && (!Number.isInteger(dadosEnvio.tempoLimiteMinutos) || dadosEnvio.tempoLimiteMinutos <= 0)) {
@@ -1042,15 +1052,33 @@ export function AssistenteQuizAvaliacao({
                     </div>
 
                     {modoExclusivoQuiz ? (
-                      <div className="campo">
-                        <label className="campo__rotulo" htmlFor="avaliacao-status">Status *</label>
-                        <select className="campo__entrada" disabled={salvando} id="avaliacao-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
-                          {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
-                            <option key={opcao.value} value={opcao.value}>
-                              {opcao.label}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="grade-2">
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-status">Status *</label>
+                          <select className="campo__entrada" disabled={salvando} id="avaliacao-status" name="statusPublicacao" onChange={atualizarCampoFormulario} value={dadosFormulario.statusPublicacao}>
+                            {OPCOES_STATUS_PUBLICACAO.map((opcao) => (
+                              <option key={opcao.value} value={opcao.value}>
+                                {opcao.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="campo">
+                          <label className="campo__rotulo" htmlFor="avaliacao-tentativas-quiz">Tentativas permitidas *</label>
+                          <input
+                            className="campo__entrada"
+                            disabled={salvando}
+                            id="avaliacao-tentativas-quiz"
+                            inputMode="numeric"
+                            min="1"
+                            name="tentativasPermitidas"
+                            onChange={atualizarCampoFormulario}
+                            step="1"
+                            type="number"
+                            value={dadosFormulario.tentativasPermitidas}
+                          />
+                          <span className="campo__dica">De 1 a {MAXIMO_TENTATIVAS_QUIZ}. O quiz não tem nota: refazer só ajuda a fixar.</span>
+                        </div>
                       </div>
                     ) : (
                       <div className="grade-3">

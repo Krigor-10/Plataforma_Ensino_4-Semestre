@@ -38,6 +38,9 @@ public class Avaliacao
     public const decimal EscalaNota = 10m;
     public const decimal PesoNotaUnico = 1m;
 
+    /// <summary>Limite de tentativas do quiz (decisao E3 da auditoria de 26/11).</summary>
+    public const int MaximoTentativasQuiz = 10;
+
     public decimal NotaMaxima { get; set; } = EscalaNota;
     public decimal PesoNota { get; set; } = PesoNotaUnico;
     public decimal PesoProgresso { get; set; } = 1;
