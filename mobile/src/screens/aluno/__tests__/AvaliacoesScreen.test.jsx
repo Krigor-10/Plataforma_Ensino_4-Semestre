@@ -86,6 +86,7 @@ const PROVA_CONCLUIDA_DADOS = {
   dataAbertura: null,
   dataFechamento: null,
   ultimaNota: 8,
+  melhorNota: 8,
   ultimaTentativaId: 101,
   ultimoStatusTentativa: 3,
   notaMaxima: 10,
@@ -152,6 +153,7 @@ function montarAvaliacao(sobrescritas) {
     dataAbertura: null,
     dataFechamento: null,
     ultimaNota: 8,
+    melhorNota: 8,
     ultimaTentativaId: 1,
     ultimoStatusTentativa: 3,
     notaMaxima: 10,
@@ -269,7 +271,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota 7,0 (limite incluido) fica verde, com 'aprovado'", async () => {
-    const avaliacao = montarAvaliacao({ ultimaNota: 7, notaMaxima: 10 });
+    const avaliacao = montarAvaliacao({ ultimaNota: 7, melhorNota: 7 });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -278,7 +280,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota 6,9 fica vermelha, abaixo de 7,0", async () => {
-    const avaliacao = montarAvaliacao({ ultimaNota: 6.9, notaMaxima: 10 });
+    const avaliacao = montarAvaliacao({ ultimaNota: 6.9, melhorNota: 6.9 });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -286,8 +288,9 @@ describe("AvaliacoesScreen - lista direta", () => {
     expect(screen.getByText("Nota 6,9 · abaixo de 7,0")).toBeTruthy();
   });
 
-  test("notaMaxima 5 com nota 4 converte pra 8,0 (escala 0-10) e fica verde", async () => {
-    const avaliacao = montarAvaliacao({ ultimaNota: 4, notaMaxima: 5 });
+  // Decisao F1 da auditoria de 26/11: vale a MELHOR tentativa corrigida.
+  test("ultima tentativa pior que a melhor: mostra a melhor (8,0) e fica verde", async () => {
+    const avaliacao = montarAvaliacao({ ultimaNota: 4, melhorNota: 8 });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -296,7 +299,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("sem tentativa, nenhuma linha de nota aparece", async () => {
-    const avaliacao = montarAvaliacao({ tentativasRealizadas: 0, ultimaNota: null, ultimaTentativaId: null });
+    const avaliacao = montarAvaliacao({ tentativasRealizadas: 0, ultimaNota: null, melhorNota: null, ultimaTentativaId: null });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -343,7 +346,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("icone: bloqueada usa a cor cinza, independente do tipo", async () => {
-    const bloqueada = montarAvaliacao({ progressoLiberado: false, tentativasRealizadas: 0, ultimaNota: null, ultimoStatusTentativa: null });
+    const bloqueada = montarAvaliacao({ progressoLiberado: false, tentativasRealizadas: 0, ultimaNota: null, melhorNota: null, ultimoStatusTentativa: null });
     const snapshot = montarSnapshot([bloqueada]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -354,7 +357,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota: ultimoStatusTentativa EmAndamento (1) nao renderiza a linha de nota", async () => {
-    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 1 });
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 1, melhorNota: null });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -363,7 +366,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota: ultimoStatusTentativa Enviada (2) renderiza 'aguardando correcao'", async () => {
-    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 2 });
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 2, melhorNota: null });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -372,7 +375,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota: Corrigida (3) com nota 0 renderiza 'Nota 0,0 · abaixo de 7,0', nunca '-'", async () => {
-    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 0 });
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 0, melhorNota: 0 });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);
@@ -381,7 +384,7 @@ describe("AvaliacoesScreen - lista direta", () => {
   });
 
   test("nota: Corrigida (3) com nota 8 renderiza 'aprovado' em verde", async () => {
-    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 8 });
+    const avaliacao = montarAvaliacao({ ultimoStatusTentativa: 3, ultimaNota: 8, melhorNota: 8 });
     const snapshot = montarSnapshot([avaliacao]);
 
     await render(<AvaliacoesScreen snapshot={snapshot} />);

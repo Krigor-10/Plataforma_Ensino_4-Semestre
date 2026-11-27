@@ -27,9 +27,35 @@ public class Avaliacao
     public DateTime? DataFechamento { get; set; }
     public int TentativasPermitidas { get; private set; } = 1;
     public int? TempoLimiteMinutos { get; set; }
-    public decimal NotaMaxima { get; set; } = 10;
-    public decimal PesoNota { get; set; } = 1;
+    /// <summary>
+    /// Toda avaliacao vale de 0 a 10 (decisao F0 da auditoria de 26/11, docs/
+    /// auditorias/AUDITORIA-PENDENCIAS-REGRAS-2026-11-26.md): a nota e a
+    /// proporcao de acertos (pontos obtidos / pontos totais das questoes x 10),
+    /// e a nota final do curso e a media SIMPLES das avaliacoes. NotaMaxima e
+    /// PesoNota continuam no banco so por compatibilidade - o servico sempre
+    /// grava EscalaNota e PesoNotaUnico, ignorando o que o cliente mandar.
+    /// </summary>
+    public const decimal EscalaNota = 10m;
+    public const decimal PesoNotaUnico = 1m;
+
+    public decimal NotaMaxima { get; set; } = EscalaNota;
+    public decimal PesoNota { get; set; } = PesoNotaUnico;
     public decimal PesoProgresso { get; set; } = 1;
+
+    /// <summary>
+    /// Nota de 0 a 10 pela proporcao de acertos. Sem pontos totais (nenhuma
+    /// questao pontuada) a nota e 0.
+    /// </summary>
+    public static decimal CalcularNotaNaEscala(decimal pontosObtidos, decimal pontosTotais)
+    {
+        if (pontosTotais <= 0)
+        {
+            return 0m;
+        }
+
+        var nota = pontosObtidos / pontosTotais * EscalaNota;
+        return decimal.Round(Math.Clamp(nota, 0m, EscalaNota), 2, MidpointRounding.AwayFromZero);
+    }
     public DateTime? PublicadoEm { get; private set; }
     public DateTime CriadoEm { get; private set; } = DateTime.UtcNow;
     public DateTime? AtualizadoEm { get; private set; }

@@ -400,7 +400,7 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
     );
   }
 
-  test("prova disponivel com nota: metricas centralizadas mostram Status/Questoes/Tentativas/Ultima nota com icone", async () => {
+  test("prova disponivel com nota: metricas centralizadas mostram Status/Questoes/Tentativas/Sua nota (a melhor) com icone", async () => {
     const usuario = userEvent.setup();
     renderAvaliacoesAluno([
       {
@@ -413,7 +413,8 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
         tentativasPermitidas: 2,
         tentativasRestantes: 1,
         progressoLiberado: true,
-        ultimaNota: 7.5,
+        ultimaNota: 6,
+        melhorNota: 7.5,
         notaMaxima: 10
       }
     ]);
@@ -425,12 +426,12 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
     expect(screen.getByText("5")).toBeInTheDocument();
     expect(screen.getByText("Tentativas")).toBeInTheDocument();
     expect(screen.getByText("1/2")).toBeInTheDocument();
-    expect(screen.getByText("Última nota")).toBeInTheDocument();
-    expect(screen.getByText("7,5")).toBeInTheDocument();
+    expect(screen.getByText("Sua nota")).toBeInTheDocument();
+    expect(screen.getByText("7,5 de 10")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Iniciar avaliacao/ })).toBeInTheDocument();
   });
 
-  test("avaliacao bloqueada: mostra Nota máxima (sem Ultima nota) e a mensagem de bloqueio no lugar do botao", async () => {
+  test("avaliacao bloqueada: 'Sua nota' sem valor e a mensagem de bloqueio no lugar do botao", async () => {
     const usuario = userEvent.setup();
     renderAvaliacoesAluno([
       {
@@ -450,7 +451,8 @@ describe("SecaoAvaliacoesAluno (prompt metricas avaliacoes aluno e gestao)", () 
 
     await usuario.click(screen.getByRole("button", { name: /Prova Bloqueada/ }));
 
-    expect(screen.getByText("Nota máxima")).toBeInTheDocument();
+    expect(screen.getByText("Sua nota")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("Última nota")).not.toBeInTheDocument();
     expect(screen.getByText(/Conclua todos os conteudos e quizzes do curso/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Iniciar avaliacao/ })).not.toBeInTheDocument();

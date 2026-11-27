@@ -153,13 +153,16 @@ public class ProgressoAlunoService : IProgressoAlunoService
             .FirstOrDefaultAsync(item => item.Id == matriculaId)
             ?? throw new KeyNotFoundException("Matricula nao encontrada.");
 
+        // Vale a MELHOR tentativa corrigida (decisao F1 da auditoria de 26/11):
+        // refazer nunca piora a nota. Empate fica com a mais recente.
         var tentativa = await _context.TentativasAvaliacao
             .AsNoTracking()
             .Where(item =>
                 item.AvaliacaoId == avaliacaoId &&
                 item.MatriculaId == matriculaId &&
                 item.StatusTentativa == StatusTentativaAvaliacao.Corrigida)
-            .OrderByDescending(item => item.NumeroTentativa)
+            .OrderByDescending(item => item.NotaBruta)
+            .ThenByDescending(item => item.NumeroTentativa)
             .FirstOrDefaultAsync();
 
         if (tentativa is null)
@@ -188,7 +191,7 @@ public class ProgressoAlunoService : IProgressoAlunoService
             lancamento.TentativaAvaliacaoId = tentativa.Id;
         }
 
-        lancamento.RegistrarCorrecao(tentativa.NotaBruta, avaliacao.PesoNota, OrigemCorrecaoNota.Automatica);
+        lancamento.RegistrarCorrecao(tentativa.NotaBruta, Avaliacao.PesoNotaUnico, OrigemCorrecaoNota.Automatica);
         lancamento.LiberarAoAluno(now);
 
         await _context.SaveChangesAsync();
@@ -398,11 +401,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
                 avaliacao.CursoId == matricula.CursoId &&
                 avaliacao.ModuloId == moduloId)
-            .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
+            .Select(avaliacao => avaliacao.Id)
             .ToListAsync();
 
         var lancamentos = await ObterLancamentosAsync(matricula.Id, avaliacoesModulo);
-        var media = CalcularMediaPonderada(avaliacoesModulo, lancamentos);
+        var media = CalcularMediaSimples(lancamentos);
 
         var progressoModulo = await _context.ProgressosModulosAlunos
             .FirstOrDefaultAsync(progresso => progresso.MatriculaId == matricula.Id && progresso.ModuloId == moduloId);
@@ -435,11 +438,11 @@ public class ProgressoAlunoService : IProgressoAlunoService
                 avaliacao.StatusPublicacao == StatusPublicacao.Publicado &&
                 avaliacao.TipoAvaliacao != TipoAvaliacao.Quiz &&
                 avaliacao.CursoId == matricula.CursoId)
-            .Select(avaliacao => new AvaliacaoNotaInfo(avaliacao.Id, avaliacao.NotaMaxima, avaliacao.PesoNota))
+            .Select(avaliacao => avaliacao.Id)
             .ToListAsync();
 
         var lancamentos = await ObterLancamentosAsync(matricula.Id, avaliacoesCurso);
-        var media = CalcularMediaPonderada(avaliacoesCurso, lancamentos);
+        var media = CalcularMediaSimples(lancamentos);
 
         var progressoCurso = await _context.ProgressosCursosAlunos
             .FirstOrDefaultAsync(progresso => progresso.MatriculaId == matricula.Id && progresso.CursoId == matricula.CursoId);
@@ -469,47 +472,35 @@ public class ProgressoAlunoService : IProgressoAlunoService
         }
     }
 
-    private async Task<List<LancamentoNotaAluno>> ObterLancamentosAsync(int matriculaId, IReadOnlyList<AvaliacaoNotaInfo> avaliacoes)
+    private async Task<List<LancamentoNotaAluno>> ObterLancamentosAsync(int matriculaId, IReadOnlyList<int> avaliacaoIds)
     {
-        if (avaliacoes.Count == 0)
+        if (avaliacaoIds.Count == 0)
         {
             return new List<LancamentoNotaAluno>();
         }
 
-        var avaliacaoIds = avaliacoes.Select(avaliacao => avaliacao.Id).ToList();
         return await _context.LancamentosNotasAlunos
             .AsNoTracking()
             .Where(lancamento => lancamento.MatriculaId == matriculaId && avaliacaoIds.Contains(lancamento.AvaliacaoId))
             .ToListAsync();
     }
 
-    private static decimal CalcularMediaPonderada(IReadOnlyList<AvaliacaoNotaInfo> avaliacoes, IReadOnlyList<LancamentoNotaAluno> lancamentos)
+    /// <summary>
+    /// Media SIMPLES das notas lancadas (decisao F0 da auditoria de 26/11):
+    /// toda Prova/Exercicio ja vem de 0 a 10 (Avaliacao.CalcularNotaNaEscala),
+    /// entao a media e so a soma dividida pela quantidade - sem peso por
+    /// avaliacao. Sem lancamento, a media e 0.
+    /// </summary>
+    private static decimal CalcularMediaSimples(IReadOnlyList<LancamentoNotaAluno> lancamentos)
     {
-        var lancamentoPorAvaliacaoId = lancamentos.ToDictionary(lancamento => lancamento.AvaliacaoId);
-        var somaPonderada = 0m;
-        var somaPesos = 0m;
-
-        foreach (var avaliacao in avaliacoes)
-        {
-            if (avaliacao.NotaMaxima <= 0 || !lancamentoPorAvaliacaoId.TryGetValue(avaliacao.Id, out var lancamento))
-            {
-                continue;
-            }
-
-            var proporcao = lancamento.NotaOficial / avaliacao.NotaMaxima;
-            somaPonderada += proporcao * avaliacao.PesoNota;
-            somaPesos += avaliacao.PesoNota;
-        }
-
-        if (somaPesos <= 0)
+        if (lancamentos.Count == 0)
         {
             return 0;
         }
 
-        return decimal.Round(somaPonderada / somaPesos * 10, 2, MidpointRounding.AwayFromZero);
+        var media = lancamentos.Average(lancamento => lancamento.NotaOficial);
+        return decimal.Round(media, 2, MidpointRounding.AwayFromZero);
     }
-
-    private sealed record AvaliacaoNotaInfo(int Id, decimal NotaMaxima, decimal PesoNota);
 
     private async Task ValidarAlunoAsync(int alunoId)
     {

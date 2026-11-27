@@ -25,8 +25,6 @@ const FILTRO_TODOS_OS_CURSOS = null;
 // quando a linha de nota aparece (item 2 do prompt de ajustes 2). 1
 // (EmAndamento) nunca mostra nota - cai no fallback (nenhuma linha).
 const STATUS_TENTATIVA_ENVIADA = 2;
-const STATUS_TENTATIVA_CORRIGIDA = 3;
-const STATUS_TENTATIVA_EXPIRADA = 4;
 
 // obterDisponibilidadeAvaliacao() ja calcula tone+label pros estados
 // Agendada/Encerrada/Sem questoes (nenhum dos tres e "Bloqueada" nem
@@ -234,28 +232,15 @@ export default function AvaliacoesScreen({ onRecarregar, onSessionExpired, snaps
       : null;
     const tentativasRealizadas = Number(avaliacao.tentativasRealizadas || 0);
     const tentativasPermitidas = avaliacao.tentativasPermitidas || 1;
-    // So Corrigida/Expirada tem nota de verdade pra mostrar (docs/redesign-
-    // mobile/PROMPT-agente-avaliacoes-ajustes-2-icone.md, item 2) -
-    // UltimaNota vem da ULTIMA tentativa mesmo que ainda esteja em
-    // andamento ou so enviada (sem correcao), entao usar so `ultimaNota !=
-    // null` (como antes) mostrava nota 0/"-" de uma tentativa que ainda nem
-    // foi corrigida. Enviada (2) ganha uma linha neutra propria (aguardando
-    // correcao); EmAndamento (1) ou sem nenhuma tentativa nao mostram nada.
+    // Nota que vale = a MELHOR tentativa corrigida (decisao F1 da auditoria
+    // de 26/11), ja na escala 0-10 (decisao F0: toda avaliacao vale de 0 a
+    // 10, entao nao ha mais conversao pela nota maxima). Sem tentativa
+    // corrigida e com a ultima so enviada, mostra "aguardando correcao";
+    // EmAndamento ou sem tentativa nao mostram nada.
     const statusUltimaTentativa = Number(avaliacao.ultimoStatusTentativa);
-    const notaDisponivel =
-      (statusUltimaTentativa === STATUS_TENTATIVA_CORRIGIDA || statusUltimaTentativa === STATUS_TENTATIVA_EXPIRADA) &&
-      avaliacao.ultimaNota != null;
-    const notaAguardandoCorrecao = statusUltimaTentativa === STATUS_TENTATIVA_ENVIADA;
-    // Escala 0-10 (ajustes 1): notaMaxima varia por avaliacao (o professor
-    // configura, default 10 - ver Models/Avaliacao.cs). Comparar ultimaNota
-    // direto contra o minimo 7 so faria sentido se notaMaxima fosse sempre
-    // 10.
-    const notaMaxima = Number(avaliacao.notaMaxima) || 10;
-    const notaConvertida = notaDisponivel
-      ? notaMaxima !== 10
-        ? (Number(avaliacao.ultimaNota) / notaMaxima) * 10
-        : Number(avaliacao.ultimaNota)
-      : null;
+    const notaDisponivel = avaliacao.melhorNota != null;
+    const notaAguardandoCorrecao = !notaDisponivel && statusUltimaTentativa === STATUS_TENTATIVA_ENVIADA;
+    const notaConvertida = notaDisponivel ? Number(avaliacao.melhorNota) : null;
     const notaAprovada = notaConvertida !== null && notaConvertida >= 7;
 
     const selo = concluida

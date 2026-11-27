@@ -34,14 +34,9 @@ import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 const MODELO_GRATUITO = 1;
 const MODELO_ACOMPANHADO = 3;
 
-function formatDecimal(value) {
-  return Number(value || 0).toFixed(2).replace(".", ",");
-}
-
 const STATUS_PUBLICADO = 2;
 const STATUS_ARQUIVADO = 3;
-const TIPO_QUIZ = 1;
-const CAMPOS_NUMERICOS_AJUSTES = new Set(["tentativasPermitidas", "tempoLimiteMinutos", "notaMaxima"]);
+const CAMPOS_NUMERICOS_AJUSTES = new Set(["tentativasPermitidas", "tempoLimiteMinutos"]);
 
 // Rascunho do modal "Ajustes rapidos": tudo em texto (valor dos inputs),
 // montado a partir do que esta salvo. tempoLimiteMinutos vazio = sem limite.
@@ -49,8 +44,7 @@ function montarRascunhoAjustes(avaliacao) {
   return {
     titulo: avaliacao.titulo || "",
     tentativasPermitidas: String(avaliacao.tentativasPermitidas ?? 1),
-    tempoLimiteMinutos: avaliacao.tempoLimiteMinutos ? String(avaliacao.tempoLimiteMinutos) : "",
-    notaMaxima: String(Number(avaliacao.notaMaxima ?? 10))
+    tempoLimiteMinutos: avaliacao.tempoLimiteMinutos ? String(avaliacao.tempoLimiteMinutos) : ""
   };
 }
 
@@ -75,7 +69,7 @@ function camposAlteradosNoRascunho(avaliacao, rascunho) {
 
 // Mesmas regras do servidor (AvaliacaoService) e do formulario completo
 // (AssistenteQuizAvaliacao), com mensagem clara em vez de descartar calado.
-function validarRascunhoAjustes(rascunho, avaliacao) {
+function validarRascunhoAjustes(rascunho) {
   const titulo = rascunho.titulo.trim();
   if (!titulo) {
     return { erro: "Informe o título da avaliação." };
@@ -92,17 +86,7 @@ function validarRascunhoAjustes(rascunho, avaliacao) {
     return { erro: "Tempo limite: deixe vazio para não ter limite ou informe os minutos (número inteiro maior que zero)." };
   }
 
-  const valores = { titulo, tentativasPermitidas, tempoLimiteMinutos };
-
-  if (Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ) {
-    const notaMaxima = Number(rascunho.notaMaxima);
-    if (!Number.isFinite(notaMaxima) || notaMaxima <= 0) {
-      return { erro: "Nota máxima: informe um valor maior que zero." };
-    }
-    valores.notaMaxima = Math.round(notaMaxima * 100) / 100;
-  }
-
-  return { valores };
+  return { valores: { titulo, tentativasPermitidas, tempoLimiteMinutos } };
 }
 
 export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onRefresh, onSessionExpired }) {
@@ -403,7 +387,7 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
       return;
     }
 
-    const validacao = validarRascunhoAjustes(rascunhoDetalhe, avaliacaoDetalhe);
+    const validacao = validarRascunhoAjustes(rascunhoDetalhe);
     if (validacao.erro) {
       setMensagemDetalhe({ tone: "error", message: validacao.erro });
       return;
@@ -725,7 +709,7 @@ function ModalAjustesRapidos({
           </span>
         </div>
 
-        <div className="grade-3 ajustes-avaliacao__numeros">
+        <div className="grade-2 ajustes-avaliacao__numeros">
           <div className="campo">
             <label className="campo__rotulo" htmlFor="ajustes-avaliacao-tentativas">Tentativas permitidas</label>
             <input
@@ -757,23 +741,6 @@ function ModalAjustesRapidos({
               value={rascunho.tempoLimiteMinutos}
             />
           </div>
-          {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
-            <div className="campo">
-              <label className="campo__rotulo" htmlFor="ajustes-avaliacao-nota">Nota máxima</label>
-              <input
-                className={classeEntrada("notaMaxima")}
-                disabled={ocupado}
-                id="ajustes-avaliacao-nota"
-                inputMode="decimal"
-                min="0.01"
-                name="notaMaxima"
-                onChange={onAlterarCampo}
-                step="0.01"
-                type="number"
-                value={rascunho.notaMaxima}
-              />
-            </div>
-          ) : null}
         </div>
 
         {temAlteracaoPendente && !confirmandoDescarte ? (
@@ -932,8 +899,8 @@ function SlideAvaliacoes({ avaliacoes, edicaoTravada, mediaNotaPorAvaliacaoId, m
                     </div>
                     {Number(avaliacao.tipoAvaliacao) !== 1 ? (
                       <div className="lista-detalhes__item">
-                        <dt><TbTarget aria-hidden="true" size={15} /> Nota máxima</dt>
-                        <dd>{formatDecimal(avaliacao.notaMaxima)}</dd>
+                        <dt><TbTarget aria-hidden="true" size={15} /> Nota</dt>
+                        <dd>de 0 a 10</dd>
                       </div>
                     ) : null}
                   </dl>

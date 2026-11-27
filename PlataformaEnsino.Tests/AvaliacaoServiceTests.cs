@@ -255,18 +255,24 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task CriarAvaliacaoAsync_NotaMaximaZero_LancaArgumentException()
+    // Decisao F0 da auditoria de 26/11: toda avaliacao vale de 0 a 10 e a
+    // media e simples - NotaMaxima/PesoNota do DTO sao ignorados.
+    public async Task CriarAvaliacaoAsync_IgnoraNotaMaximaEPesoDoDto_GravaEscalaDezEPesoUm()
     {
         var context = TestContextFactory.Criar();
         var service = CriarService(context);
         var professor = CriarProfessor(context);
         var curso = CriarCurso(context);
         var modulo = CriarModulo(context, curso.Id);
-        var turma = CriarTurma(context, curso.Id, professor.Id);
-        var dto = NovaAvaliacaoDto(curso.Id, modulo.Id);
+        CriarTurma(context, curso.Id, professor.Id);
+        var dto = NovaAvaliacaoDto(curso.Id, modulo.Id, tipoAvaliacao: TipoAvaliacao.Prova);
         dto.NotaMaxima = 0;
+        dto.PesoNota = 3;
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.CriarAvaliacaoAsync(professor.Id, dto));
+        var avaliacao = await service.CriarAvaliacaoAsync(professor.Id, dto);
+
+        Assert.Equal(10m, avaliacao.NotaMaxima);
+        Assert.Equal(1m, avaliacao.PesoNota);
     }
 
     [Fact]
@@ -928,9 +934,30 @@ public class AvaliacaoServiceTests
 
         var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
 
+        // Acertou tudo = 10, qualquer que seja o valor em pontos da questao.
         Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
-        Assert.Equal(7m, resultado.NotaBruta);
+        Assert.Equal(10m, resultado.NotaBruta);
         Assert.NotNull(resultado.CorrigidaEm);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_NotaEProporcaoDosPontosAcertados_NaEscalaDeZeroADez()
+    {
+        var (service, _, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
+        var questaoAcertada = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 1));
+        var questaoErrada = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 3));
+
+        var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto>
+            {
+                new() { QuestaoId = questaoAcertada.Id, AlternativaId = questaoAcertada.Alternativas.Single(a => a.Letra == "A").Id },
+                new() { QuestaoId = questaoErrada.Id, AlternativaId = questaoErrada.Alternativas.Single(a => a.Letra == "B").Id }
+            }
+        });
+
+        // 1 de 4 pontos = 2,5 (antes dava 1 de 10).
+        Assert.Equal(2.5m, resultado.NotaBruta);
     }
 
     // docs/TelaConteudosAlunos/PROMPT-agente-revisao-aluno-layout-professor.md,
@@ -1234,20 +1261,21 @@ public class AvaliacaoServiceTests
         var lancamento = Assert.Single(context.LancamentosNotasAlunos);
         Assert.Equal(matricula.Id, lancamento.MatriculaId);
         Assert.Equal(avaliacao.Id, lancamento.AvaliacaoId);
-        Assert.Equal(7m, lancamento.NotaOficial);
+        Assert.Equal(10m, lancamento.NotaOficial);
+        Assert.Equal(1m, lancamento.PesoNota);
         Assert.Equal(OrigemCorrecaoNota.Automatica, lancamento.OrigemCorrecao);
         Assert.NotNull(lancamento.LiberadaAoAlunoEm);
 
         var progressoModulo = context.ProgressosModulosAlunos.Single(p => p.ModuloId == modulo.Id);
         Assert.Equal(1, progressoModulo.TotalAvaliacoes);
         Assert.Equal(1, progressoModulo.AvaliacoesConcluidas);
-        Assert.Equal(7m, progressoModulo.MediaModulo);
+        Assert.Equal(10m, progressoModulo.MediaModulo);
 
         var progressoCurso = context.ProgressosCursosAlunos.Single();
-        Assert.Equal(7m, progressoCurso.MediaCurso);
+        Assert.Equal(10m, progressoCurso.MediaCurso);
 
         var matriculaAtualizada = context.Matriculas.Single(m => m.Id == matricula.Id);
-        Assert.Equal(7m, matriculaAtualizada.NotaFinal);
+        Assert.Equal(10m, matriculaAtualizada.NotaFinal);
     }
 
     [Fact]
@@ -1273,11 +1301,37 @@ public class AvaliacaoServiceTests
 
         await service.EnviarRespostasAlunoAsync(avaliacao2.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
         {
-            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao2.Id, AlternativaId = questao2.Alternativas.Single(a => a.Letra == "A").Id } }
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao2.Id, AlternativaId = questao2.Alternativas.Single(a => a.Letra == "B").Id } }
         });
 
+        // Media SIMPLES: (10 + 0) / 2 = 5, sem peso por avaliacao.
         var matriculaAposSegundaCorrecao = context.Matriculas.Single(m => m.Id == matricula.Id);
         Assert.Equal(5m, matriculaAposSegundaCorrecao.NotaFinal);
+    }
+
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_PesoDaNotaNoBancoNaoMudaAMedia_MediaSimples()
+    {
+        var (service, context, professor, aluno, _, modulo, avaliacao1) = await CriarCenarioComAvaliacaoPublicada(tipoAvaliacao: TipoAvaliacao.Prova);
+        var avaliacao2 = await service.CriarAvaliacaoAsync(professor.Id, NovaAvaliacaoDto(avaliacao1.CursoId, modulo.Id, tipoAvaliacao: TipoAvaliacao.Prova));
+        var questao1 = await service.AdicionarQuestaoAsync(avaliacao1.Id, professor.Id, NovaQuestaoObjetivaDto());
+        var questao2 = await service.AdicionarQuestaoAsync(avaliacao2.Id, professor.Id, NovaQuestaoObjetivaDto());
+        avaliacao2.Publicar();
+        // Dado antigo com peso diferente de 1: nao pode mais pesar na media.
+        avaliacao2.PesoNota = 3;
+        context.Avaliacoes.Update(avaliacao2);
+        await context.SaveChangesAsync();
+
+        await service.EnviarRespostasAlunoAsync(avaliacao1.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao1.Id, AlternativaId = questao1.Alternativas.Single(a => a.Letra == "A").Id } }
+        });
+        await service.EnviarRespostasAlunoAsync(avaliacao2.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao2.Id, AlternativaId = questao2.Alternativas.Single(a => a.Letra == "B").Id } }
+        });
+
+        Assert.Equal(5m, context.Matriculas.Single().NotaFinal);
     }
 
     [Fact]
@@ -1306,7 +1360,7 @@ public class AvaliacaoServiceTests
     }
 
     [Fact]
-    public async Task EnviarRespostasAlunoAsync_SegundaTentativaCorrigida_AtualizaLancamentoExistenteParaNotaMaisRecente()
+    public async Task EnviarRespostasAlunoAsync_SegundaTentativaMelhor_AtualizaLancamentoParaAMelhorNota()
     {
         var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tentativasPermitidas: 2, tipoAvaliacao: TipoAvaliacao.Prova);
         var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
@@ -1323,7 +1377,35 @@ public class AvaliacaoServiceTests
         });
 
         var lancamento = Assert.Single(context.LancamentosNotasAlunos);
-        Assert.Equal(7m, lancamento.NotaOficial);
+        Assert.Equal(10m, lancamento.NotaOficial);
+    }
+
+    // Decisao F1 da auditoria de 26/11: vale a MELHOR tentativa corrigida -
+    // refazer e ir pior nao derruba a nota.
+    [Fact]
+    public async Task EnviarRespostasAlunoAsync_SegundaTentativaPior_MantemAMelhorNota()
+    {
+        var (service, context, professor, aluno, _, _, avaliacao) = await CriarCenarioComAvaliacaoPublicada(tentativasPermitidas: 2, tipoAvaliacao: TipoAvaliacao.Prova);
+        var questao = await service.AdicionarQuestaoAsync(avaliacao.Id, professor.Id, NovaQuestaoObjetivaDto(pontos: 7));
+        var correta = questao.Alternativas.Single(a => a.Letra == "A");
+        var errada = questao.Alternativas.Single(a => a.Letra == "B");
+
+        await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = correta.Id } }
+        });
+        await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, new EnviarAvaliacaoAlunoDto
+        {
+            Respostas = new List<RespostaAvaliacaoAlunoDto> { new() { QuestaoId = questao.Id, AlternativaId = errada.Id } }
+        });
+
+        var lancamento = Assert.Single(context.LancamentosNotasAlunos);
+        Assert.Equal(10m, lancamento.NotaOficial);
+        Assert.Equal(10m, context.Matriculas.Single().NotaFinal);
+
+        var item = Assert.Single(await service.ListarAvaliacoesPorAlunoAsync(aluno.Id));
+        Assert.Equal(0m, item.UltimaNota);
+        Assert.Equal(10m, item.MelhorNota);
     }
 
     // ---------- Quiz e formativo: conta progresso, nao gera nota ----------
@@ -1430,7 +1512,7 @@ public class AvaliacaoServiceTests
         var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
 
         Assert.Equal(StatusTentativaAvaliacao.Corrigida, resultado.StatusTentativa);
-        Assert.Equal(7m, resultado.NotaBruta);
+        Assert.Equal(10m, resultado.NotaBruta);
     }
 
     [Fact]
@@ -1570,7 +1652,7 @@ public class AvaliacaoServiceTests
 
         var resultado = await service.EnviarRespostasAlunoAsync(avaliacao.Id, aluno.Id, dto);
 
-        Assert.Equal(7m, resultado.NotaBruta);
+        Assert.Equal(10m, resultado.NotaBruta);
     }
 
     // ---------- ListarAvaliacoesPorAlunoAsync ----------

@@ -28,6 +28,13 @@ public class AvaliacaoAlunoResponseDto
     public decimal NotaMaxima { get; set; }
     public int TotalQuestoes { get; set; }
     public decimal? UltimaNota { get; set; }
+
+    /// <summary>
+    /// Maior nota (0 a 10) entre as tentativas corrigidas - e a que vale na
+    /// media e no certificado (decisao F1 da auditoria de 26/11). Null sem
+    /// tentativa corrigida.
+    /// </summary>
+    public decimal? MelhorNota { get; set; }
     public StatusTentativaAvaliacao? UltimoStatusTentativa { get; set; }
     public int? UltimaTentativaId { get; set; }
     public DateTime? PublicadoEm { get; set; }

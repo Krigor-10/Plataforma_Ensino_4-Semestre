@@ -94,13 +94,16 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
     const mapa = new Map();
 
     avaliacoes.forEach((avaliacao) => {
+      // Nota que vale de cada Prova/Exercicio = a melhor tentativa corrigida
+      // (decisao F1 da auditoria de 26/11). Quiz nao tem nota.
       const cursoId = Number(avaliacao.cursoId);
-      if (!cursoId || avaliacao.ultimaNota === null || typeof avaliacao.ultimaNota === "undefined") {
+      const ehQuiz = Number(avaliacao.tipoAvaliacao) === 1;
+      if (!cursoId || ehQuiz || avaliacao.melhorNota === null || typeof avaliacao.melhorNota === "undefined") {
         return;
       }
 
       const notas = mapa.get(cursoId) || [];
-      notas.push(Number(avaliacao.ultimaNota));
+      notas.push(Number(avaliacao.melhorNota));
       mapa.set(cursoId, notas);
     });
 

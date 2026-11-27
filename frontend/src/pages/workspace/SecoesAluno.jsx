@@ -1467,7 +1467,8 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
         const statusTone = emAndamento ? "info" : disponibilidade.tone;
         const idDetalhe = `avaliacao-aluno-detalhe-${avaliacao.id}`;
         const ehQuiz = Number(avaliacao.tipoAvaliacao) === 1;
-        const temNota = !ehQuiz && avaliacao.ultimaNota !== null && avaliacao.ultimaNota !== undefined;
+        // Vale a melhor tentativa corrigida (decisao F1 da auditoria de 26/11).
+        const temNota = !ehQuiz && avaliacao.melhorNota !== null && avaliacao.melhorNota !== undefined;
 
         return (
           <section className="conteudos-modulo conteudos-modulo--cartao" key={avaliacao.id}>
@@ -1538,8 +1539,8 @@ function ListaAvaliacoesAluno({ avaliacaoAbertaId, avaliacoes, onAlternar, onRea
                       </div>
                     ) : (
                       <div className="lista-detalhes__item">
-                        <dt><TbAward aria-hidden="true" size={15} /> {temNota ? "Última nota" : "Nota máxima"}</dt>
-                        <dd>{temNota ? formatScore(avaliacao.ultimaNota) : formatGrade(avaliacao.notaMaxima)}</dd>
+                        <dt><TbAward aria-hidden="true" size={15} /> Sua nota</dt>
+                        <dd>{temNota ? `${formatScore(avaliacao.melhorNota)} de 10` : "—"}</dd>
                       </div>
                     )}
                   </dl>

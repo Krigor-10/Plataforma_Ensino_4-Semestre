@@ -387,8 +387,10 @@ export function AssistenteQuizAvaliacao({
       dataFechamento: modoExclusivoQuiz ? null : toIsoOrNull(dadosFormulario.dataFechamento),
       tentativasPermitidas: modoExclusivoQuiz ? 1 : Number(dadosFormulario.tentativasPermitidas),
       tempoLimiteMinutos: modoExclusivoQuiz ? null : dadosFormulario.tempoLimiteMinutos ? Number(dadosFormulario.tempoLimiteMinutos) : null,
-      notaMaxima: Number(dadosFormulario.notaMaxima),
-      pesoNota: Number(dadosFormulario.pesoNota),
+      // Toda avaliacao vale de 0 a 10 e a media do curso e simples (decisao
+      // F0 da auditoria de 26/11): o servidor ignora estes dois valores.
+      notaMaxima: 10,
+      pesoNota: 1,
       pesoProgresso: modoExclusivoQuiz ? 1 : Number(dadosFormulario.pesoProgresso)
     };
   }
@@ -416,14 +418,6 @@ export function AssistenteQuizAvaliacao({
 
     if (dadosEnvio.tempoLimiteMinutos !== null && (!Number.isInteger(dadosEnvio.tempoLimiteMinutos) || dadosEnvio.tempoLimiteMinutos <= 0)) {
       return "O tempo limite deve ser maior que zero.";
-    }
-
-    if (!Number.isFinite(dadosEnvio.notaMaxima) || dadosEnvio.notaMaxima <= 0) {
-      return "A nota maxima deve ser maior que zero.";
-    }
-
-    if (!Number.isFinite(dadosEnvio.pesoNota) || dadosEnvio.pesoNota <= 0) {
-      return "O peso de nota deve ser maior que zero.";
     }
 
     if (!Number.isFinite(dadosEnvio.pesoProgresso) || dadosEnvio.pesoProgresso <= 0) {
@@ -1091,12 +1085,6 @@ export function AssistenteQuizAvaliacao({
                           <label className="campo__rotulo" htmlFor="avaliacao-tempo">Tempo limite (min)</label>
                           <input className="campo__entrada" disabled={salvando} id="avaliacao-tempo" min="1" name="tempoLimiteMinutos" onChange={atualizarCampoFormulario} placeholder="Sem limite" type="number" value={dadosFormulario.tempoLimiteMinutos} />
                         </div>
-                        {!ehQuiz ? (
-                          <div className="campo">
-                            <label className="campo__rotulo" htmlFor="avaliacao-nota">Nota maxima *</label>
-                            <input className="campo__entrada" disabled={salvando} id="avaliacao-nota" min="0.01" name="notaMaxima" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.notaMaxima} />
-                          </div>
-                        ) : null}
                       </div>
                     ) : null}
 
@@ -1104,16 +1092,14 @@ export function AssistenteQuizAvaliacao({
                       <InlineMessage tone="info">
                         Quiz e uma atividade formativa: conta pro progresso do aluno no modulo/curso, mas nao gera nota academica.
                       </InlineMessage>
-                    ) : null}
+                    ) : (
+                      <InlineMessage tone="info">
+                        A nota vai de 0 a 10, pela proporção de acertos. Os pontos de cada questão só dizem quanto ela vale perto das outras. A nota final do curso é a média simples das avaliações.
+                      </InlineMessage>
+                    )}
 
                     {!modoExclusivoQuiz ? (
                       <div className="grade-3">
-                        {!ehQuiz ? (
-                          <div className="campo">
-                            <label className="campo__rotulo" htmlFor="avaliacao-peso-nota">Peso da nota *</label>
-                            <input className="campo__entrada" disabled={salvando} id="avaliacao-peso-nota" min="0.01" name="pesoNota" onChange={atualizarCampoFormulario} step="0.01" type="number" value={dadosFormulario.pesoNota} />
-                          </div>
-                        ) : null}
                         {ehQuiz ? (
                           <div className="campo">
                             <label className="campo__rotulo" htmlFor="avaliacao-peso-progresso">Peso de progresso *</label>

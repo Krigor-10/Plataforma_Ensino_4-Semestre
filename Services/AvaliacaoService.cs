@@ -716,7 +716,8 @@ public class AvaliacaoService : IAvaliacaoService
         var agora = DateTime.UtcNow;
         tentativa.Iniciar(tentativasRealizadas + 1, agora);
 
-        var notaObjetiva = 0m;
+        var pontosObtidos = 0m;
+        var pontosTotais = 0m;
         var possuiDissertativa = false;
 
         foreach (var questao in questoes)
@@ -727,6 +728,7 @@ public class AvaliacaoService : IAvaliacaoService
                 QuestaoPublicadaId = questao.Id,
                 RespostaTexto = string.Empty
             };
+            pontosTotais += questao.Pontos;
 
             if (questao.TipoQuestao == TipoQuestao.Dissertativa)
             {
@@ -755,7 +757,7 @@ public class AvaliacaoService : IAvaliacaoService
                 resposta.AlternativaQuestaoPublicadaId = alternativa.Id;
                 resposta.RespostaTexto = alternativa.Texto;
                 resposta.Corrigir(correta, pontos);
-                notaObjetiva += pontos;
+                pontosObtidos += pontos;
             }
 
             resposta.RegistrarEnvio(agora);
@@ -765,7 +767,9 @@ public class AvaliacaoService : IAvaliacaoService
         tentativa.MarcarEnvio(agora);
         if (!possuiDissertativa)
         {
-            tentativa.MarcarCorrecao(decimal.Round(notaObjetiva, 2, MidpointRounding.AwayFromZero), agora);
+            // Nota de 0 a 10 pela proporcao de acertos (decisao F0): os pontos
+            // das questoes so dizem quanto cada uma vale perto das outras.
+            tentativa.MarcarCorrecao(Avaliacao.CalcularNotaNaEscala(pontosObtidos, pontosTotais), agora);
         }
 
         await _context.TentativasAvaliacao.AddAsync(tentativa);
@@ -1475,8 +1479,6 @@ public class AvaliacaoService : IAvaliacaoService
             dto.DataFechamento,
             dto.TentativasPermitidas,
             dto.TempoLimiteMinutos,
-            dto.NotaMaxima,
-            dto.PesoNota,
             dto.PesoProgresso);
     }
 
@@ -1492,11 +1494,11 @@ public class AvaliacaoService : IAvaliacaoService
             dto.DataFechamento,
             dto.TentativasPermitidas,
             dto.TempoLimiteMinutos,
-            dto.NotaMaxima,
-            dto.PesoNota,
             dto.PesoProgresso);
     }
 
+    // NotaMaxima e PesoNota dos DTOs sao ignorados de proposito: toda
+    // avaliacao vale de 0 a 10 e a media e simples (ver Avaliacao.EscalaNota).
     private static void AplicarDadosBase(
         Avaliacao avaliacao,
         string titulo,
@@ -1507,8 +1509,6 @@ public class AvaliacaoService : IAvaliacaoService
         DateTime? dataFechamento,
         int tentativasPermitidas,
         int? tempoLimiteMinutos,
-        decimal notaMaxima,
-        decimal pesoNota,
         decimal pesoProgresso)
     {
         var tituloNormalizado = (titulo ?? string.Empty).Trim();
@@ -1527,16 +1527,6 @@ public class AvaliacaoService : IAvaliacaoService
             throw new ArgumentException("O tempo limite deve ser maior que zero.");
         }
 
-        if (notaMaxima <= 0)
-        {
-            throw new ArgumentException("A nota maxima deve ser maior que zero.");
-        }
-
-        if (pesoNota <= 0)
-        {
-            throw new ArgumentException("O peso de nota deve ser maior que zero.");
-        }
-
         if (pesoProgresso <= 0)
         {
             throw new ArgumentException("O peso de progresso deve ser maior que zero.");
@@ -1548,8 +1538,8 @@ public class AvaliacaoService : IAvaliacaoService
         avaliacao.DataAbertura = dataAbertura;
         avaliacao.DataFechamento = dataFechamento;
         avaliacao.TempoLimiteMinutos = tempoLimiteMinutos;
-        avaliacao.NotaMaxima = decimal.Round(notaMaxima, 2, MidpointRounding.AwayFromZero);
-        avaliacao.PesoNota = decimal.Round(pesoNota, 2, MidpointRounding.AwayFromZero);
+        avaliacao.NotaMaxima = Avaliacao.EscalaNota;
+        avaliacao.PesoNota = Avaliacao.PesoNotaUnico;
         avaliacao.PesoProgresso = decimal.Round(pesoProgresso, 2, MidpointRounding.AwayFromZero);
         avaliacao.DefinirTentativasPermitidas(tentativasPermitidas);
         AplicarStatus(avaliacao, statusPublicacao);
@@ -1723,6 +1713,10 @@ public class AvaliacaoService : IAvaliacaoService
         string tituloCursoFallback)
     {
         var ultimaTentativa = tentativas.OrderByDescending(tentativa => tentativa.NumeroTentativa).FirstOrDefault();
+        var melhorNota = tentativas
+            .Where(tentativa => tentativa.StatusTentativa == StatusTentativaAvaliacao.Corrigida)
+            .Select(tentativa => (decimal?)tentativa.NotaBruta)
+            .Max();
         var tentativasRealizadas = tentativas.Count;
 
         return new AvaliacaoAlunoResponseDto
@@ -1755,6 +1749,7 @@ public class AvaliacaoService : IAvaliacaoService
             NotaMaxima = avaliacao.NotaMaxima,
             TotalQuestoes = avaliacao.Questoes?.Count ?? 0,
             UltimaNota = ultimaTentativa?.NotaBruta,
+            MelhorNota = melhorNota,
             UltimoStatusTentativa = ultimaTentativa?.StatusTentativa,
             UltimaTentativaId = ultimaTentativa?.Id,
             PublicadoEm = avaliacao.PublicadoEm,
