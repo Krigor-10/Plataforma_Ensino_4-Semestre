@@ -58,7 +58,11 @@ namespace Sistema_Academico_Integrado.Migrations
             // ja esta completa, usa a nota final; se ainda falta nota em alguma
             // prova (nota final antiga, da regra anterior a escala 0-10), usa a
             // media simples das provas que tem nota hoje.
+            // EXEC: no script idempotente do Azure, o SQL Server compila o lote
+            // inteiro antes de rodar; sem o EXEC, o UPDATE falha com "Invalid
+            // column name" porque a coluna acima ainda nao existe.
             migrationBuilder.Sql(@"
+EXEC(N'
 UPDATE m
 SET m.NomeAlunoCertificado = LEFT(u.Nome, 150),
     m.TituloCursoCertificado = LEFT(c.Titulo, 150),
@@ -82,7 +86,8 @@ CROSS APPLY (
     INNER JOIN Avaliacoes a ON a.Id = l.AvaliacaoId
     WHERE l.MatriculaId = m.Id AND a.CursoId = m.CursoId AND a.StatusPublicacao = 2 AND a.TipoAvaliacao <> 1
 ) lancadas
-WHERE m.CertificadoEmitidoEm IS NOT NULL;");
+WHERE m.CertificadoEmitidoEm IS NOT NULL;
+');");
         }
 
         /// <inheritdoc />

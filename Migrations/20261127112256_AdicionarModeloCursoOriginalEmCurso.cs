@@ -20,12 +20,17 @@ namespace Sistema_Academico_Integrado.Migrations
             // caminho para um Pago ficar ENCERRADO era a conversao de um
             // Gratuito encerrado (Pago criado direto nao encerra). Esses ficam
             // marcados com a origem Gratuito (1). ModeloCurso 2 = Pago.
+            // EXEC: no script idempotente do Azure, o SQL Server compila o lote
+            // inteiro antes de rodar; sem o EXEC, o UPDATE falha com "Invalid
+            // column name" porque a coluna acima ainda nao existe.
             migrationBuilder.Sql(@"
+EXEC(N'
 UPDATE Cursos
 SET ModeloCursoOriginal = 1
 WHERE ModeloCurso = 2
   AND EncerradoEm IS NOT NULL
-  AND ModeloCursoOriginal IS NULL;");
+  AND ModeloCursoOriginal IS NULL;
+');");
         }
 
         /// <inheritdoc />
