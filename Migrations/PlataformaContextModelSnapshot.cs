@@ -626,6 +626,12 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime?>("CertificadoEmitidoEm")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CertificadoRevogadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CertificadoRevogadoPorId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CodigoRegistro")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -637,6 +643,14 @@ namespace Sistema_Academico_Integrado.Migrations
                     b.Property<DateTime>("DataSolicitacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("MotivoRevogacaoCertificado")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NomeAlunoCertificado")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("NomeTurmaSnapshot")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
@@ -645,8 +659,16 @@ namespace Sistema_Academico_Integrado.Migrations
                         .HasPrecision(4, 2)
                         .HasColumnType("decimal(4,2)");
 
+                    b.Property<decimal?>("NotaFinalCertificado")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<string>("TituloCursoCertificado")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<int?>("TurmaId")
                         .HasColumnType("int");

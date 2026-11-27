@@ -215,10 +215,13 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
         ) : (
           certificadosConquistados.map((certificado, indice) => {
             const chave = `${certificado.codigoVerificacao}-${indice}`;
+            // Revogado pelo Admin (decisao F3 da auditoria de 26/11): continua
+            // listado, com a data, mas sem ver/compartilhar.
+            const revogado = Boolean(certificado.revogadoEm);
             return (
               <View key={chave} style={estilos.cartaoConquistado}>
                 <View style={estilos.conquistadoIcone}>
-                  <Ionicons color={cores.sucesso} name="medal" size={22} />
+                  <Ionicons color={revogado ? cores.erro : cores.sucesso} name={revogado ? "close-circle" : "medal"} size={22} />
                 </View>
                 <View style={estilos.conquistadoCorpo}>
                   <Text numberOfLines={2} style={estilos.conquistadoTitulo}>
@@ -230,6 +233,9 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                   </Text>
                   <Text style={estilos.conquistadoCodigo}>{certificado.codigoVerificacao}</Text>
 
+                  {revogado ? (
+                    <Text style={estilos.conquistadoRevogado}>Certificado revogado em {formatDate(certificado.revogadoEm)}</Text>
+                  ) : (
                   <View style={estilos.conquistadoAcoes}>
                     <Botao onPress={() => verCertificado(certificado)} style={estilos.botaoVerCertificado} variante="primario">
                       Ver certificado
@@ -255,6 +261,7 @@ export default function CertificadosScreen({ onSessionExpired, snapshot }) {
                       <Ionicons color={cores.destaque} name="link-outline" size={18} />
                     </TouchableOpacity>
                   </View>
+                  )}
                   {chaveLinkCopiado === chave ? <Toast mensagem="Link copiado" tipo="sucesso" /> : null}
                 </View>
               </View>
@@ -366,6 +373,7 @@ const estilos = StyleSheet.create({
   conquistadoCorpo: { flex: 1, gap: 2 },
   conquistadoTitulo: { color: cores.texto, fontWeight: "700", fontSize: tipografia.subtitulo },
   conquistadoSubtitulo: { color: cores.textoSuave, fontSize: tipografia.rotulo },
+  conquistadoRevogado: { color: cores.erro, fontWeight: "700", fontSize: tipografia.rotulo, marginTop: espacamentos.sm },
   conquistadoCodigo: { color: cores.textoRotulo, fontSize: tipografia.legenda, letterSpacing: 0.5 },
   conquistadoAcoes: { flexDirection: "row", alignItems: "center", gap: espacamentos.sm, marginTop: espacamentos.sm },
   botaoVerCertificado: { flex: 1, paddingHorizontal: espacamentos.md },

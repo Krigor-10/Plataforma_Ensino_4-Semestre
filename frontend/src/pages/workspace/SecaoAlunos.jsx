@@ -61,6 +61,11 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
   const [confirmandoInativar, setConfirmandoInativar] = useState(false);
   const [motivoInativar, setMotivoInativar] = useState("");
   const [confirmandoReativar, setConfirmandoReativar] = useState(false);
+  // Revogacao de certificado pelo Admin (decisao F3 da auditoria de 26/11):
+  // guarda a matricula escolhida no detalhe do aluno e o motivo digitado.
+  const [matriculaParaRevogar, setMatriculaParaRevogar] = useState(null);
+  const [motivoRevogacao, setMotivoRevogacao] = useState("");
+  const [revogandoCertificado, setRevogandoCertificado] = useState(false);
   const [processandoAcesso, setProcessandoAcesso] = useState(false);
   const [confirmacaoLote, setConfirmacaoLote] = useState(null);
   const [motivoLote, setMotivoLote] = useState("");
@@ -92,7 +97,9 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
       mapa.get(alunoId).push({
         id: matricula.id,
         cursoTitulo: curso?.titulo || `Curso #${matricula.cursoId}`,
-        status: normalizeStatus(matricula.status)
+        status: normalizeStatus(matricula.status),
+        certificadoEmitidoEm: matricula.certificadoEmitidoEm || null,
+        certificadoRevogadoEm: matricula.certificadoRevogadoEm || null
       });
     });
 
@@ -313,6 +320,39 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
       mostrarToast(err.message || "Não foi possível inativar o acesso agora.", "erro");
     } finally {
       setProcessandoAcesso(false);
+    }
+  }
+
+  function abrirRevogacaoCertificado(matricula) {
+    setMatriculaParaRevogar(matricula);
+    setMotivoRevogacao("");
+  }
+
+  async function confirmarRevogacaoCertificado() {
+    if (!matriculaParaRevogar || motivoRevogacao.trim().length < MOTIVO_MINIMO) {
+      return;
+    }
+
+    setRevogandoCertificado(true);
+
+    try {
+      await apiRequest(`/Certificados/matricula/${matriculaParaRevogar.id}/revogar`, {
+        method: "POST",
+        body: JSON.stringify({ motivo: motivoRevogacao.trim() })
+      });
+
+      setMatriculaParaRevogar(null);
+      onRefresh?.();
+      mostrarToast("Certificado revogado.", "sucesso");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        onSessionExpired?.();
+        return;
+      }
+
+      mostrarToast(err.message || "Não foi possível revogar o certificado agora.", "erro");
+    } finally {
+      setRevogandoCertificado(false);
     }
   }
 
@@ -733,8 +773,22 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
                   <ul className="detalhe-usuario__lista" role="list">
                     {(matriculasPorAluno.get(Number(alunoDetalhe.id)) || []).map((matricula) => (
                       <li className="detalhe-usuario__item" key={matricula.id}>
-                        {matricula.cursoTitulo}
-                        <Insignia texto={matricula.status} />
+                        <span className="detalhe-usuario__item-titulo">{matricula.cursoTitulo}</span>
+                        <span className="detalhe-usuario__item-selos">
+                          <Insignia texto={matricula.status} />
+                          {matricula.certificadoRevogadoEm ? (
+                            <Insignia texto={`Certificado revogado em ${formatDate(matricula.certificadoRevogadoEm)}`} variante="erro" />
+                          ) : matricula.certificadoEmitidoEm ? (
+                            <>
+                              <Insignia texto="Certificado emitido" variante="sucesso" />
+                              {souAdmin ? (
+                                <Botao onClick={() => abrirRevogacaoCertificado(matricula)} tamanho="pequeno" variante="perigo">
+                                  Revogar certificado
+                                </Botao>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -775,6 +829,45 @@ export function SecaoAlunos({ alunos, cursos = [], matriculas = [], onRefresh, o
               value={motivoInativar}
             />
             <span className="campo__dica">{motivoInativar.trim().length}/{MOTIVO_MAXIMO}</span>
+          </div>
+        </Modal>
+      ) : null}
+
+      {matriculaParaRevogar && alunoDetalhe ? (
+        <Modal
+          onFechar={() => !revogandoCertificado && setMatriculaParaRevogar(null)}
+          titulo="Revogar certificado?"
+          rodape={
+            <footer className="modal-rodape">
+              <Botao disabled={revogandoCertificado} onClick={() => setMatriculaParaRevogar(null)} variante="fantasma">
+                Cancelar
+              </Botao>
+              <Botao
+                disabled={revogandoCertificado || motivoRevogacao.trim().length < MOTIVO_MINIMO}
+                onClick={confirmarRevogacaoCertificado}
+                variante="perigo"
+              >
+                {revogandoCertificado ? "Revogando..." : "Revogar"}
+              </Botao>
+            </footer>
+          }
+        >
+          <p className="texto-confirmacao-exclusao">
+            O certificado de {alunoDetalhe.nome} em <strong>{matriculaParaRevogar.cursoTitulo}</strong> deixa de valer. A verificação
+            pública passa a mostrar que ele foi revogado (sem o motivo). Esta ação não pode ser desfeita pela tela.
+          </p>
+          <div className="campo">
+            <label className="campo__rotulo" htmlFor="motivo-revogar-certificado">Motivo *</label>
+            <textarea
+              className="campo__entrada"
+              disabled={revogandoCertificado}
+              id="motivo-revogar-certificado"
+              maxLength={MOTIVO_MAXIMO}
+              onChange={(event) => setMotivoRevogacao(event.target.value)}
+              rows={3}
+              value={motivoRevogacao}
+            />
+            <span className="campo__dica">{motivoRevogacao.trim().length}/{MOTIVO_MAXIMO}</span>
           </div>
         </Modal>
       ) : null}

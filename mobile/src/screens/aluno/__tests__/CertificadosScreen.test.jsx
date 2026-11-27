@@ -110,6 +110,19 @@ describe("CertificadosScreen - abas no topo", () => {
     expect(screen.queryByText("Curso Em Andamento")).toBeNull();
   });
 
+  // Decisao F3 da auditoria de 26/11: revogado continua listado, com a data,
+  // mas sem ver/compartilhar.
+  test("certificado revogado mostra a data e esconde ver/compartilhar", async () => {
+    mockarApi({ meus: [{ ...CERTIFICADO_CONQUISTADO, revogadoEm: "2026-11-25T00:00:00Z" }], status: [] });
+    const snapshot = montarSnapshot({ matriculas: [] });
+
+    await render(<CertificadosScreen snapshot={snapshot} />);
+
+    expect(await screen.findByText(/Certificado revogado em/)).toBeTruthy();
+    expect(screen.queryByText("Ver certificado")).toBeNull();
+    expect(screen.queryByLabelText("Compartilhar certificado")).toBeNull();
+  });
+
   test("com 'Em andamento' vazia e certificados existentes, abre em 'Conquistados'", async () => {
     mockarApi({ meus: [CERTIFICADO_CONQUISTADO], status: [] });
     const snapshot = montarSnapshot({ matriculas: [] });

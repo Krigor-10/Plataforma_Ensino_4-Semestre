@@ -6354,6 +6354,23 @@
   border-radius: var(--raio-md);
   font-size: 0.9rem;
   font-weight: 600;
+  flex-wrap: wrap;
+}
+
+/* Matricula no detalhe do aluno (Admin): titulo a esquerda e, a direita,
+   status + certificado (emitido/revogado) + "Revogar certificado". Em tela
+   estreita os selos descem para baixo do titulo. */
+.detalhe-usuario__item-titulo {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.detalhe-usuario__item-selos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--espaco-xs, 0.25rem) var(--espaco-sm);
 }
 
 @media (max-width: 480px) {

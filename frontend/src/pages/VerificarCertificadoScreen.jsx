@@ -16,7 +16,7 @@ export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
 
   useDocumentTitle(
     status === "valido" && certificado
-      ? `Certificado autentico — ${certificado.cursoTitulo} | CodeRyse Academy`
+      ? `${certificado.revogadoEm ? "Certificado revogado" : "Certificado autentico"} — ${certificado.cursoTitulo} | CodeRyse Academy`
       : TITULOS_POR_STATUS[status] || TITULOS_POR_STATUS.loading
   );
 
@@ -61,8 +61,21 @@ export default function VerificarCertificadoScreen({ codigo, onNavigate }) {
           </>
         ) : status === "valido" ? (
           <>
-            <TbCircleCheck aria-hidden="true" className="verificar-certificado__icone verificar-certificado__icone--ok" size={48} />
-            <h1>Certificado autêntico</h1>
+            {/* Revogado pelo Admin (decisao F3 da auditoria de 26/11): o
+                registro continua consultavel, mas deixa claro que nao vale
+                mais. O motivo nunca aparece aqui. */}
+            {certificado.revogadoEm ? (
+              <>
+                <TbCircleX aria-hidden="true" className="verificar-certificado__icone verificar-certificado__icone--erro" size={48} />
+                <h1>Certificado revogado</h1>
+                <p role="alert">Este certificado foi revogado em {formatDate(certificado.revogadoEm)} e não tem mais validade.</p>
+              </>
+            ) : (
+              <>
+                <TbCircleCheck aria-hidden="true" className="verificar-certificado__icone verificar-certificado__icone--ok" size={48} />
+                <h1>Certificado autêntico</h1>
+              </>
+            )}
             <dl className="verificar-certificado__dados">
               <div>
                 <dt>Aluno</dt>

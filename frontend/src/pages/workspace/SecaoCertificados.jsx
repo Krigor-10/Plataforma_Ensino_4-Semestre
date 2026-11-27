@@ -143,8 +143,14 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
           // mobile/PROMPT-agente-certificados-mobile.md, item 13/Causa 1) -
           // certificadoDisponivel do backend ja reflete isso, aqui so deixa
           // explicito.
-          desbloqueado: status?.situacao === "Emitido" || Boolean(status?.certificadoDisponivel),
-          pendencia: pendencias[0] || null
+          // Revogado pelo Admin (decisao F3 da auditoria de 26/11): fica
+          // bloqueado, com a data no lugar da pendencia.
+          revogadoEm: status?.certificadoRevogadoEm || null,
+          desbloqueado:
+            !status?.certificadoRevogadoEm && (status?.situacao === "Emitido" || Boolean(status?.certificadoDisponivel)),
+          pendencia: status?.certificadoRevogadoEm
+            ? `Certificado revogado em ${formatDate(status.certificadoRevogadoEm)}`
+            : pendencias[0] || null
         };
       }),
     [avaliacoesPorCurso, matriculasAprovadas, progressoCursoPorMatricula, statusPorMatriculaId]
@@ -250,7 +256,9 @@ export function SecaoCertificados({ avaliacoes = [], matriculaRows = [], onSessi
                   <span className="item-certificado__nota" style={{ color: "var(--cor-texto-mudo)" }}>
                     {certificado.pendencia || `${formatPercent(certificado.percentual)} concluido`}
                   </span>
-                  <AtalhoAssistente pergunta={`O que falta para eu tirar o certificado de ${certificado.curso}?`} />
+                  {certificado.revogadoEm ? null : (
+                    <AtalhoAssistente pergunta={`O que falta para eu tirar o certificado de ${certificado.curso}?`} />
+                  )}
                 </div>
               )}
 

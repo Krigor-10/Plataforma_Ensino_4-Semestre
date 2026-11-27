@@ -84,7 +84,11 @@ public class CertificadoService : ICertificadoService
             // e marca apenas essa propriedade como modificada, evitando updates
             // indesejados em Aluno/Curso/Turma/ProgressoCursoAluno.
             _context.Matriculas.Attach(matricula);
-            _context.Entry(matricula).Property(m => m.CertificadoEmitidoEm).IsModified = true;
+            var entrada = _context.Entry(matricula);
+            entrada.Property(m => m.CertificadoEmitidoEm).IsModified = true;
+            entrada.Property(m => m.NomeAlunoCertificado).IsModified = true;
+            entrada.Property(m => m.TituloCursoCertificado).IsModified = true;
+            entrada.Property(m => m.NotaFinalCertificado).IsModified = true;
             await _context.SaveChangesAsync();
         }
 
@@ -216,7 +220,8 @@ public class CertificadoService : ICertificadoService
                 ? new List<Pendencia>()
                 : MontarPendencias(matricula, sinais);
 
-            resultado.Add(new StatusCertificadoMatricula(matricula, pendencias.Select(p => p.Mensagem).ToList(), CalcularSituacao(sinais)));
+            var situacao = matricula.CertificadoRevogadoEm.HasValue ? "Revogado" : CalcularSituacao(sinais);
+            resultado.Add(new StatusCertificadoMatricula(matricula, pendencias.Select(p => p.Mensagem).ToList(), situacao));
         }
 
         return resultado;
@@ -442,6 +447,23 @@ public class CertificadoService : ICertificadoService
             .Where(m => m.AlunoId == alunoId && m.CertificadoEmitidoEm != null)
             .OrderByDescending(m => m.CertificadoEmitidoEm)
             .ToListAsync();
+    }
+
+    public async Task<Matricula> RevogarCertificadoAsync(int matriculaId, int adminId, string motivo)
+    {
+        var matricula = await _context.Matriculas
+            .Include(m => m.Aluno)
+            .Include(m => m.Curso)
+            .FirstOrDefaultAsync(m => m.Id == matriculaId)
+            ?? throw new KeyNotFoundException("Matricula nao encontrada.");
+
+        matricula.RevogarCertificado(adminId, motivo);
+        await _context.SaveChangesAsync();
+
+        _logger?.LogInformation(
+            "Certificado da matricula {MatriculaId} revogado pelo Admin {AdminId}.", matricula.Id, adminId);
+
+        return matricula;
     }
 
     public async Task<Matricula> ObterCertificadoPorCodigoAsync(string codigo)

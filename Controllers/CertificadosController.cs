@@ -64,8 +64,23 @@ public class CertificadosController : ControllerBase
             CertificadoDisponivel = item.CertificadoDisponivel,
             PendenciasCertificado = item.Pendencias.ToList(),
             CertificadoEmitidoEm = item.Matricula.CertificadoEmitidoEm,
+            CertificadoRevogadoEm = item.Matricula.CertificadoRevogadoEm,
             Situacao = item.Situacao
         }));
+    }
+
+    [HttpPost("matricula/{matriculaId:int}/revogar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Revogar(int matriculaId, [FromBody] RevogarCertificadoDto dto)
+    {
+        var adminId = User.ObterUsuarioId();
+        if (!adminId.HasValue)
+        {
+            return Unauthorized(new { mensagem = "Nao foi possivel identificar o administrador autenticado." });
+        }
+
+        var matricula = await _certificadoService.RevogarCertificadoAsync(matriculaId, adminId.Value, dto?.Motivo ?? string.Empty);
+        return Ok(MapResponse(matricula));
     }
 
     [HttpGet("verificar/{codigo}")]
@@ -83,11 +98,14 @@ public class CertificadosController : ControllerBase
         return new CertificadoResponseDto
         {
             CodigoVerificacao = matricula.CodigoRegistro,
-            AlunoNome = matricula.Aluno?.Nome ?? string.Empty,
-            CursoTitulo = matricula.Curso?.Titulo ?? string.Empty,
+            // Dados congelados na emissao (decisao F2); o valor atual so entra
+            // se faltar o congelado (nao deveria, a migration preenche os antigos).
+            AlunoNome = matricula.NomeAlunoCertificado ?? matricula.Aluno?.Nome ?? string.Empty,
+            CursoTitulo = matricula.TituloCursoCertificado ?? matricula.Curso?.Titulo ?? string.Empty,
             TurmaNome = matricula.NomeTurmaSnapshot,
-            NotaFinal = matricula.NotaFinal,
-            EmitidoEm = matricula.CertificadoEmitidoEm ?? default
+            NotaFinal = matricula.NotaFinalCertificado ?? matricula.NotaFinal,
+            EmitidoEm = matricula.CertificadoEmitidoEm ?? default,
+            RevogadoEm = matricula.CertificadoRevogadoEm
         };
     }
 }

@@ -134,6 +134,7 @@ public class MatriculasController : ControllerBase
             DataSolicitacao = matricula.DataSolicitacao,
             NotaFinal = matricula.NotaFinal,
             Status = matricula.Status,
-            CertificadoEmitidoEm = matricula.CertificadoEmitidoEm
+            CertificadoEmitidoEm = matricula.CertificadoEmitidoEm,
+            CertificadoRevogadoEm = matricula.CertificadoRevogadoEm
         };
 }

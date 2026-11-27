@@ -21,6 +21,33 @@ public class Matricula
 
     public DateTime? CertificadoEmitidoEm { get; private set; }
 
+    /// <summary>
+    /// Dados impressos no certificado, CONGELADOS na emissao (decisao F2 da
+    /// auditoria de 26/11, docs/auditorias/AUDITORIA-PENDENCIAS-REGRAS-2026-
+    /// 11-26.md): mudar depois o nome do aluno, o titulo do curso ou a nota
+    /// (refazer prova) nao altera um certificado ja emitido. Mesmo padrao do
+    /// NomeTurmaSnapshot. Null so em certificado nao emitido.
+    /// </summary>
+    [StringLength(150)]
+    public string? NomeAlunoCertificado { get; private set; }
+
+    [StringLength(150)]
+    public string? TituloCursoCertificado { get; private set; }
+
+    public decimal? NotaFinalCertificado { get; private set; }
+
+    /// <summary>
+    /// Revogacao manual pelo Admin (decisao F3): o certificado continua
+    /// valido por padrao mesmo se o aluno perder o acesso; so deixa de valer
+    /// se o Admin revogar, com motivo. A verificacao publica mostra a data,
+    /// nunca o motivo.
+    /// </summary>
+    public DateTime? CertificadoRevogadoEm { get; private set; }
+    public int? CertificadoRevogadoPorId { get; private set; }
+
+    [StringLength(300)]
+    public string? MotivoRevogacaoCertificado { get; private set; }
+
     public int AlunoId { get; set; }
     public Aluno? Aluno { get; set; }
 
@@ -139,8 +166,44 @@ public class Matricula
         NotaFinal = 0;
     }
 
+    /// <summary>
+    /// Emite uma unica vez e congela nome, titulo e nota final do momento
+    /// (Aluno e Curso precisam estar carregados - CertificadoService sempre
+    /// carrega). Chamadas seguidas nao mudam nada.
+    /// </summary>
     public void EmitirCertificado(DateTime? emitidoEm = null)
     {
-        CertificadoEmitidoEm ??= emitidoEm ?? DateTime.UtcNow;
+        if (CertificadoEmitidoEm.HasValue)
+        {
+            return;
+        }
+
+        CertificadoEmitidoEm = emitidoEm ?? DateTime.UtcNow;
+        NomeAlunoCertificado = Aluno?.Nome;
+        TituloCursoCertificado = Curso?.Titulo;
+        NotaFinalCertificado = NotaFinal;
+    }
+
+    public void RevogarCertificado(int revogadoPorId, string motivo, DateTime? revogadoEm = null)
+    {
+        if (!CertificadoEmitidoEm.HasValue)
+        {
+            throw new InvalidOperationException("Esta matricula nao tem certificado emitido.");
+        }
+
+        if (CertificadoRevogadoEm.HasValue)
+        {
+            throw new InvalidOperationException("Este certificado ja foi revogado.");
+        }
+
+        var motivoTratado = (motivo ?? string.Empty).Trim();
+        if (motivoTratado.Length < 5 || motivoTratado.Length > 300)
+        {
+            throw new ArgumentException("Informe o motivo da revogacao (de 5 a 300 caracteres).");
+        }
+
+        CertificadoRevogadoEm = revogadoEm ?? DateTime.UtcNow;
+        CertificadoRevogadoPorId = revogadoPorId;
+        MotivoRevogacaoCertificado = motivoTratado;
     }
 }

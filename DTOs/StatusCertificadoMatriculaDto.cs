@@ -7,6 +7,7 @@ public class StatusCertificadoMatriculaDto
     public bool CertificadoDisponivel { get; set; }
     public List<string> PendenciasCertificado { get; set; } = new();
     public DateTime? CertificadoEmitidoEm { get; set; }
+    public DateTime? CertificadoRevogadoEm { get; set; }
 
     /// <summary>
     /// Situacao resumida pra tela, calculada no servidor (docs/certificados-

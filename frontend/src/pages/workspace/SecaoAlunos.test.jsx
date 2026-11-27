@@ -314,3 +314,61 @@ describe("SecaoAlunos - inativar/reativar direto pelo menu", () => {
     expect(apiRequest).toHaveBeenCalledWith("/Alunos/10/reativar", expect.objectContaining({ method: "POST" }));
   });
 });
+
+// docs/auditorias/AUDITORIA-PENDENCIAS-REGRAS-2026-11-26.md, decisao F3: o
+// Admin revoga um certificado emitido, com motivo, no detalhe do aluno.
+describe("SecaoAlunos - revogar certificado (Admin)", () => {
+  beforeEach(() => {
+    apiRequest.mockReset();
+  });
+
+  const matriculaComCertificado = {
+    id: 501,
+    alunoId: 10,
+    cursoId: 7,
+    cursoTitulo: "Curso de Redes",
+    status: "Aprovada",
+    certificadoEmitidoEm: "2026-11-20T10:00:00Z",
+    certificadoRevogadoEm: null
+  };
+
+  test("Revogar exige motivo e chama POST /Certificados/matricula/{id}/revogar", async () => {
+    apiRequest.mockResolvedValue({});
+    const onRefresh = vi.fn();
+    renderSecao({ matriculas: [matriculaComCertificado], onRefresh });
+    await abrirDetalhe();
+
+    expect(screen.getByText("Certificado emitido")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Revogar certificado" }));
+
+    const botaoRevogar = screen.getByRole("button", { name: "Revogar" });
+    expect(botaoRevogar).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("Motivo *"), "Fraude identificada");
+    await userEvent.click(botaoRevogar);
+
+    expect(apiRequest).toHaveBeenCalledWith("/Certificados/matricula/501/revogar", {
+      method: "POST",
+      body: JSON.stringify({ motivo: "Fraude identificada" })
+    });
+    expect(await screen.findByText("Certificado revogado.")).toBeInTheDocument();
+    expect(onRefresh).toHaveBeenCalled();
+  });
+
+  test("certificado ja revogado mostra a data e nao oferece revogar de novo", async () => {
+    renderSecao({ matriculas: [{ ...matriculaComCertificado, certificadoRevogadoEm: "2026-11-25T10:00:00Z" }] });
+    await abrirDetalhe();
+
+    expect(screen.getByText(/Certificado revogado em/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revogar certificado" })).not.toBeInTheDocument();
+  });
+
+  test("Coordenador ve o certificado mas nao o botao de revogar", async () => {
+    renderSecao({ matriculas: [matriculaComCertificado], usuario: COORDENADOR });
+    await abrirDetalhe();
+
+    expect(screen.getByText("Certificado emitido")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revogar certificado" })).not.toBeInTheDocument();
+  });
+});
+

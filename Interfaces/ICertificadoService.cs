@@ -32,6 +32,13 @@ public interface ICertificadoService
     Task<Matricula> ObterCertificadoPorCodigoAsync(string codigo);
 
     /// <summary>
+    /// Revogacao manual pelo Admin (decisao F3 da auditoria de 26/11), com
+    /// motivo obrigatorio. O certificado continua aparecendo na verificacao
+    /// publica, marcado como revogado (sem o motivo).
+    /// </summary>
+    Task<Matricula> RevogarCertificadoAsync(int matriculaId, int adminId, string motivo);
+
+    /// <summary>
     /// Checa os requisitos de emissao de certificado pra uma matricula sem
     /// gravar nada no banco - mesmas regras de EmitirCertificadoAsync, so
     /// que devolve a lista de pendencias em vez de lancar na primeira.

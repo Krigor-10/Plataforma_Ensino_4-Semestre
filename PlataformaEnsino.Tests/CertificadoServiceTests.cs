@@ -1200,4 +1200,138 @@ public class CertificadoServiceTests
         Assert.Equal(0, resultado.Emitidos);
         Assert.Equal(1, resultado.Bloqueados);
     }
+
+    // ---------- Decisoes F2 e F3 da auditoria de 26/11 ----------
+    // F2: o certificado congela nome, titulo e nota na emissao.
+    // F3: o Admin pode revogar, com motivo; a verificacao mostra a data.
+
+    [Fact]
+    public async Task EmitirCertificadoAsync_CongelaNomeTituloENota_MudancasDepoisNaoAlteram()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+
+        using (var contextoDoServico = TestContextFactory.Criar(nomeBanco))
+        {
+            await new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico))
+                .EmitirCertificadoAsync(aluno.Id, matricula.Id);
+        }
+
+        aluno.Nome = "Nome Corrigido Depois";
+        curso.Titulo = "Titulo Novo Depois";
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDaVerificacao = TestContextFactory.Criar(nomeBanco);
+        var certificado = await new CertificadoService(contextoDaVerificacao, new AcessoAcademicoService(contextoDaVerificacao))
+            .ObterCertificadoPorCodigoAsync(matricula.CodigoRegistro);
+
+        Assert.Equal("Aluno Teste", certificado.NomeAlunoCertificado);
+        Assert.Equal("Curso Teste", certificado.TituloCursoCertificado);
+        Assert.Equal(0m, certificado.NotaFinalCertificado);
+    }
+
+    [Fact]
+    public async Task RevogarCertificadoAsync_ComMotivo_MarcaRevogadoESituacaoRevogado()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+        matricula.EmitirCertificado();
+        contextoDeArranjo.SaveChanges();
+
+        using (var contextoDoServico = TestContextFactory.Criar(nomeBanco))
+        {
+            var revogada = await new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico))
+                .RevogarCertificadoAsync(matricula.Id, adminId: 99, motivo: "Fraude identificada na prova");
+
+            Assert.NotNull(revogada.CertificadoRevogadoEm);
+            Assert.Equal(99, revogada.CertificadoRevogadoPorId);
+            Assert.Equal("Fraude identificada na prova", revogada.MotivoRevogacaoCertificado);
+        }
+
+        using var contextoDaConsulta = TestContextFactory.Criar(nomeBanco);
+        var service = new CertificadoService(contextoDaConsulta, new AcessoAcademicoService(contextoDaConsulta));
+        var status = Assert.Single(await service.ListarStatusCertificadosDoAlunoAsync(aluno.Id));
+        Assert.Equal("Revogado", status.Situacao);
+
+        var verificado = await service.ObterCertificadoPorCodigoAsync(matricula.CodigoRegistro);
+        Assert.NotNull(verificado.CertificadoRevogadoEm);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("curt")]
+    public async Task RevogarCertificadoAsync_MotivoCurto_LancaArgumentException(string motivo)
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+        matricula.EmitirCertificado();
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico))
+                .RevogarCertificadoAsync(matricula.Id, adminId: 99, motivo: motivo));
+    }
+
+    [Fact]
+    public async Task RevogarCertificadoAsync_SemCertificadoOuJaRevogado_LancaInvalidOperation()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+
+        using (var contextoSemCertificado = TestContextFactory.Criar(nomeBanco))
+        {
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new CertificadoService(contextoSemCertificado, new AcessoAcademicoService(contextoSemCertificado))
+                    .RevogarCertificadoAsync(matricula.Id, adminId: 99, motivo: "Motivo valido aqui"));
+        }
+
+        matricula.EmitirCertificado();
+        matricula.RevogarCertificado(99, "Primeira revogacao");
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoJaRevogado = TestContextFactory.Criar(nomeBanco);
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new CertificadoService(contextoJaRevogado, new AcessoAcademicoService(contextoJaRevogado))
+                .RevogarCertificadoAsync(matricula.Id, adminId: 99, motivo: "Segunda revogacao"));
+    }
+
+    [Fact]
+    public async Task TentarEmitirAutomaticamenteAsync_CertificadoRevogado_NaoReemite()
+    {
+        var nomeBanco = Guid.NewGuid().ToString();
+        using var contextoDeArranjo = TestContextFactory.Criar(nomeBanco);
+        var aluno = CriarAluno(contextoDeArranjo);
+        var curso = CriarCurso(contextoDeArranjo);
+        var turma = CriarTurma(contextoDeArranjo, curso.Id);
+        var matricula = CriarMatriculaAprovada(contextoDeArranjo, aluno, curso, turma, percentualConclusao: 100);
+        matricula.EmitirCertificado();
+        var emitidoEm = matricula.CertificadoEmitidoEm;
+        matricula.RevogarCertificado(99, "Erro na emissao");
+        contextoDeArranjo.SaveChanges();
+
+        using var contextoDoServico = TestContextFactory.Criar(nomeBanco);
+        await new CertificadoService(contextoDoServico, new AcessoAcademicoService(contextoDoServico))
+            .TentarEmitirAutomaticamenteAsync(matricula.Id);
+
+        var depois = contextoDoServico.Matriculas.Single(m => m.Id == matricula.Id);
+        Assert.Equal(emitidoEm, depois.CertificadoEmitidoEm);
+        Assert.NotNull(depois.CertificadoRevogadoEm);
+    }
 }
