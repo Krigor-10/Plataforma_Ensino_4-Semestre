@@ -65,6 +65,13 @@ public class CursoService : ICursoService
             curso.ModeloCurso = dto.ModeloCurso.Value;
         }
 
+        // 27/11: curso Python ficou travado e "A venda" depois de trocar de
+        // Gratuito publicado para Acompanhado. Ver Curso.LimparPublicacao.
+        if (curso.ModeloCurso == ModeloCurso.Acompanhado)
+        {
+            curso.LimparPublicacao();
+        }
+
         _cursoRepository.Atualizar(curso);
         await _cursoRepository.SalvarAlteracoesAsync();
 

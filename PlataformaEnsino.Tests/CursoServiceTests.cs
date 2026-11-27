@@ -210,6 +210,48 @@ public class CursoServiceTests
     }
 
     [Fact]
+    public async Task AtualizarCursoAsync_GratuitoPublicadoViraAcompanhado_LimpaPublicacaoEDestravaEdicao()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.Gratuito);
+        curso.PublicarParaVenda();
+        context.SaveChanges();
+        Assert.False(curso.AceitaEdicao());
+
+        var atualizado = await service.AtualizarCursoAsync(curso.Id, new AtualizarCursoDto
+        {
+            Titulo = curso.Titulo,
+            Preco = 0,
+            ModeloCurso = ModeloCurso.Acompanhado
+        });
+
+        Assert.Null(atualizado.PublicadoParaVendaEm);
+        Assert.Null(atualizado.RetiradoDaVendaEm);
+        Assert.True(atualizado.AceitaEdicao());
+        Assert.True(atualizado.DisponivelParaNovosAlunos);
+    }
+
+    [Fact]
+    public async Task AtualizarCursoAsync_PagoPublicadoContinuaPublicado()
+    {
+        var context = TestContextFactory.Criar();
+        var service = CriarService(context);
+        var curso = CriarCurso(context, ModeloCurso.PagoPacote);
+        curso.PublicarParaVenda();
+        context.SaveChanges();
+
+        var atualizado = await service.AtualizarCursoAsync(curso.Id, new AtualizarCursoDto
+        {
+            Titulo = "Titulo novo",
+            Preco = 49.9m,
+            ModeloCurso = ModeloCurso.PagoPacote
+        });
+
+        Assert.NotNull(atualizado.PublicadoParaVendaEm);
+    }
+
+    [Fact]
     public async Task CriarCursoAsync_ComModeloInformado_RespeitaOValorExplicito()
     {
         var context = TestContextFactory.Criar();

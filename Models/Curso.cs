@@ -218,4 +218,16 @@ public class Curso
 
         PublicadoParaVendaEm = null;
     }
+
+    /// <summary>
+    /// Acompanhado nao usa publicacao: aparece no catalogo enquanto nao for
+    /// encerrado (DisponivelParaNovosAlunos). Uma marca de publicado que sobrou
+    /// de quando o curso era Gratuito/Pago travaria a edicao do professor
+    /// (AceitaEdicao) e mostraria "A venda" - por isso sai ao virar Acompanhado.
+    /// </summary>
+    public void LimparPublicacao()
+    {
+        PublicadoParaVendaEm = null;
+        RetiradoDaVendaEm = null;
+    }
 }
