@@ -51,7 +51,9 @@ module.exports = {
       "@sentry/react-native",
       "expo-secure-store",
       "expo-video",
-      "expo-sharing"
+      "expo-sharing",
+      // Pacote 9 (biometria): texto do pedido de Face ID no iOS.
+      ["expo-local-authentication", { faceIDPermission: "Permitir que a CodeRyse use o Face ID para desbloquear o app." }]
     ],
     extra: {
       eas: {
