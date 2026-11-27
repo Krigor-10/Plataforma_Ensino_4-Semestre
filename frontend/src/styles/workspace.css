@@ -3456,6 +3456,34 @@
   background: rgba(123, 47, 247, 0.08);
 }
 
+/* Modal "Ajustes rapidos da avaliacao" (SecaoAvaliacoesProfessor.jsx,
+   ModalAjustesRapidos): linhas so de leitura (Modulo, Total de questoes)
+   entre os campos editaveis do formulario. */
+.ajustes-avaliacao__linha-fixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espaco-sm);
+  padding-bottom: var(--espaco-sm);
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.ajustes-avaliacao__questoes {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espaco-sm);
+}
+
+/* 3 numeros lado a lado so com espaco; em tela estreita, um por linha. */
+@container (max-width: 30rem) {
+  .ajustes-avaliacao__numeros {
+    grid-template-columns: 1fr;
+  }
+}
+
 .detalhe-status {
   display: flex;
   align-items: center;

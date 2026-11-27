@@ -15,7 +15,7 @@ import {
   TbTrophy,
   TbX
 } from "react-icons/tb";
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdSave } from "react-icons/md";
 
 const MOLA_ICONE = { type: "spring", stiffness: 400, damping: 18 };
 import Botao from "../../components/Botao.jsx";
@@ -27,6 +27,7 @@ import { InlineMessage } from "../../components/Primitives.jsx";
 import { useToast } from "../../hooks/useToast.jsx";
 import { ApiError, apiRequest } from "../../lib/api.js";
 import { formatGrade, normalizePublicationStatus } from "../../lib/format.js";
+import { montarPayloadAvaliacao } from "../../lib/trilhaConteudos.js";
 import { AssistenteGeracaoIA } from "./AssistenteGeracaoIA.jsx";
 import { AssistenteQuizAvaliacao } from "./AssistenteQuizAvaliacao.jsx";
 
@@ -35,6 +36,73 @@ const MODELO_ACOMPANHADO = 3;
 
 function formatDecimal(value) {
   return Number(value || 0).toFixed(2).replace(".", ",");
+}
+
+const STATUS_PUBLICADO = 2;
+const STATUS_ARQUIVADO = 3;
+const TIPO_QUIZ = 1;
+const CAMPOS_NUMERICOS_AJUSTES = new Set(["tentativasPermitidas", "tempoLimiteMinutos", "notaMaxima"]);
+
+// Rascunho do modal "Ajustes rapidos": tudo em texto (valor dos inputs),
+// montado a partir do que esta salvo. tempoLimiteMinutos vazio = sem limite.
+function montarRascunhoAjustes(avaliacao) {
+  return {
+    titulo: avaliacao.titulo || "",
+    tentativasPermitidas: String(avaliacao.tentativasPermitidas ?? 1),
+    tempoLimiteMinutos: avaliacao.tempoLimiteMinutos ? String(avaliacao.tempoLimiteMinutos) : "",
+    notaMaxima: String(Number(avaliacao.notaMaxima ?? 10))
+  };
+}
+
+// Numero digitado de outro jeito ("10" x "10.0") nao conta como alteracao.
+function normalizarValorAjuste(campo, valor) {
+  const texto = String(valor ?? "").trim();
+  if (!CAMPOS_NUMERICOS_AJUSTES.has(campo) || texto === "") {
+    return texto;
+  }
+  const numero = Number(texto);
+  return Number.isFinite(numero) ? String(numero) : texto;
+}
+
+function camposAlteradosNoRascunho(avaliacao, rascunho) {
+  const original = montarRascunhoAjustes(avaliacao);
+  return new Set(
+    Object.keys(original).filter(
+      (campo) => normalizarValorAjuste(campo, rascunho[campo]) !== normalizarValorAjuste(campo, original[campo])
+    )
+  );
+}
+
+// Mesmas regras do servidor (AvaliacaoService) e do formulario completo
+// (AssistenteQuizAvaliacao), com mensagem clara em vez de descartar calado.
+function validarRascunhoAjustes(rascunho, avaliacao) {
+  const titulo = rascunho.titulo.trim();
+  if (!titulo) {
+    return { erro: "Informe o título da avaliação." };
+  }
+
+  const tentativasPermitidas = Number(rascunho.tentativasPermitidas);
+  if (!Number.isInteger(tentativasPermitidas) || tentativasPermitidas < 1) {
+    return { erro: "Tentativas permitidas: informe um número inteiro maior que zero." };
+  }
+
+  const tempoTexto = String(rascunho.tempoLimiteMinutos).trim();
+  const tempoLimiteMinutos = tempoTexto === "" ? null : Number(tempoTexto);
+  if (tempoLimiteMinutos !== null && (!Number.isInteger(tempoLimiteMinutos) || tempoLimiteMinutos < 1)) {
+    return { erro: "Tempo limite: deixe vazio para não ter limite ou informe os minutos (número inteiro maior que zero)." };
+  }
+
+  const valores = { titulo, tentativasPermitidas, tempoLimiteMinutos };
+
+  if (Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ) {
+    const notaMaxima = Number(rascunho.notaMaxima);
+    if (!Number.isFinite(notaMaxima) || notaMaxima <= 0) {
+      return { erro: "Nota máxima: informe um valor maior que zero." };
+    }
+    valores.notaMaxima = Math.round(notaMaxima * 100) / 100;
+  }
+
+  return { valores };
 }
 
 export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSelecionado = null, cursos, modulos, onNavigate, onRefresh, onSessionExpired }) {
@@ -52,9 +120,19 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
   const [mensagemExclusaoAvaliacao, setMensagemExclusaoAvaliacao] = useState("");
   const [menuAbertoId, setMenuAbertoId] = useState(null);
 
+  /* Modal "Ajustes rapidos" (docs/auditorias/AUDITORIA-PENDENCIAS-REGRAS-
+     2026-11-26.md, itens 6 e 7, decisoes E1/E2): os campos editam um
+     RASCUNHO local - nada vai pro servidor ate o "Salvar". Fechar/X com
+     alteracao pendente pede "Descartar alteracoes?" (antes cada campo se
+     salvava sozinho no blur, entao clicar no X acabava salvando). O toggle
+     Publicado/Arquivado continua sendo acao imediata, com estado de envio e
+     mensagem de erro. */
   const [avaliacaoDetalhe, setAvaliacaoDetalhe] = useState(null);
-  const [campoEditando, setCampoEditando] = useState(null);
-  const [valorEditando, setValorEditando] = useState("");
+  const [rascunhoDetalhe, setRascunhoDetalhe] = useState(null);
+  const [mensagemDetalhe, setMensagemDetalhe] = useState({ tone: "", message: "" });
+  const [salvandoDetalhe, setSalvandoDetalhe] = useState(false);
+  const [alternandoStatusDetalhe, setAlternandoStatusDetalhe] = useState(false);
+  const [confirmandoDescarteDetalhe, setConfirmandoDescarteDetalhe] = useState(false);
 
   /* Media de nota por avaliacao e informacao secundaria (nao existe no DTO de
      /Avaliacoes) - reaproveita o endpoint de desempenho por curso ja usado em
@@ -275,60 +353,75 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
 
   function abrirDetalheAvaliacao(avaliacao) {
     setAvaliacaoDetalhe(avaliacao);
-    setCampoEditando(null);
+    setRascunhoDetalhe(montarRascunhoAjustes(avaliacao));
+    setMensagemDetalhe({ tone: "", message: "" });
+    setConfirmandoDescarteDetalhe(false);
     setMenuAbertoId(null);
   }
 
-  function fecharDetalheAvaliacao() {
+  function fecharDetalheSemPerguntar() {
     setAvaliacaoDetalhe(null);
-    setCampoEditando(null);
+    setRascunhoDetalhe(null);
+    setMensagemDetalhe({ tone: "", message: "" });
+    setConfirmandoDescarteDetalhe(false);
   }
 
-  function iniciarEdicaoCampoDetalhe(campo, valorAtual) {
-    setCampoEditando(campo);
-    setValorEditando(String(valorAtual));
+  const detalheTemAlteracaoPendente =
+    Boolean(avaliacaoDetalhe && rascunhoDetalhe) && camposAlteradosNoRascunho(avaliacaoDetalhe, rascunhoDetalhe).size > 0;
+
+  // X, "Fechar" e Escape passam por aqui. Com alteracao pendente, a primeira
+  // tentativa so pede confirmacao (no rodape do proprio modal, sem empilhar
+  // outro Modal - dois Escape listeners fechariam os dois de uma vez); a
+  // segunda (Escape de novo) volta pra edicao.
+  function solicitarFechamentoDetalhe() {
+    if (salvandoDetalhe || alternandoStatusDetalhe) {
+      return;
+    }
+    if (confirmandoDescarteDetalhe) {
+      setConfirmandoDescarteDetalhe(false);
+      return;
+    }
+    if (detalheTemAlteracaoPendente) {
+      setConfirmandoDescarteDetalhe(true);
+      return;
+    }
+    fecharDetalheSemPerguntar();
   }
 
-  function montarPayloadAtualizacao(avaliacao) {
-    return {
-      titulo: avaliacao.titulo,
-      descricao: avaliacao.descricao || "",
-      cursoId: avaliacao.cursoId,
-      moduloId: avaliacao.moduloId,
-      tipoAvaliacao: avaliacao.tipoAvaliacao,
-      statusPublicacao: avaliacao.statusPublicacao,
-      dataAbertura: avaliacao.dataAbertura || null,
-      dataFechamento: avaliacao.dataFechamento || null,
-      tentativasPermitidas: avaliacao.tentativasPermitidas,
-      tempoLimiteMinutos: avaliacao.tempoLimiteMinutos || null,
-      notaMaxima: avaliacao.notaMaxima,
-      pesoNota: avaliacao.pesoNota,
-      pesoProgresso: avaliacao.pesoProgresso
-    };
+  function atualizarCampoRascunho(evento) {
+    const { name, value } = evento.target;
+    setRascunhoDetalhe((atual) => ({ ...atual, [name]: value }));
+    setConfirmandoDescarteDetalhe(false);
+    if (mensagemDetalhe.message) {
+      setMensagemDetalhe({ tone: "", message: "" });
+    }
   }
 
-  async function salvarCampoDetalhe(campo, valorBruto) {
-    if (campoEditando !== campo || !avaliacaoDetalhe) {
+  async function salvarAjustesDetalhe(evento) {
+    evento?.preventDefault();
+    if (!avaliacaoDetalhe || salvandoDetalhe) {
       return;
     }
 
-    const valor = campo === "titulo" ? String(valorBruto).trim() : Number(valorBruto);
-    const valorInvalido = campo === "titulo" ? !valor : !Number.isFinite(valor) || valor <= 0;
-
-    if (valorInvalido) {
-      setCampoEditando(null);
+    const validacao = validarRascunhoAjustes(rascunhoDetalhe, avaliacaoDetalhe);
+    if (validacao.erro) {
+      setMensagemDetalhe({ tone: "error", message: validacao.erro });
       return;
     }
 
-    const avaliacaoAtualizada = { ...avaliacaoDetalhe, [campo]: valor };
-    setCampoEditando(null);
-    setAvaliacaoDetalhe(avaliacaoAtualizada);
+    setSalvandoDetalhe(true);
+    setMensagemDetalhe({ tone: "", message: "" });
 
     try {
       await apiRequest(`/Avaliacoes/${avaliacaoDetalhe.id}`, {
         method: "PUT",
-        body: JSON.stringify(montarPayloadAtualizacao(avaliacaoAtualizada))
+        body: JSON.stringify(montarPayloadAvaliacao(avaliacaoDetalhe, validacao.valores))
       });
+      const avaliacaoAtualizada = { ...avaliacaoDetalhe, ...validacao.valores };
+      setAvaliacaoDetalhe(avaliacaoAtualizada);
+      setRascunhoDetalhe(montarRascunhoAjustes(avaliacaoAtualizada));
+      setConfirmandoDescarteDetalhe(false);
+      mostrarToast("Avaliação atualizada.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -336,25 +429,35 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         return;
       }
 
-      setAvaliacaoDetalhe(avaliacaoDetalhe);
+      setMensagemDetalhe({ tone: "error", message: err.message || "Não foi possível salvar a avaliação agora." });
+    } finally {
+      setSalvandoDetalhe(false);
     }
   }
 
   async function alternarStatusDetalhe() {
-    if (!avaliacaoDetalhe) {
+    if (!avaliacaoDetalhe || alternandoStatusDetalhe || salvandoDetalhe) {
       return;
     }
 
-    const proximoStatus = avaliacaoDetalhe.statusPublicacao === 2 ? 3 : 2;
-    const avaliacaoAtualizada = { ...avaliacaoDetalhe, statusPublicacao: proximoStatus };
-    setAvaliacaoDetalhe(avaliacaoAtualizada);
+    if (detalheTemAlteracaoPendente) {
+      setMensagemDetalhe({ tone: "warning", message: "Salve ou descarte as alterações antes de publicar ou arquivar." });
+      return;
+    }
+
+    const statusAnterior = avaliacaoDetalhe.statusPublicacao;
+    const proximoStatus = Number(statusAnterior) === STATUS_PUBLICADO ? STATUS_ARQUIVADO : STATUS_PUBLICADO;
+
+    setAlternandoStatusDetalhe(true);
+    setMensagemDetalhe({ tone: "", message: "" });
+    setAvaliacaoDetalhe((atual) => ({ ...atual, statusPublicacao: proximoStatus }));
 
     try {
       await apiRequest(`/Avaliacoes/${avaliacaoDetalhe.id}`, {
         method: "PUT",
-        body: JSON.stringify(montarPayloadAtualizacao(avaliacaoAtualizada))
+        body: JSON.stringify(montarPayloadAvaliacao(avaliacaoDetalhe, { statusPublicacao: proximoStatus }))
       });
-      mostrarToast(proximoStatus === 2 ? "Avaliacao publicada com sucesso." : "Avaliacao despublicada com sucesso.", "sucesso");
+      mostrarToast(proximoStatus === STATUS_PUBLICADO ? "Avaliação publicada." : "Avaliação arquivada.", "sucesso");
       onRefresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -362,7 +465,13 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         return;
       }
 
-      setAvaliacaoDetalhe(avaliacaoDetalhe);
+      setAvaliacaoDetalhe((atual) => ({ ...atual, statusPublicacao: statusAnterior }));
+      setMensagemDetalhe({
+        tone: "error",
+        message: err.message || "Não foi possível alterar o status da avaliação agora."
+      });
+    } finally {
+      setAlternandoStatusDetalhe(false);
     }
   }
 
@@ -419,212 +528,32 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
         </>
       )}
 
-      {avaliacaoDetalhe ? (
-        <Modal
-          onFechar={fecharDetalheAvaliacao}
-          titulo="Ajustes rapidos da avaliacao"
-          rodape={
-            <footer className="modal-rodape">
-              <Botao onClick={fecharDetalheAvaliacao} className="linha-icone-texto" style={{ marginRight: "auto" }} variante="perigo">
-                <TbX aria-hidden="true" size={15} /> Fechar
-              </Botao>
-              <Botao
-                onClick={() => {
-                  setAvaliacaoParaExcluir(avaliacaoDetalhe);
-                  setMensagemExclusaoAvaliacao("");
-                  fecharDetalheAvaliacao();
-                }}
-                className="linha-icone-texto"
-                variante="perigo"
-              >
-                <MdDelete aria-hidden="true" size={19} /> Excluir
-              </Botao>
-            </footer>
-          }
-        >
-          <dl className="lista-detalhes">
-            <div className="lista-detalhes__item">
-              <dt>Titulo</dt>
-              {campoEditando === "titulo" ? (
-                <input
-                  autoFocus
-                  className="campo__entrada campo__entrada--inline"
-                  defaultValue={valorEditando}
-                  onBlur={(event) => salvarCampoDetalhe("titulo", event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.target.blur();
-                    if (event.key === "Escape") setCampoEditando(null);
-                  }}
-                />
-              ) : (
-                <dd>{avaliacaoDetalhe.titulo}</dd>
-              )}
-              <button
-                className="btn-editar-linha"
-                onClick={() => iniciarEdicaoCampoDetalhe("titulo", avaliacaoDetalhe.titulo)}
-                title="Editar titulo"
-                type="button"
-              >
-                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
-                  <TbPencil aria-hidden="true" size={18} />
-                </motion.span>
-              </button>
-            </div>
-
-            <div className="lista-detalhes__item">
-              <dt>Modulo</dt>
-              <dd>{avaliacaoDetalhe.moduloTitulo || "Direto no curso"}</dd>
-            </div>
-
-            <div className="lista-detalhes__item lista-detalhes__item--com-acao">
-              <div>
-                <dt>Total de questoes</dt>
-                <dd>{avaliacaoDetalhe.totalQuestoes || 0}</dd>
-              </div>
-              <button
-                aria-label="Editar questoes desta avaliacao"
-                className="btn-editar-questoes"
-                data-tooltip="Editar questoes"
-                onClick={() => {
-                  const alvo = avaliacaoDetalhe;
-                  fecharDetalheAvaliacao();
-                  abrirEdicaoAvaliacao(alvo);
-                }}
-                type="button"
-              >
-                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
-                  <TbPencil aria-hidden="true" size={18} />
-                </motion.span>
-              </button>
-            </div>
-
-            <div className="lista-detalhes__item">
-              <dt>Tentativas permitidas</dt>
-              {campoEditando === "tentativasPermitidas" ? (
-                <input
-                  autoFocus
-                  className="campo__entrada campo__entrada--inline"
-                  defaultValue={valorEditando}
-                  max="10"
-                  min="1"
-                  onBlur={(event) => salvarCampoDetalhe("tentativasPermitidas", event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.target.blur();
-                    if (event.key === "Escape") setCampoEditando(null);
-                  }}
-                  type="number"
-                />
-              ) : (
-                <dd>{avaliacaoDetalhe.tentativasPermitidas}</dd>
-              )}
-              <button
-                className="btn-editar-linha"
-                onClick={() => iniciarEdicaoCampoDetalhe("tentativasPermitidas", avaliacaoDetalhe.tentativasPermitidas)}
-                title="Editar tentativas"
-                type="button"
-              >
-                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
-                  <TbPencil aria-hidden="true" size={18} />
-                </motion.span>
-              </button>
-            </div>
-
-            <div className="lista-detalhes__item">
-              <dt>Tempo limite</dt>
-              {campoEditando === "tempoLimiteMinutos" ? (
-                <input
-                  autoFocus
-                  className="campo__entrada campo__entrada--inline"
-                  defaultValue={valorEditando}
-                  min="5"
-                  onBlur={(event) => salvarCampoDetalhe("tempoLimiteMinutos", event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") event.target.blur();
-                    if (event.key === "Escape") setCampoEditando(null);
-                  }}
-                  type="number"
-                />
-              ) : (
-                <dd>{avaliacaoDetalhe.tempoLimiteMinutos ? `${avaliacaoDetalhe.tempoLimiteMinutos} minutos` : "Sem limite"}</dd>
-              )}
-              <button
-                className="btn-editar-linha"
-                onClick={() => iniciarEdicaoCampoDetalhe("tempoLimiteMinutos", avaliacaoDetalhe.tempoLimiteMinutos || 30)}
-                title="Editar tempo limite"
-                type="button"
-              >
-                <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
-                  <TbPencil aria-hidden="true" size={18} />
-                </motion.span>
-              </button>
-            </div>
-
-            {Number(avaliacaoDetalhe.tipoAvaliacao) === 1 ? (
-              <div className="lista-detalhes__item">
-                <dt>Tipo</dt>
-                <dd>Quiz - atividade formativa, conta pro progresso, nao gera nota</dd>
-              </div>
-            ) : (
-              <div className="lista-detalhes__item">
-                <dt>Nota maxima</dt>
-                {campoEditando === "notaMaxima" ? (
-                  <input
-                    autoFocus
-                    className="campo__entrada campo__entrada--inline"
-                    defaultValue={valorEditando}
-                    max="100"
-                    min="1"
-                    onBlur={(event) => salvarCampoDetalhe("notaMaxima", event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") event.target.blur();
-                      if (event.key === "Escape") setCampoEditando(null);
-                    }}
-                    step="0.01"
-                    type="number"
-                  />
-                ) : (
-                  <dd>{formatDecimal(avaliacaoDetalhe.notaMaxima)}</dd>
-                )}
-                <button
-                  className="btn-editar-linha"
-                  onClick={() => iniciarEdicaoCampoDetalhe("notaMaxima", avaliacaoDetalhe.notaMaxima)}
-                  title="Editar nota maxima"
-                  type="button"
-                >
-                  <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
-                    <TbPencil aria-hidden="true" size={18} />
-                  </motion.span>
-                </button>
-              </div>
-            )}
-          </dl>
-
-          <div className="detalhe-status">
-            <div>
-              <strong className="detalhe-status__rotulo">Status da avaliacao</strong>
-              <span className="detalhe-status__descricao">
-                {avaliacaoDetalhe.statusPublicacao === 2
-                  ? "Visivel e disponivel para os alunos"
-                  : "Oculta - nao aparece para os alunos"}
-              </span>
-            </div>
-            <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
-              <Insignia texto={normalizePublicationStatus(avaliacaoDetalhe.statusPublicacao)} />
-              <button
-                aria-checked={avaliacaoDetalhe.statusPublicacao === 2}
-                aria-label={avaliacaoDetalhe.statusPublicacao === 2 ? "Publicado - clique para arquivar" : "Arquivado - clique para publicar"}
-                className={`switch-ativo${avaliacaoDetalhe.statusPublicacao === 2 ? " switch-ativo--ativo" : ""}`}
-                onClick={alternarStatusDetalhe}
-                role="switch"
-                type="button"
-              >
-                <TbX aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--esq" size={10} />
-                <span aria-hidden="true" className="switch-ativo__thumb" />
-                <TbCheck aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--dir" size={10} />
-              </button>
-            </div>
-          </div>
-        </Modal>
+      {avaliacaoDetalhe && rascunhoDetalhe ? (
+        <ModalAjustesRapidos
+          alternandoStatus={alternandoStatusDetalhe}
+          avaliacao={avaliacaoDetalhe}
+          camposAlterados={camposAlteradosNoRascunho(avaliacaoDetalhe, rascunhoDetalhe)}
+          confirmandoDescarte={confirmandoDescarteDetalhe}
+          mensagem={mensagemDetalhe}
+          onAlterarCampo={atualizarCampoRascunho}
+          onAlternarStatus={alternarStatusDetalhe}
+          onContinuarEditando={() => setConfirmandoDescarteDetalhe(false)}
+          onDescartar={fecharDetalheSemPerguntar}
+          onEditarQuestoes={() => {
+            const alvo = avaliacaoDetalhe;
+            fecharDetalheSemPerguntar();
+            abrirEdicaoAvaliacao(alvo);
+          }}
+          onExcluir={() => {
+            setAvaliacaoParaExcluir(avaliacaoDetalhe);
+            setMensagemExclusaoAvaliacao("");
+            fecharDetalheSemPerguntar();
+          }}
+          onFechar={solicitarFechamentoDetalhe}
+          onSalvar={salvarAjustesDetalhe}
+          rascunho={rascunhoDetalhe}
+          salvando={salvandoDetalhe}
+        />
       ) : null}
 
       {avaliacaoParaExcluir ? (
@@ -697,6 +626,192 @@ export function SecaoAvaliacoesProfessor({ avaliacoes, conteudos = [], cursoIdSe
    accordion (mesmo padrao visual/interacao do cabecalho de modulo em
    SecaoConteudosProfessor.jsx), com so uma aberta por vez; o menu "..." (Ver
    detalhes/Editar/Excluir) fica ao lado do cabecalho, fora do botao de toggle. */
+/* Modal "Ajustes rapidos da avaliacao" (Professor > Avaliacoes) - decisao
+   E1 da auditoria de 26/11 (imagem docs/auditorias/bloco2-modal-ajustes-
+   opcoes.png, opcao A): formulario com todos os campos editaveis, borda de
+   aviso no que mudou e nao foi salvo, "Salvar" grava tudo num PUT so.
+   Fechar/X nunca salvam: com alteracao pendente, o rodape vira a pergunta
+   "Descartar alteracoes?". O toggle (decisao E2) age na hora, travado
+   durante o envio. Estado e chamadas ficam em SecaoAvaliacoesProfessor -
+   este componente so desenha. */
+function ModalAjustesRapidos({
+  alternandoStatus,
+  avaliacao,
+  camposAlterados,
+  confirmandoDescarte,
+  mensagem,
+  onAlterarCampo,
+  onAlternarStatus,
+  onContinuarEditando,
+  onDescartar,
+  onEditarQuestoes,
+  onExcluir,
+  onFechar,
+  onSalvar,
+  rascunho,
+  salvando
+}) {
+  const ocupado = salvando || alternandoStatus;
+  const publicado = Number(avaliacao.statusPublicacao) === STATUS_PUBLICADO;
+  const temAlteracaoPendente = camposAlterados.size > 0;
+
+  function classeEntrada(campo) {
+    return `campo__entrada${camposAlterados.has(campo) ? " campo__entrada--pendente" : ""}`;
+  }
+
+  const rodape = confirmandoDescarte ? (
+    <footer className="modal-rodape modal-rodape--confirmacao">
+      <p className="modal-rodape__pergunta" role="alert">
+        Descartar as alterações não salvas?
+      </p>
+      <Botao onClick={onContinuarEditando} type="button" variante="secundario">
+        Continuar editando
+      </Botao>
+      <Botao onClick={onDescartar} type="button" variante="perigo">
+        Descartar
+      </Botao>
+    </footer>
+  ) : (
+    <footer className="modal-rodape">
+      <Botao className="linha-icone-texto" disabled={ocupado} onClick={onFechar} style={{ marginRight: "auto" }} type="button" variante="secundario">
+        <TbX aria-hidden="true" size={15} /> Fechar
+      </Botao>
+      <Botao className="linha-icone-texto" disabled={ocupado} onClick={onExcluir} type="button" variante="perigo">
+        <MdDelete aria-hidden="true" size={19} /> Excluir
+      </Botao>
+      <Botao className="linha-icone-texto" disabled={ocupado || !temAlteracaoPendente} form="form-ajustes-avaliacao" type="submit" variante="primario">
+        <MdSave aria-hidden="true" size={17} /> {salvando ? "Salvando..." : "Salvar"}
+      </Botao>
+    </footer>
+  );
+
+  return (
+    <Modal onFechar={onFechar} rodape={rodape} titulo="Ajustes rápidos da avaliação">
+      <form className="formulario-modal ajustes-avaliacao" id="form-ajustes-avaliacao" noValidate onSubmit={onSalvar}>
+        <div className="campo">
+          <label className="campo__rotulo" htmlFor="ajustes-avaliacao-titulo">Título</label>
+          <input
+            className={classeEntrada("titulo")}
+            disabled={ocupado}
+            id="ajustes-avaliacao-titulo"
+            maxLength={180}
+            name="titulo"
+            onChange={onAlterarCampo}
+            value={rascunho.titulo}
+          />
+        </div>
+
+        <div className="ajustes-avaliacao__linha-fixa">
+          <span className="campo__rotulo">Módulo</span>
+          <span>{avaliacao.moduloTitulo || "Direto no curso"}</span>
+        </div>
+
+        <div className="ajustes-avaliacao__linha-fixa">
+          <span className="campo__rotulo">Total de questões</span>
+          <span className="ajustes-avaliacao__questoes">
+            {avaliacao.totalQuestoes || 0}
+            <button
+              aria-label="Editar questões desta avaliação"
+              className="btn-editar-questoes"
+              data-tooltip="Editar questões"
+              disabled={ocupado}
+              onClick={onEditarQuestoes}
+              type="button"
+            >
+              <motion.span style={{ display: "flex" }} transition={MOLA_ICONE} whileHover={{ scale: 1.25, rotate: -12 }}>
+                <TbPencil aria-hidden="true" size={18} />
+              </motion.span>
+            </button>
+          </span>
+        </div>
+
+        <div className="grade-3 ajustes-avaliacao__numeros">
+          <div className="campo">
+            <label className="campo__rotulo" htmlFor="ajustes-avaliacao-tentativas">Tentativas permitidas</label>
+            <input
+              className={classeEntrada("tentativasPermitidas")}
+              disabled={ocupado}
+              id="ajustes-avaliacao-tentativas"
+              inputMode="numeric"
+              min="1"
+              name="tentativasPermitidas"
+              onChange={onAlterarCampo}
+              step="1"
+              type="number"
+              value={rascunho.tentativasPermitidas}
+            />
+          </div>
+          <div className="campo">
+            <label className="campo__rotulo" htmlFor="ajustes-avaliacao-tempo">Tempo limite (min)</label>
+            <input
+              className={classeEntrada("tempoLimiteMinutos")}
+              disabled={ocupado}
+              id="ajustes-avaliacao-tempo"
+              inputMode="numeric"
+              min="1"
+              name="tempoLimiteMinutos"
+              onChange={onAlterarCampo}
+              placeholder="Sem limite"
+              step="1"
+              type="number"
+              value={rascunho.tempoLimiteMinutos}
+            />
+          </div>
+          {Number(avaliacao.tipoAvaliacao) !== TIPO_QUIZ ? (
+            <div className="campo">
+              <label className="campo__rotulo" htmlFor="ajustes-avaliacao-nota">Nota máxima</label>
+              <input
+                className={classeEntrada("notaMaxima")}
+                disabled={ocupado}
+                id="ajustes-avaliacao-nota"
+                inputMode="decimal"
+                min="0.01"
+                name="notaMaxima"
+                onChange={onAlterarCampo}
+                step="0.01"
+                type="number"
+                value={rascunho.notaMaxima}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {temAlteracaoPendente && !confirmandoDescarte ? (
+          <InlineMessage tone="warning">Alterações não salvas. Clique em Salvar para gravar.</InlineMessage>
+        ) : null}
+
+        {mensagem.message ? <InlineMessage tone={mensagem.tone}>{mensagem.message}</InlineMessage> : null}
+      </form>
+
+      <div className="detalhe-status">
+        <div>
+          <strong className="detalhe-status__rotulo">Status da avaliação</strong>
+          <span className="detalhe-status__descricao">
+            {alternandoStatus ? "Salvando..." : publicado ? "Visível e disponível para os alunos" : "Oculta - não aparece para os alunos"}
+          </span>
+        </div>
+        <div style={{ alignItems: "center", display: "flex", gap: "var(--espaco-sm)" }}>
+          <Insignia texto={normalizePublicationStatus(avaliacao.statusPublicacao)} />
+          <button
+            aria-busy={alternandoStatus}
+            aria-checked={publicado}
+            aria-label={publicado ? "Publicado - clique para arquivar" : "Arquivado - clique para publicar"}
+            className={`switch-ativo${publicado ? " switch-ativo--ativo" : ""}`}
+            disabled={ocupado}
+            onClick={onAlternarStatus}
+            role="switch"
+            type="button"
+          >
+            <TbX aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--esq" size={10} />
+            <span aria-hidden="true" className="switch-ativo__thumb" />
+            <TbCheck aria-hidden="true" className="switch-ativo__icone switch-ativo__icone--dir" size={10} />
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function SlideAvaliacoes({ avaliacoes, edicaoTravada, mediaNotaPorAvaliacaoId, menuAbertoId, onEditar, onExcluir, onToggleMenu, onVerDetalhes }) {
   const [avaliacaoAbertaId, setAvaliacaoAbertaId] = useState(null);
 

@@ -394,6 +394,12 @@
   color: var(--cor-texto-mudo);
 }
 
+/* Campo alterado e ainda nao salvo (formularios com "Salvar" explicito,
+   ex.: Ajustes rapidos da avaliacao). Borda de aviso; o foco continua roxo. */
+.campo__entrada--pendente {
+  border-color: var(--cor-aviso);
+}
+
 .campo__entrada--erro {
   border-color: var(--cor-erro);
 }
@@ -788,6 +794,16 @@ select.campo__entrada option {
   flex-shrink: 0;
   padding: var(--espaco-md) var(--espaco-xl) var(--espaco-xl);
   border-top: 1px solid var(--cor-borda);
+}
+
+/* Rodape virando pergunta de confirmacao ("Descartar alteracoes?") dentro
+   do proprio modal, sem empilhar outro Modal. A pergunta fica numa linha
+   propria, com os dois botoes juntos (alinhados a direita) logo abaixo. */
+.modal-rodape__pergunta {
+  flex: 1 1 100%;
+  margin: 0;
+  font-weight: 600;
+  color: var(--cor-texto-forte);
 }
 
 /* ------------------------------------------------------------
